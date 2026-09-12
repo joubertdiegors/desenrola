@@ -11,6 +11,8 @@ BACKOFFICE = [
     "backoffice:templates",
     "backoffice:content",
     "backoffice:languages",
+    "backoffice:partners",
+    "backoffice:appearance",
     "backoffice:system",
 ]
 
@@ -27,7 +29,7 @@ def test_home_publica(client):
     response = client.get(reverse("core:home"))
 
     assert response.status_code == 200
-    assert "Sua carta convite pronta em minutos." in response.content.decode()
+    assert "Gere sua Carta Convite em poucos minutos" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -73,3 +75,22 @@ def test_backoffice_nao_conflita_com_django_admin():
     """A area visual vive em /backoffice/; o Django Admin continua em /admin/."""
     assert reverse("backoffice:overview") == "/pt/backoffice/"
     assert reverse("admin:index") == "/pt/admin/"
+
+
+def test_landing_mostra_a_secao_de_parceiros(client):
+    response = client.get(reverse("core:home"))
+
+    html = response.content.decode()
+    assert "Nossos parceiros" in html
+    assert "JD-Print" in html
+
+
+def test_backoffice_aparencia_lista_as_cores(client, staff_user):
+    client.force_login(staff_user)
+
+    response = client.get(reverse("backoffice:appearance"))
+
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert 'data-theme-primary="t-roxo"' in html
+    assert 'data-theme-success="s-teal"' in html

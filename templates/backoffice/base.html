@@ -2,7 +2,7 @@
 {% load i18n %}
 {% comment %}
 Casca da area administrativa (representacao visual; nao substitui o Django
-Admin). Desktop (1i, 1j): menu lateral de 220px. Celular (1r): barra com
+Admin). Desktop (2i, 2j): menu lateral de 240px. Celular (4m): barra com
 menu, titulo e acao, mais barra inferior de 4 destinos.
 Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
 {% endcomment %}
@@ -11,13 +11,13 @@ Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
 
 {% block header %}
 <header class="m-only">
-  <nav class="nav bo-mobile-nav" aria-label="{% translate 'Administração' %}">
+  <nav class="nav-mobile bo-mobile-nav" aria-label="{% translate 'Administração' %}">
     <details class="dropdown">
-      <summary class="btn btn-secondary btn-icon btn-icon-40" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
+      <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
       <div class="dropdown-menu is-left">{% include "backoffice/menu.html" with in_dropdown=True %}</div>
     </details>
-    <span class="nav-brand">{{ bo_title }} <span class="tag tag-outline tag-xs">{% translate "Admin" %}</span></span>
-    <a class="btn btn-primary btn-icon btn-icon-40" href="#" aria-label="{{ bo_action_label }}"><i class="ph {{ bo_action_icon }}" aria-hidden="true"></i></a>
+    <span class="bo-mobile-title-group"><span class="bo-mobile-title">{{ bo_title }}</span><span class="tag tag-primary">{% translate "Admin" %}</span></span>
+    <button type="button" class="btn btn-primary btn-icon-sm" aria-label="{{ bo_action_label }}"><i class="ph {{ bo_action_icon }}" aria-hidden="true"></i></button>
   </nav>
 </header>
 {% endblock %}
@@ -25,7 +25,7 @@ Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
 {% block content %}
 <div class="bo">
   <aside class="bo-aside d-only">
-    <a class="bo-brand" href="{% url 'backoffice:overview' %}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M13 12a4 4 0 1 1-4-4"></path><path d="M9 8h12"></path></svg>Desenrola <span class="tag tag-outline tag-xs">{% translate "Admin" %}</span></a>
+    <a class="logo bo-brand" href="{% url 'backoffice:overview' %}">{% include "components/logo.html" %}</a>
     {% include "backoffice/menu.html" %}
     <div class="bo-aside-user">
       <span class="avatar avatar-sm avatar-neutral">{{ admin_user.initials }}</span>
@@ -39,10 +39,10 @@ Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
 {% endblock %}
 
 {% block footer %}
-<nav class="tabbar tabbar-4 bo-tabbar m-only" aria-label="{% translate 'Administração' %}">
-  <a href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page"{% endif %}><i class="{% if active == 'overview' %}ph-fill{% else %}ph{% endif %} ph-squares-four" aria-hidden="true"></i>{% translate "Geral" %}</a>
-  <a href="{% url 'backoffice:users' %}"{% if active == "users" or active == "permissions" %} aria-current="page"{% endif %}><i class="{% if active == 'users' or active == 'permissions' %}ph-fill{% else %}ph{% endif %} ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
-  <a href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page"{% endif %}><i class="{% if active == 'letters' %}ph-fill{% else %}ph{% endif %} ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
-  <a href="{% url 'backoffice:templates' %}"{% if active == "templates" or active == "content" or active == "languages" or active == "system" %} aria-current="page"{% endif %}><i class="ph ph-dots-three-outline" aria-hidden="true"></i>{% translate "Mais" %}</a>
+<nav class="tabbar tabbar-4 m-only" aria-label="{% translate 'Administração' %}">
+  <a href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'overview' %}ph-fill{% else %}ph{% endif %} ph-squares-four" aria-hidden="true"></i>{% translate "Geral" %}</a>
+  <a href="{% url 'backoffice:users' %}"{% if active == "users" or active == "permissions" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'users' or active == 'permissions' %}ph-fill{% else %}ph{% endif %} ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
+  <a href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'letters' %}ph-fill{% else %}ph{% endif %} ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
+  <a href="{% url 'backoffice:appearance' %}"{% if active == "templates" or active == "content" or active == "partners" or active == "languages" or active == "appearance" or active == "system" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'appearance' %}ph-fill{% else %}ph{% endif %} ph-dots-three-outline" aria-hidden="true"></i>{% translate "Mais" %}</a>
 </nav>
 {% endblock %}

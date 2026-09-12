@@ -7,9 +7,12 @@
  *   - Dialogos: [data-dialog-open="id"] mostra o backdrop com esse id;
  *     [data-dialog-close] ou Esc fecham.
  *   - Senha: [data-pw-toggle] alterna mostrar/ocultar o campo ao lado.
+ *   - Avisos legais (etapa 4 do assistente): [data-gate] desabilita o
+ *     botao ate que todos os campos com [data-gate-check] dentro dele
+ *     estejam marcados.
  *   - Fase de apresentacao (mock): [data-mock-submit] em um <form> navega
  *     para data-next em vez de enviar; [data-mock-loading] em um botao
- *     mostra o estado "Gerando..." e depois navega para data-next.
+ *     mostra um rotulo de carregamento e depois navega para data-next.
  */
 (function () {
   "use strict";
@@ -90,21 +93,41 @@
     }
   });
 
-  /* <details> aberto no desktop e fechado no celular ---------------------- */
-  /* Campos opcionais do cadastro: grade na tela larga, bloco recolhivel no
-     celular. O HTML traz `open` para funcionar sem JS. */
+  /* Interruptor (components/switch.html) ---------------------------------- */
 
-  var autoOpen = document.querySelectorAll("details[data-open-on-desktop]");
-  if (autoOpen.length && window.matchMedia) {
-    var desktop = window.matchMedia("(min-width: 768px)");
-    var syncOpen = function () {
-      for (var i = 0; i < autoOpen.length; i++) { autoOpen[i].open = desktop.matches; }
-    };
-    syncOpen();
-    if (desktop.addEventListener) { desktop.addEventListener("change", syncOpen); }
+  document.addEventListener("click", function (event) {
+    var toggle = event.target.closest(".toggle");
+    if (!toggle) { return; }
+    var on = !toggle.classList.contains("is-on");
+    toggle.classList.toggle("is-on", on);
+    toggle.setAttribute("aria-checked", String(on));
+    var input = toggle.querySelector("input");
+    if (input) { input.checked = on; }
+  });
+
+  /* Avisos legais: trava o botao ate marcar todas as caixas --------------- */
+
+  function syncGate(gate) {
+    var checks = gate.querySelectorAll("[data-gate-check]");
+    var button = document.querySelector('[data-gate-submit="' + gate.id + '"]');
+    if (!button) { return; }
+    var allChecked = true;
+    for (var i = 0; i < checks.length; i++) {
+      if (!checks[i].checked) { allChecked = false; break; }
+    }
+    button.disabled = !allChecked;
+    button.setAttribute("aria-disabled", String(!allChecked));
   }
 
-  /* Fase de apresentacao (cartas): formularios e acoes simuladas ---------- */
+  document.querySelectorAll("[data-gate]").forEach(function (gate) { syncGate(gate); });
+
+  document.addEventListener("change", function (event) {
+    if (!event.target.hasAttribute || !event.target.hasAttribute("data-gate-check")) { return; }
+    var gate = event.target.closest("[data-gate]");
+    if (gate) { syncGate(gate); }
+  });
+
+  /* Fase de apresentacao: formularios e acoes simuladas ------------------- */
 
   document.addEventListener("submit", function (event) {
     var form = event.target;
@@ -116,7 +139,7 @@
 
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-mock-loading]");
-    if (!button) { return; }
+    if (!button || button.disabled) { return; }
     event.preventDefault();
     var next = button.getAttribute("data-next");
     var label = button.getAttribute("data-loading-text");

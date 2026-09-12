@@ -1,0 +1,37 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administracao · Parceiros. Item novo do menu na v2 (landing ganhou a
+secao "Nossos parceiros"); sem layout de tela detalhado nos arquivos de
+referencia — lista simples, no mesmo padrao visual dos demais cards do
+backoffice. Contexto: partners.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <h1 class="d-only">{% translate "Parceiros" %}</h1>
+  <span class="count d-only">{{ partners|length }}</span>
+  <button type="button" class="btn btn-primary push"><i class="ph-bold ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</button>
+</div>
+
+<div class="card">
+  {% for partner in partners %}
+  <div class="partner-admin-row">
+    <div class="img-slot partner-admin-thumb" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+    <div class="partner-admin-body">
+      <h3>{{ partner.name }}</h3>
+      <p>{{ partner.description }}</p>
+    </div>
+    {% if partner.status == "pending_image" %}
+      <span class="tag tag-warning">{% translate "Aguardando imagem" %}</span>
+    {% else %}
+      <span class="tag tag-success">{% translate "Publicado" %}</span>
+    {% endif %}
+    <div class="partner-admin-actions">
+      <button type="button" class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Editar' %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Remover' %}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

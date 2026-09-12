@@ -1,20 +1,25 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administracao · Cartas. Nao ha layout proprio nos arquivos de referencia:
-reusa o cabecalho de 1i e a tabela de cartas do dashboard (1e), com a
-coluna do anfitriao. Contexto: letters.
+Administracao · Cartas. Sem layout proprio na v2: reusa o cabecalho e a
+tabela de cartas do dashboard, com a coluna do anfitriao. Contexto: letters.
 {% endcomment %}
 
 {% block bo_main %}
 <div class="bo-head">
   <h1 class="d-only">{% translate "Cartas" %}</h1>
-  <span class="count d-only">3.902</span>
-  <div class="input-icon d-only"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input class="input" type="search" placeholder="{% translate 'Buscar por convidado ou anfitrião' %}" aria-label="{% translate 'Buscar por convidado ou anfitrião' %}"></div>
-  <div class="input-icon input-icon-lg m-only"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input class="input" type="search" placeholder="{% translate 'Buscar carta' %}" aria-label="{% translate 'Buscar carta' %}"></div>
+  <span class="count d-only">{{ letters|length }}</span>
+  <div class="search-field push d-only">
+    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+    <input class="input" type="search" placeholder="{% translate 'Buscar por convidado ou anfitrião' %}" aria-label="{% translate 'Buscar por convidado ou anfitrião' %}">
+  </div>
+  <div class="search-field m-only">
+    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+    <input class="input" type="search" placeholder="{% translate 'Buscar carta' %}" aria-label="{% translate 'Buscar carta' %}">
+  </div>
 </div>
 
-<div class="table-wrap d-only">
+<div class="card table-wrap d-only">
   <table class="table">
     <thead>
       <tr>
@@ -29,12 +34,12 @@ coluna do anfitriao. Contexto: letters.
     <tbody>
       {% for letter in letters %}
       <tr>
-        <td class="text-muted">{{ letter.date }}</td>
+        <td class="cell-muted">{{ letter.date }}</td>
         <td>{{ letter.host }}</td>
         <td>{{ letter.guest }}</td>
         <td>{{ letter.language }}</td>
-        <td><span class="tag {% if letter.status == 'generated' %}tag-accent{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span></td>
-        <td class="right"><a class="btn btn-ghost" href="{% url 'letters:result' letter.id %}"><i class="ph ph-eye" aria-hidden="true"></i> {% translate "Visualizar" %}</a></td>
+        <td><span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span></td>
+        <td class="right"><a class="btn btn-text" href="{% url 'letters:result' letter.id %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Visualizar" %}</a></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -48,7 +53,7 @@ coluna do anfitriao. Contexto: letters.
       <div class="list-title">{{ letter.guest }}</div>
       <div class="list-sub">{{ letter.date }} · {{ letter.host }}</div>
     </div>
-    <span class="tag {% if letter.status == 'generated' %}tag-accent{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span>
+    <span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span>
   </a>
   {% endfor %}
 </div>

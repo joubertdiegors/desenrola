@@ -1,9 +1,9 @@
 """
 Views do app core.
 
-As areas do usuario exigem login. As cartas, estatisticas e a area
-administrativa continuam com dados ficticios (apps.core.demo) ate as
-proximas etapas do backend.
+As areas do usuario exigem login; a area administrativa exige `is_staff`.
+Cartas, estatisticas, parceiros e aparencia continuam com dados ficticios
+(apps.core.demo) ate as proximas etapas do backend.
 """
 
 from functools import wraps
@@ -30,8 +30,12 @@ def staff_required(view):
 
 
 def home(request):
-    """Landing publica."""
-    return render(request, "core/home.html")
+    """Landing publica (layouts 2a, 3a e 4a)."""
+    return render(
+        request,
+        "core/home.html",
+        {"landing_stat": demo.LANDING_STAT, "partners": demo.PARTNERS},
+    )
 
 
 @login_required
@@ -72,7 +76,7 @@ def _backoffice_context(active):
 
 @staff_required
 def backoffice_users(request, active="users"):
-    """Usuarios e permissoes (layout 1i). Tambem responde por visao geral."""
+    """Usuarios e permissoes (layout 2j). Tambem responde por visao geral."""
     context = _backoffice_context(active)
     context.update(
         {
@@ -87,7 +91,7 @@ def backoffice_users(request, active="users"):
 
 @staff_required
 def backoffice_letters(request, active="letters"):
-    """Cartas de todos os usuarios (sem layout proprio; deriva de 1e e 1i)."""
+    """Cartas de todos os usuarios (sem layout proprio; deriva de 2c e 2j)."""
     context = _backoffice_context(active)
     context["letters"] = demo.ALL_LETTERS
     return render(request, "backoffice/letters.html", context)
@@ -95,7 +99,36 @@ def backoffice_letters(request, active="letters"):
 
 @staff_required
 def backoffice_templates(request, active="templates"):
-    """Modelos, conteudo, idiomas e sistema (layout 1j)."""
+    """Modelos, conteudo e idiomas (sem layout proprio na v2; mantido da v1)."""
     context = _backoffice_context(active)
     context["languages"] = demo.LANGUAGES
     return render(request, "backoffice/templates.html", context)
+
+
+@staff_required
+def backoffice_partners(request):
+    """Parceiros (novo menu na v2; sem layout de tela detalhado)."""
+    context = _backoffice_context("partners")
+    context["partners"] = demo.ADMIN_PARTNERS
+    return render(request, "backoffice/partners.html", context)
+
+
+@staff_required
+def backoffice_appearance(request):
+    """
+    Aparencia (layouts 2i e 4m): cor principal e cor de sucesso do site.
+
+    A escolha e aplicada de verdade no navegador de quem está usando o
+    backoffice (mesmo mecanismo do seletor de tema em static/js/theme.js),
+    mas ainda nao e publicada num banco para valer para todos os
+    visitantes — isso depende de um modelo de configuracao, fora do
+    escopo desta etapa.
+    """
+    context = _backoffice_context("appearance")
+    context.update(
+        {
+            "primary_swatches": demo.THEME_PRIMARY_SWATCHES,
+            "success_swatches": demo.THEME_SUCCESS_SWATCHES,
+        }
+    )
+    return render(request, "backoffice/appearance.html", context)

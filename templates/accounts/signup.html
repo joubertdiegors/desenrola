@@ -1,93 +1,108 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% comment %}
-Criar conta (layouts 1d desktop e 1m celular), ligado ao SignupForm.
-Os campos opcionais ficam num unico bloco: grade no desktop, bloco
-recolhivel "Telefone e endereco" no celular (JS abre/fecha por largura).
+Criar conta (layout 2b desktop, 4c celular), ligado ao SignupForm. Os
+campos opcionais (telefone, endereco) ficam num unico bloco: grade no
+desktop, bloco recolhivel "Telefone e endereço" no celular.
 {% endcomment %}
 
-{% block title %}{% translate "Criar conta" %} · Desenrola{% endblock %}
-{% block main_class %}auth auth-signup{% endblock %}
+{% block title %}{% translate "Criar minha conta" %} · Desenrola{% endblock %}
+{% block main_class %}auth-page{% endblock %}
+
+{% block header %}
+<header class="auth-header m-only">
+  <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+</header>
+{% endblock %}
 
 {% block content %}
 {% url 'accounts:login' as login_url %}
-<div class="auth-box auth-wide">
-  <a class="auth-back m-only" href="{% url 'core:home' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-  <a class="logo-link d-only" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
-  <div class="auth-title">
-    <h2>{% translate "Criar conta" %}</h2>
-    <p><span class="d-only">{% translate "Leva menos de um minuto." %} </span>{% blocktranslate trimmed %}Campos com <span class="required">*</span> são obrigatórios.{% endblocktranslate %}</p>
-  </div>
-  <form class="auth-form" method="post" novalidate>
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    {% if form.non_field_errors %}
-    <div class="alert alert-error" role="alert">
-      <i class="ph ph-x-circle" aria-hidden="true"></i>
-      <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+<div class="auth-wrap">
+  <div class="card auth-card auth-card-wide">
+    <a class="logo d-only" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+    <div class="auth-title">
+      <h2>{% translate "Criar minha conta" %}</h2>
+      <p>{% blocktranslate trimmed %}Leva menos de um minuto. Campos com <span class="required">*</span> são obrigatórios.{% endblocktranslate %}</p>
     </div>
-    {% endif %}
-    <div class="signup-grid">
-      <div class="field span-2{% if form.full_name.errors %} is-invalid{% endif %}">
+    <form class="auth-form" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}
+      <div class="notice notice-error" role="alert">
+        <i class="ph-fill ph-x-circle" aria-hidden="true"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+      </div>
+      {% endif %}
+
+      <div class="field{% if form.full_name.errors %} is-invalid{% endif %}">
         <label for="id_full_name">{% translate "Nome completo" %} <span class="required">*</span></label>
         <input class="input" id="id_full_name" name="full_name" type="text" autocomplete="name" required maxlength="150" value="{{ form.full_name.value|default:'' }}">
         {% include "components/field_errors.html" with errors=form.full_name.errors %}
       </div>
-      <div class="field span-2{% if form.email.errors %} is-invalid{% elif form.is_bound %} is-valid{% endif %}">
+
+      <div class="field">
         <label for="id_email">{% translate "E-mail" %} <span class="required">*</span></label>
         <div class="input-wrap">
-          <input class="input" id="id_email" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}">
-          {% if form.is_bound and not form.email.errors %}<i class="ph ph-check input-state is-valid" aria-hidden="true"></i>{% endif %}
+          <input class="input{% if form.email.errors %} is-invalid{% elif form.is_bound %} is-valid{% endif %}" type="email" id="id_email" name="email" autocomplete="email" required value="{{ form.email.value|default:'' }}">
+          {% if form.is_bound and not form.email.errors %}<i class="ph-fill ph-check-circle input-icon is-valid" aria-hidden="true"></i>{% endif %}
         </div>
         {% include "components/field_errors.html" with errors=form.email.errors %}
       </div>
-      <div class="field{% if form.password1.errors %} is-invalid{% endif %}">
-        <label for="id_password1">{% translate "Senha" %} <span class="required">*</span></label>
-        <input class="input" id="id_password1" name="password1" type="password" autocomplete="new-password" required>
-        {% if form.password1.errors %}{% include "components/field_errors.html" with errors=form.password1.errors %}{% else %}<div class="field-help">{% translate "Mínimo 8 caracteres." %}</div>{% endif %}
+
+      <div class="form-grid">
+        <div class="field{% if form.password1.errors %} is-invalid{% endif %}">
+          <label for="id_password1">{% translate "Senha" %} <span class="required">*</span></label>
+          <input class="input" id="id_password1" name="password1" type="password" autocomplete="new-password" required>
+          {% if form.password1.errors %}{% include "components/field_errors.html" with errors=form.password1.errors %}{% else %}<div class="field-hint">{% translate "Mínimo 8 caracteres." %}</div>{% endif %}
+        </div>
+        <div class="field{% if form.password2.errors %} is-invalid{% endif %}">
+          <label for="id_password2">{% translate "Confirmar senha" %} <span class="required">*</span></label>
+          <input class="input" id="id_password2" name="password2" type="password" autocomplete="new-password" required{% if form.password2.errors %} aria-invalid="true"{% endif %}>
+          {% include "components/field_errors.html" with errors=form.password2.errors %}
+        </div>
       </div>
-      <div class="field{% if form.password2.errors %} is-invalid{% endif %}">
-        <label for="id_password2">{% translate "Confirmar senha" %} <span class="required">*</span></label>
-        <input class="input" id="id_password2" name="password2" type="password" autocomplete="new-password" required{% if form.password2.errors %} aria-invalid="true"{% endif %}>
-        {% include "components/field_errors.html" with errors=form.password2.errors %}
-      </div>
-      <details class="disclosure signup-optional span-2" data-open-on-desktop open>
+
+      <details class="disclosure" data-open-on-desktop open>
         <summary>{% translate "Telefone e endereço" %} <span class="disclosure-hint">{% translate "opcional" %} <i class="ph ph-caret-down" aria-hidden="true"></i></span></summary>
         <div class="disclosure-body">
           <div class="field{% if form.phone.errors %} is-invalid{% endif %}">
-            <label for="id_phone">{% translate "Telefone" %} <span class="optional">{% translate "(opcional)" %}</span></label>
-            <input class="input" id="id_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="+32 4" value="{{ form.phone.value|default:'' }}">
+            <label for="id_phone">{% translate "Telefone" %} <span class="optional">({% translate "opcional" %})</span></label>
+            <div class="phone-field">
+              <span class="input dial-code" aria-hidden="true"><span class="flag-be"></span>+32</span>
+              <input class="input" id="id_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="{% translate 'Ex.: 470 12 34 56' %}" value="{{ form.phone.value|default:'' }}">
+            </div>
             {% include "components/field_errors.html" with errors=form.phone.errors %}
           </div>
           <div class="field{% if form.address_line1.errors %} is-invalid{% endif %}">
-            <label for="id_address_line1">{% translate "Endereço completo" %} <span class="optional">{% translate "(opcional)" %}</span></label>
-            <input class="input" id="id_address_line1" name="address_line1" type="text" autocomplete="street-address" maxlength="255" placeholder="{% translate 'Rua e número' %}" value="{{ form.address_line1.value|default:'' }}">
+            <label for="id_address_line1">{% translate "Endereço completo na Bélgica" %} <span class="optional">({% translate "opcional" %})</span></label>
+            <input class="input" id="id_address_line1" name="address_line1" type="text" autocomplete="street-address" maxlength="255" placeholder="{% translate 'Rua, número, complemento' %}" value="{{ form.address_line1.value|default:'' }}">
             {% include "components/field_errors.html" with errors=form.address_line1.errors %}
           </div>
           <div class="disclosure-row">
             <div class="field{% if form.postal_code.errors %} is-invalid{% endif %}">
               <label for="id_postal_code">{% translate "Código postal" %}</label>
-              <input class="input" id="id_postal_code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" placeholder="1200" value="{{ form.postal_code.value|default:'' }}">
+              <input class="input" id="id_postal_code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" value="{{ form.postal_code.value|default:'' }}">
               {% include "components/field_errors.html" with errors=form.postal_code.errors %}
             </div>
             <div class="field{% if form.city.errors %} is-invalid{% endif %}">
               <label for="id_city">{% translate "Cidade" %}</label>
-              <input class="input" id="id_city" name="city" type="text" autocomplete="address-level2" maxlength="120" placeholder="{% translate 'Cidade' %}" value="{{ form.city.value|default:'' }}">
+              <input class="input" id="id_city" name="city" type="text" autocomplete="address-level2" maxlength="120" value="{{ form.city.value|default:'' }}">
               {% include "components/field_errors.html" with errors=form.city.errors %}
             </div>
           </div>
         </div>
       </details>
-    </div>
-    <div>
-      <label class="check terms-check{% if form.terms.errors %} is-invalid{% endif %}">
-        <input type="checkbox" name="terms" value="on"{% if form.terms.value %} checked{% endif %}><span class="box"></span>
+
+      <label class="check{% if form.terms.errors %} is-invalid{% endif %}">
+        <input type="checkbox" name="terms" value="on"{% if form.terms.value %} checked{% endif %}>
+        <span class="box"></span>
         <span>{% blocktranslate trimmed %}Li e aceito os <a href="#">Termos de uso</a> e a <a href="#">Política de privacidade</a>.{% endblocktranslate %}</span>
       </label>
       {% include "components/field_errors.html" with errors=form.terms.errors %}
-    </div>
-    <button class="btn btn-primary btn-block auth-submit" type="submit">{% translate "Criar conta" %}</button>
-  </form>
-  <p class="auth-alt">{% blocktranslate trimmed %}Já tem conta? <a href="{{ login_url }}">Entrar</a>{% endblocktranslate %}</p>
+
+      <button class="btn btn-primary btn-block btn-lg" type="submit">{% translate "Criar conta" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+    </form>
+    <p class="auth-alt">{% blocktranslate trimmed %}Já tem conta? <a href="{{ login_url }}">Fazer login</a>{% endblocktranslate %}</p>
+  </div>
 </div>
 {% endblock %}

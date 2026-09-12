@@ -1,15 +1,17 @@
 {% load i18n %}{% comment %}
-Menu da area administrativa (layouts 1i e 1j). No desktop e o menu
+Menu da area administrativa (layout 2j / 2i). No desktop e o menu
 lateral; no celular vai dentro do dropdown do botao de menu
 (in_dropdown=True). Contexto: active.
 {% endcomment %}
-<nav class="{% if in_dropdown %}bo-dropdown-menu{% else %}side-menu{% endif %}" aria-label="{% translate 'Administração' %}">
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page"{% endif %}><i class="ph ph-squares-four" aria-hidden="true"></i>{% translate "Visão geral" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:users' %}"{% if active == "users" %} aria-current="page"{% endif %}><i class="ph ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:permissions' %}#permissoes"{% if active == "permissions" %} aria-current="page"{% endif %}><i class="ph ph-shield-check" aria-hidden="true"></i>{% translate "Permissões" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page"{% endif %}><i class="ph ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:templates' %}"{% if active == "templates" %} aria-current="page"{% endif %}><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Modelos" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:content' %}#conteudo"{% if active == "content" %} aria-current="page"{% endif %}><i class="ph ph-article" aria-hidden="true"></i>{% translate "Conteúdo do site" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:languages' %}#idiomas"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:system' %}#sistema"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-gear" aria-hidden="true"></i>{% translate "Sistema" %}</a>
+<nav class="{% if not in_dropdown %}side-menu{% endif %}" aria-label="{% translate 'Administração' %}">
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'overview' %}is-current{% endif %}" href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page"{% endif %}><i class="ph ph-squares-four" aria-hidden="true"></i>{% translate "Visão geral" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'users' %}is-current{% endif %}" href="{% url 'backoffice:users' %}"{% if active == "users" %} aria-current="page"{% endif %}><i class="ph ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'permissions' %}is-current{% endif %}" href="{% url 'backoffice:permissions' %}#permissoes"{% if active == "permissions" %} aria-current="page"{% endif %}><i class="ph ph-shield-check" aria-hidden="true"></i>{% translate "Permissões" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letters' %}is-current{% endif %}" href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page"{% endif %}><i class="ph ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'templates' %}is-current{% endif %}" href="{% url 'backoffice:templates' %}"{% if active == "templates" %} aria-current="page"{% endif %}><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Modelos" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'content' %}is-current{% endif %}" href="{% url 'backoffice:content' %}#conteudo"{% if active == "content" %} aria-current="page"{% endif %}><i class="ph ph-article" aria-hidden="true"></i>{% translate "Conteúdo do site" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'partners' %}is-current{% endif %}" href="{% url 'backoffice:partners' %}"{% if active == "partners" %} aria-current="page"{% endif %}><i class="ph ph-handshake" aria-hidden="true"></i>{% translate "Parceiros" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %}" href="{% url 'backoffice:languages' %}#idiomas"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'appearance' %}is-current{% endif %}" href="{% url 'backoffice:appearance' %}"{% if active == "appearance" %} aria-current="page"{% endif %}><i class="ph ph-palette" aria-hidden="true"></i>{% translate "Aparência" %}</a>
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %}" href="{% url 'backoffice:system' %}#sistema"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-gear" aria-hidden="true"></i>{% translate "Sistema" %}</a>
 </nav>

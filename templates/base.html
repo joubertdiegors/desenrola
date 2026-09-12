@@ -3,29 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#161826">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#1a5fd6">
   <title>{% block title %}Desenrola{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
 
-  {# Tema antes do primeiro paint, para nao piscar. Mesma chave da referencia. #}
+  {# Cor do tema (backoffice > Aparencia) antes do primeiro paint, para nao piscar. #}
   <script>
     (function () {
       try {
-        var pref = localStorage.getItem("desenrola.theme");
-        var light = pref === "claro" ||
-          (pref === "sistema" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
-        if (light) { document.documentElement.classList.add("light"); }
+        var t = JSON.parse(localStorage.getItem("desenrola.theme") || "{}");
+        if (t.p) { document.documentElement.classList.add(t.p); }
+        if (t.s) { document.documentElement.classList.add(t.s); }
       } catch (e) {}
     })();
   </script>
 
-  {# Inter (pesos 400 e 500: o sistema nao usa negrito) e icones Phosphor #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
 
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/components.css' %}">

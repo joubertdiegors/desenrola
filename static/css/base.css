@@ -1,130 +1,63 @@
 /* ==========================================================================
-   Desenrola — base.css
+   Desenrola — base.css (v2)
    Tokens, reset e tipografia do design system.
 
-   Fonte da verdade: desenrola-1-conceito.html (Sistema visual). Os valores
-   abaixo sao copia literal daquele arquivo. Nao ajustar sem atualizar a
-   referencia. O tema escuro e o padrao; a classe `light` no <html> ativa
-   o tema claro (ver js/theme.js).
+   Fonte da verdade: desenrola-v2-1-sistema.html (Sistema visual). Os
+   valores abaixo sao copia literal daquele arquivo. Nao ajustar sem
+   atualizar a referencia.
+
+   Tema: claro, unico (a v2 nao define modo escuro). A cor principal e a
+   cor de sucesso sao parametrizaveis pelo backoffice (Aparencia) atraves
+   das classes .t-* / .s-* abaixo, aplicadas em <html> por static/js/theme.js
+   — mesmo mecanismo do arquivo de referencia.
    ========================================================================== */
 
 :root {
-  color-scheme: dark;
-
-  /* Cores de base */
-  --color-bg: #161826;
-  --color-surface: #232532;
-  --color-text: #e9e9ed;
-  --color-accent: #9184d9;
-  --color-accent-2: #a7a1db;
-  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
-
-  /* Rampa neutra 100-900: superficies, bordas, texto secundario */
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-200: #e4e7f5;
-  --color-neutral-300: #cfd3e5;
-  --color-neutral-400: #b2b6ca;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #75798c;
-  --color-neutral-700: #595d6c;
-  --color-neutral-800: #3f424d;
-  --color-neutral-900: #292b31;
-
-  /* Rampa do acento 100-900: 800 para tintas, 300 para texto em acento,
-     500 para linhas */
-  --color-accent-100: #f5f4ff;
-  --color-accent-200: #e7e5fe;
-  --color-accent-300: #d2cefd;
-  --color-accent-400: #b5abfc;
-  --color-accent-500: #968ae0;
-  --color-accent-600: #796cbf;
-  --color-accent-700: #5d5294;
-  --color-accent-800: #423a6a;
-  --color-accent-900: #2b2741;
-
-  --color-accent-2-100: #f5f4ff;
-  --color-accent-2-200: #e7e5fe;
-  --color-accent-2-300: #d2cefd;
-  --color-accent-2-400: #b5afe8;
-  --color-accent-2-500: #9690c9;
-  --color-accent-2-600: #7972a9;
-  --color-accent-2-700: #5c5783;
-  --color-accent-2-800: #423e5d;
-  --color-accent-2-900: #2b293a;
-
-  --color-section: #262a60;
-  --color-section-glow: #353b80;
-  --color-section-ghost: #4c5397;
-
-  /* Semanticos: mesmos tons nos dois temas (chroma baixo de proposito) */
-  --color-success: #7cc59d;
-  --color-warning: #d6b26a;
-  --color-error: #e08a82;
-
-  /* Tipografia: Inter, peso maximo 500 */
-  --font-heading: "Inter", system-ui, sans-serif;
-  --font-heading-weight: 500;
-  --font-body: "Inter", system-ui, sans-serif;
-
-  /* Espacamento dos componentes */
-  --space-1: 2.8px;
-  --space-2: 5.6px;
-  --space-3: 8.4px;
-  --space-4: 11.2px;
-  --space-6: 16.8px;
-  --space-8: 22.4px;
-
-  /* Raios */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 14px;
-
-  /* Sombras: sempre borda de 1px + sombra ambiente */
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
-}
-
-/* Tema claro: rampas invertidas (100 <-> 900), acento um passo mais escuro
-   para manter 4,5:1 sobre o branco; sucesso, alerta e erro nao mudam. */
-:root.light {
   color-scheme: light;
 
-  --color-bg: #f3f4f8;
-  --color-surface: #ffffff;
-  --color-text: #1d1e2a;
-  --color-accent: #6d5fc4;
-  --color-accent-2: #7d75b8;
-  --color-divider: color-mix(in srgb, #1d1e2a 12%, transparent);
+  /* Cor principal (acoes, links, stepper, icones) e cor de sucesso (gerar
+     PDF, WhatsApp, confirmacoes). Ambas trocaveis pelo backoffice. */
+  --p: #1a5fd6;
+  --s: #17a34a;
 
-  --color-neutral-100: #292b31;
-  --color-neutral-200: #3f424d;
-  --color-neutral-300: #595d6c;
-  --color-neutral-400: #75798c;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #b2b6ca;
-  --color-neutral-700: #cfd3e5;
-  --color-neutral-800: #e4e7f5;
-  --color-neutral-900: #eceef7;
+  --bg: #f4f7fc;
+  --tx: #1b2b47;
+  --mu: #5c6b85;
+  --bd: #d7e0ef;
 
-  --color-accent-100: #2b2741;
-  --color-accent-200: #423a6a;
-  --color-accent-300: #5d5294;
-  --color-accent-400: #796cbf;
-  --color-accent-500: #968ae0;
-  --color-accent-600: #b5abfc;
-  --color-accent-700: #d2cefd;
-  --color-accent-800: #e7e5fe;
-  --color-accent-900: #f5f4ff;
+  /* Derivados: nunca definidos a mao, sempre a partir de --p */
+  --navy: color-mix(in srgb, var(--p) 35%, #0b1a33);
+  --p10: color-mix(in srgb, var(--p) 9%, white);
+  --p20: color-mix(in srgb, var(--p) 18%, white);
 
-  --color-section: #2f3475;
-  --color-section-glow: #3d448f;
-  --color-section-ghost: #5760a6;
+  --error: #d64545;
+  --error-dark: #c53030;
+  --warning: #c98a12;
+  --warning-dark: #8a5d05;
 
-  --shadow-sm: 0 0 0 1px #dcdfeb;
-  --shadow-md: 0 0 0 1px #cfd3e5, 0 6px 18px rgba(30, 32, 60, 0.10);
-  --shadow-lg: 0 0 0 1px #b2b6ca, 0 16px 40px rgba(30, 32, 60, 0.16);
+  --font: "Inter", system-ui, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-card: 0 1px 2px rgba(15, 44, 102, 0.05);
+  --shadow-md: 0 1px 3px rgba(15, 44, 102, 0.1), 0 8px 20px rgba(15, 44, 102, 0.08);
+  --shadow-lg: 0 20px 50px rgba(15, 44, 102, 0.16);
 }
+
+/* Temas de cor principal (backoffice · Aparencia) */
+.t-azul { --p: #1a5fd6; }
+.t-roxo { --p: #6b3fd6; }
+.t-verde { --p: #0e8a58; }
+.t-laranja { --p: #d9641b; }
+.t-grafite { --p: #2f3e55; }
+
+/* Temas de cor de sucesso (backoffice · Aparencia) */
+.s-verde { --s: #17a34a; }
+.s-azul { --s: #1a5fd6; }
+.s-ambar { --s: #c98a12; }
+.s-teal { --s: #0f8f8a; }
 
 
 /* --------------------------------------------------------------------------
@@ -139,76 +72,64 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--tx);
+  font-family: var(--font);
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  line-height: 1.12;
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--navy);
   letter-spacing: -0.015em;
-  margin: 0 0 var(--space-2);
+  line-height: 1.15;
+  margin: 0;
 }
-h1 { font-size: 42px; }
-h2 { font-size: 32px; }
-h3 { font-size: 25px; }
-h4 { font-size: 20px; }
-h5 { font-size: 16px; }
-h6 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+h1 { font-size: 40px; }
+h2 { font-size: 26px; }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
 
-/* Hierarquia por tamanho e espaco, nao por negrito: peso maximo 500 */
-strong, b { font-weight: 500; }
+strong, b { font-weight: 600; }
 
-p { margin: 0 0 var(--space-3); }
+p { margin: 0; }
 
-a { color: var(--color-accent); text-underline-offset: 3px; }
-a:hover { color: var(--color-accent-300); }
+a { color: var(--p); text-decoration: none; }
+a:hover { color: color-mix(in srgb, var(--p) 80%, black); }
 
 img { display: block; max-width: 100%; }
-figure { margin: 0; }
-figcaption {
-  font-size: 11px;
-  margin-top: var(--space-1);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+
+.text-muted { color: var(--mu); }
+.text-success { color: var(--s); }
+.text-error { color: var(--error-dark); }
+.text-warning { color: var(--warning-dark); }
+.text-accent { color: var(--p); }
+
+/* Empurra o restante do flex container para a direita */
+.push { margin-left: auto; }
+
+/* Icones Phosphor: por padrao, do tamanho do texto ao redor. Componentes
+   que precisam de um tamanho proprio (avatar, stepper, hero...) o definem. */
+.ph, .ph-fill, .ph-bold { font-size: 1em; line-height: 1; }
+
+.kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p);
 }
 
-.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
-
-/* Icones Phosphor: regular (1.5px), sempre acompanhados de rotulo */
-.ph, .ph-fill { font-size: 1.15em; line-height: 1; }
-
-/* Foco: anel no acento, so para navegacao por teclado */
 :focus { outline: none; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+:focus-visible { outline: 3px solid var(--p20); outline-offset: 1px; }
+::selection { background: color-mix(in srgb, var(--p) 25%, transparent); }
 
-/* Divisor: linha que some nas pontas */
-.hr {
-  height: 1px;
-  border: 0;
-  margin: var(--space-4) 0;
-  background: linear-gradient(to right,
-    transparent, var(--color-divider) 48px,
-    var(--color-divider) calc(100% - 48px), transparent);
-}
+.hr { height: 1px; border: 0; margin: 0; background: var(--bd); }
 
-/* Papel: superficie do documento (a carta reproduz o modelo oficial,
-   nunca o design do site) */
-.paper {
-  background: #f6f5f1;
-  color: #141414;
-  font-family: "Times New Roman", Times, serif;
-  line-height: 1.35;
-}
-.paper p { margin: 0 0 .55em; }
-
-/* Acessibilidade: texto so para leitores de tela */
 .visually-hidden {
   position: absolute !important;
   width: 1px; height: 1px;
@@ -217,8 +138,15 @@ figcaption {
   white-space: nowrap; border: 0;
 }
 
-/* Sem animacoes decorativas por regra do sistema; o que existir respeita
-   a preferencia do usuario */
+/* Documento oficial: nunca segue o design system do site */
+.paper {
+  background: #fff;
+  color: #141414;
+  font-family: "Times New Roman", Times, serif;
+  line-height: 1.35;
+}
+.paper p { margin: 0 0 0.55em; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

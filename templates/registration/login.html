@@ -1,32 +1,38 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% comment %}
-Entrar (layouts 1c desktop e 1l celular). Formulario da LoginView do Django
+Entrar (layout 2b desktop, 4b celular). Formulario da LoginView do Django
 (accounts.forms.LoginForm): o campo `username` e o e-mail. Erros de
-credencial aparecem no alerta de erro, acima dos campos.
+credencial aparecem no aviso de erro, acima dos campos.
 {% endcomment %}
 
 {% block title %}{% translate "Entrar" %} · Desenrola{% endblock %}
-{% block main_class %}auth{% endblock %}
+{% block main_class %}auth-page{% endblock %}
+
+{% block header %}
+<header class="auth-header m-only">
+  <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+</header>
+{% endblock %}
 
 {% block content %}
 {% url 'accounts:signup' as signup_url %}
-<div class="auth-box">
-  <a class="logo-link" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
-  <div class="auth-title">
-    <h2>{% translate "Entrar" %}</h2>
-    <p>{% translate "Bem-vindo de volta." %}</p>
-  </div>
-  <form class="auth-form" method="post" novalidate>
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    {% if form.non_field_errors %}
-    <div class="alert alert-error" role="alert">
-      <i class="ph ph-x-circle" aria-hidden="true"></i>
-      <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <a class="logo d-only" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+    <div class="auth-title">
+      <h2>{% translate "Entrar" %}</h2>
+      <p>{% translate "Bem-vindo de volta." %}</p>
     </div>
-    {% endif %}
-    <div class="auth-fields">
+    <form class="auth-form" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}
+      <div class="notice notice-error" role="alert">
+        <i class="ph-fill ph-x-circle" aria-hidden="true"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+      </div>
+      {% endif %}
       <div class="field{% if form.username.errors %} is-invalid{% endif %}">
         <label for="id_username">{% translate "E-mail" %}</label>
         <input class="input" id="id_username" name="username" type="email" autocomplete="email" autofocus required placeholder="voce@exemplo.com" value="{{ form.username.value|default:'' }}">
@@ -41,10 +47,10 @@ credencial aparecem no alerta de erro, acima dos campos.
         {% include "components/field_errors.html" with errors=form.password.errors %}
       </div>
       <a class="auth-link" href="{% url 'accounts:password_reset' %}">{% translate "Esqueci minha senha" %}</a>
-    </div>
-    <button class="btn btn-primary btn-block auth-submit" type="submit">{% translate "Entrar" %}</button>
-  </form>
-  <p class="auth-alt">{% blocktranslate trimmed %}Não tem conta? <a href="{{ signup_url }}">Criar conta</a>{% endblocktranslate %}</p>
+      <button class="btn btn-primary btn-block btn-lg" type="submit">{% translate "Entrar" %}</button>
+    </form>
+    <p class="auth-alt">{% blocktranslate trimmed %}Não tem conta? <a href="{{ signup_url }}">Criar minha conta</a>{% endblocktranslate %}</p>
+  </div>
 </div>
 {% endblock %}
 

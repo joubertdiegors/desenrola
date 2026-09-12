@@ -1,16 +1,17 @@
 {% load i18n %}{% comment %}
-Barra superior da area logada (layout 1e). No celular so aparece quando
-mobile_nav e verdadeiro (dashboard): logotipo + avatar.
+Barra superior da area logada (layout 2c). No celular so aparece quando
+mobile_nav e verdadeiro (dashboard, perfil): logotipo + avatar.
 {% endcomment %}
 <header class="app-header{% if not mobile_nav %} d-only{% endif %}">
-  <nav class="nav app-nav container" aria-label="{% translate 'Navegação principal' %}">
-    <a class="nav-brand" href="{% url 'core:dashboard' %}">{% include "components/logo.html" %}</a>
-    <a class="d-only" href="{% url 'core:dashboard' %}"{% if active_nav == "home" %} aria-current="page"{% endif %}>{% translate "Início" %}</a>
-    <a class="d-only" href="{% url 'core:dashboard' %}#minhas-cartas">{% translate "Minhas cartas" %}</a>
+  <nav class="nav-desktop app-nav container" aria-label="{% translate 'Navegação principal' %}">
+    <a href="{% url 'core:dashboard' %}">{% include "components/logo.html" %}</a>
+    <a class="nav-link d-only{% if active_nav == 'home' %} is-current{% endif %}" href="{% url 'core:dashboard' %}"{% if active_nav == "home" %} aria-current="page"{% endif %}>{% translate "Início" %}</a>
+    <a class="nav-link d-only{% if active_nav == 'letters' %} is-current{% endif %}" href="{% url 'core:dashboard' %}#minhas-cartas"{% if active_nav == "letters" %} aria-current="page"{% endif %}>{% translate "Minhas cartas" %}</a>
+    <a class="nav-link d-only{% if active_nav == 'profile' %} is-current{% endif %}" href="{% url 'accounts:profile' %}"{% if active_nav == "profile" %} aria-current="page"{% endif %}>{% translate "Perfil" %}</a>
+    <span class="d-only push"></span>
     <div class="d-only">{% include "components/language_selector.html" %}</div>
-    <div class="d-only">{% include "components/theme_switcher.html" %}</div>
-    <details class="dropdown user-menu d-only{% if active_nav == 'profile' %} is-current{% endif %}">
-      <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+    <details class="dropdown user-menu d-only">
+      <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar avatar-md">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
         <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Perfil" %}</a>
         <div class="dropdown-sep"></div>

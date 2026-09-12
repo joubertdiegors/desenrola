@@ -1,4 +1,5 @@
 {% comment %}
-Interruptor. Parametros: name, checked (bool), size (sm | md | lg),
-label (texto para leitores de tela), theme (True liga ao tema claro/escuro).
-{% endcomment %}<label class="switch{% if size %} switch-{{ size }}{% endif %}"><input type="checkbox"{% if name %} name="{{ name }}"{% endif %}{% if checked %} checked{% endif %}{% if theme %} data-theme-switch{% endif %}{% if label %} aria-label="{{ label }}"{% endif %}><span class="track"></span><span class="knob"></span></label>
+Interruptor (comunicacoes, ativo/inativo). Parametros: name, checked
+(bool), size ("sm" para a tabela do admin), label (para leitores de tela).
+O clique e tratado por static/js/app.js (delegado em .toggle).
+{% endcomment %}<button type="button" class="toggle{% if size %} toggle-{{ size }}{% endif %}{% if checked %} is-on{% endif %}" role="switch" aria-checked="{% if checked %}true{% else %}false{% endif %}"{% if label %} aria-label="{{ label }}"{% endif %}><input type="checkbox" class="visually-hidden" tabindex="-1"{% if name %} name="{{ name }}"{% endif %}{% if checked %} checked{% endif %}></button>

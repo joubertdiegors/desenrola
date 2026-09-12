@@ -1,25 +1,15 @@
 {% load i18n %}{% comment %}
-Seletor de idioma em dropdown. Padrao: codigo atual como tag neutra na
-barra. variant="footer": globo + nome do idioma, abrindo para cima (rodape
-da landing). Envia para set_language (fora do prefixo de idioma), que
-traduz a URL atual para o idioma escolhido.
+Seletor de idioma em dropdown, com globo. variant="footer" abre para cima
+(rodape). Envia para set_language (fora do prefixo de idioma), que traduz
+a URL atual para o idioma escolhido.
 {% endcomment %}{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as AVAILABLE_LANGUAGES %}{% get_language_info_list for AVAILABLE_LANGUAGES as language_list %}
-<details class="dropdown lang">
-  {% if variant == "footer" %}
-  <summary class="lang-footer-summary" aria-label="{% translate 'Idioma' %}"><i class="ph ph-globe" aria-hidden="true"></i>{% for language in language_list %}{% if language.code == CURRENT_LANGUAGE %}{{ language.name_local|capfirst }}{% endif %}{% endfor %} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
-  {% else %}
-  <summary aria-label="{% translate 'Idioma' %}: {{ CURRENT_LANGUAGE|upper }}">
-    <span class="tag tag-neutral">{{ CURRENT_LANGUAGE|upper }}</span>
-  </summary>
-  {% endif %}
-  <form class="dropdown-menu{% if variant == 'footer' %} is-up{% endif %}" action="{% url 'set_language' %}" method="post">
+<details class="dropdown lang-dropdown">
+  <summary aria-label="{% translate 'Idioma' %}" class="input site-nav-lang"><i class="ph ph-globe" aria-hidden="true"></i>{% for language in language_list %}{% if language.code == CURRENT_LANGUAGE %}{{ language.code|upper }}{% endif %}{% endfor %} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+  <form class="dropdown-menu{% if variant == 'footer' %} is-up is-left{% endif %}" action="{% url 'set_language' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-    <div class="dropdown-head">{% translate "Idioma" %}</div>
     {% for language in language_list %}
-      <button type="submit" name="language" value="{{ language.code }}" class="dropdown-item"{% if language.code == CURRENT_LANGUAGE %} aria-current="true"{% endif %}>
-        <span class="lang-code">{{ language.code|upper }}</span>{{ language.name_local|capfirst }}
-      </button>
+      <button type="submit" name="language" value="{{ language.code }}" class="dropdown-item"{% if language.code == CURRENT_LANGUAGE %} aria-current="true"{% endif %}>{{ language.name_local|capfirst }}</button>
     {% endfor %}
   </form>
 </details>

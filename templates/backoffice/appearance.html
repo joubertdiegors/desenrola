@@ -1,0 +1,74 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administracao · Aparencia (layouts 2i desktop e 4m celular). Escolha da
+cor principal e da cor de sucesso do site, com pre-visualizacao ao vivo:
+como as duas rodam em variaveis CSS no <html>, a troca por
+static/js/theme.js atualiza esta mesma pagina na hora.
+Contexto: primary_swatches, success_swatches.
+{% endcomment %}
+
+{% block bo_main_class %}bo-grid{% endblock %}
+
+{% block bo_main %}
+<div class="bo-head span-2 d-only">
+  <div><h1>{% translate "Aparência" %}</h1><p class="text-muted bo-appearance-note">{% translate "Defina as cores do site. Títulos, tintas claras e estados são derivados automaticamente da cor principal." %}</p></div>
+  <button type="button" class="btn btn-ghost push">{% translate "Restaurar padrão" %}</button>
+  <button type="button" class="btn btn-primary">{% translate "Publicar tema" %}</button>
+</div>
+<p class="m-only text-muted">{% translate "Defina as cores do site. Títulos, tintas e estados são derivados da cor principal." %}</p>
+
+<div class="bo-panel">
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Cor principal" %}</h3>
+      <span class="note d-only">{% translate "Botões, links, stepper, ícones" %}</span>
+    </div>
+    <div class="bo-appearance-swatches">
+      {% for swatch in primary_swatches %}
+      <button type="button" class="swatch {{ swatch.swatch }}{% if forloop.first %} is-on{% endif %}" data-theme-primary="{{ swatch.cls }}" aria-label="{{ swatch.name }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"></button>
+      {% endfor %}
+    </div>
+    <div class="notice notice-success notice-sm"><i class="ph-fill ph-check-circle" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Contraste do texto branco sobre a cor principal: <strong>5,6:1</strong> — aprovado (mín. 4,5:1).{% endblocktranslate %}</span></div>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Cor de sucesso" %}</h3>
+      <span class="note d-only">{% translate "Botão “Gerar PDF”, WhatsApp, confirmações" %}</span>
+    </div>
+    <div class="bo-appearance-swatches">
+      {% for swatch in success_swatches %}
+      <button type="button" class="swatch {{ swatch.swatch }}{% if forloop.first %} is-on{% endif %}" data-theme-success="{{ swatch.cls }}" aria-label="{{ swatch.name }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"></button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card bo-card d-only form-grid">
+    <div class="field"><label>{% translate "Fundo da página" %}</label><div class="input is-readonly"><span>#f4f7fc</span></div></div>
+    <div class="field"><label>{% translate "Cor de erro" %}</label><div class="input is-readonly"><span>#d64545</span></div></div>
+    <div class="field"><label>{% translate "Raio dos cantos" %}</label><div class="input is-readonly">{% translate "Médio (10–14px)" %}</div></div>
+    <div class="field"><label>{% translate "Logotipo" %}</label><div class="input is-readonly text-accent"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Enviar SVG / PNG" %}</div></div>
+  </div>
+</div>
+
+<div class="card bo-preview">
+  <div class="bo-preview-head">{% translate "Pré-visualização ao vivo" %}</div>
+  <div class="bo-preview-body">
+    <a href="#">{% include "components/logo.html" with small=True %}</a>
+    <div class="stepper" aria-hidden="true">
+      <span class="step-dot is-done"><i class="ph-bold ph-check"></i></span><span class="step-line is-done"></span>
+      <span class="step-dot is-current">2</span><span class="step-line"></span>
+      <span class="step-dot">3</span><span class="step-line"></span>
+      <span class="step-dot">4</span>
+    </div>
+    <div class="field"><label>{% translate "Data de chegada" %}</label><div class="input"><span class="input-static is-placeholder">DD/MM/AAAA</span><i class="ph ph-calendar-blank input-icon" aria-hidden="true"></i></div></div>
+    <div class="notice notice-sm"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à de chegada." %}</span></div>
+    <div class="bo-preview-actions">
+      <button type="button" class="btn btn-secondary"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</button>
+      <button type="button" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+    </div>
+    <button type="button" class="btn btn-success"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Gerar Carta Convite em PDF" %}</button>
+  </div>
+</div>
+{% endblock %}

@@ -1,99 +1,72 @@
 /*
  * Desenrola — theme.js
- * Alternancia claro/escuro, consistente em todas as telas.
  *
- * Replica o mecanismo do arquivo de identidade visual: a preferencia fica
- * em localStorage na chave "desenrola.theme" com os valores "escuro"
- * (padrao) e "claro"; o tema claro e a classe `light` no <html>. O valor
- * "sistema" (opcao do perfil) segue a preferencia do sistema operacional.
+ * A v2 do design nao tem modo escuro: e um tema unico e claro. O que e
+ * parametrizavel e a COR (principal e de sucesso), pelo backoffice em
+ * Aparencia — mesmo mecanismo do arquivo de referencia (desenrola-v2-1
+ * -sistema.html): duas classes no <html>, uma por cor, persistidas em
+ * localStorage.
  *
- * O template base aplica a classe antes do primeiro paint (script inline no
- * <head>); este arquivo cuida da interacao:
- *   - [data-theme-toggle]           alterna entre os dois temas (botao sol/lua);
- *   - [data-theme-option="claro"]   escolhe um tema explicitamente (segmentado);
- *   - [data-theme-switch]           interruptor "Modo claro" (checkbox).
+ * Isso e uma personalizacao do NAVEGADOR de quem esta vendo a pagina, nao
+ * uma configuracao do site publicada no servidor — o backoffice ainda nao
+ * tem onde guardar isso no banco (fase visual). Quando essa etapa entrar,
+ * a leitura passa a vir do servidor e este arquivo perde a necessidade de
+ * ler o localStorage no primeiro paint.
+ *
+ *   [data-theme-primary="t-roxo"]  escolhe a cor principal (swatch)
+ *   [data-theme-success="s-azul"]  escolhe a cor de sucesso (swatch)
+ *   valor vazio ("") volta para o padrao (azul / verde)
  */
 (function () {
   "use strict";
 
   var KEY = "desenrola.theme";
   var root = document.documentElement;
-  var media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+  var PRIMARY_CLASSES = ["t-azul", "t-roxo", "t-verde", "t-laranja", "t-grafite"];
+  var SUCCESS_CLASSES = ["s-verde", "s-azul", "s-ambar", "s-teal"];
 
-  function stored() {
-    try { return localStorage.getItem(KEY); } catch (e) { return null; }
-  }
-
-  function resolve(pref) {
-    if (pref === "claro") { return "claro"; }
-    if (pref === "sistema") { return media && media.matches ? "claro" : "escuro"; }
-    return "escuro";
-  }
-
-  function apply(pref) {
-    var theme = resolve(pref);
-    var light = theme === "claro";
-    root.classList.toggle("light", light);
-
-    var toggles = document.querySelectorAll("[data-theme-toggle]");
-    for (var i = 0; i < toggles.length; i++) {
-      toggles[i].setAttribute("aria-pressed", light ? "true" : "false");
-    }
-
-    var options = document.querySelectorAll("[data-theme-option]");
-    for (var j = 0; j < options.length; j++) {
-      var option = options[j];
-      var selected = option.getAttribute("data-theme-option") === pref;
-      var input = option.querySelector("input");
-      if (input) { input.checked = selected; }
-    }
-
-    var switches = document.querySelectorAll("[data-theme-switch]");
-    for (var k = 0; k < switches.length; k++) {
-      switches[k].checked = light;
+  function read() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || "{}");
+    } catch (e) {
+      return {};
     }
   }
 
-  function setTheme(pref) {
-    if (pref !== "claro" && pref !== "sistema") { pref = "escuro"; }
-    apply(pref);
-    try { localStorage.setItem(KEY, pref); } catch (e) { /* armazenamento indisponivel */ }
+  function apply(theme) {
+    PRIMARY_CLASSES.forEach(function (cls) { root.classList.remove(cls); });
+    SUCCESS_CLASSES.forEach(function (cls) { root.classList.remove(cls); });
+    if (theme.p) { root.classList.add(theme.p); }
+    if (theme.s) { root.classList.add(theme.s); }
+
+    var swatches = document.querySelectorAll("[data-theme-primary], [data-theme-success]");
+    for (var i = 0; i < swatches.length; i++) {
+      var el = swatches[i];
+      var isPrimary = el.hasAttribute("data-theme-primary");
+      var value = el.getAttribute(isPrimary ? "data-theme-primary" : "data-theme-success");
+      var current = isPrimary ? theme.p || "" : theme.s || "";
+      el.classList.toggle("is-on", value === current);
+      el.setAttribute("aria-pressed", value === current ? "true" : "false");
+    }
   }
 
-  function currentTheme() {
-    return root.classList.contains("light") ? "claro" : "escuro";
-  }
-
-  function toggleTheme() {
-    setTheme(currentTheme() === "claro" ? "escuro" : "claro");
+  function setTheme(partial) {
+    var theme = read();
+    Object.assign(theme, partial);
+    apply(theme);
+    try { localStorage.setItem(KEY, JSON.stringify(theme)); } catch (e) { /* indisponivel */ }
   }
 
   document.addEventListener("click", function (event) {
-    var toggle = event.target.closest("[data-theme-toggle]");
-    if (toggle) { toggleTheme(); }
-  });
+    var primary = event.target.closest("[data-theme-primary]");
+    if (primary) { setTheme({ p: primary.getAttribute("data-theme-primary") }); return; }
 
-  document.addEventListener("change", function (event) {
-    var option = event.target.closest("[data-theme-option]");
-    if (option && event.target.checked) {
-      setTheme(option.getAttribute("data-theme-option"));
-      return;
-    }
-    if (event.target.matches && event.target.matches("[data-theme-switch]")) {
-      setTheme(event.target.checked ? "claro" : "escuro");
-    }
+    var success = event.target.closest("[data-theme-success]");
+    if (success) { setTheme({ s: success.getAttribute("data-theme-success") }); }
   });
-
-  if (media && media.addEventListener) {
-    media.addEventListener("change", function () {
-      if (stored() === "sistema") { apply("sistema"); }
-    });
-  }
 
   window.Desenrola = window.Desenrola || {};
   window.Desenrola.setTheme = setTheme;
-  window.Desenrola.toggleTheme = toggleTheme;
-  window.Desenrola.currentTheme = currentTheme;
 
-  apply(stored() || "escuro");
+  apply(read());
 })();

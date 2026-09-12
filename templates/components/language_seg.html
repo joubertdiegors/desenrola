@@ -1,9 +1,9 @@
 {% load i18n %}{% comment %}
-Idioma em segmentado (barra da landing, admin, perfil). Cada opcao envia a
-troca para set_language. Parametro opcional: size (xs | sm | md | lg).
+Escolha de idioma em botoes (perfil > Idioma). Cada opcao envia a troca
+para set_language.
 {% endcomment %}{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as AVAILABLE_LANGUAGES %}
-<form class="seg lang-seg{% if size %} seg-{{ size }}{% endif %}" action="{% url 'set_language' %}" method="post" aria-label="{% translate 'Idioma' %}">
+<form class="lang-choice" action="{% url 'set_language' %}" method="post" aria-label="{% translate 'Idioma da interface' %}">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ request.get_full_path }}">
-  {% for code, name in AVAILABLE_LANGUAGES %}<button type="submit" name="language" value="{{ code }}" class="seg-opt"{% if code == CURRENT_LANGUAGE %} aria-current="true"{% endif %}>{{ code|upper }}</button>{% endfor %}
+  {% for code, name in AVAILABLE_LANGUAGES %}<button type="submit" name="language" value="{{ code }}" class="btn btn-sm {% if code == CURRENT_LANGUAGE %}btn-primary{% else %}btn-ghost{% endif %}"{% if code == CURRENT_LANGUAGE %} aria-current="true"{% endif %}>{{ code|upper }}</button>{% endfor %}
 </form>

@@ -1,57 +1,48 @@
 {% extends "app_base.html" %}
 {% load i18n %}
 {% comment %}
-Resultado / PDF (layouts 1g desktop e 1p celular). O documento e um mock
-visual (components/paper_letter.html); a reproducao do PDF oficial vira
-com o arquivo original. Os botoes de acao sao ilustrativos.
+Conclusão: carta gerada (layout 2g desktop, 4k celular). O documento e um
+mock visual (components/paper_letter.html); a reproducao do PDF oficial
+vira com o arquivo original. So aparece no desktop — a v2 nao mostra
+preview do PDF na tela de conclusao do celular.
 {% endcomment %}
 
 {% block title %}{% translate "Carta convite" %} · Desenrola{% endblock %}
 
-{% block mobile_header %}
-<div class="m-head m-only">
-  <a class="btn btn-ghost btn-icon btn-icon-44" href="{% url 'core:dashboard' %}" aria-label="{% translate 'Voltar' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i></a>
-  <span class="m-head-title">{% translate "Carta convite" %}</span>
-  <span class="tag tag-accent">{{ letter.status_label }}</span>
-</div>
-{% endblock %}
-
 {% block content %}
-<div class="result container">
-  <div class="alert alert-success alert-lg" role="status">
-    <i class="ph ph-check-circle" aria-hidden="true"></i>
-    <span><strong><span class="d-only">{% translate "Carta gerada com sucesso." %}</span><span class="m-only">{% translate "Carta gerada." %}</span></strong> <span class="d-only">{% translate "Imprima, assine à mão e entregue ao convidado junto com a cópia do seu documento." %}</span><span class="m-only">{% translate "Imprima, assine à mão e entregue ao convidado." %}</span></span>
+<div class="container">
+<div class="done-wrap">
+  <div class="card done-card">
+    <span class="done-icon"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
+    <h1>{% translate "Sua Carta Convite está pronta!" %}</h1>
+    <p class="text-muted">{% translate "Confira o documento antes de utilizá-lo." %}</p>
+    <div class="tint done-info">
+      <span class="done-info-row"><i class="ph ph-globe" aria-hidden="true"></i><strong>{% translate "Idioma:" %}</strong> {{ letter.language }}</span>
+      <span class="done-info-row"><i class="ph ph-calendar-blank" aria-hidden="true"></i><strong>{% translate "Gerado em:" %}</strong> {{ letter.generated_at }}</span>
+      <span class="done-info-row is-multiline"><i class="ph ph-file-pdf" aria-hidden="true"></i><span><strong>{% translate "Nome do arquivo:" %}</strong><br>{{ letter.filename }}</span></span>
+    </div>
+    <div class="done-actions">
+      <button type="button" class="btn btn-primary"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Baixar PDF" %}</button>
+      <button type="button" class="btn btn-success"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i>{% translate "Enviar pelo WhatsApp" %}</button>
+      <a class="btn btn-secondary" href="{% url 'letters:new' %}"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>{% translate "Gerar nova Carta Convite" %}</a>
+      <div class="done-actions-row">
+        <button type="button" class="btn btn-text"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</button>
+        <button type="button" class="btn btn-text"><i class="ph ph-share-network" aria-hidden="true"></i>{% translate "Compartilhar" %}</button>
+        <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-house" aria-hidden="true"></i>{% translate "Dashboard" %}</a>
+      </div>
+    </div>
+    <p class="done-thanks">{% translate "Obrigado por utilizar nossa ferramenta!" %}</p>
+    <p class="done-thanks-sub">{% translate "Mais pessoas conectadas a um mundo sem fronteiras." %}</p>
   </div>
 
-  <div class="result-grid">
-    <div class="viewer">
-      <div class="viewer-bar d-only">
-        <span>{{ letter.filename }}</span>
-        <span class="viewer-bar-tools"><i class="ph ph-magnifying-glass-minus" aria-hidden="true"></i>100% <i class="ph ph-magnifying-glass-plus" aria-hidden="true"></i><span>{% translate "Página 1 de 1" %}</span></span>
-      </div>
-      <div class="paper d-only">{% include "components/paper_letter.html" with variant="full" %}</div>
-      <div class="paper m-only">{% include "components/paper_letter.html" with variant="full-m" %}</div>
-      <div class="viewer-note d-only"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Documento no layout oficial — o Desenrola não altera o modelo." %}</div>
-      <div class="viewer-note m-only">{% translate "Toque para ampliar · 1 página" %}</div>
+  <div class="done-preview d-only">
+    <div class="done-preview-bar">
+      <span>{% translate "Pré-visualização" %} · {{ letter.filename }}</span>
+      <span>{% translate "Página 1 de 1" %}</span>
     </div>
-
-    <aside class="result-aside">
-      <div class="card-kicker d-only">{% blocktranslate with name=letter.guest %}Carta para {{ name }}{% endblocktranslate %}</div>
-      <button type="button" class="btn btn-primary btn-block act-save"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Salvar PDF" %}</button>
-      <button type="button" class="btn btn-secondary btn-block act-print"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</button>
-      <button type="button" class="btn btn-secondary btn-block act-share"><i class="ph ph-share-network" aria-hidden="true"></i>{% translate "Compartilhar" %}</button>
-      <button type="button" class="btn btn-secondary btn-block act-wa"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i>{% translate "Enviar pelo WhatsApp" %}</button>
-      <div class="hr d-only"></div>
-      <div class="card info-card d-only">
-        <div class="info-row"><span class="k">{% translate "Idioma" %}</span><span>{{ letter.language }}</span></div>
-        <div class="info-row"><span class="k">{% translate "Gerada em" %}</span><span>{{ letter.generated_at }}</span></div>
-        <div class="info-row"><span class="k">{% translate "Status" %}</span><span class="tag tag-accent">{{ letter.status_label }}</span></div>
-      </div>
-      <a class="btn btn-ghost act-fix d-only" href="{% url 'letters:new' %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Corrigir dados" %}</a>
-      <a class="btn btn-ghost act-back" href="{% url 'core:dashboard' %}"><i class="ph ph-arrow-left d-only" aria-hidden="true"></i>{% translate "Voltar para o dashboard" %}</a>
-    </aside>
+    <div class="paper">{% include "components/paper_letter.html" with variant="full" host_name=user.full_name %}</div>
+    <span class="done-preview-note"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Layout do modelo oficial — o site não o altera." %}</span>
   </div>
 </div>
+</div>
 {% endblock %}
-
-{% block tabbar %}{% endblock %}

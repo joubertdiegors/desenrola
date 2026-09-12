@@ -1,12 +1,12 @@
 {% extends "app_base.html" %}
 {% load i18n %}
 {% comment %}
-Perfil do usuario autenticado. Desktop (1h): menu lateral e secoes numa
-coluna. Celular (1q): cabecalho com avatar, lista de itens, comunicacoes e
-sair; cada item abre a secao correspondente (?secao=...).
+Perfil do usuario autenticado (layout 2h desktop, 4l celular). Desktop:
+menu lateral e secoes numa coluna. Celular: lista de atalhos; cada item
+abre a secao correspondente (?secao=...), que reusa a secao do desktop.
 Contexto: profile_form, password_form, section (ou None), section_title.
-Idioma da interface e aparencia sao reais; as comunicacoes ainda nao tem
-campo no modelo e ficam ilustrativas.
+Idioma da interface e real; aparencia e comunicacoes ainda sao
+ilustrativas (sem campo no modelo).
 {% endcomment %}
 
 {% block title %}{% translate "Perfil" %} · Desenrola{% endblock %}
@@ -14,8 +14,8 @@ campo no modelo e ficam ilustrativas.
 {% block mobile_header %}
 {% if section %}
 <div class="m-head m-only">
-  <a class="btn btn-ghost btn-icon btn-icon-44" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Voltar' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i></a>
-  <span class="m-head-title">{{ section_title }}</span>
+  <a class="btn btn-ghost btn-icon-sm" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Voltar' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i></a>
+  <span class="logo-name">{{ section_title }}</span>
 </div>
 {% endif %}
 {% endblock %}
@@ -24,62 +24,61 @@ campo no modelo e ficam ilustrativas.
 {% get_current_language as CURRENT_LANGUAGE %}
 {% get_language_info for CURRENT_LANGUAGE as current_language %}
 {% with current=section|default:"dados" %}
-<div class="profile container{% if section %} has-section{% endif %}">
-  <aside class="profile-side">
+<div class="container profile{% if section %} has-section{% endif %}">
+  <aside class="profile-side d-only card">
     <div class="profile-user">
       <span class="avatar avatar-lg">{{ user.get_initials }}</span>
       <div>
         <div class="profile-user-name">{{ user.full_name }}</div>
-        <div class="profile-user-sub"><span class="d-only">{% blocktranslate with date=user.date_joined|date:"b. Y" %}Conta desde {{ date }}{% endblocktranslate %}</span><span class="m-only">{{ user.email }}</span></div>
+        <div class="profile-user-sub">{% blocktranslate with date=user.date_joined|date:"b. Y" %}Conta desde {{ date }}{% endblocktranslate %}</div>
       </div>
     </div>
-
-    <nav class="side-menu d-only" aria-label="{% translate 'Seções do perfil' %}">
-      <a href="{% url 'accounts:profile' %}?secao=dados#dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
-      <a href="{% url 'accounts:profile' %}?secao=senha#senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
-      <a href="{% url 'accounts:profile' %}?secao=idioma#idioma"{% if current == "idioma" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idioma" %}</a>
-      <a href="{% url 'accounts:profile' %}?secao=comunicacoes#comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
-      <div class="hr"></div>
+    <nav class="side-menu" aria-label="{% translate 'Seções do perfil' %}">
+      <a class="{% if current == 'dados' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
+      <a class="{% if current == 'senha' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
+      <a class="{% if current == 'idioma' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=idioma"{% if current == "idioma" %} aria-current="page"{% endif %}><i class="ph ph-globe" aria-hidden="true"></i>{% translate "Idioma" %}</a>
+      <a class="{% if current == 'comunicacoes' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
       <form method="post" action="{% url 'accounts:logout' %}">
         {% csrf_token %}
-        <button type="submit"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair" %}</button>
+        <button type="submit" class="hr-item"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair" %}</button>
       </form>
     </nav>
-
-    <div class="profile-home m-only">
-      <div class="list">
-        <a class="list-item" href="?secao=dados"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-        <a class="list-item" href="?secao=senha"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Alterar senha" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-        <a class="list-item" href="?secao=idioma"><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idioma" %}<span class="list-value">{{ current_language.name_local|capfirst }}</span><i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-        <div class="list-item"><i class="ph ph-sun" aria-hidden="true"></i>{% translate "Modo claro" %}<span class="list-end">{% include "components/switch.html" with size="lg" theme=True label=_("Modo claro") %}</span></div>
-      </div>
-
-      <div class="profile-list">
-        <div class="card-kicker">{% translate "Comunicações" %}</div>
-        <div class="list">
-          <div class="list-item pref"><span>{% translate "Avisos sobre minhas cartas" %}<span class="pref-help">{% translate "Geração e lembretes." %}</span></span>{% include "components/switch.html" with size="lg" checked=True name="notify_letters" label=_("Avisos sobre minhas cartas") %}</div>
-          <div class="list-item pref"><span>{% translate "Novidades do Desenrola" %}<span class="pref-help">{% translate "Até um e-mail por mês." %}</span></span>{% include "components/switch.html" with size="lg" name="news" label=_("Novidades do Desenrola") %}</div>
-        </div>
-      </div>
-
-      <form class="profile-signout-form" method="post" action="{% url 'accounts:logout' %}">
-        {% csrf_token %}
-        <button class="btn btn-secondary btn-block profile-signout" type="submit"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
-      </form>
-      <div class="profile-foot">Desenrola v1.0 · <a href="#">{% translate "Privacidade" %}</a></div>
-    </div>
   </aside>
 
+  <div class="profile-home m-only">
+    <div class="profile-avatar-row">
+      <span class="avatar avatar-xl">{{ user.get_initials }}</span>
+      <div><h1>{{ user.full_name }}</h1><p class="text-muted">{{ user.email }}</p></div>
+    </div>
+    <div class="notice profile-notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Estes dados são usados como <strong>dados do anfitrião</strong> em todas as cartas.{% endblocktranslate %}</span></div>
+    <div class="list">
+      <a class="list-item" href="?secao=dados"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
+      <a class="list-item" href="?secao=dados#endereco"><i class="ph ph-map-pin" aria-hidden="true"></i>{% translate "Endereço na Bélgica" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
+      <a class="list-item" href="?secao=senha"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Alterar senha" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
+      <a class="list-item" href="?secao=idioma"><i class="ph ph-globe" aria-hidden="true"></i>{% translate "Idioma" %}<span class="list-value">{{ current_language.name_local|capfirst }}</span><i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
+    </div>
+    <div class="card">
+      <div class="profile-comm-kicker"><span class="kicker">{% translate "Comunicações" %}</span></div>
+      <label class="list-item"><span><strong>{% translate "Avisos sobre minhas cartas" %}</strong><span class="list-sub list-sub-block">{% translate "Geração e lembretes." %}</span></span>{% include "components/switch.html" with checked=True label=_("Avisos sobre minhas cartas") %}</label>
+      <label class="list-item"><span><strong>{% translate "Novidades e parceiros" %}</strong><span class="list-sub list-sub-block">{% translate "Até um e-mail por mês." %}</span></span>{% include "components/switch.html" with label=_("Novidades e parceiros") %}</label>
+    </div>
+    <form method="post" action="{% url 'accounts:logout' %}" class="profile-signout-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost btn-block"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
+    </form>
+    <p class="text-muted profile-foot">Desenrola v1.0 · <a href="#">{% translate "Privacidade" %}</a></p>
+  </div>
+
   <div class="profile-main">
-    <section class="profile-section{% if section == 'dados' %} is-current{% endif %}" id="dados">
-      <h2 class="has-sub">{% translate "Dados pessoais" %}</h2>
-      <p class="section-sub">{% translate "Usados como dados do anfitrião em cada nova carta." %}</p>
+    <section class="card profile-section{% if section == 'dados' %} is-current{% endif %}" id="dados">
+      <h2>{% translate "Dados pessoais" %}</h2>
+      <p class="section-sub">{% translate "Usados como dados do anfitrião em cada nova carta — por isso a etapa 3 só os exibe." %}</p>
       <form method="post" action="{% url 'accounts:profile' %}" novalidate>
         {% csrf_token %}
         <input type="hidden" name="action" value="dados">
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
         {% if profile_form.non_field_errors %}
-        <div class="alert alert-error" role="alert"><i class="ph ph-x-circle" aria-hidden="true"></i><span>{% for error in profile_form.non_field_errors %}{{ error }} {% endfor %}</span></div>
+        <div class="notice notice-error" role="alert"><i class="ph-fill ph-x-circle" aria-hidden="true"></i><span>{% for error in profile_form.non_field_errors %}{{ error }} {% endfor %}</span></div>
         {% endif %}
         <div class="form-grid">
           <div class="field span-2{% if profile_form.full_name.errors %} is-invalid{% endif %}">
@@ -97,10 +96,9 @@ campo no modelo e ficam ilustrativas.
             <input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" value="{{ profile_form.phone.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.phone.errors %}
           </div>
-          <div class="field span-2{% if profile_form.address_line1.errors %} is-invalid{% endif %}">
-            <label for="p_address">{% translate "Endereço completo" %}</label>
+          <div class="field span-2" id="endereco">
+            <label for="p_address">{% translate "Endereço completo na Bélgica" %}</label>
             <input class="input" id="p_address" name="address_line1" type="text" autocomplete="street-address" maxlength="255" value="{{ profile_form.address_line1.value|default:'' }}">
-            {% include "components/field_errors.html" with errors=profile_form.address_line1.errors %}
           </div>
           <div class="field{% if profile_form.postal_code.errors %} is-invalid{% endif %}">
             <label for="p_postal_code">{% translate "Código postal" %}</label>
@@ -120,7 +118,7 @@ campo no modelo e ficam ilustrativas.
       </form>
     </section>
 
-    <section class="profile-section{% if section == 'senha' %} is-current{% endif %}" id="senha">
+    <section class="card profile-section{% if section == 'senha' %} is-current{% endif %}" id="senha">
       <h2>{% translate "Alterar senha" %}</h2>
       <form method="post" action="{% url 'accounts:profile' %}" novalidate>
         {% csrf_token %}
@@ -144,35 +142,30 @@ campo no modelo e ficam ilustrativas.
           </div>
         </div>
         <div class="profile-actions">
-          <button class="btn btn-secondary" type="submit">{% translate "Atualizar senha" %}</button>
+          <button class="btn btn-success" type="submit">{% translate "Atualizar senha" %}</button>
         </div>
       </form>
     </section>
 
-    <section class="profile-section{% if section == 'idioma' %} is-current{% endif %}" id="idioma">
-      <h2>{% translate "Idioma e aparência" %}</h2>
-      <div class="form-grid">
-        <div class="field"><span class="field-label">{% translate "Idioma da interface" %}</span>{% include "components/language_seg.html" %}</div>
+    <section class="card profile-section{% if section == 'idioma' %} is-current{% endif %}" id="idioma">
+      <h2>{% translate "Idioma" %}</h2>
+      <div class="profile-columns">
+        <div class="field">
+          <label>{% translate "Idioma da interface" %}</label>
+          {% include "components/language_seg.html" %}
+        </div>
         <div class="field">
           <label for="p_letter_lang">{% translate "Idioma padrão da carta" %}</label>
-          <select class="input" id="p_letter_lang" name="letter_language"><option>{% translate "Francês" %}</option><option>{% translate "Neerlandês" %}</option><option>{% translate "Inglês" %}</option></select>
-        </div>
-        <div class="field span-2">
-          <span class="field-label" id="lbl_tema">{% translate "Aparência" %}</span>
-          <div class="seg seg-md" role="radiogroup" aria-labelledby="lbl_tema">
-            <label class="seg-opt" data-theme-option="escuro"><input type="radio" name="tema" value="escuro"><i class="ph ph-moon" aria-hidden="true"></i>{% translate "Escuro" %}</label>
-            <label class="seg-opt" data-theme-option="claro"><input type="radio" name="tema" value="claro"><i class="ph ph-sun" aria-hidden="true"></i>{% translate "Claro" %}</label>
-            <label class="seg-opt" data-theme-option="sistema"><input type="radio" name="tema" value="sistema"><i class="ph ph-desktop" aria-hidden="true"></i>{% translate "Sistema" %}</label>
-          </div>
+          <select class="input" id="p_letter_lang" name="letter_language"><option>Français</option><option>English</option><option>Português</option></select>
         </div>
       </div>
     </section>
 
-    <section class="profile-section{% if section == 'comunicacoes' %} is-current{% endif %}" id="comunicacoes">
+    <section class="card profile-section{% if section == 'comunicacoes' %} is-current{% endif %}" id="comunicacoes">
       <h2>{% translate "Comunicações" %}</h2>
-      <div class="prefs">
-        <div class="pref"><span>{% translate "Avisos sobre minhas cartas" %}<span class="pref-help">{% translate "Confirmação de geração e lembretes de validade." %}</span></span>{% include "components/switch.html" with checked=True name="notify_letters" label=_("Avisos sobre minhas cartas") %}</div>
-        <div class="pref"><span>{% translate "Novidades do Desenrola" %}<span class="pref-help">{% translate "No máximo um e-mail por mês. Pode cancelar quando quiser." %}</span></span>{% include "components/switch.html" with name="news" label=_("Novidades do Desenrola") %}</div>
+      <div class="prefs-stack">
+        <label class="pref"><span><strong>{% translate "Avisos sobre minhas cartas" %}</strong><span class="pref-help">{% translate "Confirmação de geração e lembretes." %}</span></span>{% include "components/switch.html" with checked=True label=_("Avisos sobre minhas cartas") %}</label>
+        <label class="pref"><span><strong>{% translate "Novidades e parceiros" %}</strong><span class="pref-help">{% translate "No máximo um e-mail por mês." %}</span></span>{% include "components/switch.html" with label=_("Novidades e parceiros") %}</label>
       </div>
     </section>
   </div>
