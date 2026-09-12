@@ -493,14 +493,20 @@ class TestRevisao:
 
 
 class TestFinalizacao:
-    def test_finalizar_com_tudo_preenchido_muda_o_status(self, auth_client, draft_letter):
+    def test_finalizar_com_tudo_preenchido_gera_a_carta(self, auth_client, draft_letter):
+        """
+        Com o PDF gerado (Fase 4), o fechamento vai ate GENERATED. O
+        COMPLETED intermediario ainda existe: e o estado em que a carta
+        fica se a geracao do PDF falhar (ver
+        `test_finalizar_sem_cidade_no_perfil_nao_finaliza`).
+        """
         _fill_all_steps(auth_client, draft_letter)
 
         response = auth_client.post(_step_url(draft_letter, 6))
 
         draft_letter.refresh_from_db()
         assert response.status_code == 302
-        assert draft_letter.status == Letter.Status.COMPLETED
+        assert draft_letter.status == Letter.Status.GENERATED
 
     def test_finalizar_cria_snapshot(self, auth_client, draft_letter, user):
         _fill_all_steps(auth_client, draft_letter)
@@ -513,15 +519,15 @@ class TestFinalizacao:
         assert draft_letter.snapshot["template_slug"] == official_slug("fr")
         assert draft_letter.snapshot["data"]["guest_name"] == "Maria Santos da Silva"
 
-    def test_finalizar_nao_gera_pdf(self, auth_client, draft_letter):
+    def test_finalizar_gera_e_guarda_o_pdf(self, auth_client, draft_letter):
         _fill_all_steps(auth_client, draft_letter)
 
         auth_client.post(_step_url(draft_letter, 6))
 
         draft_letter.refresh_from_db()
-        assert not draft_letter.pdf_file
-        assert draft_letter.pdf_sha256 == ""
-        assert draft_letter.generated_at is None
+        assert draft_letter.pdf_file
+        assert len(draft_letter.pdf_sha256) == 64
+        assert draft_letter.generated_at is not None
 
     def test_nao_finaliza_com_etapa_obrigatoria_incompleta(self, auth_client, draft_letter):
         auth_client.post(_step_url(draft_letter, 1), VALID_STEP_1)

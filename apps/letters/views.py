@@ -16,6 +16,7 @@ referencia visual da conclusao.
 """
 
 import datetime
+import logging
 
 from django.conf import settings
 from django.contrib import messages
@@ -28,6 +29,10 @@ from django.utils.translation import gettext_lazy as _
 from apps.core import demo
 from apps.letters import services
 from apps.letters.models import Letter
+from apps.letters.pdf_generation import UnsupportedLanguageError
+from pdfengine.exceptions import PdfEngineError
+
+logger = logging.getLogger(__name__)
 
 STEP_META = {
     1: {
@@ -276,9 +281,52 @@ def _finalize(request, letter):
         )
         return redirect("letters:step", letter_uuid=letter.uuid, step=invalid_step)
 
+    # O documento usa dados do perfil que nao sao perguntados no
+    # assistente (endereco, telefone e a cidade do fecho "Fait à ..."). Se
+    # faltar algum, a carta nao pode ser finalizada: o snapshot e
+    # congelado no fechamento, entao finalizar agora deixaria a carta
+    # presa, sem PDF possivel nem depois de corrigir o perfil.
+    missing = services.missing_host_profile_fields(request.user)
+    if missing:
+        messages.error(
+            request,
+            _("Complete o seu perfil antes de finalizar a carta. Falta: %(campos)s.")
+            % {"campos": ", ".join(str(item) for item in missing)},
+        )
+        return redirect("accounts:profile")
+
     letter.snapshot = services.build_snapshot(letter, request.user)
     letter.status = Letter.Status.COMPLETED
     letter.save(update_fields=["snapshot", "status", "updated_at"])
+
+    # A carta ja fica registrada (COMPLETED) aconteca o que acontecer com
+    # o PDF: e melhor do que perder o preenchimento. O status so vira
+    # GENERATED quando o arquivo existir de verdade.
+    try:
+        services.generate_pdf(letter)
+    except UnsupportedLanguageError:
+        # Nao e uma falha: e o limite conhecido de so existir documento
+        # oficial em frances por enquanto. Dizer isso claramente, em vez
+        # de sugerir que algo deu errado.
+        messages.warning(
+            request,
+            _(
+                "A carta foi registrada. O documento oficial em PDF ainda só "
+                "existe em francês — escolha o francês na etapa de idioma "
+                "para gerá-lo."
+            ),
+        )
+        return redirect("core:dashboard")
+    except PdfEngineError:
+        logger.exception("Falha ao gerar o PDF da carta %s", letter.reference)
+        messages.warning(
+            request,
+            _(
+                "A carta foi registrada, mas o PDF não pôde ser gerado. "
+                "Nossa equipe foi avisada."
+            ),
+        )
+        return redirect("core:dashboard")
 
     messages.success(request, _("Carta Convite registrada com sucesso."))
     return redirect("core:dashboard")

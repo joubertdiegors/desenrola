@@ -45,3 +45,9 @@ htmlcov/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Preview visual gerado por pdfengine/tools/render_preview.py -- artefato
+# de desenvolvimento, nao versionado.
+pdfengine/tools/preview_fr.png
+pdfengine/tools/comparacao_fr.png
+pdfengine/tools/diff_fr.png

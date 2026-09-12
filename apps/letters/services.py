@@ -15,7 +15,10 @@ idioma sem versao publicada NAO cai no documento de outro idioma: o
 fluxo para e avisa.
 """
 
+import hashlib
+
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -24,6 +27,7 @@ from apps.doctemplates.official_templates import official_slug
 from apps.doctemplates.schema import OPTION_BASED_TYPES, resolve_label, resolve_options
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
 from apps.letters.models import Letter
+from apps.letters.pdf_generation import render_letter_pdf
 
 # Etapas 1-4 tem campos vindos do field_schema, cada uma na sua secao;
 # 5 (idioma) grava direto em Letter.language; 6 (revisao) so exibe.
@@ -262,8 +266,15 @@ def build_snapshot(letter, user):
     """
     Congela tudo que influenciou a geracao no momento do fechamento: os
     dados preenchidos, o idioma, a versao do modelo usada e os dados do
-    anfitriao vindos do perfil (nome/telefone/endereco) -- para a carta
-    continuar reproduzivel mesmo que o usuario edite o perfil depois.
+    anfitriao vindos do perfil (nome/telefone/endereco/cidade) -- para a
+    carta continuar reproduzivel mesmo que o usuario edite o perfil
+    depois.
+
+    A cidade e congelada SEPARADA do endereco de proposito. O fechamento
+    do documento ("Fait à <cidade>, le <data>") usa a cidade de
+    residencia de quem emite a carta; guardando-a como dado estruturado,
+    reproduzir a carta antiga nunca depende de adivinhar a cidade a
+    partir do texto do endereco.
     """
     return {
         "data": dict(letter.data),
@@ -274,6 +285,60 @@ def build_snapshot(letter, user):
             "full_name": user.full_name,
             "phone": user.phone,
             "address": user.get_address_display(),
+            "city": user.city,
         },
         "finalized_at": timezone.now().isoformat(),
     }
+
+
+def missing_host_profile_fields(user):
+    """
+    Os dados de perfil que o documento oficial exige e o perfil ainda
+    nao tem -- lista vazia quando esta tudo certo.
+
+    Serve para barrar a finalizacao ANTES de congelar um snapshot
+    incompleto: uma carta finalizada sem a cidade ficaria presa, porque o
+    snapshot e imutavel e regerar o PDF continuaria falhando. Devolve a
+    lista de rotulos que faltam (vazia se estiver tudo certo).
+    """
+    missing = []
+    if not (user.full_name or "").strip():
+        missing.append(_("nome completo"))
+    if not (user.get_address_display() or "").strip():
+        missing.append(_("endereço"))
+    if not (user.city or "").strip():
+        missing.append(_("cidade"))
+    if not (user.phone or "").strip():
+        missing.append(_("telefone"))
+    return missing
+
+
+def generate_pdf(letter):
+    """
+    Gera o PDF da carta a partir do seu snapshot congelado e guarda o
+    resultado: o arquivo em `Letter.pdf_file`, a impressao digital em
+    `Letter.pdf_sha256`, o instante em `Letter.generated_at`, e so entao
+    o status passa a GENERATED.
+
+    A fonte dos dados e SEMPRE o snapshot, nunca o perfil atual do
+    usuario -- e o que faz uma carta antiga continuar reproduzindo os
+    dados que tinha quando foi emitida, mesmo que o perfil tenha mudado
+    desde entao.
+
+    Se a geracao falhar (falta um dado, um valor nao cabe na area
+    reservada, o PDF base nao pode ser lido), o erro sobe e NADA e
+    gravado: a carta nao vira GENERATED com um arquivo errado.
+    """
+    pdf_bytes = render_letter_pdf(
+        template_version=letter.template_version, snapshot=letter.snapshot
+    )
+    checksum = hashlib.sha256(pdf_bytes).hexdigest()
+
+    letter.pdf_file.save(f"{letter.reference}.pdf", ContentFile(pdf_bytes), save=False)
+    letter.pdf_sha256 = checksum
+    letter.generated_at = timezone.now()
+    letter.status = Letter.Status.GENERATED
+    letter.save(
+        update_fields=["pdf_file", "pdf_sha256", "generated_at", "status", "updated_at"]
+    )
+    return letter

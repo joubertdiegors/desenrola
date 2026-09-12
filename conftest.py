@@ -21,12 +21,23 @@ def idioma_padrao():
 
 @pytest.fixture
 def user(db):
-    """Usuaria comum com senha conhecida (SENHA)."""
+    """
+    Usuaria comum com senha conhecida (SENHA).
+
+    Os dados de perfil sao os MESMOS do anfitriao do documento oficial
+    (pdfengine/assets/fr/) de proposito: assim os testes que finalizam uma
+    carta de ponta a ponta geram um PDF comparavel com o modelo real.
+    A cidade fica num campo proprio (`city`), separada do endereco -- e de
+    la que sai o "Fait à <cidade>" do fecho do documento.
+    """
     return get_user_model().objects.create_user(
         email="claire@exemplo.be",
         password=SENHA,
         full_name="Claire Dubois",
         phone="+32 470 00 00 00",
+        address_line1="Rue des Exemple 25",
+        postal_code="1200",
+        city="Woluwe-Saint-Lambert",
     )
 
 
