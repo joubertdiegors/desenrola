@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% comment %}
+  Template provisorio. Sera substituido na fase de autenticacao.
+{% endcomment %}
+
+{% block title %}{% translate "Entrar" %} | Desenrola{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Entrar" %}</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">{% translate "Entrar" %}</button>
+  </form>
+{% endblock %}

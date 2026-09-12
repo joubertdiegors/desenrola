@@ -1,0 +1,13 @@
+# Desenrola - dependencias de desenvolvimento
+# Instalar com: pip install -r requirements/dev.txt
+
+-r base.txt
+
+pytest==9.1.1
+pytest-django==4.14.0
+factory-boy==3.3.3
+ruff==0.16.7
+django-debug-toolbar==8.0.0
+
+# Compila .po -> .mo no Windows sem precisar do gettext instalado
+polib==1.2.0

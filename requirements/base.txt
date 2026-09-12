@@ -1,0 +1,15 @@
+# Desenrola - dependencias de producao
+# Instalar com: pip install -r requirements/base.txt
+
+Django==5.2.17
+django-environ==0.14.0
+psycopg[binary]==3.3.5
+Pillow==12.3.0
+
+# PDF - a engine sera implementada em fase posterior.
+# pypdf: ler/fundir/achatar o PDF oficial
+# reportlab: gerar a camada de overlay com os dados variaveis
+# pypdfium2: rasterizar paginas para o editor visual de mapeamento
+pypdf==6.18.1
+reportlab==5.0.1
+pypdfium2==5.13.0

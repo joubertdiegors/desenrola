@@ -1,0 +1,7 @@
+# Desenrola - dependencias de producao (PythonAnywhere)
+# Instalar com: pip install -r requirements/prod.txt
+#
+# O PythonAnywhere serve a aplicacao via uWSGI proprio e os arquivos
+# estaticos via mapeamento nginx, portanto nao ha gunicorn/whitenoise aqui.
+
+-r base.txt

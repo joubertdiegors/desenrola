@@ -1,0 +1,23 @@
+# Configuracao de ferramentas do projeto Desenrola.
+# O projeto nao e distribuido como pacote: dependencias ficam em requirements/.
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+exclude = [".venv", "migrations", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "DJ"]
+ignore = [
+    # Modelos base do projeto definem __str__; nao exigir em cada abstrata.
+    "DJ008",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config", "pdfengine"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["test_*.py"]
+testpaths = ["apps", "tests"]
+addopts = "-ra --strict-markers"

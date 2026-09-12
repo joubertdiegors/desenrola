@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Ambiente virtual ---
+.venv/
+venv/
+env/
+
+# --- Segredos e configuracao local ---
+.env
+.env.*
+!.env.example
+
+# --- Django ---
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/*
+!/media/.gitkeep
+
+# --- Traducoes compiladas ---
+# Os .po sao versionados; os .mo sao gerados por compilemessages.
+*.mo
+
+# --- Testes e ferramentas ---
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# --- Editores e sistema operacional ---
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

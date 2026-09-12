@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Painel" %} | Desenrola{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Painel" %}</h1>
+  <p>{% blocktranslate with name=user.get_short_name %}Ola, {{ name }}.{% endblocktranslate %}</p>
+{% endblock %}
