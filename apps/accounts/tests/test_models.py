@@ -92,3 +92,39 @@ class TestUser:
     def test_get_short_name(self):
         user = User(email="curto@exemplo.be", full_name="Joao Pedro Silva")
         assert user.get_short_name() == "Joao"
+
+
+@pytest.mark.django_db
+class TestUserPermissoes:
+    def test_permissao_manage_users_existe(self):
+        from django.contrib.auth.models import Permission
+
+        assert Permission.objects.filter(
+            content_type__app_label="accounts", codename="manage_users"
+        ).exists()
+
+    def test_usuario_comum_nao_tem_a_permissao_por_padrao(self):
+        user = User.objects.create_user(
+            email="comum@exemplo.be", password="senha-forte-123", full_name="Usuario Comum"
+        )
+        assert not user.has_perm("accounts.manage_users")
+
+    def test_usuario_com_grupo_ganha_a_permissao(self):
+        from django.contrib.auth.models import Group, Permission
+
+        user = User.objects.create_user(
+            email="gerente@desenrola.be", password="senha-forte-123", full_name="Gerente"
+        )
+        grupo = Group.objects.create(name="Gerente de usuários")
+        grupo.permissions.add(
+            Permission.objects.get(content_type__app_label="accounts", codename="manage_users")
+        )
+        user.groups.add(grupo)
+
+        assert user.has_perm("accounts.manage_users")
+
+    def test_superusuario_tem_a_permissao_automaticamente(self):
+        admin = User.objects.create_superuser(
+            email="root2@desenrola.be", password="senha-forte-123", full_name="Root"
+        )
+        assert admin.has_perm("accounts.manage_users")

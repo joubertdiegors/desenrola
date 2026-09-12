@@ -55,3 +55,35 @@ def auth_client(client, user):
     """Cliente ja autenticado como `user`."""
     client.force_login(user)
     return client
+
+
+@pytest.fixture
+def letter_template(db):
+    """Um LetterTemplate qualquer, para testes de doctemplates/letters."""
+    from apps.doctemplates.models import LetterTemplate
+
+    return LetterTemplate.objects.create(
+        name="Carta Convite — curta duração",
+        slug="carta-convite-curta-duracao-fr",
+        description="Modelo oficial para visitas de curta duração.",
+        language="fr",
+    )
+
+
+@pytest.fixture
+def draft_version(letter_template):
+    """Uma TemplateVersion em rascunho, ligada a `letter_template`."""
+    from apps.doctemplates.models import TemplateVersion
+
+    return TemplateVersion.objects.create(
+        template=letter_template,
+        version_number=1,
+        field_schema={"fields": ["nome_convidado", "passaporte"]},
+    )
+
+
+@pytest.fixture
+def published_version(draft_version):
+    """Uma TemplateVersion publicada (imutável), a partir de `draft_version`."""
+    draft_version.publish()
+    return draft_version

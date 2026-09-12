@@ -89,6 +89,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name = _("usuario")
         verbose_name_plural = _("usuarios")
         ordering = ["full_name", "email"]
+        permissions = [
+            ("manage_users", "Pode administrar usuários (ativar, desativar, alterar função)"),
+        ]
 
     def __str__(self):
         return self.email
