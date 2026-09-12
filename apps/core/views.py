@@ -1,15 +1,32 @@
 """
 Views do app core.
 
-Fase de apresentacao visual: as telas usam dados ficticios (apps.core.demo)
-e ainda nao exigem login. Na fase de autenticacao, o dashboard volta a
-usar `login_required` e a ler as cartas do banco.
+As areas do usuario exigem login. As cartas, estatisticas e a area
+administrativa continuam com dados ficticios (apps.core.demo) ate as
+proximas etapas do backend.
 """
 
+from functools import wraps
+
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import render
 
 from . import demo
+
+
+def staff_required(view):
+    """Exige login e, alem disso, `is_staff`; sem isso responde 403."""
+
+    @login_required
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_staff:
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+
+    return wrapper
 
 
 def home(request):
@@ -17,17 +34,13 @@ def home(request):
     return render(request, "core/home.html")
 
 
+@login_required
 def dashboard(request):
-    """Area do usuario. TODO(fase de autenticacao): restaurar @login_required."""
+    """Area do usuario. As cartas listadas ainda sao ficticias."""
     return render(
         request,
         "core/dashboard.html",
-        {
-            "demo_user": demo.USER,
-            "letters": demo.LETTERS,
-            "active_nav": "home",
-            "mobile_nav": True,
-        },
+        {"letters": demo.LETTERS, "active_nav": "home", "mobile_nav": True},
     )
 
 
@@ -57,6 +70,7 @@ def _backoffice_context(active):
     }
 
 
+@staff_required
 def backoffice_users(request, active="users"):
     """Usuarios e permissoes (layout 1i). Tambem responde por visao geral."""
     context = _backoffice_context(active)
@@ -71,6 +85,7 @@ def backoffice_users(request, active="users"):
     return render(request, "backoffice/users.html", context)
 
 
+@staff_required
 def backoffice_letters(request, active="letters"):
     """Cartas de todos os usuarios (sem layout proprio; deriva de 1e e 1i)."""
     context = _backoffice_context(active)
@@ -78,6 +93,7 @@ def backoffice_letters(request, active="letters"):
     return render(request, "backoffice/letters.html", context)
 
 
+@staff_required
 def backoffice_templates(request, active="templates"):
     """Modelos, conteudo, idiomas e sistema (layout 1j)."""
     context = _backoffice_context(active)

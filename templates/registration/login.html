@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% comment %}
-Entrar (layouts 1c desktop e 1l celular). Fase de apresentacao: o envio
-navega para o dashboard (data-mock-submit); a autenticacao real vira depois.
+Entrar (layouts 1c desktop e 1l celular). Formulario da LoginView do Django
+(accounts.forms.LoginForm): o campo `username` e o e-mail. Erros de
+credencial aparecem no alerta de erro, acima dos campos.
 {% endcomment %}
 
 {% block title %}{% translate "Entrar" %} · Desenrola{% endblock %}
@@ -16,19 +17,28 @@ navega para o dashboard (data-mock-submit); a autenticacao real vira depois.
     <h2>{% translate "Entrar" %}</h2>
     <p>{% translate "Bem-vindo de volta." %}</p>
   </div>
-  <form class="auth-form" method="post" data-mock-submit data-next="{% url 'core:dashboard' %}" novalidate>
+  <form class="auth-form" method="post" novalidate>
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if form.non_field_errors %}
+    <div class="alert alert-error" role="alert">
+      <i class="ph ph-x-circle" aria-hidden="true"></i>
+      <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+    </div>
+    {% endif %}
     <div class="auth-fields">
-      <div class="field">
+      <div class="field{% if form.username.errors %} is-invalid{% endif %}">
         <label for="id_username">{% translate "E-mail" %}</label>
-        <input class="input" id="id_username" name="username" type="email" autocomplete="email" placeholder="voce@exemplo.com">
+        <input class="input" id="id_username" name="username" type="email" autocomplete="email" autofocus required placeholder="voce@exemplo.com" value="{{ form.username.value|default:'' }}">
+        {% include "components/field_errors.html" with errors=form.username.errors %}
       </div>
-      <div class="field">
+      <div class="field{% if form.password.errors %} is-invalid{% endif %}">
         <label for="id_password">{% translate "Senha" %}</label>
         <div class="pw-wrap">
-          <input class="input" id="id_password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
+          <input class="input" id="id_password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
           <button type="button" class="pw-toggle" data-pw-toggle aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
         </div>
+        {% include "components/field_errors.html" with errors=form.password.errors %}
       </div>
       <a class="auth-link" href="{% url 'accounts:password_reset' %}">{% translate "Esqueci minha senha" %}</a>
     </div>

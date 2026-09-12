@@ -9,17 +9,12 @@ removido quando as views passarem a ler do banco.
 
 from django.utils.translation import gettext_lazy as _
 
-USER = {
-    "name": "Claire Dubois",
-    "first_name": "Claire",
-    "initials": "CD",
-    "email": "claire.dubois@exemplo.be",
-    "phone": "+32 470 00 00 00",
-    "address": "Rue des Exemple 25 – 1200 Woluwe-Saint-Lambert",
+# Dados do anfitriao que o modelo de usuario ainda nao guarda; o formulario
+# da carta os mostra preenchidos ate a etapa das cartas definir esses campos.
+HOST = {
     "birth_date": "14/03/1985",
     "nationality": _("Belga"),
     "id_number": "00000000",
-    "member_since": _("Conta desde ago. 2026"),
 }
 
 GUEST = {
@@ -95,8 +90,9 @@ ALL_LETTERS = [
     },
 ]
 
-# Cartas da usuaria ficticia (dashboard)
-LETTERS = [letter for letter in ALL_LETTERS if letter["host"] == USER["name"]]
+# Cartas mostradas no dashboard (ficticias, iguais para qualquer usuario ate
+# a etapa das cartas)
+LETTERS = [letter for letter in ALL_LETTERS if letter["host"] == "Claire Dubois"]
 
 
 def get_letter(pk):
@@ -131,15 +127,6 @@ FORM_STEPS = {
         "hint": _("Confira os dados antes de gerar."),
     },
 }
-
-# Secoes do perfil (titulo usado no cabecalho do celular)
-PROFILE_SECTIONS = {
-    "dados": _("Dados pessoais"),
-    "senha": _("Alterar senha"),
-    "idioma": _("Idioma e aparência"),
-    "comunicacoes": _("Comunicações"),
-}
-
 
 # ---------------------------------------------------------------------------
 # Area administrativa

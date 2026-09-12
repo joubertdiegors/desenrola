@@ -1,0 +1,4 @@
+{% comment %}
+Erros de um campo, no estilo do design system (texto e icone na cor de erro).
+Uso: {% include "components/field_errors.html" with errors=form.email.errors %}
+{% endcomment %}{% for error in errors %}<div class="field-error"><i class="ph ph-warning-circle" aria-hidden="true"></i>{{ error }}</div>{% endfor %}

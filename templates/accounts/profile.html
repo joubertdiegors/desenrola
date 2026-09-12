@@ -1,10 +1,12 @@
 {% extends "app_base.html" %}
 {% load i18n %}
 {% comment %}
-Perfil. Desktop (1h): menu lateral e secoes numa coluna. Celular (1q):
-cabecalho com avatar, lista de itens, comunicacoes e sair; cada item abre
-a secao correspondente (?secao=...), que nao tem layout proprio e reusa a
-secao do desktop. Contexto: demo_user, section (ou None), section_title.
+Perfil do usuario autenticado. Desktop (1h): menu lateral e secoes numa
+coluna. Celular (1q): cabecalho com avatar, lista de itens, comunicacoes e
+sair; cada item abre a secao correspondente (?secao=...).
+Contexto: profile_form, password_form, section (ou None), section_title.
+Idioma da interface e aparencia sao reais; as comunicacoes ainda nao tem
+campo no modelo e ficam ilustrativas.
 {% endcomment %}
 
 {% block title %}{% translate "Perfil" %} · Desenrola{% endblock %}
@@ -25,10 +27,10 @@ secao do desktop. Contexto: demo_user, section (ou None), section_title.
 <div class="profile container{% if section %} has-section{% endif %}">
   <aside class="profile-side">
     <div class="profile-user">
-      <span class="avatar avatar-lg">{{ demo_user.initials }}</span>
+      <span class="avatar avatar-lg">{{ user.get_initials }}</span>
       <div>
-        <div class="profile-user-name">{{ demo_user.name }}</div>
-        <div class="profile-user-sub"><span class="d-only">{{ demo_user.member_since }}</span><span class="m-only">{{ demo_user.email }}</span></div>
+        <div class="profile-user-name">{{ user.full_name }}</div>
+        <div class="profile-user-sub"><span class="d-only">{% blocktranslate with date=user.date_joined|date:"b. Y" %}Conta desde {{ date }}{% endblocktranslate %}</span><span class="m-only">{{ user.email }}</span></div>
       </div>
     </div>
 
@@ -72,13 +74,44 @@ secao do desktop. Contexto: demo_user, section (ou None), section_title.
     <section class="profile-section{% if section == 'dados' %} is-current{% endif %}" id="dados">
       <h2 class="has-sub">{% translate "Dados pessoais" %}</h2>
       <p class="section-sub">{% translate "Usados como dados do anfitrião em cada nova carta." %}</p>
-      <form method="post" data-mock-submit data-next="{% url 'accounts:profile' %}" novalidate>
+      <form method="post" action="{% url 'accounts:profile' %}" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="action" value="dados">
+        <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
+        {% if profile_form.non_field_errors %}
+        <div class="alert alert-error" role="alert"><i class="ph ph-x-circle" aria-hidden="true"></i><span>{% for error in profile_form.non_field_errors %}{{ error }} {% endfor %}</span></div>
+        {% endif %}
         <div class="form-grid">
-          <div class="field span-2"><label for="p_name">{% translate "Nome completo" %}</label><input class="input" id="p_name" name="full_name" type="text" autocomplete="name" value="{{ demo_user.name }}"></div>
-          <div class="field"><label for="p_email">{% translate "E-mail" %}</label><input class="input" id="p_email" name="email" type="email" autocomplete="email" value="{{ demo_user.email }}"></div>
-          <div class="field"><label for="p_phone">{% translate "Telefone" %}</label><input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" value="{{ demo_user.phone }}"></div>
-          <div class="field span-2"><label for="p_address">{% translate "Endereço completo" %}</label><input class="input" id="p_address" name="address" type="text" autocomplete="street-address" value="{{ demo_user.address }}"></div>
+          <div class="field span-2{% if profile_form.full_name.errors %} is-invalid{% endif %}">
+            <label for="p_name">{% translate "Nome completo" %}</label>
+            <input class="input" id="p_name" name="full_name" type="text" autocomplete="name" required maxlength="150" value="{{ profile_form.full_name.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.full_name.errors %}
+          </div>
+          <div class="field{% if profile_form.email.errors %} is-invalid{% endif %}">
+            <label for="p_email">{% translate "E-mail" %}</label>
+            <input class="input" id="p_email" name="email" type="email" autocomplete="email" required value="{{ profile_form.email.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.email.errors %}
+          </div>
+          <div class="field{% if profile_form.phone.errors %} is-invalid{% endif %}">
+            <label for="p_phone">{% translate "Telefone" %}</label>
+            <input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" value="{{ profile_form.phone.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.phone.errors %}
+          </div>
+          <div class="field span-2{% if profile_form.address_line1.errors %} is-invalid{% endif %}">
+            <label for="p_address">{% translate "Endereço completo" %}</label>
+            <input class="input" id="p_address" name="address_line1" type="text" autocomplete="street-address" maxlength="255" value="{{ profile_form.address_line1.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.address_line1.errors %}
+          </div>
+          <div class="field{% if profile_form.postal_code.errors %} is-invalid{% endif %}">
+            <label for="p_postal_code">{% translate "Código postal" %}</label>
+            <input class="input" id="p_postal_code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" value="{{ profile_form.postal_code.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.postal_code.errors %}
+          </div>
+          <div class="field{% if profile_form.city.errors %} is-invalid{% endif %}">
+            <label for="p_city">{% translate "Cidade" %}</label>
+            <input class="input" id="p_city" name="city" type="text" autocomplete="address-level2" maxlength="120" value="{{ profile_form.city.value|default:'' }}">
+            {% include "components/field_errors.html" with errors=profile_form.city.errors %}
+          </div>
         </div>
         <div class="profile-actions">
           <button class="btn btn-primary" type="submit">{% translate "Salvar alterações" %}</button>
@@ -89,12 +122,26 @@ secao do desktop. Contexto: demo_user, section (ou None), section_title.
 
     <section class="profile-section{% if section == 'senha' %} is-current{% endif %}" id="senha">
       <h2>{% translate "Alterar senha" %}</h2>
-      <form method="post" data-mock-submit data-next="{% url 'accounts:profile' %}" novalidate>
+      <form method="post" action="{% url 'accounts:profile' %}" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="action" value="senha">
+        <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
         <div class="form-grid">
-          <div class="field span-2"><label for="p_pw0">{% translate "Senha atual" %}</label><input class="input" id="p_pw0" name="old_password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
-          <div class="field"><label for="p_pw1">{% translate "Nova senha" %}</label><input class="input" id="p_pw1" name="new_password1" type="password" autocomplete="new-password" placeholder="{% translate 'Mínimo 8 caracteres' %}"></div>
-          <div class="field"><label for="p_pw2">{% translate "Confirmar nova senha" %}</label><input class="input" id="p_pw2" name="new_password2" type="password" autocomplete="new-password" placeholder="{% translate 'Repita a nova senha' %}"></div>
+          <div class="field span-2{% if password_form.old_password.errors %} is-invalid{% endif %}">
+            <label for="p_pw0">{% translate "Senha atual" %}</label>
+            <input class="input" id="p_pw0" name="old_password" type="password" autocomplete="current-password" required placeholder="••••••••">
+            {% include "components/field_errors.html" with errors=password_form.old_password.errors %}
+          </div>
+          <div class="field{% if password_form.new_password1.errors %} is-invalid{% endif %}">
+            <label for="p_pw1">{% translate "Nova senha" %}</label>
+            <input class="input" id="p_pw1" name="new_password1" type="password" autocomplete="new-password" required placeholder="{% translate 'Mínimo 8 caracteres' %}">
+            {% include "components/field_errors.html" with errors=password_form.new_password1.errors %}
+          </div>
+          <div class="field{% if password_form.new_password2.errors %} is-invalid{% endif %}">
+            <label for="p_pw2">{% translate "Confirmar nova senha" %}</label>
+            <input class="input" id="p_pw2" name="new_password2" type="password" autocomplete="new-password" required placeholder="{% translate 'Repita a nova senha' %}">
+            {% include "components/field_errors.html" with errors=password_form.new_password2.errors %}
+          </div>
         </div>
         <div class="profile-actions">
           <button class="btn btn-secondary" type="submit">{% translate "Atualizar senha" %}</button>

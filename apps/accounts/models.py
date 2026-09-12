@@ -48,6 +48,10 @@ class UserManager(BaseUserManager):
 
         return self._create_user(email, password, **extra_fields)
 
+    def get_by_natural_key(self, email):
+        """Localiza o usuario no login sem diferenciar maiusculas no e-mail."""
+        return self.get(**{f"{self.model.USERNAME_FIELD}__iexact": email})
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     """Usuario do sistema, identificado pelo e-mail."""
@@ -99,3 +103,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         """Primeiro nome, usado em saudacoes da interface."""
         return self.full_name.split(" ")[0] if self.full_name else self.email
+
+    def get_initials(self):
+        """Iniciais para o avatar: primeiro e ultimo nome, ate duas letras."""
+        parts = self.full_name.split()
+        if not parts:
+            return self.email[:1].upper()
+        if len(parts) == 1:
+            return parts[0][:1].upper()
+        return (parts[0][0] + parts[-1][0]).upper()
+
+    def get_address_display(self):
+        """Endereco numa linha: 'Rua 25 – 1200 Cidade'. Vazio se nao houver."""
+        place = " ".join(p for p in (self.postal_code, self.city) if p)
+        return " – ".join(p for p in (self.address_line1, place) if p)

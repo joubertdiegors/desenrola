@@ -102,6 +102,24 @@ O tema claro/escuro e alternado pelo botao sol/lua na barra do dashboard,
 pelo perfil ("Aparencia" no desktop, "Modo claro" no celular) e fica salvo
 no navegador (`localStorage`, chave `desenrola.theme`).
 
+### Autenticacao
+
+Cadastro, login, logout, perfil (dados e troca de senha) e recuperacao de
+senha sao reais e usam os mecanismos nativos do Django (sessao, hash de
+senha, CSRF, `login_required`, tokens de recuperacao). O login e por
+e-mail, sem diferenciar maiusculas; o cadastro guarda o e-mail em
+minusculas e recusa duplicados.
+
+Dashboard, gerar carta, resultado e perfil exigem login; o usuario anonimo
+vai para `/<idioma>/accounts/login/?next=...`. A area visual em
+`/backoffice/` exige `is_staff`.
+
+A recuperacao de senha envia o link por e-mail. Em desenvolvimento ele sai
+no console do `runserver`. Em producao, defina `EMAIL_URL` no `.env`
+(ex.: `smtp+tls://usuario:senha@smtp.exemplo.com:587`) e, se quiser,
+`DEFAULT_FROM_EMAIL`; sem `EMAIL_URL`, os e-mails sao apenas escritos no
+log do servidor.
+
 ### Testes
 
 ```bash

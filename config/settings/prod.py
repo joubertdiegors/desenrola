@@ -27,6 +27,17 @@ if "postgresql" not in DATABASES["default"]["ENGINE"]:
 
 
 # ---------------------------------------------------------------------------
+# E-mail (recuperacao de senha)
+# ---------------------------------------------------------------------------
+# EMAIL_URL no formato do django-environ, ex.:
+#   smtp+tls://usuario:senha@smtp.exemplo.com:587
+# Sem a variavel, os e-mails sao apenas escritos no log do servidor: o
+# fluxo funciona, mas nenhuma mensagem chega ao usuario ate o SMTP existir.
+
+globals().update(env.email_url("EMAIL_URL", default="consolemail://"))
+
+
+# ---------------------------------------------------------------------------
 # Endurecimento HTTPS
 # ---------------------------------------------------------------------------
 # O PythonAnywhere termina o TLS no proxy dele e repassa X-Forwarded-Proto.

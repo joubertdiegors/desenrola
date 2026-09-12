@@ -1,16 +1,39 @@
 """
-Formularios de usuario para a area administrativa.
+Formularios de conta.
 
-As formularios nativos do Django assumem um campo `username`. Como o
-Desenrola autentica por e-mail, precisamos ligar os formularios do admin ao
-nosso modelo. Os formularios publicos (cadastro, login, recuperacao de senha)
-serao implementados em fase posterior.
+Os formularios nativos do Django assumem um campo `username`. Como o
+Desenrola autentica por e-mail, todos aqui apontam para o nosso modelo.
+
+  - UserCreationForm / UserChangeForm: usados pelo Django Admin;
+  - SignupForm: cadastro publico (cria o usuario com senha validada);
+  - LoginForm: e-mail + senha, com mensagens no tom da interface;
+  - ProfileForm: edicao dos dados do proprio usuario.
+
+A troca de senha e a recuperacao usam os formularios nativos
+(PasswordChangeForm, PasswordResetForm, SetPasswordForm).
 """
 
-from django.contrib.auth.forms import BaseUserCreationForm
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
+from django.contrib.auth.forms import SetPasswordForm as DjangoSetPasswordForm
 from django.contrib.auth.forms import UserChangeForm as DjangoUserChangeForm
+from django.utils.translation import gettext_lazy as _
 
 from .models import User
+
+# Campos que o usuario edita no cadastro e no perfil.
+PROFILE_FIELDS = ("full_name", "email", "phone", "address_line1", "postal_code", "city")
+
+# Texto aprovado no layout para a confirmacao de senha. O catalogo `pt` do
+# Django diz "palavra-passe"; os demais textos de validacao de senha ainda
+# vem dele ate o catalogo do projeto (locale/pt) sobrescreve-los.
+PASSWORD_MISMATCH = _("As senhas não coincidem.")
+
+
+def _normalize_email(email):
+    """E-mail sempre em minusculas: evita contas duplicadas por caixa."""
+    return email.strip().lower()
 
 
 class UserCreationForm(BaseUserCreationForm):
@@ -27,3 +50,72 @@ class UserChangeForm(DjangoUserChangeForm):
     class Meta:
         model = User
         fields = "__all__"
+
+
+class SignupForm(BaseUserCreationForm):
+    """
+    Cadastro publico.
+
+    Herda a validacao de senha do Django (confirmacao, validadores de
+    AUTH_PASSWORD_VALIDATORS) e guarda a senha com hash.
+    """
+
+    terms = forms.BooleanField(
+        required=True,
+        error_messages={
+            "required": _("É preciso aceitar os Termos de uso e a Política de privacidade.")
+        },
+    )
+    error_messages = {"password_mismatch": PASSWORD_MISMATCH}
+
+    class Meta:
+        model = User
+        fields = PROFILE_FIELDS
+
+    def clean_email(self):
+        email = _normalize_email(self.cleaned_data["email"])
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(_("Já existe uma conta com este e-mail."))
+        return email
+
+
+class PasswordChangeForm(DjangoPasswordChangeForm):
+    """Troca de senha no perfil (exige a senha atual)."""
+
+    error_messages = {
+        **DjangoPasswordChangeForm.error_messages,
+        "password_mismatch": PASSWORD_MISMATCH,
+        "password_incorrect": _("Senha atual incorreta."),
+    }
+
+
+class SetPasswordForm(DjangoSetPasswordForm):
+    """Nova senha a partir do link de recuperacao."""
+
+    error_messages = {
+        **DjangoSetPasswordForm.error_messages,
+        "password_mismatch": PASSWORD_MISMATCH,
+    }
+
+
+class LoginForm(AuthenticationForm):
+    """E-mail + senha. O campo `username` e o e-mail (USERNAME_FIELD)."""
+
+    error_messages = {
+        "invalid_login": _("E-mail ou senha incorretos."),
+        "inactive": _("Esta conta está desativada."),
+    }
+
+
+class ProfileForm(forms.ModelForm):
+    """Dados pessoais do proprio usuario (nunca de outro)."""
+
+    class Meta:
+        model = User
+        fields = PROFILE_FIELDS
+
+    def clean_email(self):
+        email = _normalize_email(self.cleaned_data["email"])
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError(_("Já existe uma conta com este e-mail."))
+        return email

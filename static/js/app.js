@@ -90,7 +90,21 @@
     }
   });
 
-  /* Fase de apresentacao: formularios e acoes simuladas ------------------ */
+  /* <details> aberto no desktop e fechado no celular ---------------------- */
+  /* Campos opcionais do cadastro: grade na tela larga, bloco recolhivel no
+     celular. O HTML traz `open` para funcionar sem JS. */
+
+  var autoOpen = document.querySelectorAll("details[data-open-on-desktop]");
+  if (autoOpen.length && window.matchMedia) {
+    var desktop = window.matchMedia("(min-width: 768px)");
+    var syncOpen = function () {
+      for (var i = 0; i < autoOpen.length; i++) { autoOpen[i].open = desktop.matches; }
+    };
+    syncOpen();
+    if (desktop.addEventListener) { desktop.addEventListener("change", syncOpen); }
+  }
+
+  /* Fase de apresentacao (cartas): formularios e acoes simuladas ---------- */
 
   document.addEventListener("submit", function (event) {
     var form = event.target;

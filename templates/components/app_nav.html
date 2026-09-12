@@ -10,7 +10,7 @@ mobile_nav e verdadeiro (dashboard): logotipo + avatar.
     <div class="d-only">{% include "components/language_selector.html" %}</div>
     <div class="d-only">{% include "components/theme_switcher.html" %}</div>
     <details class="dropdown user-menu d-only{% if active_nav == 'profile' %} is-current{% endif %}">
-      <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar">{{ demo_user.initials }}</span>{{ demo_user.first_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+      <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
         <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Perfil" %}</a>
         <div class="dropdown-sep"></div>
@@ -20,6 +20,6 @@ mobile_nav e verdadeiro (dashboard): logotipo + avatar.
         </form>
       </div>
     </details>
-    <a class="avatar avatar-md m-only" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Perfil' %}">{{ demo_user.initials }}</a>
+    <a class="avatar avatar-md m-only" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Perfil' %}">{{ user.get_initials }}</a>
   </nav>
 </header>

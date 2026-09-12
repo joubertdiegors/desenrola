@@ -140,6 +140,21 @@ LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "core:home"
 
+# Prazo do link de recuperacao de senha (segundos): 3 dias.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
+
+
+# ---------------------------------------------------------------------------
+# E-mail
+# ---------------------------------------------------------------------------
+#
+# Usado hoje pela recuperacao de senha. O backend fica por ambiente: em
+# desenvolvimento os e-mails vao para o console (ver dev.py); em producao
+# o SMTP entra pela variavel EMAIL_URL (ver prod.py e .env.example).
+
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Desenrola <no-reply@desenrola.be>")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
 
 # ---------------------------------------------------------------------------
 # Internacionalizacao

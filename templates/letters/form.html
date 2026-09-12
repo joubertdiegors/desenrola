@@ -4,7 +4,9 @@
 Gerar Carta Convite. Desktop (1f): tudo numa pagina, com menu lateral de
 secoes e barra fixa embaixo. Celular (1o): um passo por tela, com
 progresso e botao Continuar. Campos ilustrativos; o envio e simulado.
-Contexto: step (1-4), steps, step_info, demo_user, guest, stay.
+Contexto: step (1-4), steps, step_info, host (dados ficticios que o
+usuario ainda nao guarda), guest, stay. Nome, telefone e endereco do
+anfitriao vem do usuario autenticado.
 {% endcomment %}
 
 {% block title %}{% translate "Gerar Carta Convite" %} · Desenrola{% endblock %}
@@ -61,27 +63,27 @@ Contexto: step (1-4), steps, step_info, demo_user, guest, stay.
         <div class="form-grid">
           <div class="field span-2">
             <label for="h_name">{% translate "Nome completo" %} <span class="required">*</span></label>
-            <input class="input" id="h_name" name="host_name" type="text" value="{{ demo_user.name }}">
+            <input class="input" id="h_name" name="host_name" type="text" value="{{ user.full_name }}">
           </div>
           <div class="field">
             <label for="h_birth">{% translate "Data de nascimento" %} <span class="required">*</span></label>
-            <input class="input" id="h_birth" name="host_birth_date" type="text" value="{{ demo_user.birth_date }}">
+            <input class="input" id="h_birth" name="host_birth_date" type="text" value="{{ host.birth_date }}">
           </div>
           <div class="field">
             <label for="h_nationality">{% translate "Nacionalidade" %} <span class="required">*</span></label>
-            <select class="input" id="h_nationality" name="host_nationality"><option>{{ demo_user.nationality }}</option></select>
+            <select class="input" id="h_nationality" name="host_nationality"><option>{{ host.nationality }}</option></select>
           </div>
           <div class="field">
             <label for="h_id">{% translate "Nº da carteira de identidade" %} <span class="required">*</span></label>
-            <input class="input" id="h_id" name="host_id_number" type="text" value="{{ demo_user.id_number }}">
+            <input class="input" id="h_id" name="host_id_number" type="text" value="{{ host.id_number }}">
           </div>
           <div class="field">
             <label for="h_phone">{% translate "Telefone" %} <span class="required">*</span></label>
-            <input class="input" id="h_phone" name="host_phone" type="tel" value="{{ demo_user.phone }}">
+            <input class="input" id="h_phone" name="host_phone" type="tel" value="{{ user.phone }}">
           </div>
           <div class="field span-2">
             <label for="h_address">{% translate "Endereço (domicílio)" %} <span class="required">*</span></label>
-            <input class="input" id="h_address" name="host_address" type="text" value="{{ demo_user.address }}">
+            <input class="input" id="h_address" name="host_address" type="text" value="{{ user.get_address_display }}">
           </div>
         </div>
       </section>
@@ -154,7 +156,7 @@ Contexto: step (1-4), steps, step_info, demo_user, guest, stay.
         <div class="review-list">
           <div class="card elev-sm info-card">
             <div class="info-row"><span class="k">{% translate "Idioma" %}</span><span>{% translate "Francês" %}</span></div>
-            <div class="info-row"><span class="k">{% translate "Anfitrião" %}</span><span>{{ demo_user.name }}</span></div>
+            <div class="info-row"><span class="k">{% translate "Anfitrião" %}</span><span>{{ user.full_name }}</span></div>
             <div class="info-row"><span class="k">{% translate "Convidado" %}</span><span>{{ guest.name }}</span></div>
             <div class="info-row"><span class="k">{% translate "Estadia" %}</span><span>{{ stay.arrival }} – {{ stay.departure }}</span></div>
           </div>

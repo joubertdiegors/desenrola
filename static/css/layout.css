@@ -274,6 +274,29 @@ body { display: flex; flex-direction: column; }
   .disclosure .input { min-height: 50px; font-size: 16px; }
 }
 
+/* Campos opcionais do cadastro: um unico bloco que vira grade no desktop
+   (layout 1d) e bloco recolhivel "Telefone e endereco" no celular (1m). */
+@media (min-width: 768px) {
+  .signup-optional { border: 0; border-radius: 0; }
+  .signup-optional > summary { display: none; }
+  .signup-optional .disclosure-body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; padding: 0; }
+  .signup-optional .disclosure-body > .field { grid-column: 1 / -1; }
+  .signup-optional .disclosure-row { display: contents; }
+}
+@media (max-width: 767px) {
+  .signup-optional .field > label { display: none; }
+}
+
+/* Aceite dos termos: 18px no desktop (1d), 22px no celular (1m) */
+.terms-check { gap: 10px; }
+.terms-check .box { width: 18px; height: 18px; margin-top: 2px; border-width: 1px; }
+.terms-check input:checked + .box::after { width: 9px; height: 5px; }
+@media (max-width: 767px) {
+  .terms-check { gap: 12px; min-height: 44px; }
+  .terms-check .box { width: 22px; height: 22px; margin-top: 0; border-radius: 5px; }
+  .terms-check input:checked + .box::after { width: 11px; height: 6px; margin-top: -3px; }
+}
+
 
 /* --------------------------------------------------------------------------
    Area logada: barra superior e menu do usuario

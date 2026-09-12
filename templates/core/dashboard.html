@@ -7,7 +7,7 @@
 {% block content %}
 <div class="container">
 <div class="dash">
-  <h1>{% blocktranslate with name=demo_user.first_name %}Olá, {{ name }}{% endblocktranslate %}</h1>
+  <h1>{% blocktranslate with name=user.get_short_name %}Olá, {{ name }}{% endblocktranslate %}</h1>
   <p class="dash-sub">{% translate "O que você quer fazer hoje?" %}</p>
 
   <div class="card elev-md hero-card">

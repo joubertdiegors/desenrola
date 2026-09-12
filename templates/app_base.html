@@ -3,8 +3,9 @@
 {% comment %}
 Casca da area logada: barra superior (desktop), cabecalho proprio do celular
 (bloco mobile_header) e barra inferior de 3 destinos (celular).
-Contexto esperado: demo_user, active_nav ("home" | "profile" | vazio) e
-mobile_nav (True quando a barra superior tambem aparece no celular).
+Usa `user` (o usuario autenticado; as views exigem login). Contexto:
+active_nav ("home" | "profile" | vazio) e mobile_nav (True quando a barra
+superior tambem aparece no celular).
 {% endcomment %}
 
 {% block header %}
