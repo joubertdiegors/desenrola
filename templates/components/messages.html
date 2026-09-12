@@ -1,0 +1,11 @@
+{% comment %}
+Mensagens do framework de messages do Django, renderizadas como alertas.
+Mapeamento: success -> sucesso, warning -> alerta, error -> erro,
+info/debug -> informativo (acento).
+{% endcomment %}{% if messages %}
+<div class="messages" aria-live="polite">
+  {% for message in messages %}
+    {% include "components/alert.html" with kind=message.level_tag text=message %}
+  {% endfor %}
+</div>
+{% endif %}

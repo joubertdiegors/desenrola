@@ -3,28 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#161826">
   <title>{% block title %}Desenrola{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+
+  {# Tema antes do primeiro paint, para nao piscar. Mesma chave da referencia. #}
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("desenrola.theme") === "claro") {
+          document.documentElement.classList.add("light");
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  {# Inter (pesos 400 e 500: o sistema nao usa negrito) e icones Phosphor #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="{% url 'core:home' %}">Desenrola</a>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">{% translate "Ir para o conteúdo" %}</a>
 
-    <form action="{% url 'set_language' %}" method="post" class="lang-form">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.path }}">
-      <select name="language" onchange="this.form.submit()" aria-label="{% translate 'Idioma' %}">
-        {% get_current_language as CURRENT %}
-        {% get_available_languages as LANGUAGES %}
-        {% for code, name in LANGUAGES %}
-          <option value="{{ code }}"{% if code == CURRENT %} selected{% endif %}>{{ code|upper }}</option>
-        {% endfor %}
-      </select>
-    </form>
-  </header>
+  {% block header %}{% endblock %}
 
-  <main class="site-main">
+  <main id="main" class="{% block main_class %}page{% endblock %}">
+    {% include "components/messages.html" %}
     {% block content %}{% endblock %}
   </main>
+
+  {% block footer %}{% endblock %}
+
+  <script src="{% static 'js/theme.js' %}"></script>
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

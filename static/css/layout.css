@@ -1,0 +1,67 @@
+/* ==========================================================================
+   Desenrola — layout.css
+   Estrutura das paginas: casca comum, cabecalho, rodape e composicao das
+   telas. Os componentes ficam em components.css; os tokens em base.css.
+
+   Esta primeira versao cobre so o que o arquivo de conceito define. As
+   telas (landing, autenticacao, dashboard, formulario, resultado, perfil,
+   admin) entram a partir dos arquivos de layout desktop e mobile.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   Casca
+   -------------------------------------------------------------------------- */
+
+body { display: flex; flex-direction: column; }
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.messages { margin-bottom: 16px; }
+
+/* Link de salto para o conteudo: so aparece com foco de teclado */
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -48px;
+  z-index: 200;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+  font-size: 14px;
+}
+.skip-link:focus { top: 12px; }
+
+
+/* --------------------------------------------------------------------------
+   Logotipo
+   Horizontal: simbolo + nome em Inter 500. Cor do nome = texto; simbolo no
+   acento.
+   -------------------------------------------------------------------------- */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.01em;
+  color: inherit;
+  text-decoration: none;
+  line-height: 1;
+}
+.logo svg { flex: none; }
+.logo-name { font-size: 24px; }
+
+/* Na barra de navegacao o logotipo e menor */
+.nav .logo { gap: 7px; }
+.nav .logo-name { font-size: 16px; }

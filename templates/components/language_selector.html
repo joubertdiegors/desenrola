@@ -1,0 +1,20 @@
+{% load i18n %}{% comment %}
+Seletor de idioma. Codigo atual como tag neutra na barra; ao abrir, lista os
+quatro idiomas no nome nativo. Envia para a view set_language do Django
+(fora do prefixo de idioma), que traduz a URL atual para o idioma escolhido.
+{% endcomment %}{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as AVAILABLE_LANGUAGES %}{% get_language_info_list for AVAILABLE_LANGUAGES as language_list %}
+<details class="dropdown lang">
+  <summary aria-label="{% translate 'Idioma' %}: {{ CURRENT_LANGUAGE|upper }}">
+    <span class="tag tag-neutral">{{ CURRENT_LANGUAGE|upper }}<i class="ph ph-caret-down" aria-hidden="true"></i></span>
+  </summary>
+  <form class="dropdown-menu" action="{% url 'set_language' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="dropdown-head">{% translate "Idioma" %}</div>
+    {% for language in language_list %}
+      <button type="submit" name="language" value="{{ language.code }}" class="dropdown-item"{% if language.code == CURRENT_LANGUAGE %} aria-current="true"{% endif %}>
+        <span class="lang-code">{{ language.code|upper }}</span>{{ language.name_local|capfirst }}
+      </button>
+    {% endfor %}
+  </form>
+</details>

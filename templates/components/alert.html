@@ -1,0 +1,11 @@
+{% comment %}
+Alerta de estado do sistema.
+  kind:  success | warning | error | info (padrao)
+  title: frase curta em peso 500 (opcional)
+  text:  complemento
+Uso:
+  {% include "components/alert.html" with kind="success" title="Carta gerada com sucesso." text="Você pode salvar, imprimir ou compartilhar." %}
+{% endcomment %}<div class="alert alert-{{ kind|default:'info' }}" role="{% if kind == 'error' %}alert{% else %}status{% endif %}">
+  <i class="ph {% if kind == 'success' %}ph-check-circle{% elif kind == 'warning' %}ph-warning{% elif kind == 'error' %}ph-x-circle{% else %}ph-info{% endif %}" aria-hidden="true"></i>
+  <span>{% if title %}<strong>{{ title }}</strong> {% endif %}{{ text }}</span>
+</div>

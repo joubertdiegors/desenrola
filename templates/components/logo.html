@@ -1,0 +1,7 @@
+{% comment %}
+Logotipo Desenrola: espiral que se abre numa linha reta.
+Uso:
+  {% include "components/logo.html" %}                     -> simbolo + nome, 24px
+  {% include "components/logo.html" with size=18 %}        -> simbolo 18px + nome
+  {% include "components/logo.html" with icon_only=True %} -> so o simbolo
+{% endcomment %}<span class="logo{% if not icon_only %} logo-wordmark{% endif %}"><svg width="{{ size|default:24 }}" height="{{ size|default:24 }}" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M13 12a4 4 0 1 1-4-4"></path><path d="M9 8h12"></path></svg>{% if not icon_only %}<span class="logo-name">Desenrola</span>{% else %}<span class="visually-hidden">Desenrola</span>{% endif %}</span>
