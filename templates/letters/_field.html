@@ -1,0 +1,32 @@
+{% load i18n %}
+{% comment %}
+Um campo do formulario dinamico (Fase 3): renderiza `row` (dict com key,
+type, full_width, bound — o BoundField ja construido a partir do
+field_schema em apps/letters/forms.py) no mesmo padrao visual usado em
+templates/accounts/signup.html (campo real, nao mais uma div estatica).
+
+`checkbox_class` (opcional): classe do wrapper quando o tipo e checkbox —
+"check confirm-check" na etapa Anfitrião, "card notice-check" na etapa
+Avisos (ver templates/letters/wizard.html). O tipo do campo continua
+vindo do schema; so a moldura visual muda por etapa, como no design
+original ja aprovado.
+{% endcomment %}
+{% if row.type == "checkbox" %}
+<label class="{{ checkbox_class|default:"check" }}{% if row.full_width %} span-2{% endif %}{% if row.bound.errors %} is-invalid{% endif %}">
+  {{ row.bound }}
+  <span class="box"></span>
+  <span>{{ row.bound.label }}</span>
+</label>
+{% include "components/field_errors.html" with errors=row.bound.errors %}
+{% else %}
+<div class="field{% if row.full_width %} span-2{% endif %}{% if row.bound.errors %} is-invalid{% endif %}">
+  <label for="{{ row.bound.id_for_label }}">{{ row.bound.label }}{% if row.bound.field.required %} <span class="required">*</span>{% else %} <span class="optional">({% translate "opcional" %})</span>{% endif %}</label>
+  {% if row.type == "date" %}
+  <div class="input-wrap">{{ row.bound }}<i class="ph ph-calendar-blank input-icon is-accent" aria-hidden="true"></i></div>
+  {% else %}
+  {{ row.bound }}
+  {% endif %}
+  {% if row.bound.help_text and not row.bound.errors %}<div class="field-hint">{{ row.bound.help_text }}</div>{% endif %}
+  {% include "components/field_errors.html" with errors=row.bound.errors %}
+</div>
+{% endif %}

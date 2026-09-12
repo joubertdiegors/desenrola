@@ -1,8 +1,12 @@
 """
 Dados ficticios da fase de apresentacao visual.
 
-Alimentam as telas enquanto o modelo de carta e a geracao de PDF nao
-existem (apps.letters ainda nao tem modelo proprio). Nomes, datas e
+Alimentam as telas que ainda nao tem uma fonte real: a Home/Landing e a
+listagem do dashboard/backoffice (a geracao do PDF ainda nao existe).
+O assistente de Carta Convite (apps.letters) ja usa dados reais desde a
+Fase 3 — o que restou aqui e so a lista ilustrativa de cartas e a tela de
+conclusao ficticia (`letters:result`/`letters:generate`), mantida como
+referencia visual ate a geracao real de PDF (Fase 4). Nomes, datas e
 numeros vem dos layouts de referencia (desenrola-v2-2-desktop.html,
 desenrola-v2-3-tablet.html e desenrola-v2-4-mobile.html). Este modulo
 sera removido conforme cada parte ganhar uma implementacao real.
@@ -38,119 +42,6 @@ PARTNERS = [
         "description": _("Descrição curta do serviço, em uma linha."),
     },
 ]
-
-
-# ---------------------------------------------------------------------------
-# Gerar Carta Convite: assistente de 6 etapas
-# ---------------------------------------------------------------------------
-
-# Dados do anfitriao que o modelo de usuario ainda nao guarda (nacionalidade,
-# nascimento, documento). Nome, telefone e endereco vem do usuario real.
-HOST_EXTRA = {
-    "nationality": _("Brasileira"),
-    "birth_date": "03/06/1988",
-    "document_label": _("Carte d'identité"),
-    "document_number": "592-0000000-00",
-}
-
-# Passo 6 (revisao) e a conclusao mostram um exemplo ja preenchido, no
-# mesmo padrao do arquivo de referencia — as etapas 1 e 2 comecam vazias
-# (o usuario ainda vai preencher; nao ha estado salvo entre passos nesta
-# fase, pois o modelo Letter ainda nao existe).
-GUEST_EXAMPLE = {
-    "name": "Maria Santos da Silva",
-    "nationality": _("Brasileira"),
-    "birth_date": "15/08/1990",
-    "passport": "FA123456",
-}
-
-STAY_EXAMPLE = {
-    "arrival": "10/04/2025",
-    "departure": "25/04/2025",
-    "duration_days": 15,
-}
-
-LANGUAGE_OPTIONS = [
-    {
-        "code": "fr",
-        "name": "Français",
-        "hint": _("Idioma mais utilizado para processos na Bélgica."),
-        "flag": "lang-flag-fr",
-    },
-    {
-        "code": "en",
-        "name": "English",
-        "hint": _("Widely accepted internationally."),
-        "flag": "lang-flag-en",
-    },
-    {
-        "code": "pt",
-        "name": "Português",
-        "hint": _("Versão completa do documento."),
-        "flag": "lang-flag-pt",
-    },
-]
-DEFAULT_LANGUAGE = "pt"
-
-LEGAL_NOTICES = [
-    _(
-        "Declaro estar ciente de que a Carta Convite é um documento de caráter "
-        "informal e, por si só, não possui força jurídica, não garante a "
-        "concessão de visto nem a entrada ou permanência no Espaço Schengen. "
-        "Estou ciente de que emitir uma Carta Convite envolve responsabilidade "
-        "e que as informações nela declaradas devem ser verdadeiras, completas "
-        "e corresponder à realidade da visita e da hospedagem."
-    ),
-    _(
-        "Declaro estar ciente de que a Carta Convite não deve ser confundida "
-        "com a “Prise en Charge” (Annexe 3bis). A Carta Convite serve para "
-        "formalizar uma intenção de convite e/ou hospedagem, enquanto a Prise "
-        "en Charge é um compromisso formal de responsabilidade financeira "
-        "sujeito às condições e formalidades previstas pela legislação belga."
-    ),
-]
-
-# Kicker, titulo e texto de apoio de cada uma das 6 etapas (usados no
-# cabecalho do celular; o desktop repete titulo e texto acima do cartao).
-FORM_STEPS = {
-    1: {
-        "label": _("Convidado"),
-        "title": _("1. Dados do convidado"),
-        "hint": _("Preencha as informações da pessoa que será convidada."),
-    },
-    2: {
-        "label": _("Viagem"),
-        "title": _("2. Período da viagem"),
-        "hint": _("Informe as datas da viagem."),
-    },
-    3: {
-        "label": _("Anfitrião"),
-        "title": _("3. Dados do anfitrião"),
-        "hint": _(
-            "Confirme os seus dados. A carta é sempre emitida em nome do "
-            "titular da conta."
-        ),
-    },
-    4: {
-        "label": _("Avisos"),
-        "title": _("4. Avisos importantes"),
-        "hint": _("Leia atentamente as informações abaixo."),
-    },
-    5: {
-        "label": _("Idioma"),
-        "title": _("5. Escolha o idioma da Carta Convite"),
-        "hint": _("Selecione o idioma em que o documento será gerado."),
-    },
-    6: {
-        "label": _("Revisão"),
-        "title": _("6. Revise seu documento"),
-        "hint": _(
-            "Confira atentamente todas as informações antes de gerar sua "
-            "Carta Convite."
-        ),
-    },
-}
-LAST_STEP = 6
 
 
 # ---------------------------------------------------------------------------

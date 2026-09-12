@@ -342,6 +342,10 @@ body { display: flex; flex-direction: column; }
     linear-gradient(90deg, transparent 40%, #c8102e 40% 60%, transparent 60%),
     linear-gradient(0deg, transparent 40%, #c8102e 40% 60%, transparent 60%);
 }
+.lang-card.is-unavailable { opacity: .55; cursor: not-allowed; }
+.lang-flag-nl {
+  background: linear-gradient(0deg, #21468b 33%, #fff 33% 66%, #ae1c28 66%);
+}
 .lang-flag-sm { width: 20px; height: 20px; }
 .lang-card-text { flex: 1; }
 .lang-card-name { display: block; font-size: 16px; font-weight: 600; color: var(--navy); }

@@ -1,17 +1,16 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% comment %}
-Gerar Carta Convite: assistente de 6 etapas (layouts 2e/2f/3c desktop e
-tablet, 4e-4j celular). Cada etapa e uma tela propria (?passo=N); sem
-layout desktop proprio nos arquivos de referencia para os passos 1, 2, 4
-e 5, a estrutura segue o mesmo cartao usado nos passos 3 e 6, com os
-campos descritos nas telas de celular equivalentes.
+Gerar Carta Convite: assistente real de 6 etapas (Fase 3), alimentado
+pelo field_schema da TemplateVersion publicada do modelo oficial (ver
+apps/doctemplates/official_templates.py) e persistido em Letter.data a
+cada etapa valida. A URL identifica a carta (UUID do dono) e a etapa
+(/letters/<uuid>/step/<n>/); nao ha estado em querystring nem dependencia
+exclusiva de JavaScript para avancar/voltar.
 
-Sem um modelo Letter ainda, o envio da etapa 6 e simulado
-(data-mock-loading): mostra "Gerando…" e abre a conclusao.
-
-Contexto: step, last_step, step_info, host_extra, guest, stay,
-language_options, default_language, legal_notices.
+Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
+`field_rows` (1-4), `duration_days` (2), `language_options` e
+`selected_language` (5), `review_sections` e `review_language` (6).
 {% endcomment %}
 
 {% block title %}{{ step_info.title }} · Desenrola{% endblock %}
@@ -30,7 +29,7 @@ language_options, default_language, legal_notices.
     <details class="dropdown">
       <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
-        <a class="dropdown-item" href="{% url 'core:dashboard' %}"><i class="ph ph-x" aria-hidden="true"></i>{% translate "Sair sem salvar" %}</a>
+        <a class="dropdown-item" href="{% url 'core:dashboard' %}"><i class="ph ph-x" aria-hidden="true"></i>{% translate "Sair" %}</a>
       </div>
     </details>
   </nav>
@@ -56,169 +55,140 @@ language_options, default_language, legal_notices.
 
   {% if step == 1 %}
     {# ------------------------------------------------------------------ #}
-    {# 1 · Convidado — formulario vazio, ilustrativo.                     #}
+    {# 1 · Convidado — campos reais, do field_schema.                     #}
     {# ------------------------------------------------------------------ #}
-    <div class="card wizard-card form-grid">
-      <div class="field span-2">
-        <label for="g_name">{% translate "Nome completo do convidado" %}</label>
-        <div class="field-hint">{% translate "Digite exatamente como aparece no passaporte." %}</div>
-        <input class="input" id="g_name" name="guest_name" type="text" placeholder="{% translate 'Nome completo' %}">
-      </div>
-      <div class="field">
-        <label for="g_nationality">{% translate "Nacionalidade" %}</label>
-        <div class="input"><span class="input-static is-placeholder">{% translate "Selecione a nacionalidade" %}</span><i class="ph ph-caret-down input-icon" aria-hidden="true"></i></div>
-      </div>
-      <div class="field">
-        <label for="g_birth">{% translate "Data de nascimento" %}</label>
-        <div class="input"><span class="input-static is-placeholder">DD/MM/AAAA</span><i class="ph ph-calendar-blank input-icon is-accent" aria-hidden="true"></i></div>
-      </div>
-      <div class="field span-2">
-        <label for="g_passport">{% translate "Número do passaporte" %}</label>
-        <input class="input" id="g_passport" name="guest_passport" type="text" placeholder="{% translate 'Número do passaporte' %}">
-      </div>
-    </div>
+    <form method="post" id="step-form" class="card wizard-card form-grid" novalidate>
+      {% csrf_token %}
+      {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
+    </form>
     <div class="wizard-actions is-single">
-      <a class="btn btn-primary" href="?passo=2">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      <button type="submit" form="step-form" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
     </div>
 
   {% elif step == 2 %}
     {# ------------------------------------------------------------------ #}
-    {# 2 · Viagem — exemplo preenchido, com duracao calculada.            #}
+    {# 2 · Viagem — datas reais; duracao calculada no servidor.           #}
     {# ------------------------------------------------------------------ #}
-    <div class="card wizard-card form-grid">
-      <div class="field">
-        <label for="s_arrival">{% translate "Data de chegada" %}</label>
-        <div class="input"><span>{{ stay.arrival }}</span><i class="ph ph-calendar-blank input-icon is-accent" aria-hidden="true"></i></div>
-      </div>
-      <div class="field">
-        <label for="s_departure">{% translate "Data de partida" %}</label>
-        <div class="input"><span>{{ stay.departure }}</span><i class="ph ph-calendar-blank input-icon is-accent" aria-hidden="true"></i></div>
-      </div>
-      <div class="tint duration-box span-2">
-        <span class="duration-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
-        <div>
-          <div class="duration-label">{% translate "Duração da estadia" %}</div>
-          <div class="duration-value">{% blocktranslate count n=stay.duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}</div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="card wizard-card form-grid">
+        {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
+        {% if duration_days %}
+        <div class="tint duration-box span-2">
+          <span class="duration-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
+          <div>
+            <div class="duration-label">{% translate "Duração da estadia" %}</div>
+            <div class="duration-value">{% blocktranslate count n=duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}</div>
+          </div>
+          {% if duration_days <= 90 %}
+          <span class="tag tag-success push">{% translate "≤ 90 dias" %}</span>
+          {% else %}
+          <span class="tag tag-warning push">{% translate "> 90 dias" %}</span>
+          {% endif %}
         </div>
-        <span class="tag tag-success push">{% translate "≤ 90 dias" %}</span>
+        {% endif %}
+        <div class="notice span-2"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à data de chegada. Cartas de curta duração valem para estadias de até 90 dias." %}</span></div>
       </div>
-      <div class="notice span-2"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à data de chegada. Cartas de curta duração valem para estadias de até 90 dias." %}</span></div>
-    </div>
-    <div class="wizard-actions">
-      <a class="btn btn-secondary" href="?passo=1"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <a class="btn btn-primary" href="?passo=3">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    </div>
+      <div class="wizard-actions">
+        <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=1 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      </div>
+    </form>
 
   {% elif step == 3 %}
     {# ------------------------------------------------------------------ #}
-    {# 3 · Anfitrião — somente confirmacao (dados do perfil, bloqueados). #}
+    {# 3 · Anfitrião — nome/endereço/telefone vêm do perfil (bloqueados); #}
+    {# nacionalidade/nascimento/documento são campos reais do schema.     #}
     {# ------------------------------------------------------------------ #}
     {% url 'accounts:profile' as profile_url %}
-    <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Estes dados não podem ser editados aqui. Eles vêm do seu perfil e garantem que a carta seja emitida em seu nome. Para corrigir algo, <a href="{{ profile_url }}">edite seu perfil</a> e volte a esta etapa.{% endblocktranslate %}</span></div>
-    <form class="card wizard-card form-grid" id="host-confirm" data-gate>
+    <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Seu nome, endereço e telefone não podem ser editados aqui. Eles vêm do seu perfil e garantem que a carta seja emitida em seu nome. Para corrigir algo, <a href="{{ profile_url }}">edite seu perfil</a> e volte a esta etapa.{% endblocktranslate %}</span></div>
+    <form method="post" id="step-form" class="card wizard-card form-grid" novalidate>
+      {% csrf_token %}
       <div class="field span-2">
         <label>{% translate "Nome completo do anfitrião" %}</label>
         <div class="input is-readonly">{{ user.full_name }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div>
       </div>
-      <div class="field"><label>{% translate "Nacionalidade" %}</label><div class="input is-readonly">{{ host_extra.nationality }}</div></div>
-      <div class="field"><label>{% translate "Data de nascimento" %}</label><div class="input is-readonly">{{ host_extra.birth_date }}</div></div>
       <div class="field span-2"><label>{% translate "Endereço completo na Bélgica" %}</label><div class="input is-readonly">{{ user.get_address_display|default:"—" }}</div></div>
       <div class="field"><label>{% translate "Número de telefone" %}</label><div class="input is-readonly">{{ user.phone|default:"—" }}</div></div>
-      <div class="field"><label>{% translate "Documento de identidade" %}</label><div class="input is-readonly">{{ host_extra.document_label }} · {{ host_extra.document_number }}</div></div>
-      <label class="check confirm-check">
-        <input type="checkbox" data-gate-check>
-        <span class="box"></span>
-        <span>{% translate "Confirmo que estes são os meus dados e que sou eu quem convida e hospeda." %}</span>
-      </label>
+      {% for row in field_rows %}{% include "letters/_field.html" with checkbox_class="check confirm-check" %}{% endfor %}
     </form>
     <div class="wizard-actions">
-      <a class="btn btn-secondary" href="?passo=2"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <a class="btn btn-primary" href="?passo=4" data-gate-submit="host-confirm">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=2 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+      <button type="submit" form="step-form" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
     </div>
 
   {% elif step == 4 %}
     {# ------------------------------------------------------------------ #}
-    {# 4 · Avisos — dois checkboxes legais travam o botao de avancar.     #}
+    {# 4 · Avisos — checkboxes reais do field_schema; texto legal vem do  #}
+    {# label de cada campo, nao esta hardcoded aqui.                      #}
     {# ------------------------------------------------------------------ #}
-    <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span><strong>{% translate "Leia com atenção." %}</strong> {% translate "Antes de gerar sua Carta Convite, confirme que você está ciente das seguintes informações:" %}</span></div>
-    <div class="wizard-card wizard-stack" id="legal-notices" data-gate>
-      {% for notice in legal_notices %}
-      <label class="card notice-check">
-        <input type="checkbox" data-gate-check>
-        <span class="box"></span>
-        <span>{{ notice }}</span>
-      </label>
-      {% endfor %}
-    </div>
-    <div class="wizard-actions">
-      <a class="btn btn-secondary" href="?passo=3"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <a class="btn btn-primary" href="?passo=5" data-gate-submit="legal-notices">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    </div>
+    <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span><strong>{% translate "Leia com atenção." %}</strong> {% translate "Antes de finalizar sua Carta Convite, confirme que você está ciente das seguintes informações:" %}</span></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="wizard-card wizard-stack">
+        {% for row in field_rows %}{% include "letters/_field.html" with checkbox_class="card notice-check" %}{% endfor %}
+      </div>
+      <div class="wizard-actions">
+        <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=3 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      </div>
+    </form>
 
   {% elif step == 5 %}
     {# ------------------------------------------------------------------ #}
-    {# 5 · Idioma — cards selecionaveis, radio nativo.                    #}
+    {# 5 · Idioma — as 4 opções de settings.LANGUAGES.                    #}
     {# ------------------------------------------------------------------ #}
-    <div class="wizard-card wizard-stack">
-      {% for lang in language_options %}
-      <label class="card lang-card">
-        <input type="radio" name="idioma" value="{{ lang.code }}"{% if lang.code == default_language %} checked{% endif %}>
-        <span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>
-        <span class="lang-card-text">
-          <span class="lang-card-name">{{ lang.name }}</span>
-          <span class="lang-card-desc">{{ lang.hint }}</span>
-        </span>
-        <span class="lang-card-radio"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
-      </label>
-      {% endfor %}
-      <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% translate "O conteúdo do documento será gerado automaticamente no idioma selecionado. O layout e o padrão visual são sempre os mesmos." %}</span></div>
-    </div>
-    <div class="wizard-actions">
-      <a class="btn btn-secondary" href="?passo=4"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <a class="btn btn-primary" href="?passo=6">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="wizard-card wizard-stack">
+        {% for lang in language_options %}
+        <label class="card lang-card{% if not lang.available %} is-unavailable{% endif %}">
+          <input type="radio" name="language" value="{{ lang.code }}"{% if lang.code == selected_language %} checked{% endif %}{% if not lang.available %} disabled{% endif %} required>
+          <span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>
+          <span class="lang-card-text">
+            <span class="lang-card-name">{{ lang.name }}</span>
+            <span class="lang-card-desc">{% if lang.available %}{{ lang.hint }}{% else %}{% translate "Documento oficial ainda não disponível neste idioma." %}{% endif %}</span>
+          </span>
+          <span class="lang-card-radio"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
+        </label>
+        {% endfor %}
+        <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% translate "O conteúdo do documento será gerado automaticamente no idioma selecionado. O layout e o padrão visual são sempre os mesmos." %}</span></div>
+      </div>
+      <div class="wizard-actions">
+        <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=4 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      </div>
+    </form>
 
   {% else %}
     {# ------------------------------------------------------------------ #}
-    {# 6 · Revisao — resumo do exemplo, antes de gerar o PDF.             #}
+    {# 6 · Revisão — resumo real dos dados salvos; não altera dados.      #}
     {# ------------------------------------------------------------------ #}
     <div class="card review-grid">
+      {% for section in review_sections %}
       <div class="review-block">
-        <div class="review-block-head"><h3>{% translate "Dados do convidado" %}</h3><a href="?passo=1"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
+        <div class="review-block-head"><h3>{{ section.title }}</h3><a href="{% url 'letters:step' letter_uuid=letter.uuid step=section.step %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
         <dl class="review-dl">
-          <dt>{% translate "Nome completo" %}</dt><dd>{{ guest.name }}</dd>
-          <dt>{% translate "Nacionalidade" %}</dt><dd>{{ guest.nationality }}</dd>
-          <dt>{% translate "Nascimento" %}</dt><dd>{{ guest.birth_date }}</dd>
-          <dt>{% translate "Passaporte" %}</dt><dd>{{ guest.passport }}</dd>
+          {% for item in section.items %}<dt>{{ item.label }}</dt><dd>{{ item.value|default:"—" }}</dd>{% endfor %}
         </dl>
       </div>
+      {% endfor %}
       <div class="review-block">
-        <div class="review-block-head"><h3>{% translate "Período da viagem" %}</h3><a href="?passo=2"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
-        <dl class="review-dl">
-          <dt>{% translate "Chegada" %}</dt><dd>{{ stay.arrival }}</dd>
-          <dt>{% translate "Partida" %}</dt><dd>{{ stay.departure }}</dd>
-          <dt>{% translate "Duração" %}</dt><dd>{% blocktranslate count n=stay.duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}</dd>
-        </dl>
-      </div>
-      <div class="review-block">
-        <div class="review-block-head"><h3>{% translate "Dados do anfitrião" %}</h3><span class="locked"><i class="ph ph-lock-simple" aria-hidden="true"></i> {% translate "Do perfil" %}</span></div>
-        <dl class="review-dl">
-          <dt>{% translate "Nome completo" %}</dt><dd>{{ user.full_name }}</dd>
-          <dt>{% translate "Nacionalidade" %}</dt><dd>{{ host_extra.nationality }}</dd>
-          <dt>{% translate "Endereço" %}</dt><dd>{{ user.get_address_display|default:"—" }}</dd>
-          <dt>{% translate "Telefone" %}</dt><dd>{{ user.phone|default:"—" }}</dd>
-        </dl>
-      </div>
-      <div class="review-block">
-        <div class="review-block-head"><h3>{% translate "Idioma selecionado" %}</h3><a href="?passo=5"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
-        <div class="review-lang-row"><span class="lang-flag lang-flag-sm lang-flag-pt" aria-hidden="true"></span>{% translate "Português" %}</div>
-        <div class="notice notice-success notice-sm review-lang-note d-only"><i class="ph-fill ph-check-circle" aria-hidden="true"></i><span>{% translate "Avisos lidos e aceitos na etapa 4." %}</span></div>
+        <div class="review-block-head"><h3>{% translate "Idioma selecionado" %}</h3><a href="{% url 'letters:step' letter_uuid=letter.uuid step=5 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
+        {% if review_language %}
+        <div class="review-lang-row"><span class="lang-flag lang-flag-sm {{ review_language.flag }}" aria-hidden="true"></span>{{ review_language.name }}</div>
+        {% else %}
+        <p class="text-muted">{% translate "Nenhum idioma selecionado ainda." %}</p>
+        {% endif %}
       </div>
     </div>
-    <div class="wizard-actions is-final">
-      <a class="btn btn-secondary" href="?passo=5"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <button type="button" class="btn btn-success btn-lg" data-mock-loading data-next="{% url 'letters:generate' %}" data-loading-text="{% translate 'Gerando…' %}"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Gerar Carta Convite em PDF" %}</button>
-    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="wizard-actions is-final">
+        <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=5 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        <button type="submit" class="btn btn-success btn-lg"><i class="ph ph-check-circle" aria-hidden="true"></i>{% translate "Finalizar Carta Convite" %}</button>
+      </div>
+    </form>
   {% endif %}
 </div>
 {% endblock %}

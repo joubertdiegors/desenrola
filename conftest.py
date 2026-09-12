@@ -59,12 +59,18 @@ def auth_client(client, user):
 
 @pytest.fixture
 def letter_template(db):
-    """Um LetterTemplate qualquer, para testes de doctemplates/letters."""
+    """
+    Um LetterTemplate qualquer, para testes de doctemplates/letters.
+
+    O slug e deliberadamente diferente dos modelos oficiais semeados por
+    migracao (apps/doctemplates/official_templates.py): este e um modelo
+    de teste generico, nao o documento oficial de nenhum idioma.
+    """
     from apps.doctemplates.models import LetterTemplate
 
     return LetterTemplate.objects.create(
         name="Carta Convite — curta duração",
-        slug="carta-convite-curta-duracao-fr",
+        slug="carta-convite-de-teste",
         description="Modelo oficial para visitas de curta duração.",
         language="fr",
     )
