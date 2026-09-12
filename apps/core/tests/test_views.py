@@ -1,4 +1,8 @@
-"""Testes das views do app core."""
+"""
+Testes das views do app core: landing, healthz e backoffice.
+
+O dashboard tem suite propria em test_dashboard.py.
+"""
 
 import pytest
 from django.urls import reverse
@@ -33,22 +37,6 @@ def test_home_publica(client):
 
 
 @pytest.mark.django_db
-def test_dashboard_exige_login(client):
-    url = reverse("core:dashboard")
-
-    response = client.get(url)
-
-    assert response.status_code == 302
-    assert response.url == f"{reverse('accounts:login')}?next={url}"
-
-
-def test_dashboard_abre_para_usuario_logado(auth_client):
-    response = auth_client.get(reverse("core:dashboard"))
-
-    assert response.status_code == 200
-    assert "Olá, Claire" in response.content.decode()
-
-
 @pytest.mark.django_db
 @pytest.mark.parametrize("nome", BACKOFFICE)
 def test_backoffice_exige_login(client, nome):

@@ -127,11 +127,31 @@ class TestValidacaoCruzadaViagem:
         assert not form.is_valid()
         assert "stay_departure" in form.errors
 
-    def test_partida_igual_a_chegada_e_invalida(self):
+    def test_partida_no_mesmo_dia_da_chegada_e_valida(self):
+        """
+        Chegar e partir no mesmo dia é uma estadia de 1 dia -- válida.
+        (Antes era recusada; a regra passou a ser chegada <= partida.)
+        """
         form = build_dynamic_form(
             self.FIELDS, data={"stay_arrival": "10/04/2025", "stay_departure": "10/04/2025"}
         )
+        assert form.is_valid()
+
+    def test_estadia_de_ate_90_dias_e_valida(self):
+        form = build_dynamic_form(
+            self.FIELDS, data={"stay_arrival": "01/01/2026", "stay_departure": "31/03/2026"}
+        )
+        assert form.is_valid(), form.errors
+
+    def test_estadia_acima_de_90_dias_e_recusada(self):
+        """O limite da carta de curta duração vive no formulário, não só
+        no template -- é o que impede contornar mandando o POST direto."""
+        form = build_dynamic_form(
+            self.FIELDS, data={"stay_arrival": "01/01/2026", "stay_departure": "01/04/2026"}
+        )
         assert not form.is_valid()
+        assert "stay_departure" in form.errors
+        assert "90" in str(form.errors["stay_departure"])
 
     def test_partida_depois_da_chegada_e_valida(self):
         form = build_dynamic_form(

@@ -332,6 +332,7 @@ select.input {
 .tag-success { background: color-mix(in srgb, var(--s) 12%, white); color: color-mix(in srgb, var(--s) 80%, black); }
 .tag-neutral { background: #eef1f6; color: var(--mu); }
 .tag-warning { background: color-mix(in srgb, var(--warning) 14%, white); color: var(--warning-dark); }
+.tag-error { background: color-mix(in srgb, var(--error) 12%, white); color: var(--error-dark); }
 .tag-outline { background: transparent; border: 1px solid var(--p); color: var(--p); }
 .tag-xs { font-size: 10px; padding: 1px 8px; }
 .tag-lg { font-size: 13px; padding: 6px 14px; }
@@ -393,6 +394,11 @@ select.input {
 }
 .step-dot.is-current { background: var(--p); color: #fff; box-shadow: 0 0 0 4px var(--p20); }
 .step-dot.is-done { background: var(--p); color: #fff; }
+/* Etapa alcancavel vira link: mesma aparencia, so ganha o cursor e um
+   realce no foco/hover. As nao alcancaveis continuam <span>, inertes. */
+a.step-dot { text-decoration: none; cursor: pointer; }
+a.step-dot:hover { filter: brightness(0.94); }
+a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .step-line { flex: 1; height: 2px; background: #dfe6f1; min-width: 6px; }
 .step-line.is-done { background: var(--p); }
 
@@ -680,3 +686,33 @@ select.input {
 @media (max-width: 767px) {
   .btn:not(.btn-icon):not(.btn-text) { min-height: 52px; }
 }
+
+/* Campo de data: o input visivel (dd/mm/aaaa, com mascara) mais o
+   calendario nativo, aberto pelo botao do icone. O <input type="date">
+   fica sobreposto ao botao e invisivel -- e ele que o navegador ancora
+   ao abrir o calendario, entao nao pode ser display:none. */
+.date-input .date-input-picker {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.date-input .date-input-open {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  padding: 6px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.date-input .date-input-open:hover { background: var(--p10); }
+.date-input .date-input-open:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }

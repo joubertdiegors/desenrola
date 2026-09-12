@@ -115,7 +115,7 @@ CARTA_CONVITE_FIELD_SCHEMA = {
         },
         {
             "key": "guest_nationality",
-            "type": "text",
+            "type": "nationality",
             "required": True,
             "order": 2,
             "section": "convidado",
@@ -148,14 +148,14 @@ CARTA_CONVITE_FIELD_SCHEMA = {
             "section": "convidado",
             "full_width": True,
             "label": "Número do passaporte",
-            "placeholder": "Número do passaporte",
+            # O placeholder aqui é um EXEMPLO DE FORMATO, não uma frase:
+            # não muda com o idioma, então não tem tradução por idioma --
+            # `resolve_field_text` cai neste valor de origem em todos.
+            "placeholder": "YY0000",
             "translations": {
-                "fr": {
-                    "label": "Numéro de passeport",
-                    "placeholder": "Numéro de passeport",
-                },
-                "nl": {"label": "Paspoortnummer", "placeholder": "Paspoortnummer"},
-                "en": {"label": "Passport number", "placeholder": "Passport number"},
+                "fr": {"label": "Numéro de passeport"},
+                "nl": {"label": "Paspoortnummer"},
+                "en": {"label": "Passport number"},
             },
         },
         # --- Etapa 2 · Viagem ----------------------------------------------
@@ -191,7 +191,7 @@ CARTA_CONVITE_FIELD_SCHEMA = {
         # não guarda.
         {
             "key": "host_nationality",
-            "type": "text",
+            "type": "nationality",
             "required": True,
             "order": 7,
             "section": "anfitriao",
@@ -213,39 +213,6 @@ CARTA_CONVITE_FIELD_SCHEMA = {
                 "fr": {"label": "Date de naissance"},
                 "nl": {"label": "Geboortedatum"},
                 "en": {"label": "Date of birth"},
-            },
-        },
-        {
-            "key": "host_document_label",
-            "type": "text",
-            "required": True,
-            "order": 9,
-            "section": "anfitriao",
-            "label": "Documento de identidade",
-            "placeholder": "Ex.: Carte d'identité",
-            "translations": {
-                "fr": {
-                    "label": "Document d'identité",
-                    "placeholder": "Ex. : carte d'identité",
-                },
-                "nl": {
-                    "label": "Identiteitsdocument",
-                    "placeholder": "Bijv.: identiteitskaart",
-                },
-                "en": {"label": "Identity document", "placeholder": "E.g.: identity card"},
-            },
-        },
-        {
-            "key": "host_document_number",
-            "type": "text",
-            "required": True,
-            "order": 10,
-            "section": "anfitriao",
-            "label": "Número do documento",
-            "translations": {
-                "fr": {"label": "Numéro du document"},
-                "nl": {"label": "Documentnummer"},
-                "en": {"label": "Document number"},
             },
         },
         # Declaração do usuário: sem `translations` de propósito (ver o

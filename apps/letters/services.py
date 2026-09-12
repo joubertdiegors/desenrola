@@ -27,6 +27,8 @@ from apps.doctemplates.official_templates import official_slug
 from apps.doctemplates.schema import OPTION_BASED_TYPES, resolve_label, resolve_options
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
 from apps.letters.models import Letter
+from apps.letters.nationalities import display_name as nationality_display_name
+from apps.letters.nationalities import document_forms
 from apps.letters.pdf_generation import render_letter_pdf
 
 # Etapas 1-4 tem campos vindos do field_schema, cada uma na sua secao;
@@ -204,16 +206,23 @@ def save_step_data(letter, step, cleaned_data):
     letter.save(update_fields=["data", "updated_at"])
 
 
-def validate_all_steps(letter):
+def blocking_step_before(letter, target_step):
     """
-    Revalida o conjunto completo (etapas 1-4 a partir de `letter.data`, e
-    o idioma escolhido) antes de permitir o fechamento na Etapa 6 -- nao
-    confia apenas em cada submissao anterior ter sido validada.
+    A primeira etapa ANTERIOR a `target_step` que ainda nao esta valida --
+    ou None se o caminho ate ali esta todo preenchido.
 
-    Retorna o numero da primeira etapa invalida, ou None se tudo estiver
-    valido.
+    E o que permite navegar pelo assistente sem furar a validacao: voltar
+    e sempre livre, mas so se avanca ate onde os dados ja sustentam. Como
+    a checagem e feita a partir de `letter.data` (e nao de um "ate onde
+    ele chegou" guardado), nao ha como contornar pela URL: pedir a etapa 5
+    com a 2 invalida devolve 2, tenha a pessoa passado por la antes ou
+    nao.
+
+    Revalidar assim tambem e o que sustenta o fechamento na etapa 6: nunca
+    confiamos apenas em cada submissao anterior ter sido validada no seu
+    momento.
     """
-    for step in range(FIRST_STEP, LAST_FORM_STEP + 1):
+    for step in range(FIRST_STEP, min(target_step, LAST_FORM_STEP + 1)):
         fields = fields_for_section(letter, STEP_SECTIONS[step])
         if not fields:
             continue
@@ -221,10 +230,32 @@ def validate_all_steps(letter):
         if not form.is_valid():
             return step
 
-    if letter.language not in valid_language_codes():
+    if target_step > LANGUAGE_STEP and letter.language not in valid_language_codes():
         return LANGUAGE_STEP
 
     return None
+
+
+def validate_all_steps(letter):
+    """
+    Revalida o conjunto completo antes de permitir o fechamento. Retorna o
+    numero da primeira etapa invalida, ou None se tudo estiver valido.
+    """
+    return blocking_step_before(letter, LAST_STEP + 1)
+
+
+def reachable_steps(letter):
+    """
+    Ate que etapa a pessoa pode ir agora: todas as anteriores (voltar e
+    sempre livre) mais a primeira que ainda falta preencher.
+
+    Serve para os indicadores 1-6 saberem quais viram link e quais ficam
+    inertes -- a regra de verdade continua sendo a do servidor, esta aqui
+    e so para nao oferecer um caminho que seria recusado.
+    """
+    bloqueio = validate_all_steps(letter)
+    limite = LAST_STEP if bloqueio is None else bloqueio
+    return set(range(FIRST_STEP, limite + 1))
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +280,10 @@ def grouped_review(letter):
         elif field_def["type"] in OPTION_BASED_TYPES:
             labels = dict(resolve_options(field_def, language))
             value = labels.get(value, value)
+        elif field_def["type"] == "nationality":
+            # Em Letter.data fica o codigo; na revisao a pessoa tem de ver
+            # o nome, no idioma da carta.
+            value = nationality_display_name(value, language)
         sections.setdefault(section, []).append(
             {"label": resolve_label(field_def, language), "value": value}
         )
@@ -262,6 +297,34 @@ def grouped_review(letter):
     return ordered
 
 
+# Metadados de exibicao de cada idioma disponivel (nome/dica/bandeira). Os
+# CODIGOS validos continuam vindo so de settings.LANGUAGES — isto e so a
+# camada visual de apoio, nunca a fonte de verdade sobre quais idiomas
+# existem, nem sobre quais tem documento oficial publicado.
+LANGUAGE_META = {
+    "pt": {
+        "name": "Português",
+        "hint": _("Versão completa do documento."),
+        "flag": "lang-flag-pt",
+    },
+    "fr": {
+        "name": "Français",
+        "hint": _("Idioma mais utilizado para processos na Bélgica."),
+        "flag": "lang-flag-fr",
+    },
+    "nl": {
+        "name": "Nederlands",
+        "hint": _("Também é idioma oficial na Bélgica e nos Países Baixos."),
+        "flag": "lang-flag-nl",
+    },
+    "en": {
+        "name": "English",
+        "hint": _("Widely accepted internationally."),
+        "flag": "lang-flag-en",
+    },
+}
+
+
 def build_snapshot(letter, user):
     """
     Congela tudo que influenciou a geracao no momento do fechamento: os
@@ -269,6 +332,10 @@ def build_snapshot(letter, user):
     anfitriao vindos do perfil (nome/telefone/endereco/cidade) -- para a
     carta continuar reproduzivel mesmo que o usuario edite o perfil
     depois.
+
+    Do perfil vem tambem o numero do documento de identidade: e um dado
+    da pessoa, nao da viagem, entao o anfitriao o informa uma vez e todas
+    as cartas o reaproveitam.
 
     A cidade e congelada SEPARADA do endereco de proposito. O fechamento
     do documento ("Fait à <cidade>, le <data>") usa a cidade de
@@ -286,7 +353,14 @@ def build_snapshot(letter, user):
             "phone": user.phone,
             "address": user.get_address_display(),
             "city": user.city,
+            "document_number": user.document_number,
         },
+        # As nacionalidades entram ja RESOLVIDAS na forma que o documento
+        # usa. `data` guarda o codigo (estavel); aqui fica o texto que foi
+        # impresso -- e o que faz uma carta emitida continuar igual mesmo
+        # que a nacionalidade seja renomeada ou desativada no cadastro
+        # depois.
+        "nationalities": document_forms(letter.data),
         "finalized_at": timezone.now().isoformat(),
     }
 
@@ -308,6 +382,8 @@ def missing_host_profile_fields(user):
         missing.append(_("endereço"))
     if not (user.city or "").strip():
         missing.append(_("cidade"))
+    if not (user.document_number or "").strip():
+        missing.append(_("número do documento de identidade"))
     if not (user.phone or "").strip():
         missing.append(_("telefone"))
     return missing

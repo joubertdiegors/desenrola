@@ -23,7 +23,15 @@ from django.utils.translation import gettext_lazy as _
 from .models import User
 
 # Campos que o usuario edita no cadastro e no perfil.
-PROFILE_FIELDS = ("full_name", "email", "phone", "address_line1", "postal_code", "city")
+PROFILE_FIELDS = (
+    "full_name",
+    "email",
+    "phone",
+    "document_number",
+    "address_line1",
+    "postal_code",
+    "city",
+)
 
 # Texto aprovado no layout para a confirmacao de senha. O catalogo `pt` do
 # Django diz "palavra-passe"; os demais textos de validacao de senha ainda

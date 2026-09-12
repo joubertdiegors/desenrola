@@ -1,0 +1,14 @@
+{% load i18n %}{% comment %}
+Etiqueta de status de uma carta. Recebe `card` (LetterCard).
+
+Cada estado tem a sua cor, usando as etiquetas que ja existem no visual
+v2 (static/css/components.css) -- nenhum estilo novo:
+
+  rascunho  -> âmbar, é o que ainda pede ação da pessoa;
+  concluída -> azul, registrada (sem PDF: ver o detalhe da carta);
+  gerada    -> verde com visto, o documento existe;
+  cancelada -> cinza apagado, nada a fazer.
+
+O texto vem de `get_status_display()`, ou seja, dos rótulos do próprio
+modelo -- nao ha rotulo inventado aqui.
+{% endcomment %}{% if card.status == "generated" %}<span class="tag tag-success"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>{{ card.status_label }}</span>{% elif card.status == "completed" %}<span class="tag tag-primary"><i class="ph ph-check" aria-hidden="true"></i>{{ card.status_label }}</span>{% elif card.status == "cancelled" %}<span class="tag tag-neutral"><i class="ph ph-prohibit" aria-hidden="true"></i>{{ card.status_label }}</span>{% else %}<span class="tag tag-warning"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ card.status_label }}</span>{% endif %}

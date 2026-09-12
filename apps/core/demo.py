@@ -1,15 +1,16 @@
 """
 Dados ficticios da fase de apresentacao visual.
 
-Alimentam as telas que ainda nao tem uma fonte real: a Home/Landing e a
-listagem do dashboard/backoffice (a geracao do PDF ainda nao existe).
-O assistente de Carta Convite (apps.letters) ja usa dados reais desde a
-Fase 3 — o que restou aqui e so a lista ilustrativa de cartas e a tela de
-conclusao ficticia (`letters:result`/`letters:generate`), mantida como
-referencia visual ate a geracao real de PDF (Fase 4). Nomes, datas e
-numeros vem dos layouts de referencia (desenrola-v2-2-desktop.html,
-desenrola-v2-3-tablet.html e desenrola-v2-4-mobile.html). Este modulo
-sera removido conforme cada parte ganhar uma implementacao real.
+Alimentam as telas que ainda nao tem uma fonte real: a Home/Landing e o
+backoffice. Nomes, datas e numeros vem dos layouts de referencia
+(desenrola-v2-2-desktop.html, desenrola-v2-3-tablet.html e
+desenrola-v2-4-mobile.html). Este modulo sera removido conforme cada
+parte ganhar uma implementacao real.
+
+Ja NAO passam por aqui: o assistente de Carta Convite (dados reais desde
+a Fase 3), a geracao do PDF (Fase 4) e o dashboard do usuario, que desde
+a Fase 5 le as cartas do banco (apps/letters/presentation.py). O que
+resta e a landing e a listagem ilustrativa do backoffice.
 """
 
 from django.utils.translation import gettext_lazy as _
@@ -105,19 +106,6 @@ ALL_LETTERS = [
         "filename": "Carta-Convite-Amara-Nkemelu.pdf",
     },
 ]
-
-# Cartas mostradas no dashboard: um recorte ilustrativo, igual para
-# qualquer usuario ate o modelo Letter existir de verdade.
-LETTERS = ALL_LETTERS[:3]
-
-
-def get_letter(pk):
-    """Devolve a carta ficticia com esse id ou None."""
-    for letter in ALL_LETTERS:
-        if letter["id"] == pk:
-            return letter
-    return None
-
 
 # ---------------------------------------------------------------------------
 # Area administrativa

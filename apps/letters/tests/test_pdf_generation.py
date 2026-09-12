@@ -30,6 +30,18 @@ from pdfengine.render import render_invitation_letter_fr
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _nacionalidades_de_teste(nacionalidade_factory):
+    """
+    Nacionalidades usadas pelos payloads deste arquivo -- desde a decisão
+    final da Fase 5/Etapa 3 o campo não aceita mais texto livre. Não é
+    uma lista oficial (ver apps/letters/tests/test_nacionalidade_e_documento.py).
+    """
+    nacionalidade_factory("Brésilienne", guest_form="Brésilienne")
+
+    nacionalidade_factory("belge", guest_form="Belge", host_form="belge")
+
+
 def _step_url(letter, step):
     return reverse("letters:step", args=[letter.uuid, step])
 
@@ -44,8 +56,6 @@ VALID_STEP_2 = {"stay_arrival": "10/10/2026", "stay_departure": "24/10/2026"}
 VALID_STEP_3 = {
     "host_nationality": "belge",
     "host_birth_date": "14/03/1985",
-    "host_document_label": "belge",
-    "host_document_number": "00000000",
     "host_confirm": "on",
 }
 VALID_STEP_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
@@ -90,8 +100,6 @@ def snapshot_completo():
             "stay_departure": "2026-10-24",
             "host_nationality": "belge",
             "host_birth_date": "1985-03-14",
-            "host_document_label": "belge",
-            "host_document_number": "00000000",
             "host_confirm": True,
             "notice_informal": True,
             "notice_prise_en_charge": True,
@@ -104,6 +112,12 @@ def snapshot_completo():
             "phone": "+32 470 00 00 00",
             "address": "Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert",
             "city": "Woluwe-Saint-Lambert",
+            "document_number": "00000000",
+        },
+        # formas já resolvidas no fechamento (ver nationalities.document_forms)
+        "nationalities": {
+            "guest_nationality": "Brésilienne",
+            "host_nationality": "belge",
         },
         "finalized_at": "2026-09-09T10:00:00+00:00",
     }

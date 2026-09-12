@@ -22,6 +22,7 @@ So o idioma frances tem um documento oficial implementado ate agora
 import datetime
 
 from apps.doctemplates.official_templates import official_slug
+from apps.letters.rules import stay_duration_days
 from pdfengine.exceptions import MissingHostCityError, MissingSnapshotDataError
 from pdfengine.render import render_invitation_letter_fr
 
@@ -134,14 +135,30 @@ De onde vem cada coisa: os dados do convidado e da viagem de
 
     arrival_iso = _require(data, "stay_arrival", context="etapa Viagem")
     departure_iso = _require(data, "stay_departure", context="etapa Viagem")
-    # Duracao INCLUSIVA (conta o dia de chegada e o de partida), como no
-    # documento oficial: "du 10/10/2026 au 24/10/2026 (15 jours)" -- a
-    # diferenca entre as duas datas e 14, mas o documento declara 15.
-    # E sempre recalculada aqui, nunca lida de um campo guardado, para
-    # nao ficar desatualizada se o dado de origem mudar.
-    duration_days = (
-        datetime.date.fromisoformat(departure_iso) - datetime.date.fromisoformat(arrival_iso)
-    ).days + 1
+    # Sempre recalculada, nunca lida de um campo guardado -- assim nao
+    # fica desatualizada se o dado de origem mudar. A conta vem de
+    # `rules`, a mesma que o assistente mostra na etapa da viagem: a tela
+    # e o documento nunca dizem numeros diferentes.
+    duration_days = stay_duration_days(
+        datetime.date.fromisoformat(arrival_iso),
+        datetime.date.fromisoformat(departure_iso),
+    )
+    if duration_days is None:
+        raise MissingSnapshotDataError(
+            "As datas da viagem no snapshot são inválidas: a partida "
+            "é anterior à chegada."
+        )
+
+    # As nacionalidades vêm do snapshot já na forma impressa no documento
+    # (congeladas no fechamento). Cartas anteriores ao cadastro de
+    # nacionalidades não têm esta chave: aí valem os valores de `data`,
+    # que naquela época já eram o próprio texto.
+    nationalities = snapshot.get("nationalities") or {
+        chave: data.get(chave) for chave in ("guest_nationality", "host_nationality")
+    }
+    host_nationality = _require(
+        nationalities, "host_nationality", context="etapa Anfitrião"
+    )
 
     host_name = _require(host, "full_name", context="dados do anfitrião")
     document_date_raw = _require(snapshot, "finalized_at", context="data de finalização")
@@ -151,15 +168,23 @@ De onde vem cada coisa: os dados do convidado e da viagem de
         "host_birth": _format_date(
             _require(data, "host_birth_date", context="etapa Anfitrião")
         ),
-        "host_nationality": _require(data, "host_nationality", context="etapa Anfitrião"),
-        "host_document_type": _require(
-            data, "host_document_label", context="etapa Anfitrião"
+        "host_nationality": host_nationality,
+        # O "belge" de "titulaire de la carte d'identité belge n° ..." é a
+        # MESMA nacionalidade do anfitrião, na forma que o documento usa --
+        # não um segundo dado. Antes havia um campo separado no
+        # assistente (`host_document_label`), com rótulo de "tipo de
+        # documento", que na verdade recebia a nacionalidade. O tipo é
+        # fixo e já está no texto impresso do documento.
+        "host_document_type": host_nationality,
+        "host_document": _require(
+            host, "document_number", context="documento de identidade no perfil"
         ),
-        "host_document": _require(data, "host_document_number", context="etapa Anfitrião"),
         "host_address": _require(host, "address", context="dados do anfitrião"),
         "host_phone": _require(host, "phone", context="dados do anfitrião"),
         "guest_name": _require(data, "guest_name", context="etapa Convidado"),
-        "guest_nationality": _require(data, "guest_nationality", context="etapa Convidado"),
+        "guest_nationality": _require(
+            nationalities, "guest_nationality", context="etapa Convidado"
+        ),
         "guest_birth": _format_date(_require(data, "guest_birth_date", context="etapa Convidado")),
         "guest_passport": _require(data, "guest_passport", context="etapa Convidado"),
         "arrival_date": _format_date(arrival_iso),

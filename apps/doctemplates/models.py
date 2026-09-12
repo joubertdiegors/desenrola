@@ -228,3 +228,79 @@ class TemplateVersion(TimeStampedModel):
         }
         defaults.update(overrides)
         return TemplateVersion.objects.create(**defaults)
+
+
+class NationalityQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class Nationality(TimeStampedModel):
+    """
+    Uma nacionalidade que o assistente oferece nos campos de nacionalidade.
+
+    Por que existe: o campo era texto livre, e texto livre num documento
+    oficial vira erro de digitacao e forma gramatical errada. Aqui a
+    lista e administravel (Django Admin) e o que fica guardado em
+    `Letter.data` e o CODIGO -- estavel -- nunca o texto traduzido. Assim,
+    renomear "Brésilienne" no cadastro nao reescreve o passado: o texto
+    que foi para a carta ja esta congelado no snapshot dela.
+
+    As duas formas gramaticais existem porque o documento oficial escreve
+    a mesma nacionalidade de dois jeitos:
+
+        "de nationalité belge"          -> `host_form`
+        "Nationalité : Brésilienne"     -> `guest_form`
+
+    LIMITE CONHECIDO: hoje essas duas formas sao as do documento oficial,
+    que so existe em frances. Quando outro idioma ganhar documento
+    proprio, elas precisarao virar uma forma por idioma.
+    """
+
+    code = models.CharField(
+        _("código"),
+        max_length=16,
+        unique=True,
+        help_text=_(
+            "Identificador estável, gravado na carta. Não mude depois de "
+            "existirem cartas usando-o."
+        ),
+    )
+    is_active = models.BooleanField(
+        _("ativa"),
+        default=True,
+        help_text=_("Só nacionalidades ativas aparecem no formulário."),
+    )
+    order = models.PositiveIntegerField(
+        _("ordem"), default=0, help_text=_("Menor aparece primeiro.")
+    )
+
+    name_pt = models.CharField(_("nome (pt)"), max_length=120)
+    name_fr = models.CharField(_("nome (fr)"), max_length=120)
+    name_nl = models.CharField(_("nome (nl)"), max_length=120)
+    name_en = models.CharField(_("nome (en)"), max_length=120)
+
+    guest_form = models.CharField(
+        _("forma no documento — convidado"),
+        max_length=120,
+        help_text=_('Como sai na tabela do documento. Ex.: "Brésilienne".'),
+    )
+    host_form = models.CharField(
+        _("forma no documento — anfitrião"),
+        max_length=120,
+        help_text=_('Como sai no texto do documento. Ex.: "belge".'),
+    )
+
+    objects = NationalityQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("nacionalidade")
+        verbose_name_plural = _("nacionalidades")
+        ordering = ["order", "name_pt"]
+
+    def __str__(self):
+        return self.name_pt or self.code
+
+    def display_name(self, language=None):
+        """O nome no idioma pedido, caindo no portugues se faltar."""
+        return getattr(self, f"name_{language}", "") or self.name_pt or self.code

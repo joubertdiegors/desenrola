@@ -38,9 +38,14 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
 
 {% block content %}
 <div class="wizard">
-  <div class="stepper" aria-hidden="true">
-    {% for n in steps %}<span class="step-dot{% if n < step %} is-done{% elif n == step %} is-current{% endif %}">{% if n < step %}<i class="ph-bold ph-check"></i>{% else %}{{ n }}{% endif %}</span>{% if not forloop.last %}<span class="step-line{% if n < step %} is-done{% endif %}"></span>{% endif %}{% endfor %}
-  </div>
+  {% comment %}
+  Indicadores navegáveis: uma etapa alcançável vira link; as demais ficam
+  inertes. Quem manda de verdade é o servidor (services.blocking_step_before),
+  isto aqui só evita oferecer um caminho que seria recusado.
+  {% endcomment %}
+  <nav class="stepper" aria-label="{% translate 'Etapas' %}">
+    {% for n in steps %}{% if n in reachable_steps and n != step %}<a class="step-dot{% if n < step %} is-done{% endif %}" href="{% url 'letters:step' letter_uuid=letter.uuid step=n %}" aria-label="{% blocktranslate %}Ir para a etapa {{ n }}{% endblocktranslate %}">{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}</a>{% else %}<span class="step-dot{% if n < step %} is-done{% elif n == step %} is-current{% endif %}"{% if n == step %} aria-current="step"{% endif %}>{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}</span>{% endif %}{% if not forloop.last %}<span class="step-line{% if n < step %} is-done{% endif %}" aria-hidden="true"></span>{% endif %}{% endfor %}
+  </nav>
   <div class="step-labels d-only">
     <span{% if step == 1 %} class="is-current"{% endif %}>{% translate "Convidado" %}</span>
     <span{% if step == 2 %} class="is-current"{% endif %}>{% translate "Viagem" %}</span>
@@ -74,18 +79,21 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       <div class="card wizard-card form-grid">
         {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
         {% if duration_days %}
-        <div class="tint duration-box span-2">
+        <div class="tint duration-box span-2{% if duration_exceeded %} is-invalid{% endif %}">
           <span class="duration-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
           <div>
             <div class="duration-label">{% translate "Duração da estadia" %}</div>
             <div class="duration-value">{% blocktranslate count n=duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}</div>
           </div>
-          {% if duration_days <= 90 %}
-          <span class="tag tag-success push">{% translate "≤ 90 dias" %}</span>
+          {% if duration_exceeded %}
+          <span class="tag tag-error push">{% blocktranslate %}&gt; {{ max_stay_days }} dias{% endblocktranslate %}</span>
           {% else %}
-          <span class="tag tag-warning push">{% translate "> 90 dias" %}</span>
+          <span class="tag tag-success push">{% blocktranslate %}&le; {{ max_stay_days }} dias{% endblocktranslate %}</span>
           {% endif %}
         </div>
+        {% endif %}
+        {% if duration_exceeded %}
+        <div class="notice notice-error span-2"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{% blocktranslate %}A estadia não pode ultrapassar {{ max_stay_days }} dias. Ajuste as datas para continuar.{% endblocktranslate %}</span></div>
         {% endif %}
         <div class="notice span-2"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à data de chegada. Cartas de curta duração valem para estadias de até 90 dias." %}</span></div>
       </div>

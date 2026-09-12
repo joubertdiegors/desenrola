@@ -9,10 +9,9 @@ Criacao: `GET /letters/new/` so APRESENTA a primeira etapa — nao grava
 nada. E o POST valido dessa tela que cria a Letter em rascunho. Assim
 nenhum link, prefetch ou recarregamento cria carta por engano.
 
-`generate`/`result` sao a fase de apresentacao anterior (dados ficticios
-de apps.core.demo) — nenhuma tela do assistente real aponta mais para
-elas; ficam como estao, sem geracao de PDF ainda (isso e Fase 4), so como
-referencia visual da conclusao.
+`detail`/`letter_pdf` sao a carta pronta: sempre pela UUID publica,
+sempre so para o dono. O PDF nunca sai por midia estatica — `letter_pdf`
+e a unica porta.
 """
 
 import datetime
@@ -21,15 +20,15 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
-from apps.core import demo
-from apps.letters import services
+from apps.letters import presentation, services
 from apps.letters.models import Letter
 from apps.letters.pdf_generation import UnsupportedLanguageError
+from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_days
 from pdfengine.exceptions import PdfEngineError
 
 logger = logging.getLogger(__name__)
@@ -67,32 +66,6 @@ STEP_META = {
     },
 }
 
-# Metadados de exibicao de cada idioma disponivel (nome/dica/bandeira). Os
-# CODIGOS validos continuam vindo so de settings.LANGUAGES — isto e so a
-# camada visual de apoio, nunca a fonte de verdade sobre quais idiomas
-# existem, nem sobre quais tem documento oficial publicado.
-LANGUAGE_META = {
-    "pt": {
-        "name": "Português",
-        "hint": _("Versão completa do documento."),
-        "flag": "lang-flag-pt",
-    },
-    "fr": {
-        "name": "Français",
-        "hint": _("Idioma mais utilizado para processos na Bélgica."),
-        "flag": "lang-flag-fr",
-    },
-    "nl": {
-        "name": "Nederlands",
-        "hint": _("Também é idioma oficial na Bélgica e nos Países Baixos."),
-        "flag": "lang-flag-nl",
-    },
-    "en": {
-        "name": "English",
-        "hint": _("Widely accepted internationally."),
-        "flag": "lang-flag-en",
-    },
-}
 
 DOCUMENT_UNAVAILABLE = _(
     "O documento oficial da Carta Convite ainda não está disponível neste idioma."
@@ -176,6 +149,14 @@ def wizard_step(request, letter_uuid, step):
     if letter is None:
         raise Http404("Carta não encontrada.")
 
+    # Voltar e livre; avancar so ate onde os dados sustentam. Isto e o
+    # servidor decidindo -- digitar a URL da etapa 5 com a 2 incompleta
+    # devolve a pessoa para a 2.
+    bloqueio = services.blocking_step_before(letter, step)
+    if bloqueio is not None:
+        messages.error(request, _("Complete esta etapa antes de seguir adiante."))
+        return redirect("letters:step", letter_uuid=letter.uuid, step=bloqueio)
+
     if step in services.STEP_SECTIONS:
         return _handle_form_step(request, letter, step)
     if step == services.LANGUAGE_STEP:
@@ -189,6 +170,7 @@ def _steps_context(letter, step):
         "step": step,
         "steps": range(1, services.LAST_STEP + 1),
         "step_info": STEP_META[step],
+        "reachable_steps": services.reachable_steps(letter),
     }
 
 
@@ -210,16 +192,22 @@ def _handle_form_step(request, letter, step):
     )
 
     if step == 2:
-        context["duration_days"] = _stay_duration_days(letter, form)
+        duracao = _stay_duration_days(letter, form)
+        context["duration_days"] = duracao
+        context["duration_exceeded"] = exceeds_max_stay(duracao)
+        context["max_stay_days"] = MAX_STAY_DAYS
 
     return render(request, "letters/wizard.html", context)
 
 
 def _stay_duration_days(letter, form):
     """
-    Duracao da estadia, para exibicao (etapa 'Viagem'). So calculada
-    quando ja ha datas validas — no formulario vinculado (POST invalido de
-    outro campo) ou no que ja estiver salvo em Letter.data (GET).
+    Duracao da estadia, para exibicao (etapa 'Viagem'). Sai do
+    formulario vinculado (POST invalido de outro campo) ou do que ja
+    estiver salvo em Letter.data (GET).
+
+    A conta e a de `rules.stay_duration_days` -- a mesma que o PDF usa,
+    para a tela nunca dizer um numero e o documento outro.
     """
     if form.is_bound:
         arrival = form["stay_arrival"].value()
@@ -239,12 +227,7 @@ def _stay_duration_days(letter, form):
                     continue
         return None
 
-    arrival_date = _as_date(arrival)
-    departure_date = _as_date(departure)
-    if not arrival_date or not departure_date:
-        return None
-    days = (departure_date - arrival_date).days
-    return days if days > 0 else None
+    return stay_duration_days(_as_date(arrival), _as_date(departure))
 
 
 def _handle_language_step(request, letter):
@@ -256,7 +239,7 @@ def _handle_language_step(request, letter):
     available = set(services.available_languages())
     context = _steps_context(letter, services.LANGUAGE_STEP)
     context["language_options"] = [
-        {"code": code, "available": code in available, **LANGUAGE_META[code]}
+        {"code": code, "available": code in available, **services.LANGUAGE_META[code]}
         for code, _label in settings.LANGUAGES
     ]
     context["selected_language"] = letter.language
@@ -269,7 +252,7 @@ def _handle_review_step(request, letter):
 
     context = _steps_context(letter, services.REVIEW_STEP)
     context["review_sections"] = services.grouped_review(letter)
-    context["review_language"] = LANGUAGE_META.get(letter.language)
+    context["review_language"] = services.LANGUAGE_META.get(letter.language)
     return render(request, "letters/wizard.html", context)
 
 
@@ -316,7 +299,7 @@ def _finalize(request, letter):
                 "para gerá-lo."
             ),
         )
-        return redirect("core:dashboard")
+        return redirect("letters:detail", letter_uuid=letter.uuid)
     except PdfEngineError:
         logger.exception("Falha ao gerar o PDF da carta %s", letter.reference)
         messages.warning(
@@ -326,29 +309,76 @@ def _finalize(request, letter):
                 "Nossa equipe foi avisada."
             ),
         )
-        return redirect("core:dashboard")
+        return redirect("letters:detail", letter_uuid=letter.uuid)
 
-    messages.success(request, _("Carta Convite registrada com sucesso."))
-    return redirect("core:dashboard")
+    messages.success(request, _("Carta Convite gerada com sucesso."))
+    return redirect("letters:detail", letter_uuid=letter.uuid)
 
 
-# --- Fase de apresentação (dados fictícios) — mantidas sem alteração -------
+# ---------------------------------------------------------------------------
+# Carta pronta: detalhe e PDF
+# ---------------------------------------------------------------------------
+
+
+def _get_own_letter(user, letter_uuid):
+    """
+    A Letter identificada por `letter_uuid`, apenas se pertencer a `user`.
+    None em qualquer outro caso -- carta de outra pessoa ou inexistente --
+    para a view responder sempre o mesmo 404, sem revelar qual dos dois
+    aconteceu (nenhuma enumeracao de UUID de terceiros).
+
+    So o dono, de proposito: `letters.view_all_letters` e permissao de
+    supervisao (ver `Letter.objects.visible_to()`), e a tela de supervisao
+    nao existe ainda. Quando existir, sera ela a usar aquele filtro.
+    """
+    return (
+        Letter.objects.filter(uuid=letter_uuid, user=user)
+        .select_related("template", "template_version")
+        .first()
+    )
 
 
 @login_required
-def generate(request):
-    """Recebe o envio da etapa 6 da fase de apresentação (so redireciona)."""
-    return redirect("letters:result", pk=1)
-
-
-@login_required
-def result(request, pk):
-    """Conclusão da fase de apresentação: carta ficticia, com preview e ações."""
-    letter = demo.get_letter(pk)
+def detail(request, letter_uuid):
+    """A carta em si: dados reais e a acao que faz sentido no seu estado."""
+    letter = _get_own_letter(request.user, letter_uuid)
     if letter is None:
         raise Http404("Carta não encontrada.")
+
     return render(
         request,
-        "letters/result.html",
-        {"letter": letter, "active_nav": "letters", "mobile_nav": True},
+        "letters/detail.html",
+        {
+            "card": presentation.build_card(letter),
+            "active_nav": "letters",
+            "mobile_nav": True,
+        },
+    )
+
+
+@login_required
+def letter_pdf(request, letter_uuid):
+    """
+    Entrega o PDF da carta.
+
+    O arquivo e privado: nunca e servido por mapeamento estatico de midia
+    (isso so existe em DEBUG e nao valida ninguem). A unica porta e esta
+    view, que exige login, exige ser o dono e exige que o PDF exista --
+    qualquer outro caso e 404, sempre igual.
+    """
+    letter = _get_own_letter(request.user, letter_uuid)
+    if letter is None or not letter.pdf_file:
+        raise Http404("Carta não encontrada.")
+
+    try:
+        arquivo = letter.pdf_file.open("rb")
+    except (FileNotFoundError, OSError):
+        # O registro aponta para um arquivo que nao esta mais la. Para
+        # quem pede, e o mesmo que nao existir.
+        raise Http404("Carta não encontrada.") from None
+
+    return FileResponse(
+        arquivo,
+        content_type="application/pdf",
+        filename=f"{letter.reference}.pdf",
     )

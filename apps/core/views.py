@@ -2,8 +2,9 @@
 Views do app core.
 
 As areas do usuario exigem login; a area administrativa exige `is_staff`.
-Cartas, estatisticas, parceiros e aparencia continuam com dados ficticios
-(apps.core.demo) ate as proximas etapas do backend.
+O dashboard ja le as cartas do banco (apps.letters.presentation); a
+landing e o backoffice continuam com dados ficticios (apps.core.demo) ate
+as proximas etapas do backend.
 """
 
 from functools import wraps
@@ -11,7 +12,9 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+
+from apps.letters import presentation
 
 from . import demo
 
@@ -30,7 +33,16 @@ def staff_required(view):
 
 
 def home(request):
-    """Landing publica (layouts 2a, 3a e 4a)."""
+    """
+    Landing publica (layouts 2a, 3a e 4a).
+
+    Quem ja esta logado nao tem o que fazer na pagina de apresentacao:
+    vai direto para a sua area. O logout traz de volta para ca
+    (LOGOUT_REDIRECT_URL), e ai a sessao ja acabou -- entao nao ha laco.
+    """
+    if request.user.is_authenticated:
+        return redirect("core:dashboard")
+
     return render(
         request,
         "core/home.html",
@@ -40,11 +52,23 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    """Area do usuario. As cartas listadas ainda sao ficticias."""
+    """
+    Area do usuario: as cartas DELE, vindas do banco.
+
+    Lista as mais recentes (`presentation.RECENT_LIMIT`), mas conta o
+    total -- o numero ao lado do titulo e quantas cartas a pessoa tem, nao
+    quantas couberam na lista.
+    """
+    letters = presentation.own_letters(request.user)
     return render(
         request,
         "core/dashboard.html",
-        {"letters": demo.LETTERS, "active_nav": "home", "mobile_nav": True},
+        {
+            "cards": [presentation.build_card(x) for x in letters[: presentation.RECENT_LIMIT]],
+            "letters_total": letters.count(),
+            "active_nav": "home",
+            "mobile_nav": True,
+        },
     )
 
 

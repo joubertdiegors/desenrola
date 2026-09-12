@@ -3,6 +3,12 @@
 {% comment %}
 Administracao · Cartas. Sem layout proprio na v2: reusa o cabecalho e a
 tabela de cartas do dashboard, com a coluna do anfitriao. Contexto: letters.
+
+Esta tela ainda e ilustrativa (dados de apps/core/demo.py). O link
+"Visualizar" apontava para a conclusao ficticia, que deixou de existir; o
+detalhe real (letters:detail) e do dono da carta, nao serve aqui. Entao a
+acao foi retirada em vez de apontar para o lugar errado -- a supervisao
+de verdade e uma etapa propria, com `Letter.objects.visible_to()`.
 {% endcomment %}
 
 {% block bo_main %}
@@ -39,7 +45,7 @@ tabela de cartas do dashboard, com a coluna do anfitriao. Contexto: letters.
         <td>{{ letter.guest }}</td>
         <td>{{ letter.language }}</td>
         <td><span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span></td>
-        <td class="right"><a class="btn btn-text" href="{% url 'letters:result' letter.id %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Visualizar" %}</a></td>
+        <td class="right"></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -48,13 +54,13 @@ tabela de cartas do dashboard, com a coluna do anfitriao. Contexto: letters.
 
 <div class="list m-only">
   {% for letter in letters %}
-  <a class="list-item" href="{% url 'letters:result' letter.id %}">
+  <div class="list-item">
     <div class="list-body">
       <div class="list-title">{{ letter.guest }}</div>
       <div class="list-sub">{{ letter.date }} · {{ letter.host }}</div>
     </div>
     <span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span>
-  </a>
+  </div>
   {% endfor %}
 </div>
 {% endblock %}

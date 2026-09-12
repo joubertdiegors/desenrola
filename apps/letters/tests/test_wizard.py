@@ -20,6 +20,18 @@ from apps.letters.models import Letter
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _nacionalidades_de_teste(nacionalidade_factory):
+    """
+    Nacionalidades usadas pelos payloads deste arquivo -- desde a decisão
+    final da Fase 5/Etapa 3 o campo não aceita mais texto livre. Não é
+    uma lista oficial (ver apps/letters/tests/test_nacionalidade_e_documento.py).
+    """
+    nacionalidade_factory("Brasileira")
+
+    nacionalidade_factory("Belga", host_form="belga")
+
+
 def _step_url(letter, step):
     return reverse("letters:step", args=[letter.uuid, step])
 
@@ -34,11 +46,24 @@ VALID_STEP_2 = {"stay_arrival": "10/04/2025", "stay_departure": "25/04/2025"}
 VALID_STEP_3 = {
     "host_nationality": "Belga",
     "host_birth_date": "03/06/1988",
-    "host_document_label": "Carte d'identité",
-    "host_document_number": "592-0000000-00",
     "host_confirm": "on",
 }
 VALID_STEP_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
+
+
+def _fill_until(client, letter, step):
+    """
+    Preenche as etapas ANTERIORES a `step`.
+
+    Desde que os indicadores viraram navegaveis, o servidor so deixa
+    avancar ate onde os dados sustentam (services.blocking_step_before):
+    pedir a etapa 5 com a 2 em branco devolve a pessoa para a 2. Os testes
+    que querem exercitar uma etapa adiante precisam, portanto, chegar la
+    pelo caminho.
+    """
+    payloads = {1: VALID_STEP_1, 2: VALID_STEP_2, 3: VALID_STEP_3, 4: VALID_STEP_4}
+    for n in range(1, min(step, 5)):
+        client.post(_step_url(letter, n), payloads[n])
 
 
 def _fill_all_steps(client, letter):
@@ -211,6 +236,7 @@ class TestAssistente:
         assert response.context["form"].initial["stay_arrival"] == datetime.date(2025, 4, 10)
 
     def test_etapa_3_mostra_dados_do_usuario_logado(self, auth_client, draft_letter, user):
+        _fill_until(auth_client, draft_letter, 3)
         response = auth_client.get(_step_url(draft_letter, 3))
 
         html = response.content.decode()
@@ -299,6 +325,7 @@ class TestValidacao:
         assert draft_letter.data == {}
 
     def test_etapa_2_recusa_partida_antes_da_chegada(self, auth_client, draft_letter):
+        _fill_until(auth_client, draft_letter, 2)
         response = auth_client.post(
             _step_url(draft_letter, 2),
             {"stay_arrival": "20/04/2025", "stay_departure": "10/04/2025"},
@@ -308,6 +335,7 @@ class TestValidacao:
         assert response.context["form"].errors
 
     def test_etapa_3_exige_confirmar_a_caixa(self, auth_client, draft_letter):
+        _fill_until(auth_client, draft_letter, 3)
         dados = {k: v for k, v in VALID_STEP_3.items() if k != "host_confirm"}
 
         response = auth_client.post(_step_url(draft_letter, 3), dados)
@@ -316,6 +344,7 @@ class TestValidacao:
         assert "host_confirm" in response.context["form"].errors
 
     def test_etapa_4_exige_os_dois_avisos_marcados(self, auth_client, draft_letter):
+        _fill_until(auth_client, draft_letter, 4)
         response = auth_client.post(_step_url(draft_letter, 4), {"notice_informal": "on"})
 
         assert response.status_code == 200
@@ -337,6 +366,11 @@ class TestValidacao:
 
 
 class TestIdioma:
+    @pytest.fixture(autouse=True)
+    def _chega_na_etapa_do_idioma(self, auth_client, draft_letter):
+        """A etapa 5 só é alcançável com as etapas 1-4 preenchidas."""
+        _fill_until(auth_client, draft_letter, 5)
+
     def test_idioma_invalido_e_recusado(self, auth_client, draft_letter):
         response = auth_client.post(_step_url(draft_letter, 5), {"language": "xx"})
 
@@ -466,7 +500,8 @@ class TestRevisao:
         assert response.status_code == 200
         assert "Maria Santos da Silva" in html
         assert "FA123456" in html
-        assert "592-0000000-00" in html
+        # o documento de identidade saiu do assistente: agora vem do perfil
+        assert "592-0000000-00" not in html
 
     def test_revisao_permite_voltar_a_uma_etapa_especifica(self, auth_client, draft_letter):
         _fill_all_steps(auth_client, draft_letter)

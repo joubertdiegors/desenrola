@@ -1,6 +1,12 @@
 {% extends "app_base.html" %}
 {% load i18n %}
-{% comment %}Dashboard (layout 2c desktop, 3b tablet, 4d celular). Dados ficticios.{% endcomment %}
+{% comment %}
+Dashboard (layout 2c desktop, 3b tablet, 4d celular).
+
+Dados reais: `cards` sao LetterCard (apps/letters/presentation.py) das
+cartas DO usuario, e `letters_total` e quantas ele tem ao todo. Botao que
+ainda nao tem acao nao aparece — nada de fingir funcionalidade.
+{% endcomment %}
 
 {% block title %}{% translate "Início" %} · Desenrola{% endblock %}
 
@@ -21,8 +27,17 @@
 
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>
-    <span class="count"><span class="d-only">{% blocktranslate count counter=letters|length trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters|length }}</span></span>
+    <span class="count"><span class="d-only">{% blocktranslate count counter=letters_total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters_total }}</span></span>
   </div>
+
+  {% if not cards %}
+    <div class="card letters-empty">
+      <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
+      <h3>{% translate "Você ainda não tem cartas" %}</h3>
+      <p>{% translate "Quando gerar sua primeira Carta Convite, ela aparece aqui." %}</p>
+      <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    </div>
+  {% else %}
 
   <div class="card table-wrap d-only letters-table">
     <table class="table">
@@ -30,24 +45,26 @@
         <tr>
           <th>{% translate "Data" %}</th>
           <th>{% translate "Convidado" %}</th>
+          <th>{% translate "Período" %}</th>
           <th>{% translate "Idioma" %}</th>
           <th>{% translate "Status" %}</th>
           <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
         </tr>
       </thead>
       <tbody>
-        {% for letter in letters %}
+        {% for card in cards %}
         <tr>
-          <td class="cell-muted">{{ letter.date }}</td>
-          <td class="cell-name">{{ letter.guest }}</td>
-          <td>{{ letter.language }}</td>
-          <td><span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{% if letter.status == "generated" %}<i class="ph-fill ph-check-circle" aria-hidden="true"></i>{% endif %}{{ letter.status_label }}</span></td>
+          <td class="cell-muted">{{ card.updated_at|date:"d/m/Y" }}</td>
+          <td class="cell-name">{{ card.guest_name|default:"—" }}</td>
+          <td class="cell-muted">{% if card.has_period %}{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td>{{ card.language_name }}</td>
+          <td>{% include "letters/_status_tag.html" with card=card %}</td>
           <td class="right">
-            {% if letter.status == "generated" %}
-              <a class="btn btn-success" href="{% url 'letters:result' letter.id %}"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "PDF" %}</a>
-              <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:result' letter.id %}" aria-label="{% translate 'Enviar pelo WhatsApp' %}"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i></a>
+            {% if card.is_draft %}
+              <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
             {% else %}
-              <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+              {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+              <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
             {% endif %}
           </td>
         </tr>
@@ -57,24 +74,27 @@
   </div>
 
   <div class="letters-cards m-only">
-    {% for letter in letters %}
+    {% for card in cards %}
     <div class="card letter-card">
       <div class="letter-card-head">
-        <h3>{{ letter.guest }}</h3>
-        <span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{% if letter.status == "generated" %}<i class="ph-fill ph-check-circle" aria-hidden="true"></i>{% endif %}{{ letter.status_label }}</span>
+        <h3>{{ card.guest_name|default:"—" }}</h3>
+        {% include "letters/_status_tag.html" with card=card %}
       </div>
-      <p>{{ letter.date }} · {{ letter.language }}</p>
-      {% if letter.status == "generated" %}
-        <div class="letter-card-actions">
-          <a class="btn btn-success" href="{% url 'letters:result' letter.id %}"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "PDF" %}</a>
-          <a class="btn btn-ghost" href="{% url 'letters:result' letter.id %}"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i>{% translate "WhatsApp" %}</a>
-        </div>
+      <p>{{ card.updated_at|date:"d/m/Y" }} · {{ card.language_name }}</p>
+      {% if card.has_period %}<p>{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</p>{% endif %}
+      {% if card.is_draft %}
+        <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
       {% else %}
-        <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+        <div class="letter-card-actions">
+          {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+          <a class="btn btn-ghost" href="{% url 'letters:detail' card.uuid %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Detalhes" %}</a>
+        </div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
+
+  {% endif %}
 </div>
 </div>
 {% endblock %}

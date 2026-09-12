@@ -96,6 +96,12 @@ ilustrativas (sem campo no modelo).
             <input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" value="{{ profile_form.phone.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.phone.errors %}
           </div>
+          <div class="field{% if profile_form.document_number.errors %} is-invalid{% endif %}">
+            <label for="p_document">{% translate "Número do documento de identidade" %}</label>
+            <input class="input" id="p_document" name="document_number" type="text" maxlength="64" value="{{ profile_form.document_number.value|default:'' }}">
+            <div class="field-hint">{% translate "Usado na sua Carta Convite. Assim você não precisa digitá-lo a cada carta." %}</div>
+            {% include "components/field_errors.html" with errors=profile_form.document_number.errors %}
+          </div>
           <div class="field span-2" id="endereco">
             <label for="p_address">{% translate "Endereço completo na Bélgica" %}</label>
             <input class="input" id="p_address" name="address_line1" type="text" autocomplete="street-address" maxlength="255" value="{{ profile_form.address_line1.value|default:'' }}">

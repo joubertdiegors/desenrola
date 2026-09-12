@@ -150,6 +150,109 @@
     }, 900);
   });
 
+  // --- Campos de data ---------------------------------------------------
+  // O input visivel mostra dd/mm/aaaa; digitar 10102026 vira 10/10/2026
+  // sozinho, e o botao do icone abre o calendario NATIVO do navegador.
+  // Antes de enviar, a data vai normalizada para ISO.
+  //
+  // Nada aqui e seguranca: o servidor revalida e converte de qualquer
+  // jeito (apps/letters/forms.py aceita dd/mm/aaaa e ISO). Sem
+  // JavaScript, o campo continua sendo um campo de data que se digita.
+
+  function maskDate(value) {
+    var digits = value.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 2) { return digits; }
+    if (digits.length <= 4) { return digits.slice(0, 2) + "/" + digits.slice(2); }
+    return digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+  }
+
+  function toIso(value) {
+    var parts = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
+    if (!parts) { return null; }
+    var day = Number(parts[1]);
+    var month = Number(parts[2]);
+    var year = Number(parts[3]);
+    var date = new Date(year, month - 1, day);
+    // Recusa data impossivel (31/02 viraria 03/03 sozinho no Date).
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null;
+    }
+    return parts[3] + "-" + parts[2] + "-" + parts[1];
+  }
+
+  function fromIso(value) {
+    var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+    return parts ? parts[3] + "/" + parts[2] + "/" + parts[1] : "";
+  }
+
+  document.addEventListener("input", function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches("[data-date-input]")) { return; }
+    var masked = maskDate(input.value);
+    if (masked !== input.value) { input.value = masked; }
+  });
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".date-input-open");
+    if (!button) { return; }
+    var wrap = button.closest(".date-input");
+    var picker = wrap && wrap.querySelector(".date-input-picker");
+    var input = wrap && wrap.querySelector("[data-date-input]");
+    if (!picker || !input) { return; }
+
+    picker.value = toIso(input.value) || "";
+    if (typeof picker.showPicker === "function") {
+      try { picker.showPicker(); } catch (err) { picker.focus(); }
+    } else {
+      picker.focus();
+      picker.click();
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    var picker = event.target;
+    if (!picker.matches || !picker.matches(".date-input-picker")) { return; }
+    var input = picker.closest(".date-input").querySelector("[data-date-input]");
+    if (input && picker.value) { input.value = fromIso(picker.value); }
+  });
+
+  // Envia ISO quando a data esta completa e valida; se nao estiver, deixa
+  // seguir como foi digitada, para o servidor apontar o erro no campo.
+  document.addEventListener("submit", function (event) {
+    var campos = event.target.querySelectorAll("[data-date-input]");
+    Array.prototype.forEach.call(campos, function (input) {
+      var iso = toIso(input.value);
+      if (iso) { input.value = iso; }
+    });
+  });
+
+  // Imprimir a carta: usa o PDF REAL da Letter, nunca um substituto.
+  // O <a> ja abre o PDF em outra aba sozinho (funciona sem JavaScript);
+  // aqui so tentamos poupar um passo, carregando o mesmo arquivo num
+  // iframe escondido e chamando a caixa de impressao. Se o navegador nao
+  // permitir, nao fazemos nada e o link segue o seu caminho normal.
+  document.addEventListener("click", function (event) {
+    var trigger = event.target.closest(".js-print-pdf");
+    if (!trigger) { return; }
+    var url = trigger.getAttribute("data-pdf-url");
+    if (!url || !window.HTMLIFrameElement) { return; }
+
+    var frame = document.createElement("iframe");
+    frame.hidden = true;
+    frame.src = url;
+    frame.addEventListener("load", function () {
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch (err) {
+        // Sem permissao para imprimir de dentro do iframe: abre a aba.
+        window.open(url, "_blank", "noopener");
+      }
+    });
+    document.body.appendChild(frame);
+    event.preventDefault();
+  });
+
   window.Desenrola = window.Desenrola || {};
   window.Desenrola.openDialog = openDialog;
   window.Desenrola.closeDialog = function (id) { closeDialog(document.getElementById(id)); };

@@ -69,6 +69,10 @@ FIELD_TYPE_CHOICES = (
     "checkbox",
     "radio",
     "file",
+    # Escolha vinda do cadastro de nacionalidades (models.Nationality), e
+    # nao de `options` fixas no schema: a lista e administravel e o que
+    # fica guardado na carta e o CODIGO, nunca o texto traduzido.
+    "nationality",
 )
 
 # Tipos cujo valor e escolhido entre opcoes pre-definidas.

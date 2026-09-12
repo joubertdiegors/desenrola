@@ -63,6 +63,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(_("nome completo"), max_length=150)
     phone = models.CharField(_("telefone"), max_length=32, blank=True)
 
+    # Numero do documento de identidade. Fica no perfil, e nao em cada
+    # carta: e um dado da PESSOA, nao da viagem -- o anfitriao digita uma
+    # vez e as cartas seguintes ja o trazem. O TIPO do documento nao e
+    # guardado porque nao varia: o documento oficial ja diz "carte
+    # d'identite" no proprio texto fixo.
+    document_number = models.CharField(
+        _("número do documento de identidade"), max_length=64, blank=True
+    )
+
     # --- Endereco (opcional) ----------------------------------------------
     address_line1 = models.CharField(_("endereco"), max_length=255, blank=True)
     address_line2 = models.CharField(_("complemento"), max_length=255, blank=True)

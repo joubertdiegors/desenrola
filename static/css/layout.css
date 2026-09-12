@@ -275,6 +275,14 @@ body { display: flex; flex-direction: column; }
 .letter-card .btn { min-height: 42px; font-size: 14px; flex: 1; }
 .letter-card-actions { display: flex; gap: 8px; margin-top: 6px; }
 
+/* Estado vazio de "Minhas cartas": mesma moldura .card do resto do
+   dashboard, so centrada. */
+.letters-empty { padding: 40px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.letters-empty-icon { font-size: 40px; color: var(--mu); line-height: 1; }
+.letters-empty h3 { font-size: 18px; }
+.letters-empty p { font-size: 14px; color: var(--mu); max-width: 42ch; }
+.letters-empty .btn { margin-top: 8px; }
+
 @media (max-width: 767px) {
   .dash { padding: 16px 20px 0; max-width: none; }
   .dash h1 { font-size: 30px; }
@@ -282,6 +290,8 @@ body { display: flex; flex-direction: column; }
   .hero-cta-icon { width: 52px; height: 52px; font-size: 26px; }
   .hero-cta .btn { width: 100%; min-height: 52px; font-size: 16px; }
   .section-head { margin: 28px 0 12px; }
+  .letters-empty { padding: 32px 20px; }
+  .letters-empty .btn { width: 100%; min-height: 48px; }
 }
 
 
@@ -313,6 +323,10 @@ body { display: flex; flex-direction: column; }
 .duration-icon { width: 44px; height: 44px; background: #fff; border-radius: var(--radius-md); display: grid; place-items: center; color: var(--p); font-size: 24px; flex: none; }
 .duration-label { font-size: 13px; font-weight: 600; color: var(--navy); }
 .duration-value { font-size: 20px; font-weight: 800; color: var(--navy); }
+/* Estadia acima do limite legal: a duracao passa a ser o alerta. */
+.duration-box.is-invalid { background: color-mix(in srgb, var(--error) 8%, white); }
+.duration-box.is-invalid .duration-value,
+.duration-box.is-invalid .duration-icon { color: var(--error-dark); }
 
 .review-lang-note { margin-top: 12px; }
 

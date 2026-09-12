@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import LetterTemplate, TemplateVersion
+from .models import LetterTemplate, Nationality, TemplateVersion
 
 
 class TemplateVersionInline(admin.TabularInline):
@@ -48,3 +48,37 @@ class TemplateVersionAdmin(admin.ModelAdmin):
         if obj and obj.status == TemplateVersion.Status.PUBLISHED:
             fields += ["template", "version_number", "field_schema", "snapshot"]
         return fields
+
+
+@admin.register(Nationality)
+class NationalityAdmin(admin.ModelAdmin):
+    """
+    Cadastro das nacionalidades oferecidas no assistente.
+
+    `code` fica somente-leitura depois de criado: e ele que vai gravado em
+    Letter.data, entao muda-lo quebraria a ligacao das cartas ja feitas.
+    """
+
+    list_display = ("code", "name_pt", "guest_form", "host_form", "order", "is_active")
+    list_filter = ("is_active",)
+    list_editable = ("order", "is_active")
+    search_fields = ("code", "name_pt", "name_fr", "name_nl", "name_en")
+    ordering = ("order", "name_pt")
+    fieldsets = (
+        (None, {"fields": ("code", "is_active", "order")}),
+        (_("Nomes na interface"), {"fields": ("name_pt", "name_fr", "name_nl", "name_en")}),
+        (
+            _("Formas usadas no documento"),
+            {
+                "fields": ("guest_form", "host_form"),
+                "description": _(
+                    "O documento oficial escreve a mesma nacionalidade de dois "
+                    "jeitos: “Nationalité : Brésilienne” (convidado) e "
+                    "“de nationalité belge” (anfitrião)."
+                ),
+            },
+        ),
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("code",) if obj else ()
