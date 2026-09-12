@@ -12,9 +12,10 @@
   <script>
     (function () {
       try {
-        if (localStorage.getItem("desenrola.theme") === "claro") {
-          document.documentElement.classList.add("light");
-        }
+        var pref = localStorage.getItem("desenrola.theme");
+        var light = pref === "claro" ||
+          (pref === "sistema" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+        if (light) { document.documentElement.classList.add("light"); }
       } catch (e) {}
     })();
   </script>

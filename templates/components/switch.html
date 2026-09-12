@@ -1,0 +1,4 @@
+{% comment %}
+Interruptor. Parametros: name, checked (bool), size (sm | md | lg),
+label (texto para leitores de tela), theme (True liga ao tema claro/escuro).
+{% endcomment %}<label class="switch{% if size %} switch-{{ size }}{% endif %}"><input type="checkbox"{% if name %} name="{{ name }}"{% endif %}{% if checked %} checked{% endif %}{% if theme %} data-theme-switch{% endif %}{% if label %} aria-label="{{ label }}"{% endif %}><span class="track"></span><span class="knob"></span></label>

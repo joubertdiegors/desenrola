@@ -25,6 +25,9 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),
+    path("letters/", include("apps.letters.urls")),
+    # Area administrativa visual (nao substitui o Django Admin em /admin/).
+    path("backoffice/", include("apps.core.backoffice_urls")),
     path("", include("apps.core.urls")),
 )
 

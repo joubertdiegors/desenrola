@@ -11,18 +11,25 @@ Aplicacao web para geracao de Carta Convite.
 
 ## Estado atual
 
-Fundacao tecnica. O que existe:
+Fundacao tecnica + apresentacao visual. O que existe:
 
 - projeto Django com settings separados por ambiente;
 - User customizado com login por e-mail;
 - cinco apps criados e registrados;
 - i18n configurado nos quatro idiomas, com prefixo de idioma nas URLs;
-- login e logout nativos ligados (templates provisorios);
-- suite de testes cobrindo as decisoes de fundacao.
+- login e logout nativos ligados;
+- design system (tokens, componentes, tema claro/escuro) replicado do
+  arquivo de identidade visual, em `static/css/`;
+- todas as telas navegaveis com dados ficticios (`apps/core/demo.py`):
+  landing, entrar, criar conta, recuperar senha, dashboard, gerar carta,
+  resultado/PDF, perfil e area administrativa visual;
+- suite de testes cobrindo fundacao e telas.
 
-Ainda **nao** implementado: geracao de PDF, formulario da carta, modelos de
-documento, permissoes granulares, dashboard definitivo, layout visual,
-compartilhamento por WhatsApp e envio real de e-mail.
+Ainda **nao** implementado: autenticacao real das telas (o dashboard nao
+exige login nesta fase), geracao de PDF, logica do formulario, modelos de
+documento, permissoes granulares, compartilhamento por WhatsApp e envio
+real de e-mail. O documento mostrado no resultado e um mock visual; a
+reproducao do PDF oficial vira com o arquivo original.
 
 ---
 
@@ -72,6 +79,28 @@ python manage.py runserver
 ```
 
 Aplicacao em http://127.0.0.1:8000/pt/ e admin em http://127.0.0.1:8000/pt/admin/.
+
+### Telas de apresentacao
+
+Todas aceitam os prefixos `/pt/`, `/fr/`, `/nl/` e `/en/`. Os formularios
+sao simulados: "Entrar" e "Criar conta" levam ao dashboard; "Gerar Carta
+Convite" leva ao resultado.
+
+| Tela | URL |
+|---|---|
+| Landing | `/pt/` |
+| Entrar | `/pt/accounts/login/` |
+| Criar conta | `/pt/accounts/signup/` |
+| Recuperar senha | `/pt/accounts/password-reset/` |
+| Dashboard | `/pt/dashboard/` |
+| Gerar Carta Convite | `/pt/letters/new/` (no celular, `?passo=1` a `?passo=4`) |
+| Resultado / PDF | `/pt/letters/1/` |
+| Perfil | `/pt/accounts/profile/` (no celular, `?secao=dados`, `senha`, `idioma`) |
+| Admin visual | `/pt/backoffice/` (usuarios, permissoes, cartas, modelos, conteudo, idiomas, sistema) |
+
+O tema claro/escuro e alternado pelo botao sol/lua na barra do dashboard,
+pelo perfil ("Aparencia" no desktop, "Modo claro" no celular) e fica salvo
+no navegador (`localStorage`, chave `desenrola.theme`).
 
 ### Testes
 

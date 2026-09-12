@@ -2,9 +2,10 @@
    Desenrola — components.css
    Componentes reutilizaveis do design system.
 
-   Fonte da verdade: desenrola-1-conceito.html (Sistema visual). Cada bloco
-   replica o componente correspondente do arquivo de referencia; os poucos
-   itens que a referencia nao define (checkbox, select, dropdown, switch)
+   Fonte da verdade: desenrola-1-conceito.html (Sistema visual) para o
+   desenho de cada componente; desenrola-2-desktop.html e
+   desenrola-3-mobile.html para as variantes de tamanho usadas nas telas.
+   Os poucos itens que a referencia nao define (checkbox, select, dropdown)
    derivam dos valores ja existentes, sem estilo novo.
    ========================================================================== */
 
@@ -48,8 +49,11 @@
 .btn-ghost:hover { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 
-.btn-icon { width: 36px; height: 36px; padding: 0; }
+.btn-icon { width: 36px; height: 36px; padding: 0; flex: none; }
 .btn-icon .ph, .btn-icon .ph-fill { font-size: 18px; }
+.btn-icon-40 { width: 40px; height: 40px; }
+.btn-icon-44 { width: 44px; height: 44px; }
+.btn-icon-40 .ph, .btn-icon-44 .ph { font-size: 20px; }
 
 .btn-block { width: 100%; margin-top: var(--space-2); }
 
@@ -82,6 +86,7 @@
   color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
 .field .required { color: var(--color-accent); }
+.field .optional { opacity: 0.55; }
 
 .input {
   width: 100%;
@@ -119,8 +124,9 @@ textarea.input { min-height: 90px; resize: vertical; }
   margin-top: 5px;
 }
 .field-error .ph { font-size: 14px; }
+.field-note { font-size: 12px; opacity: 0.55; margin-left: auto; }
 
-/* Campo com icone de estado a direita (ex.: check de validado) */
+/* Campo com icone a direita (estado de validacao, calendario, seta) */
 .input-wrap { position: relative; }
 .input-wrap .input { padding-right: 34px; }
 .input-wrap .input-state {
@@ -133,6 +139,38 @@ textarea.input { min-height: 90px; resize: vertical; }
 }
 .input-wrap .input-state.is-valid { color: var(--color-success); }
 .input-wrap .input-state.is-invalid { color: var(--color-error); }
+.input-wrap .input-state.is-hint { opacity: 0.6; }
+
+/* Campo com icone a esquerda (busca) */
+.input-icon { position: relative; }
+.input-icon > .ph {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.input-icon .input { padding-left: 32px; }
+.input-icon-lg > .ph { left: 12px; }
+.input-icon-lg .input { padding-left: 36px; min-height: 48px; font-size: 16px; }
+
+/* Senha com botao de mostrar/ocultar */
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 40px; }
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 13px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
 
 /* Select nativo com a mesma aparencia do input; seta em neutro-500,
    que e identico nos dois temas */
@@ -177,8 +215,10 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   box-shadow: inset 0 0 0 4px var(--color-bg);
 }
 .radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.radio-stack { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 
-/* Checkbox: mesma logica do radio, em quadrado de raio 4px */
+/* Checkbox: mesma logica do radio, em quadrado. Tamanhos das telas:
+   16px (padrao), 18px (cadastro desktop), 22px (cadastro celular). */
 .check {
   display: inline-flex;
   align-items: flex-start;
@@ -213,8 +253,15 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 }
 .check input:focus-visible + .box { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .check.is-invalid .box { border-color: var(--color-error); }
+.check-lg { gap: 10px; }
+.check-lg .box { width: 18px; height: 18px; margin-top: 2px; border-width: 1px; }
+.check-lg input:checked + .box::after { width: 9px; height: 5px; }
+.check-xl { gap: 12px; min-height: 44px; }
+.check-xl .box { width: 22px; height: 22px; margin-top: 0; border-radius: 5px; border-width: 1px; }
+.check-xl input:checked + .box::after { width: 11px; height: 6px; margin-top: -3px; }
 
-/* Segmentado (ex.: escolha de idioma ou tema no perfil) */
+/* Segmentado (idioma, tema). Tamanhos: xs (barra da landing), sm (admin),
+   padrao, md (aparencia), lg (idioma da carta) */
 .seg {
   display: inline-flex;
   overflow: hidden;
@@ -229,24 +276,44 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   font-size: 13px;
   cursor: pointer;
   position: relative;
+  background: none;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
+  line-height: inherit;
 }
 .seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
-.seg-opt:has(input:checked), .seg-opt[aria-checked="true"] {
+.seg-opt:has(input:checked), .seg-opt[aria-current="true"] {
   color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
-.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.seg-opt:not(:has(input:checked)):not([aria-current="true"]):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg-opt:has(input:focus-visible), .seg-opt:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.seg-opt .seg-check { display: none; }
+.seg-opt:has(input:checked) .seg-check { display: inline; }
+.seg-xs { font-size: 12px; }
+.seg-xs .seg-opt { padding: 5px 9px; font-size: 12px; }
+.seg-sm { font-size: 12px; }
+.seg-sm .seg-opt { padding: 5px 10px; font-size: 12px; }
+.seg-md .seg-opt { padding: 8px 14px; }
+.seg-lg .seg-opt { padding: 9px 16px; }
 
-/* Interruptor (toggle da referencia): trilho neutro, ligado = acento */
+/* Interruptor: trilho neutro, ligado = acento. Tamanhos das telas:
+   sm 32x18 (tabela admin), padrao 36x20, md 40x22, lg 44x26 (celular). */
 .switch {
+  --sw-w: 36px;
+  --sw-h: 20px;
+  --sw-k: 16px;
   position: relative;
   display: inline-block;
-  width: 38px;
-  height: 20px;
+  width: var(--sw-w);
+  height: var(--sw-h);
   flex: none;
   cursor: pointer;
 }
+.switch-sm { --sw-w: 32px; --sw-h: 18px; --sw-k: 14px; }
+.switch-md { --sw-w: 40px; --sw-h: 22px; --sw-k: 18px; }
+.switch-lg { --sw-w: 44px; --sw-h: 26px; --sw-k: 20px; }
 .switch .track {
   position: absolute;
   inset: 0;
@@ -258,13 +325,13 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: var(--sw-k);
+  height: var(--sw-k);
   border-radius: 50%;
   background: var(--color-neutral-500);
 }
 .switch input:checked ~ .track { background: var(--color-accent); border-color: var(--color-accent); }
-.switch input:checked ~ .knob { left: 20px; background: var(--color-bg); }
+.switch input:checked ~ .knob { left: calc(var(--sw-w) - var(--sw-k) - 2px); background: var(--color-bg); }
 .switch input:focus-visible ~ .track { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* Linha de preferencia: rotulo a esquerda, controle a direita */
@@ -273,11 +340,33 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 0;
   font-size: 14px;
+  cursor: pointer;
 }
-.pref + .pref { border-top: 1px solid var(--color-divider); }
 .pref .pref-help { display: block; font-size: 12px; opacity: 0.6; }
+.prefs { display: flex; flex-direction: column; gap: 14px; }
+
+/* Grade de formulario: duas colunas no desktop, uma no celular */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid .field { margin-top: 0; }
+.form-grid .input { min-height: 44px; }
+.span-2 { grid-column: 1 / -1; }
+
+/* Bloco recolhivel (campos opcionais no celular) */
+.disclosure { border-radius: var(--radius-md); border: 1px solid var(--color-divider); }
+.disclosure > summary {
+  padding: 14px;
+  font-size: 15px;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure-hint { font-size: 12px; opacity: 0.55; }
+.disclosure-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+.disclosure-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
 
 
 /* --------------------------------------------------------------------------
@@ -320,6 +409,17 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .elev-md { box-shadow: var(--shadow-md); }
 .elev-lg { box-shadow: var(--shadow-lg); }
 
+/* Indicador numerico (admin) */
+.stat { padding: 16px; gap: 2px; }
+.stat-value { font-size: 28px; font-weight: 500; }
+.stat-note { font-size: 12px; opacity: 0.6; }
+.stat-note.text-success, .stat-note.text-warning { opacity: 1; }
+
+/* Card de informacoes em linhas chave/valor */
+.info-card { padding: 14px; gap: 6px; font-size: 13px; }
+.info-row { display: flex; justify-content: space-between; align-items: center; }
+.info-row .k { opacity: 0.6; }
+
 
 /* --------------------------------------------------------------------------
    Tags e status
@@ -342,15 +442,69 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .tag-success { background: color-mix(in srgb, var(--color-success) 16%, transparent); color: var(--color-success); }
 .tag-warning { background: color-mix(in srgb, var(--color-warning) 16%, transparent); color: var(--color-warning); }
 .tag-error { background: color-mix(in srgb, var(--color-error) 16%, transparent); color: var(--color-error); }
+.tag-xs { font-size: 10px; padding: 1px 7px; }
+.tag-lg { font-size: 12px; padding: 6px 12px; }
 
 .light .tag-neutral { background: var(--color-neutral-800); color: var(--color-neutral-200); }
 .light .tag-accent { background: var(--color-accent-800); color: var(--color-accent-200); }
+
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-accent { color: var(--color-accent); }
+
+
+/* --------------------------------------------------------------------------
+   Avatar (iniciais) e numero de passo
+   -------------------------------------------------------------------------- */
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-accent-800);
+  color: var(--color-accent-100);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  text-decoration: none;
+}
+.avatar-sm { width: 28px; height: 28px; font-size: 11px; }
+.avatar-md { width: 36px; height: 36px; font-size: 13px; }
+.avatar-lg { width: 48px; height: 48px; font-size: 16px; }
+.avatar-xl { width: 56px; height: 56px; font-size: 18px; }
+.avatar-neutral { background: var(--color-neutral-800); color: inherit; }
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+.step-num-lg {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  border-color: var(--color-accent-300);
+  color: var(--color-accent-300);
+}
+
+/* Barra de progresso em segmentos (passos no celular) */
+.progress { display: flex; gap: 4px; }
+.progress span { flex: 1; height: 3px; border-radius: 2px; background: var(--color-neutral-800); }
+.progress .is-done { background: var(--color-accent); }
 
 
 /* --------------------------------------------------------------------------
    Navegacao
    Desktop: barra superior com poucos links e o idioma.
-   Celular: barra inferior com 3 destinos.
+   Celular: barra inferior com 3 (ou 4, no admin) destinos.
    -------------------------------------------------------------------------- */
 
 .nav {
@@ -363,7 +517,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .nav-brand {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
   font-size: 18px;
@@ -373,33 +527,105 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 }
 .nav a { color: inherit; text-decoration: none; font-size: 14px; }
 .nav a:hover, .nav a[aria-current="page"] { color: var(--color-accent); }
-.nav .nav-brand:hover { color: inherit; }
+.nav .nav-brand:hover, .nav a.btn:hover { color: inherit; }
+.nav a.btn-primary:hover { color: var(--color-accent); }
 
 .light .nav a { color: var(--color-neutral-300); }
-.light .nav a[aria-current="page"] { color: var(--color-accent); }
+.light .nav a[aria-current="page"], .light .nav a.btn-primary { color: var(--color-accent); }
+.light .nav .nav-brand { color: var(--color-text); }
 
 .tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding: 8px 0;
+  padding: 10px 0 26px;
   font-size: 11px;
   text-align: center;
   background: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  border-top: 1px solid var(--color-divider);
 }
+.tabbar-4 { grid-template-columns: repeat(4, 1fr); }
 .tabbar a {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   min-height: 44px;
-  justify-content: center;
   color: inherit;
   text-decoration: none;
   opacity: 0.7;
 }
-.tabbar a .ph, .tabbar a .ph-fill { font-size: 20px; }
+.tabbar a .ph, .tabbar a .ph-fill { font-size: 22px; }
 .tabbar a[aria-current="page"] { color: var(--color-accent); opacity: 1; }
+
+/* Menu lateral (perfil, passos do formulario, admin) */
+.side-menu { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.side-menu a, .side-menu button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.8;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.side-menu a:hover, .side-menu button:hover {
+  color: inherit;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.side-menu a[aria-current="page"] {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  opacity: 1;
+}
+.side-menu-steps a { opacity: 0.75; }
+.side-menu .hr { margin: 10px 0; }
+
+/* Lista de linhas (celular): perfil, usuarios do admin */
+.list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 15px 16px;
+  font-size: 16px;
+  color: inherit;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.list-item + .list-item { border-top: 1px solid var(--color-divider); }
+.list-item:hover { color: inherit; }
+.list-item > .ph:first-child { font-size: 20px; color: var(--color-accent); }
+.list-item .list-value { margin-left: auto; font-size: 13px; opacity: 0.6; }
+.list-item .list-caret { margin-left: auto; opacity: 0.5; font-size: 1.15em; }
+.list-item .list-value + .list-caret { margin-left: 0; }
+.list-item .list-body { flex: 1; min-width: 0; }
+.list-item .list-end { margin-left: auto; display: inline-flex; }
+.list-item .list-title { font-size: 15px; }
+.list-item .list-sub { font-size: 12px; opacity: 0.6; display: flex; gap: 6px; align-items: center; }
+.list-item.is-inactive { opacity: 0.6; }
 
 
 /* --------------------------------------------------------------------------
@@ -407,7 +633,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
    Linhas separadas por gradiente que some nas pontas; hover a 4% de tinta.
    -------------------------------------------------------------------------- */
 
-.table-wrap { overflow-x: auto; }
+.table-wrap { position: relative; overflow-x: auto; max-width: 100%; min-width: 0; }
 
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th {
@@ -441,6 +667,13 @@ select.input option { background: var(--color-surface); color: var(--color-text)
       transparent, color-mix(in srgb, var(--color-text) 8%, transparent) 48px,
       color-mix(in srgb, var(--color-text) 8%, transparent) calc(100% - 48px), transparent) no-repeat bottom / 100% 1px;
 }
+.table-sm { font-size: 13px; }
+.table-nowrap th, .table-nowrap td { white-space: nowrap; }
+.table .center { text-align: center; }
+.table .right { text-align: right; }
+.table .cell-check { text-align: center; color: var(--color-success); }
+.table .cell-none { text-align: center; opacity: 0.35; }
+.table tr.is-inactive { opacity: 0.6; }
 
 .light .table th { color: var(--color-neutral-300); }
 
@@ -501,6 +734,9 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .alert > .ph { font-size: 18px; flex: none; color: var(--color-accent); }
 .alert strong { font-weight: 500; }
 .alert + .alert { margin-top: 8px; }
+.alert-lg { padding: 12px 16px; font-size: 14px; }
+.alert-lg > .ph { font-size: 20px; }
+.alert-center { align-items: center; }
 
 .alert-success { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 10%, transparent); }
 .alert-success > .ph { color: var(--color-success); }
@@ -511,7 +747,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 
 
 /* --------------------------------------------------------------------------
-   Dropdown (menu do usuario, idioma)
+   Dropdown (menu do usuario, idioma, menu do celular)
    <details> nativo: acessivel e sem JS obrigatorio.
    -------------------------------------------------------------------------- */
 
@@ -543,6 +779,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   box-shadow: var(--shadow-md);
 }
 .dropdown-menu.is-left { right: auto; left: 0; }
+.dropdown-menu.is-up { top: auto; bottom: calc(100% + 6px); }
 .dropdown-item {
   display: flex;
   align-items: center;
@@ -561,7 +798,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   cursor: pointer;
 }
 .dropdown-item:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.dropdown-item[aria-current="true"] { color: var(--color-accent); }
+.dropdown-item[aria-current="true"], .dropdown-item[aria-current="page"] { color: var(--color-accent); }
 .dropdown-item .ph { font-size: 16px; opacity: 0.8; }
 .dropdown-sep { height: 1px; margin: 4px 0; background: var(--color-divider); }
 .dropdown-head {
@@ -569,6 +806,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   font-size: 12px;
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
+.dropdown-menu form { display: contents; }
 
 /* Seletor de idioma: o codigo aparece como tag neutra na barra */
 .lang-code {
@@ -578,6 +816,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   letter-spacing: 0.02em;
   opacity: 0.6;
 }
+.lang-footer-summary { gap: 6px; font-size: inherit; color: inherit; }
 
 
 /* --------------------------------------------------------------------------
@@ -594,7 +833,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
    Celular: alvos de toque
    -------------------------------------------------------------------------- */
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .input { min-height: 44px; }
   .btn:not(.btn-icon):not(.btn-ghost) { min-height: 44px; }
 }

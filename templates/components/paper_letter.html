@@ -1,0 +1,44 @@
+{% comment %}
+Documento ficticio (mock visual da carta, em frances como no modelo).
+NAO e a reproducao do PDF oficial: essa vira com o arquivo original.
+variant: hero (landing desktop) | hero-m (landing celular) |
+         full (resultado desktop) | full-m (resultado celular) | thumb (admin)
+{% endcomment %}{% if variant == "thumb" %}
+<p class="paper-title">LETTRE D'INVITATION</p>
+<p>Je soussignée…</p>
+<p>Nom et prénom :<br>Nationalité :<br>Durée :</p>
+{% elif variant == "hero-m" %}
+<p class="paper-title">LETTRE D'INVITATION ET D'HÉBERGEMENT</p>
+<p>À l'attention des autorités compétentes.</p>
+<p>Je soussignée, <span class="highlight">Claire Dubois</span>, née le 14/03/1985, de nationalité belge, titulaire de la carte d'identité belge n° 00000000, invite par la présente :</p>
+<p>Nom et prénom : <span class="highlight">Carlos Eduardo Silva</span><br>Nationalité : Brésilienne<br>Durée : du 10/10/2026 au 24/10/2026</p>
+<p>1. La présente invitation est établie dans le cadre d'une visite privée.</p>
+<p>2. Pendant toute la durée de son séjour…</p>
+{% elif variant == "hero" %}
+<p class="paper-title">LETTRE D'INVITATION ET D'HÉBERGEMENT</p>
+<p class="paper-sub">(COURT SÉJOUR EN BELGIQUE)</p>
+<p>À l'attention des autorités compétentes.</p>
+<p>Je soussignée, <span class="highlight">Claire Dubois</span>, née le <span class="highlight">14/03/1985</span>, de nationalité belge, titulaire de la carte d'identité belge n° 00000000, domiciliée au Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert, invite par la présente :</p>
+<p>Nom et prénom : <span class="highlight">Carlos Eduardo Silva</span><br>Nationalité : Brésilienne<br>Date de naissance : 22/07/1990<br>N° de passeport : YY000000<br>Durée : du 10/10/2026 au 24/10/2026 (15 jours)</p>
+<p>1. La présente invitation est établie dans le cadre d'une visite privée.</p>
+<p>2. Pendant toute la durée de son séjour en Belgique, la personne invitée sera hébergée à mon domicile…</p>
+<p>3. La personne invitée assume personnellement ses frais de voyage, de séjour…</p>
+<p class="paper-date">Fait à Woluwe-Saint-Lambert, le 09/09/2026</p>
+<p class="paper-sign">_______________________<br>Claire Dubois</p>
+{% else %}
+<p class="paper-title">LETTRE D'INVITATION ET D'HÉBERGEMENT</p>
+<p class="paper-sub">(COURT SÉJOUR EN BELGIQUE)</p>
+<p>À l'attention des autorités compétentes.</p>
+<p class="justify">Je soussignée, Claire Dubois, née le 14/03/1985, de nationalité belge, titulaire de la carte d'identité belge n° 00000000, domiciliée au Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert, téléphone +32 470 00 00 00, invite par la présente :</p>
+<p class="lines">Nom et prénom : Carlos Eduardo Silva<br>Nationalité : Brésilienne<br>Date de naissance : 22/07/1990<br>N° de passeport : YY000000<br>Durée : du 10/10/2026 au 24/10/2026 (15 jours)</p>
+<p class="justify">1. La présente invitation est établie dans le cadre d'une visite privée.</p>
+<p class="justify">2. Pendant toute la durée de son séjour en Belgique, la personne invitée sera hébergée à mon domicile situé à l'adresse suivante : Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert</p>
+<p class="justify">3. La personne invitée assume personnellement ses frais de voyage, de séjour, de nourriture, d'assurance, de transport et autres dépenses liées à son séjour.</p>
+<p class="justify">La présente lettre constitue exclusivement une invitation privée et une confirmation d'hébergement et ne constitue pas un engagement de prise en charge financière au sens de l'Annexe 3bis.</p>
+{% if variant != "full-m" %}
+<p class="justify">Je certifie l'exactitude des informations reprises dans la présente lettre et reste disponible auprès des autorités compétentes pour toute vérification concernant cette invitation et les conditions d'hébergement.</p>
+<p class="justify">La personne invitée s'engage à respecter les conditions applicables à son séjour et à quitter le territoire de l'espace Schengen à l'issue de la durée autorisée.</p>
+{% endif %}
+<p class="paper-date">Fait à Woluwe-Saint-Lambert, le 09/09/2026</p>
+<p class="paper-sign">_______________________________<br>Claire Dubois<br>Signature de l'invitante</p>
+{% endif %}

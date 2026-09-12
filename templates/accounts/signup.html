@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+Criar conta (layouts 1d desktop e 1m celular). Valores e estados de
+validacao sao ilustrativos, como na referencia. Fase de apresentacao: o
+envio navega para o dashboard.
+{% endcomment %}
+
+{% block title %}{% translate "Criar conta" %} · Desenrola{% endblock %}
+{% block main_class %}auth auth-signup{% endblock %}
+
+{% block content %}
+{% url 'accounts:login' as login_url %}
+<div class="auth-box auth-wide">
+  <a class="auth-back m-only" href="{% url 'core:home' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+  <a class="logo-link d-only" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+  <div class="auth-title">
+    <h2>{% translate "Criar conta" %}</h2>
+    <p><span class="d-only">{% translate "Leva menos de um minuto." %} </span>{% blocktranslate trimmed %}Campos com <span class="required">*</span> são obrigatórios.{% endblocktranslate %}</p>
+  </div>
+  <form class="auth-form" method="post" data-mock-submit data-next="{% url 'core:dashboard' %}" novalidate>
+    {% csrf_token %}
+    <div class="signup-grid">
+      <div class="field span-2">
+        <label for="id_full_name">{% translate "Nome completo" %} <span class="required">*</span></label>
+        <input class="input" id="id_full_name" name="full_name" type="text" autocomplete="name" value="Claire Dubois">
+      </div>
+      <div class="field span-2 is-valid">
+        <label for="id_email">{% translate "E-mail" %} <span class="required">*</span></label>
+        <div class="input-wrap">
+          <input class="input" id="id_email" name="email" type="email" autocomplete="email" value="claire.dubois@exemplo.be">
+          <i class="ph ph-check input-state is-valid" aria-hidden="true"></i>
+        </div>
+      </div>
+      <div class="field">
+        <label for="id_password1">{% translate "Senha" %} <span class="required">*</span></label>
+        <input class="input" id="id_password1" name="password1" type="password" autocomplete="new-password" value="senha-forte-1">
+        <div class="field-help">{% translate "Mínimo 8 caracteres." %}</div>
+      </div>
+      <div class="field is-invalid">
+        <label for="id_password2">{% translate "Confirmar senha" %} <span class="required">*</span></label>
+        <input class="input" id="id_password2" name="password2" type="password" autocomplete="new-password" value="senha-for" aria-invalid="true" aria-describedby="id_password2_error">
+        <div class="field-error" id="id_password2_error"><i class="ph ph-warning-circle" aria-hidden="true"></i>{% translate "As senhas não coincidem." %}</div>
+      </div>
+      <div class="field span-2 d-only">
+        <label for="id_phone">{% translate "Telefone" %} <span class="optional">{% translate "(opcional)" %}</span></label>
+        <input class="input" id="id_phone" name="phone" type="tel" autocomplete="tel" placeholder="+32 4">
+      </div>
+      <div class="field span-2 d-only">
+        <label for="id_address">{% translate "Endereço completo" %} <span class="optional">{% translate "(opcional)" %}</span></label>
+        <input class="input" id="id_address" name="address" type="text" autocomplete="street-address" placeholder="{% translate 'Rua e número' %}">
+      </div>
+      <div class="field d-only">
+        <label for="id_postal_code">{% translate "Código postal" %}</label>
+        <input class="input" id="id_postal_code" name="postal_code" type="text" autocomplete="postal-code" placeholder="1200">
+      </div>
+      <div class="field d-only">
+        <label for="id_city">{% translate "Cidade" %}</label>
+        <input class="input" id="id_city" name="city" type="text" autocomplete="address-level2" placeholder="Woluwe-Saint-Lambert">
+      </div>
+      <details class="disclosure m-only">
+        <summary>{% translate "Telefone e endereço" %} <span class="disclosure-hint">{% translate "opcional" %} <i class="ph ph-caret-down" aria-hidden="true"></i></span></summary>
+        <div class="disclosure-body">
+          <input class="input" type="tel" autocomplete="tel" aria-label="{% translate 'Telefone' %}" placeholder="+32 4">
+          <input class="input" type="text" autocomplete="street-address" aria-label="{% translate 'Endereço completo' %}" placeholder="{% translate 'Rua e número' %}">
+          <div class="disclosure-row">
+            <input class="input" type="text" autocomplete="postal-code" aria-label="{% translate 'Código postal' %}" placeholder="1200">
+            <input class="input" type="text" autocomplete="address-level2" aria-label="{% translate 'Cidade' %}" placeholder="{% translate 'Cidade' %}">
+          </div>
+        </div>
+      </details>
+    </div>
+    <label class="check check-lg d-only">
+      <input type="checkbox" name="terms" checked><span class="box"></span>
+      <span>{% blocktranslate trimmed %}Li e aceito os <a href="#">Termos de uso</a> e a <a href="#">Política de privacidade</a>.{% endblocktranslate %}</span>
+    </label>
+    <label class="check check-xl m-only">
+      <input type="checkbox" checked><span class="box"></span>
+      <span>{% blocktranslate trimmed %}Li e aceito os <a href="#">Termos de uso</a> e a <a href="#">Política de privacidade</a>.{% endblocktranslate %}</span>
+    </label>
+    <button class="btn btn-primary btn-block auth-submit" type="submit">{% translate "Criar conta" %}</button>
+  </form>
+  <p class="auth-alt">{% blocktranslate trimmed %}Já tem conta? <a href="{{ login_url }}">Entrar</a>{% endblocktranslate %}</p>
+</div>
+{% endblock %}

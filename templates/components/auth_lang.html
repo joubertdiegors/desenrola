@@ -1,0 +1,10 @@
+{% load i18n %}{% comment %}
+Linha de idioma no rodape da tela de entrar no celular (layout 1l):
+globo, nome do idioma atual e os codigos dos demais, clicaveis.
+{% endcomment %}{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as AVAILABLE_LANGUAGES %}{% get_language_info_list for AVAILABLE_LANGUAGES as language_list %}
+<form class="auth-lang m-only" action="{% url 'set_language' %}" method="post">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <i class="ph ph-globe" aria-hidden="true"></i>
+  {% for language in language_list %}{% if language.code == CURRENT_LANGUAGE %}<span>{{ language.name_local|capfirst }}</span>{% else %}<button type="submit" name="language" value="{{ language.code }}">{{ language.code|upper }}</button>{% endif %}{% if not forloop.last %}<span aria-hidden="true">·</span>{% endif %}{% endfor %}
+</form>

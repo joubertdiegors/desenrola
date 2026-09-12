@@ -1,9 +1,74 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 {% load i18n %}
+{% comment %}Dashboard (layouts 1e desktop e 1n celular). Dados ficticios.{% endcomment %}
 
-{% block title %}{% translate "Painel" %} | Desenrola{% endblock %}
+{% block title %}{% translate "Início" %} · Desenrola{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Painel" %}</h1>
-  <p>{% blocktranslate with name=user.get_short_name %}Ola, {{ name }}.{% endblocktranslate %}</p>
+<div class="container">
+<div class="dash">
+  <h1>{% blocktranslate with name=demo_user.first_name %}Olá, {{ name }}{% endblocktranslate %}</h1>
+  <p class="dash-sub">{% translate "O que você quer fazer hoje?" %}</p>
+
+  <div class="card elev-md hero-card">
+    <div class="hero-card-icon"><i class="ph ph-file-plus" aria-hidden="true"></i></div>
+    <div class="hero-card-text">
+      <div class="hero-card-title">{% translate "Gerar Carta Convite" %}</div>
+      <div class="hero-card-desc"><span class="d-only">{% translate "Seus dados de anfitrião já estão salvos. Só falta o convidado e as datas." %}</span><span class="m-only">{% translate "Seus dados já estão salvos. Só falta o convidado e as datas." %}</span></div>
+    </div>
+    <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Começar" %} <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+  </div>
+
+  <div class="section-head" id="minhas-cartas">
+    <h2>{% translate "Minhas cartas" %}</h2>
+    <span class="count"><span class="d-only">{% blocktranslate count counter=letters|length trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters|length }}</span></span>
+  </div>
+
+  <table class="table d-only">
+    <thead>
+      <tr>
+        <th>{% translate "Data" %}</th>
+        <th>{% translate "Convidado" %}</th>
+        <th>{% translate "Idioma" %}</th>
+        <th>{% translate "Status" %}</th>
+        <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for letter in letters %}
+      <tr>
+        <td class="text-muted">{{ letter.date }}</td>
+        <td>{{ letter.guest }}</td>
+        <td>{{ letter.language }}</td>
+        <td><span class="tag {% if letter.status == 'generated' %}tag-accent{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span></td>
+        <td class="right">
+          {% if letter.status == "generated" %}
+            <a class="btn btn-ghost" href="{% url 'letters:result' letter.id %}"><i class="ph ph-eye" aria-hidden="true"></i> {% translate "Visualizar" %}</a>
+          {% else %}
+            <a class="btn btn-ghost" href="{% url 'letters:new' %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Continuar" %}</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="letter-cards m-only">
+    {% for letter in letters %}
+    <div class="card elev-sm letter-card">
+      <div class="letter-card-head">
+        <span class="card-title">{{ letter.guest }}</span>
+        <span class="tag {% if letter.status == 'generated' %}tag-accent{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span>
+      </div>
+      <div class="card-meta">{{ letter.date }} · {{ letter.language }}</div>
+      {% if letter.status == "generated" %}
+        <a class="btn btn-ghost" href="{% url 'letters:result' letter.id %}"><i class="ph ph-eye" aria-hidden="true"></i> {% translate "Visualizar" %}</a>
+      {% else %}
+        <a class="btn btn-ghost" href="{% url 'letters:new' %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Continuar" %}</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+</div>
 {% endblock %}

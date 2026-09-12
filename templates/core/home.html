@@ -1,7 +1,91 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% comment %}Landing (layouts 1b desktop e 1k celular).{% endcomment %}
+
+{% block title %}Desenrola · {% translate "Sua carta convite pronta em minutos" %}{% endblock %}
+
+{% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Desenrola" %}</h1>
-  <p>{% translate "Gerador de Carta Convite." %}</p>
+<section class="hero container">
+  <div>
+    <div class="card-kicker"><span class="d-only">{% translate "Carta convite e de hospedagem · Bélgica" %}</span><span class="m-only">{% translate "Carta convite · Bélgica" %}</span></div>
+    <h1>{% translate "Sua carta convite pronta em minutos." %}</h1>
+    <p class="hero-lead"><span class="d-only">{% translate "Você preenche os seus dados e os do seu convidado. O Desenrola gera a Carta Convite e de Hospedagem no modelo oficial, pronta para imprimir, assinar e enviar." %}</span><span class="m-only">{% translate "Preencha seus dados e os do convidado. O Desenrola gera a carta no modelo oficial, pronta para imprimir e enviar." %}</span></p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{% translate "Gerar carta convite" %} <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      <a class="btn btn-ghost" href="{% url 'accounts:login' %}"><span class="d-only">{% translate "Já tenho conta" %}</span><span class="m-only">{% translate "Já tenho conta · Entrar" %}</span></a>
+    </div>
+    <div class="hero-trust d-only">
+      <span><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Dados protegidos" %}</span>
+      <span><i class="ph ph-translate" aria-hidden="true"></i>PT · FR · NL · EN</span>
+      <span><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "PDF oficial" %}</span>
+    </div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="hero-glow"></div>
+    <div class="paper elev-lg hero-paper d-only">{% include "components/paper_letter.html" with variant="hero" %}</div>
+    <div class="paper elev-lg hero-paper m-only">{% include "components/paper_letter.html" with variant="hero-m" %}</div>
+    <div class="card elev-md hero-badge d-only">
+      <div class="hero-badge-row"><i class="ph ph-check-circle"></i>{% translate "Carta gerada" %}</div>
+      <div class="card-meta">{% translate "Modelo oficial · Francês · 1 página" %}</div>
+    </div>
+  </div>
+</section>
+
+<section class="features container">
+  <div class="card elev-sm feature">
+    <i class="ph ph-seal-check" aria-hidden="true"></i>
+    <div class="feature-text">
+      <span class="card-title">{% translate "Fiel ao modelo oficial" %}</span>
+      <p class="card-body"><span class="d-only">{% translate "A carta sai exatamente no layout aceito pelas autoridades. O site só coleta os dados." %}</span><span class="m-only">{% translate "A carta sai no layout aceito pelas autoridades." %}</span></p>
+    </div>
+  </div>
+  <div class="card elev-sm feature">
+    <i class="ph ph-translate" aria-hidden="true"></i>
+    <div class="feature-text">
+      <span class="card-title">{% translate "No seu idioma" %}</span>
+      <p class="card-body"><span class="d-only">{% translate "Preencha em português, francês, holandês ou inglês. A carta é emitida no idioma exigido." %}</span><span class="m-only">{% translate "PT, FR, NL ou EN. A carta sai no idioma exigido." %}</span></p>
+    </div>
+  </div>
+  <div class="card elev-sm feature">
+    <i class="ph ph-device-mobile" aria-hidden="true"></i>
+    <div class="feature-text">
+      <span class="card-title">{% translate "Do celular ao PDF" %}</span>
+      <p class="card-body"><span class="d-only">{% translate "Gere, salve, imprima ou envie pelo WhatsApp em poucos toques. Suas cartas ficam guardadas." %}</span><span class="m-only">{% translate "Salve, imprima ou envie pelo WhatsApp." %}</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="como-funciona">
+  <div class="container">
+    <div class="card-kicker">{% translate "Como funciona" %}</div>
+    <h2><span class="d-only">{% translate "Três passos, sem burocracia." %}</span><span class="m-only">{% translate "Três passos." %}</span></h2>
+    <div class="how-steps">
+      <div class="how-step">
+        <span class="step-num step-num-lg">1</span>
+        <div class="how-step-text">
+          <span class="how-step-title">{% translate "Crie sua conta" %}</span>
+          <p><span class="d-only">{% translate "Só e-mail e senha. Seus dados de anfitrião ficam salvos para a próxima carta." %}</span><span class="m-only">{% translate "Só e-mail e senha." %}</span></p>
+        </div>
+      </div>
+      <div class="how-step">
+        <span class="step-num step-num-lg">2</span>
+        <div class="how-step-text">
+          <span class="how-step-title">{% translate "Preencha os dados" %}</span>
+          <p><span class="d-only">{% translate "Anfitrião, convidado e período da estadia — com verificação campo a campo." %}</span><span class="m-only">{% translate "Anfitrião, convidado e estadia." %}</span></p>
+        </div>
+      </div>
+      <div class="how-step">
+        <span class="step-num step-num-lg">3</span>
+        <div class="how-step-text">
+          <span class="how-step-title">{% translate "Gere e compartilhe" %}</span>
+          <p><span class="d-only">{% translate "Visualize o PDF, salve, imprima ou envie direto ao seu convidado." %}</span><span class="m-only">{% translate "PDF pronto para salvar, imprimir ou enviar." %}</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}
+
+{% block footer %}{% include "components/site_footer.html" %}{% endblock %}

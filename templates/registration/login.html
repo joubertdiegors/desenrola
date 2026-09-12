@@ -1,18 +1,41 @@
 {% extends "base.html" %}
 {% load i18n %}
-
 {% comment %}
-  Template provisorio. Sera substituido na fase de autenticacao.
+Entrar (layouts 1c desktop e 1l celular). Fase de apresentacao: o envio
+navega para o dashboard (data-mock-submit); a autenticacao real vira depois.
 {% endcomment %}
 
-{% block title %}{% translate "Entrar" %} | Desenrola{% endblock %}
+{% block title %}{% translate "Entrar" %} · Desenrola{% endblock %}
+{% block main_class %}auth{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Entrar" %}</h1>
-
-  <form method="post">
+{% url 'accounts:signup' as signup_url %}
+<div class="auth-box">
+  <a class="logo-link" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+  <div class="auth-title">
+    <h2>{% translate "Entrar" %}</h2>
+    <p>{% translate "Bem-vindo de volta." %}</p>
+  </div>
+  <form class="auth-form" method="post" data-mock-submit data-next="{% url 'core:dashboard' %}" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">{% translate "Entrar" %}</button>
+    <div class="auth-fields">
+      <div class="field">
+        <label for="id_username">{% translate "E-mail" %}</label>
+        <input class="input" id="id_username" name="username" type="email" autocomplete="email" placeholder="voce@exemplo.com">
+      </div>
+      <div class="field">
+        <label for="id_password">{% translate "Senha" %}</label>
+        <div class="pw-wrap">
+          <input class="input" id="id_password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="pw-toggle" data-pw-toggle aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <a class="auth-link" href="{% url 'accounts:password_reset' %}">{% translate "Esqueci minha senha" %}</a>
+    </div>
+    <button class="btn btn-primary btn-block auth-submit" type="submit">{% translate "Entrar" %}</button>
   </form>
+  <p class="auth-alt">{% blocktranslate trimmed %}Não tem conta? <a href="{{ signup_url }}">Criar conta</a>{% endblocktranslate %}</p>
+</div>
 {% endblock %}
+
+{% block footer %}{% include "components/auth_lang.html" %}{% endblock %}

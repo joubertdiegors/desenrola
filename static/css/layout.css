@@ -1,11 +1,11 @@
 /* ==========================================================================
    Desenrola — layout.css
-   Estrutura das paginas: casca comum, cabecalho, rodape e composicao das
-   telas. Os componentes ficam em components.css; os tokens em base.css.
+   Composicao das telas: casca, cabecalhos, rodapes e paginas.
 
-   Esta primeira versao cobre so o que o arquivo de conceito define. As
-   telas (landing, autenticacao, dashboard, formulario, resultado, perfil,
-   admin) entram a partir dos arquivos de layout desktop e mobile.
+   Fontes da verdade: desenrola-2-desktop.html (largura >= 768px) e
+   desenrola-3-mobile.html (largura < 768px). Tokens em base.css,
+   componentes em components.css. Cada bloco traz primeiro o desktop e
+   depois, na media query, a estrutura do celular.
    ========================================================================== */
 
 
@@ -15,21 +15,19 @@
 
 body { display: flex; flex-direction: column; }
 
-.page {
-  flex: 1;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 16px 40px;
-}
+.page { flex: 1; width: 100%; display: flex; flex-direction: column; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; }
 
-.messages { margin-bottom: 16px; }
+.messages { width: 100%; max-width: 1200px; margin: 0 auto; padding: 16px 48px 0; }
+
+@media (max-width: 767px) { .d-only { display: none !important; } }
+@media (min-width: 768px) { .m-only { display: none !important; } }
 
 /* Link de salto para o conteudo: so aparece com foco de teclado */
 .skip-link {
   position: absolute;
   left: 16px;
-  top: -48px;
+  top: -120px;
   z-index: 200;
   padding: 8px 12px;
   border-radius: var(--radius-md);
@@ -41,17 +39,11 @@ body { display: flex; flex-direction: column; }
 }
 .skip-link:focus { top: 12px; }
 
-
-/* --------------------------------------------------------------------------
-   Logotipo
-   Horizontal: simbolo + nome em Inter 500. Cor do nome = texto; simbolo no
-   acento.
-   -------------------------------------------------------------------------- */
-
+/* Logotipo: simbolo no acento, nome em Inter 500 */
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
   letter-spacing: -0.01em;
@@ -60,8 +52,568 @@ body { display: flex; flex-direction: column; }
   line-height: 1;
 }
 .logo svg { flex: none; }
-.logo-name { font-size: 24px; }
+.logo-name { font-size: 20px; }
+.logo-link { display: inline-flex; color: inherit; text-decoration: none; align-self: flex-start; }
+.nav .logo svg { width: 22px; height: 22px; }
+.nav .logo-name { font-size: 18px; }
 
-/* Na barra de navegacao o logotipo e menor */
-.nav .logo { gap: 7px; }
-.nav .logo-name { font-size: 16px; }
+/* Cabecalho de pagina no celular: voltar + titulo */
+.m-head { display: flex; align-items: center; gap: 8px; padding: 12px 20px 0; }
+.m-head .btn-icon-44 { margin-left: -10px; }
+.m-head-title { font-size: 15px; font-weight: 500; }
+.m-head-note { margin-left: auto; font-size: 13px; opacity: 0.6; }
+.m-head .tag { margin-left: auto; }
+
+/* Marca de campo obrigatorio fora de .field (textos de apoio) */
+.required { color: var(--color-accent); }
+
+@media (max-width: 767px) {
+  .messages { padding: 16px 20px 0; }
+  .nav .logo svg { width: 20px; height: 20px; }
+  .nav .logo-name { font-size: 17px; }
+  .nav .logo { gap: 7px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Landing: barra, hero, destaques, como funciona, rodape
+   -------------------------------------------------------------------------- */
+
+.site-nav { padding: 16px 48px; }
+.site-nav .lang-seg { margin: 0; }
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 56px;
+  padding: 64px 48px 72px;
+  align-items: center;
+}
+.hero .card-kicker { margin-bottom: 14px; }
+.hero h1 { font-size: 52px; line-height: 1.05; margin: 0 0 18px; max-width: 14ch; }
+.hero-lead { font-size: 18px; line-height: 1.5; opacity: 0.82; max-width: 46ch; margin: 0 0 28px; }
+.hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hero-actions .btn-primary { min-height: 48px; padding: 0 22px; font-size: 15px; }
+.hero-actions .btn-ghost { min-height: 48px; font-size: 15px; }
+.hero-trust { display: flex; gap: 22px; margin-top: 26px; font-size: 13px; opacity: 0.65; }
+.hero-trust span { display: flex; gap: 6px; align-items: center; }
+
+.hero-art { position: relative; height: 420px; }
+.hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 50%, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 70%);
+}
+.hero-paper {
+  position: absolute;
+  left: 60px;
+  top: 20px;
+  width: 330px;
+  padding: 28px 30px;
+  border-radius: 3px;
+  font-size: 7.5px;
+  transform: rotate(-2deg);
+}
+.hero-badge { position: absolute; right: 40px; bottom: 30px; width: 220px; padding: 12px 14px; gap: 4px; }
+.hero-badge-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.hero-badge-row .ph { color: var(--color-success); font-size: 18px; }
+
+/* Documento ficticio (texto em frances, como no modelo) */
+.paper .paper-title { text-align: center; font-weight: 700; font-size: 1.2em; margin-bottom: 0.27em; }
+.paper .paper-sub { text-align: center; font-size: 0.96em; margin-bottom: 1.6em; }
+.paper .highlight { background: #ebe6ff; }
+.paper .justify { text-align: justify; }
+.paper .lines { line-height: 1.6; }
+.paper .paper-date { margin-top: 1.8em; }
+.paper .paper-sign { margin-top: 2.2em; }
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 0 48px 64px;
+}
+.feature { padding: 22px; gap: 10px; }
+.feature > .ph { font-size: 26px; color: var(--color-accent); }
+.feature-text { display: flex; flex-direction: column; gap: 10px; }
+
+/* Faixa "Como funciona": mantem o aspecto escuro nos dois temas (ver relatorio) */
+.how { padding: 56px 48px 72px; background: var(--color-section); color: #e9e9ed; }
+.how .card-kicker { color: #d2cefd; }
+.how h2 { font-size: 32px; margin: 8px 0 36px; }
+.how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+.how-step { display: flex; flex-direction: column; gap: 10px; }
+.how-step .step-num-lg { border-color: #d2cefd; color: #d2cefd; }
+.how-step-title { font-size: 20px; font-weight: 500; }
+.how-step p { font-size: 14px; opacity: 0.8; margin: 0; }
+.how-step-text { display: flex; flex-direction: column; gap: 10px; }
+
+.site-footer {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 48px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 75%, transparent);
+}
+.footer-brand { display: inline-flex; align-items: center; gap: 7px; }
+.footer-brand svg { opacity: 0.75; }
+.footer-links { display: contents; }
+.site-footer a { color: inherit; text-decoration: none; }
+.site-footer a:hover { color: var(--color-accent); }
+.footer-lang { margin-left: auto; }
+.footer-lang .dropdown > summary { min-height: 0; }
+
+@media (max-width: 767px) {
+  .site-nav { padding: 12px 20px; }
+
+  .hero { display: block; padding: 28px 20px 0; }
+  .hero .card-kicker { margin-bottom: 12px; }
+  .hero h1 { font-size: 34px; line-height: 1.08; margin: 0 0 14px; max-width: none; }
+  .hero-lead { font-size: 16px; margin: 0 0 22px; max-width: none; }
+  .hero-actions { flex-direction: column; align-items: stretch; gap: 0; }
+  .hero-actions .btn-primary { min-height: 52px; font-size: 16px; padding: 0; width: 100%; margin: 0; }
+  .hero-actions .btn-ghost { width: 100%; margin-top: 6px; }
+  .hero-art { height: 200px; margin-top: 20px; overflow: hidden; }
+  .hero-glow { background: radial-gradient(60% 70% at 50% 60%, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 70%); }
+  .hero-paper {
+    left: 50%;
+    top: 22px;
+    width: 230px;
+    padding: 18px 20px;
+    font-size: 5.4px;
+    border-radius: 2px;
+    transform: translateX(-50%) rotate(-2deg);
+  }
+  .hero-paper .paper-title { margin-bottom: 1.5em; }
+
+  .features { display: flex; flex-direction: column; gap: 10px; padding: 8px 20px 0; }
+  .feature { padding: 16px; flex-direction: row; gap: 14px; align-items: flex-start; }
+  .feature > .ph { font-size: 24px; }
+  .feature .card-title { font-size: 16px; }
+  .feature .card-body { margin-top: 3px; }
+  .feature-text { gap: 0; }
+
+  .how { margin-top: 28px; padding: 32px 20px; }
+  .how h2 { font-size: 24px; margin: 6px 0 20px; }
+  .how-steps { display: flex; flex-direction: column; gap: 16px; }
+  .how-step { flex-direction: row; gap: 14px; align-items: flex-start; }
+  .how-step .step-num-lg { width: 30px; height: 30px; font-size: 13px; }
+  .how-step-title { font-size: 16px; }
+  .how-step p { font-size: 13px; }
+  .how-step-text { gap: 0; }
+
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 10px; padding: 22px 20px 30px; }
+  .footer-links { display: flex; gap: 16px; order: -1; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Autenticacao: entrar, criar conta, recuperar senha
+   -------------------------------------------------------------------------- */
+
+.auth { flex: 1; display: grid; place-items: center; padding: 48px 24px; }
+.auth-box { width: 380px; max-width: 100%; display: flex; flex-direction: column; gap: 22px; }
+.auth-box .logo svg { width: 24px; height: 24px; }
+.auth-box .logo-name { font-size: 20px; }
+.auth-wide { width: 484px; }
+.auth-title h2 { font-size: 28px; margin: 0 0 6px; }
+.auth-title p { font-size: 14px; opacity: 0.7; margin: 0; }
+.auth-form { display: flex; flex-direction: column; gap: 22px; }
+.auth-fields { display: flex; flex-direction: column; gap: 14px; }
+.auth-fields .field { margin-top: 0; }
+.auth-fields .input { min-height: 44px; }
+.auth-link { font-size: 13px; text-decoration: none; align-self: flex-start; }
+.auth-submit { min-height: 46px; font-size: 15px; margin: 0; }
+.auth-alt { font-size: 14px; opacity: 0.8; margin: 0; text-align: center; }
+.auth-back { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; text-decoration: none; min-height: 44px; }
+.signup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.signup-grid .field { margin-top: 0; }
+.signup-grid .input { min-height: 44px; }
+.auth-lang {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 24px 28px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.5;
+}
+.auth-lang button {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .auth { display: flex; flex-direction: column; place-items: normal; padding: 56px 24px 0; }
+  .auth-signup { padding: 20px 24px 0; }
+  .auth-box { width: 100%; gap: 24px; }
+  .auth-signup .auth-box { gap: 20px; }
+  .auth-box .logo svg { width: 26px; height: 26px; }
+  .auth-box .logo-name { font-size: 22px; }
+  .auth-title p { font-size: 15px; }
+  .auth-signup .auth-title p { font-size: 14px; }
+  .auth-form { gap: 24px; }
+  .auth-signup .auth-form { gap: 20px; }
+  .auth-fields { gap: 16px; }
+  .auth-fields .field > label, .signup-grid .field > label { font-size: 13px; }
+  .auth-fields .input, .signup-grid .input { min-height: 50px; font-size: 16px; }
+  .pw-wrap .input { padding-right: 44px; }
+  .pw-toggle { right: 14px; top: 15px; font-size: 18px; }
+  .auth-link { font-size: 14px; min-height: 44px; display: flex; align-items: center; }
+  .auth-submit { min-height: 52px; font-size: 16px; }
+  .auth-alt { font-size: 15px; opacity: 0.85; }
+  .auth-signup .auth-alt { margin-bottom: 28px; }
+  .signup-grid { display: flex; flex-direction: column; gap: 16px; }
+  .signup-grid .field-error { font-size: 13px; margin-top: 6px; }
+  .disclosure .input { min-height: 50px; font-size: 16px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Area logada: barra superior e menu do usuario
+   -------------------------------------------------------------------------- */
+
+.app-nav { padding: 16px 48px; }
+.user-menu > summary { gap: 8px; font-size: 14px; padding-left: 12px; min-height: 30px; }
+.user-menu > summary .ph-caret-down { opacity: 0.6; }
+.user-menu.is-current > summary { color: var(--color-accent); }
+
+@media (max-width: 767px) {
+  .app-nav { padding: 12px 20px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Dashboard
+   -------------------------------------------------------------------------- */
+
+.dash { padding: 40px 48px 56px; max-width: 960px; }
+.dash h1 { font-size: 36px; margin: 0 0 6px; }
+.dash-sub { font-size: 15px; opacity: 0.7; margin: 0 0 28px; }
+
+.hero-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 32px;
+  border: 1px solid var(--color-accent-700);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)), var(--color-surface) 60%);
+}
+.hero-card-icon {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  border: 1px solid var(--color-accent);
+  display: grid;
+  place-items: center;
+  color: var(--color-accent);
+  font-size: 28px;
+}
+.hero-card-text { flex: 1; }
+.hero-card-title { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+.hero-card-desc { font-size: 14px; opacity: 0.75; }
+.hero-card .btn-primary { min-height: 46px; padding: 0 20px; font-size: 15px; }
+
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 44px 0 12px; }
+.section-head h2 { font-size: 22px; margin: 0; }
+.section-head .count { font-size: 13px; opacity: 0.6; }
+
+.letter-cards { display: flex; flex-direction: column; gap: 10px; }
+.letter-card { padding: 14px 16px; gap: 6px; }
+.letter-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.letter-card .card-title { font-size: 16px; }
+.letter-card .card-meta { font-size: 12px; }
+.letter-card .btn-ghost { align-self: flex-start; min-height: 40px; padding-inline: 4px; }
+
+@media (max-width: 767px) {
+  .dash { padding: 20px 20px 20px; max-width: none; }
+  .dash h1 { font-size: 30px; margin: 0 0 4px; }
+  .dash-sub { margin: 0 0 20px; }
+  .hero-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 22px 20px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)), var(--color-surface) 70%);
+  }
+  .hero-card-icon { width: 48px; height: 48px; border-radius: 12px; font-size: 24px; }
+  .hero-card-title { font-size: 20px; }
+  .hero-card .btn-primary { min-height: 50px; font-size: 16px; width: 100%; margin: 0; }
+  .section-head { margin: 32px 0 12px; }
+  .section-head h2 { font-size: 20px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Gerar Carta Convite: desktop numa pagina, celular um passo por tela
+   -------------------------------------------------------------------------- */
+
+.lf { display: grid; grid-template-columns: 240px 1fr; gap: 56px; padding: 32px 48px 0; }
+.lf-aside { position: sticky; top: 24px; align-self: start; }
+.back-link { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; text-decoration: none; margin-bottom: 22px; }
+.lf-aside .card-kicker { margin-bottom: 10px; }
+.lf-aside-note { margin-top: 22px; font-size: 12px; opacity: 0.6; line-height: 1.5; }
+
+.lf-main { max-width: 680px; padding-bottom: 120px; }
+.lf-main h1 { font-size: 32px; margin: 0 0 6px; }
+.lf-intro { font-size: 14px; opacity: 0.7; margin: 0 0 30px; }
+.lf-lang { margin-bottom: 30px; }
+.lf-section { margin-bottom: 36px; }
+.lf-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.lf-section-head h2 { font-size: 20px; margin: 0; }
+.lf-step-intro .card-kicker { margin-bottom: 6px; }
+.lf-step-intro h2 { font-size: 26px; margin: 0 0 4px; }
+.lf-step-intro p { font-size: 14px; opacity: 0.7; margin: 0; }
+
+.lf-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 48px;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--color-divider);
+}
+.lf-bar .saved { margin-right: auto; display: flex; gap: 6px; align-items: center; font-size: 13px; opacity: 0.6; }
+.lf-bar .btn-secondary { min-height: 44px; padding: 0 18px; }
+.lf-bar .btn-primary { min-height: 44px; padding: 0 20px; font-size: 15px; }
+
+/* Revisao (so no celular, passo 4) */
+.review-list { display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-width: 767px) {
+  .lf { display: block; padding: 0; }
+  .lf-main { max-width: none; padding: 24px 20px 0; display: flex; flex-direction: column; gap: 18px; }
+  .lf-form { display: contents; }
+  .lf-lang, .lf-section { margin: 0; }
+  .lf-section:not(.is-current) { display: none; }
+  .form-grid { display: flex; flex-direction: column; gap: 18px; }
+  .form-grid .field > label, .lf-lang > label { font-size: 13px; }
+  .form-grid .input { min-height: 50px; font-size: 16px; }
+  .form-grid .field-error { font-size: 13px; margin-top: 6px; }
+  .lf-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 14px 20px 28px;
+    background: var(--color-bg);
+    backdrop-filter: none;
+  }
+  .lf-bar .saved { order: 2; margin: 0; justify-content: center; font-size: 12px; opacity: 0.55; }
+  .lf-bar .btn-primary { min-height: 52px; font-size: 16px; width: 100%; margin: 0; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Resultado / PDF
+   -------------------------------------------------------------------------- */
+
+.result { padding: 24px 48px 56px; }
+.result-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: start; margin-top: 24px; }
+
+.viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px;
+  border-radius: 10px;
+  background: var(--color-neutral-900);
+  box-shadow: var(--shadow-sm);
+}
+.viewer-bar { align-self: stretch; display: flex; justify-content: space-between; align-items: center; font-size: 12px; opacity: 0.65; }
+.viewer-bar-tools { display: flex; gap: 14px; align-items: center; }
+.viewer .paper { width: 560px; max-width: 100%; padding: 52px 56px; font-size: 10.2px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+.viewer .paper .paper-sign { margin-top: 3.3em; }
+.viewer-note { display: flex; gap: 6px; align-items: center; font-size: 12px; opacity: 0.55; }
+
+.result-aside { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 10px; }
+.result-aside .card-kicker { margin-bottom: 4px; }
+.result-aside .btn-block { min-height: 48px; font-size: 15px; margin: 0; justify-content: flex-start; padding-inline: 16px; gap: 10px; }
+.result-aside .btn-block .ph { font-size: 20px; }
+.result-aside .hr { margin: 10px 0; }
+.result-aside .btn-ghost { min-height: 44px; justify-content: flex-start; padding-inline: 8px; gap: 8px; }
+.result-aside .act-fix { margin-top: 6px; }
+
+@media (max-width: 767px) {
+  .result { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 14px; }
+  .result .alert-lg { padding: 12px 14px; }
+  .result-grid { display: contents; }
+  .viewer { padding: 16px; gap: 10px; }
+  .viewer .paper { width: 100%; padding: 22px 24px; font-size: 6.2px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  .viewer .paper .paper-sign { margin-top: 2.2em; }
+  .result-aside { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .result-aside .btn-block { justify-content: center; padding-inline: 12px; min-height: 50px; font-size: 14px; gap: 8px; }
+  .result-aside .act-save { grid-column: 1 / -1; min-height: 52px; font-size: 16px; gap: 10px; }
+  .result-aside .act-wa { grid-column: 1 / -1; font-size: 15px; }
+  .result-aside .act-back { grid-column: 1 / -1; justify-content: center; min-height: 48px; font-size: 15px; margin: 0 0 24px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Perfil
+   -------------------------------------------------------------------------- */
+
+.profile { display: grid; grid-template-columns: 240px 1fr; gap: 56px; padding: 32px 48px 64px; }
+.profile-user { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.profile-user-name { font-size: 16px; font-weight: 500; }
+.profile-user-sub { font-size: 12px; opacity: 0.6; }
+.profile .side-menu a, .profile .side-menu button { padding: 9px 10px; }
+
+.profile-main { max-width: 640px; display: flex; flex-direction: column; gap: 40px; }
+.profile-section h2 { font-size: 24px; margin: 0 0 18px; }
+.profile-section h2.has-sub { margin-bottom: 4px; }
+.profile-section .section-sub { font-size: 13px; opacity: 0.65; margin: 0 0 18px; }
+.profile-actions { display: flex; gap: 10px; margin-top: 16px; }
+.profile-actions .btn { min-height: 42px; }
+.profile-actions .btn-primary, .profile-actions .btn-secondary { padding: 0 18px; }
+.profile-section .seg { align-self: flex-start; }
+
+.profile-list .list-item.pref { padding: 14px 16px; min-height: 56px; font-size: 15px; justify-content: space-between; gap: 14px; }
+.profile-signout { min-height: 50px; font-size: 15px; gap: 8px; margin: auto 0 0; }
+.profile-foot { text-align: center; font-size: 12px; opacity: 0.45; margin-bottom: 8px; }
+.profile-foot a { color: inherit; }
+
+@media (max-width: 767px) {
+  .profile { display: flex; flex-direction: column; flex: 1; gap: 22px; padding: 24px 20px 0; }
+  .profile-side { display: flex; flex-direction: column; gap: 22px; flex: 1; }
+  .profile-home { display: contents; }
+  .profile-signout-form { margin-top: auto; }
+  .profile.has-section .profile-side { display: none; }
+  .profile-user { gap: 14px; margin: 0; }
+  .profile-user .avatar { width: 56px; height: 56px; font-size: 18px; }
+  .profile-user-name { font-size: 20px; }
+  .profile-user-sub { font-size: 13px; }
+  .profile-list .card-kicker { margin-bottom: 10px; }
+  .profile-main { max-width: none; gap: 24px; }
+  .profile:not(.has-section) .profile-main { display: none; }
+  .profile.has-section .profile-home { display: none; }
+  .profile-main .profile-section:not(.is-current) { display: none; }
+  .profile-section .form-grid { gap: 16px; }
+  .profile-actions .btn { min-height: 48px; flex: 1; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Area administrativa (representacao visual)
+   -------------------------------------------------------------------------- */
+
+.bo { flex: 1; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+.bo-main > * { min-width: 0; }
+.bo-aside {
+  border-right: 1px solid var(--color-divider);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.bo-brand { display: inline-flex; align-items: center; gap: 8px; padding: 0 8px 18px; font-size: 17px; font-weight: 500; color: inherit; text-decoration: none; }
+.bo-brand svg { width: 20px; height: 20px; }
+.bo-aside-user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; font-size: 13px; }
+.bo-aside-user small { display: block; font-size: 11px; opacity: 0.55; }
+
+.bo-main { padding: 28px 36px 48px; display: flex; flex-direction: column; gap: 24px; }
+.bo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-content: start; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+.bo-head { display: flex; align-items: center; gap: 12px; }
+.bo-head h1 { font-size: 26px; margin: 0; }
+.bo-head .count { font-size: 13px; opacity: 0.6; }
+.bo-head .input-icon { margin-left: auto; }
+.bo-head .input-icon .input { width: 260px; min-height: 38px; }
+.bo-head select.input { width: auto; min-height: 38px; }
+.bo-head .btn { min-height: 38px; }
+.bo-head .push { margin-left: auto; }
+.bo-sub-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.bo-sub-head h2 { font-size: 20px; margin: 0; }
+.bo-sub-head .note { font-size: 13px; opacity: 0.6; }
+
+.tpl-card { flex-direction: row; align-items: center; gap: 12px; padding: 18px; }
+.tpl-thumb { width: 54px; height: 72px; padding: 6px; font-size: 3px; flex: none; overflow: hidden; }
+.tpl-body { flex: 1; }
+.tpl-title-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.tpl-card .btn { min-height: 38px; }
+
+.bo-card { padding: 20px; gap: 12px; }
+.bo-card-head { display: flex; align-items: center; gap: 10px; }
+.bo-card-head .right { margin-left: auto; font-size: 12px; opacity: 0.6; }
+.bo-card-head .btn-ghost { margin-left: auto; min-height: 32px; font-size: 13px; }
+.bo-card .seg { align-self: flex-start; }
+.bo-card .field { margin-top: 0; }
+.bo-card-actions { display: flex; gap: 10px; align-items: center; }
+.bo-card-actions .btn { min-height: 38px; }
+.bo-card-actions .when { margin-left: auto; font-size: 12px; opacity: 0.55; }
+
+.sys-card { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; padding: 20px; font-size: 13px; }
+.sys-card .card-title { font-size: 15px; margin-right: 12px; }
+.sys-item { display: flex; gap: 6px; align-items: center; opacity: 0.75; }
+.sys-item.is-ok { opacity: 1; }
+.sys-item .ph-circle { color: var(--color-success); font-size: 9px; }
+.sys-card > a { margin-left: auto; font-size: 13px; }
+
+.bo-mobile-nav { padding: 12px 20px; }
+.bo-mobile-nav .nav-brand { font-size: 16px; gap: 7px; }
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.user-list .list-item { padding: 12px 14px; min-height: 64px; }
+
+@media (max-width: 767px) {
+  .bo { display: block; }
+  .bo-main { padding: 8px 20px 0; gap: 12px; }
+  .bo-grid { display: flex; flex-direction: column; gap: 12px; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { padding: 12px 14px; gap: 0; }
+  .stat-value { font-size: 24px; }
+  .bo-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .bo-head .input-icon { margin-left: 0; }
+  .bo-head .input-icon .input { width: 100%; }
+  .bo-sub-head { flex-wrap: wrap; }
+  .tpl-card { flex-wrap: wrap; }
+  .sys-card > a { margin-left: 0; }
+  .bo-tabbar { margin-top: 16px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Tablet (768 a 1023px): estrutura do desktop com margens menores.
+   Nao ha layout de referencia para esta faixa; so a adaptacao fluida.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .site-nav, .app-nav { padding-left: 24px; padding-right: 24px; }
+  .messages { padding-left: 24px; padding-right: 24px; }
+  .hero { grid-template-columns: 1fr 1fr; gap: 32px; padding: 48px 24px 56px; }
+  .hero h1 { font-size: 44px; }
+  .hero-art { height: 380px; }
+  .hero-paper { left: 8px; width: 300px; }
+  .hero-badge { right: 8px; }
+  .features { padding: 0 24px 48px; gap: 14px; }
+  .how { padding: 48px 24px 56px; }
+  .how-steps { gap: 24px; }
+  .site-footer { padding: 24px; flex-wrap: wrap; }
+  .dash { padding: 32px 24px 48px; }
+  .lf { grid-template-columns: 200px 1fr; gap: 32px; padding: 24px 24px 0; }
+  .lf-bar { padding: 16px 24px; }
+  .result { padding: 24px 24px 48px; }
+  .result-grid { grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; }
+  .viewer { padding: 20px; }
+  .profile { grid-template-columns: 200px 1fr; gap: 32px; padding: 24px 24px 48px; }
+  .bo { grid-template-columns: 200px minmax(0, 1fr); }
+  .bo-main { padding: 24px 20px 40px; }
+  .bo-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .bo-head { flex-wrap: wrap; }
+  .bo-head .input-icon { margin-left: 0; }
+}

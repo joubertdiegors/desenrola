@@ -1,0 +1,13 @@
+{% load i18n %}{% comment %}
+Rodape da landing. Desktop (1b): marca, links e idioma a direita.
+Celular (1k): links em linha e depois a marca, em coluna.
+{% endcomment %}
+<footer class="site-footer container">
+  <span class="footer-brand"><svg class="d-only" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M13 12a4 4 0 1 1-4-4"></path><path d="M9 8h12"></path></svg>Desenrola · 2026</span>
+  <span class="footer-links">
+    <a href="#"><span class="d-only">{% translate "Termos de uso" %}</span><span class="m-only">{% translate "Termos" %}</span></a>
+    <a href="#">{% translate "Privacidade" %}</a>
+    <a href="#">{% translate "Contato" %}</a>
+  </span>
+  <div class="footer-lang d-only">{% include "components/language_selector.html" with variant="footer" %}</div>
+</footer>

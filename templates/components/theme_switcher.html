@@ -1,4 +1,5 @@
 {% load i18n %}{% comment %}
-Alternador claro/escuro. Escuro (padrao) mostra o sol; claro mostra a lua.
-Estado e persistencia em static/js/theme.js.
-{% endcomment %}<button type="button" class="btn btn-secondary btn-icon theme-toggle" data-theme-toggle aria-pressed="false" aria-label="{% translate 'Alternar entre modo escuro e claro' %}" title="{% translate 'Modo claro / escuro' %}"><i class="ph ph-sun" aria-hidden="true"></i><i class="ph ph-moon" aria-hidden="true"></i></button>
+Alternador claro/escuro da barra (layout 1e): botao ghost de icone.
+Escuro (padrao) mostra o sol; claro mostra a lua. Estado e persistencia em
+static/js/theme.js.
+{% endcomment %}<button type="button" class="btn btn-ghost btn-icon theme-toggle" data-theme-toggle aria-pressed="false" aria-label="{% translate 'Alternar modo claro/escuro' %}" title="{% translate 'Alternar modo claro/escuro' %}"><i class="ph ph-sun" aria-hidden="true"></i><i class="ph ph-moon" aria-hidden="true"></i></button>

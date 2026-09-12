@@ -1,0 +1,118 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administracao · Usuarios e permissoes (layouts 1i desktop e 1r celular).
+Contexto: stats, stats_mobile, users, permissions.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="stats">
+  {% for stat in stats %}
+  <div class="card elev-sm stat d-only">
+    <span class="card-meta">{{ stat.label }}</span>
+    <span class="stat-value">{{ stat.value }}</span>
+    <span class="stat-note{% if stat.tone %} text-{{ stat.tone }}{% endif %}">{{ stat.note }}</span>
+  </div>
+  {% endfor %}
+  {% for stat in stats_mobile %}
+  <div class="card elev-sm stat m-only">
+    <span class="card-meta">{{ stat.label }}</span>
+    <span class="stat-value">{{ stat.value }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="bo-head">
+  <h1 class="d-only">{% translate "Usuários" %}</h1>
+  <span class="count d-only">1.284</span>
+  <div class="input-icon d-only"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input class="input" type="search" placeholder="{% translate 'Buscar por nome ou e-mail' %}" aria-label="{% translate 'Buscar por nome ou e-mail' %}"></div>
+  <div class="input-icon input-icon-lg m-only"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input class="input" type="search" placeholder="{% translate 'Buscar usuário' %}" aria-label="{% translate 'Buscar usuário' %}"></div>
+  <select class="input d-only" aria-label="{% translate 'Função' %}">
+    <option>{% translate "Todas as funções" %}</option>
+    <option>{% translate "Administrador" %}</option>
+    <option>{% translate "Gerente" %}</option>
+    <option>{% translate "Operador" %}</option>
+    <option>{% translate "Usuário" %}</option>
+  </select>
+  <a class="btn btn-primary d-only" href="#"><i class="ph ph-plus" aria-hidden="true"></i> {% translate "Convidar usuário" %}</a>
+</div>
+
+<div class="filter-chips m-only" role="group" aria-label="{% translate 'Filtrar por função' %}">
+  <span class="tag tag-accent tag-lg">{% translate "Todos" %}</span>
+  <span class="tag tag-neutral tag-lg">{% translate "Administradores" %}</span>
+  <span class="tag tag-neutral tag-lg">{% translate "Gerentes" %}</span>
+  <span class="tag tag-neutral tag-lg">{% translate "Operadores" %}</span>
+</div>
+
+<div class="table-wrap d-only">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{% translate "Nome" %}</th>
+        <th>{% translate "E-mail" %}</th>
+        <th>{% translate "Função" %}</th>
+        <th>{% translate "Cartas" %}</th>
+        <th>{% translate "Último acesso" %}</th>
+        <th>{% translate "Ativo" %}</th>
+        <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr{% if not u.active %} class="is-inactive"{% endif %}>
+        <td>{{ u.name }}</td>
+        <td class="text-muted">{{ u.email }}</td>
+        <td><span class="tag {% if u.role == 'admin' %}tag-accent{% elif u.role == 'user' %}tag-neutral{% else %}tag-outline{% endif %}">{{ u.role_label }}</span></td>
+        <td>{% if u.letters is None %}—{% else %}{{ u.letters }}{% endif %}</td>
+        <td class="text-muted">{{ u.last_access }}</td>
+        <td>{% include "components/switch.html" with size="sm" checked=u.active label=u.name %}</td>
+        <td class="right"><button type="button" class="btn btn-ghost btn-icon" aria-label="{% translate 'Mais ações' %}"><i class="ph ph-dots-three" aria-hidden="true"></i></button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="list user-list m-only">
+  {% for u in users %}
+  <div class="list-item{% if not u.active %} is-inactive{% endif %}">
+    <span class="avatar avatar-md avatar-neutral">{{ u.initials }}</span>
+    <div class="list-body">
+      <div class="list-title">{{ u.name }}</div>
+      <div class="list-sub"><span class="tag tag-xs {% if u.role == 'admin' %}tag-accent{% elif u.role == 'user' %}tag-neutral{% else %}tag-outline{% endif %}">{{ u.role_label }}</span>{{ u.mobile_note }}</div>
+    </div>
+    {% include "components/switch.html" with size="md" checked=u.active label=u.name %}
+  </div>
+  {% endfor %}
+</div>
+
+<div id="permissoes">
+  <div class="bo-sub-head">
+    <h2>{% translate "Níveis de acesso" %}</h2>
+    <span class="note">{% translate "Permissões ilustrativas — a definir" %}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-sm table-nowrap">
+      <thead>
+        <tr>
+          <th>{% translate "Permissão" %}</th>
+          <th class="center">{% translate "Administrador" %}</th>
+          <th class="center">{% translate "Gerente" %}</th>
+          <th class="center">{% translate "Operador" %}</th>
+          <th class="center">{% translate "Usuário" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in permissions %}
+        <tr>
+          <td>{{ p.label }}</td>
+          {% for ok in p.levels %}
+          <td class="{% if ok %}cell-check{% else %}cell-none{% endif %}"><i class="ph {% if ok %}ph-check{% else %}ph-minus{% endif %}" aria-hidden="true"></i><span class="visually-hidden">{% if ok %}{% translate "Sim" %}{% else %}{% translate "Não" %}{% endif %}</span></td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

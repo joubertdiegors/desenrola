@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+Casca da area logada: barra superior (desktop), cabecalho proprio do celular
+(bloco mobile_header) e barra inferior de 3 destinos (celular).
+Contexto esperado: demo_user, active_nav ("home" | "profile" | vazio) e
+mobile_nav (True quando a barra superior tambem aparece no celular).
+{% endcomment %}
+
+{% block header %}
+  {% include "components/app_nav.html" %}
+  {% block mobile_header %}{% endblock %}
+{% endblock %}
+
+{% block footer %}
+  {% block tabbar %}{% include "components/tabbar.html" %}{% endblock %}
+{% endblock %}

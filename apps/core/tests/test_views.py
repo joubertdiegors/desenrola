@@ -1,4 +1,4 @@
-"""Testes das views de fundacao."""
+"""Testes das views do app core."""
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -19,13 +19,18 @@ def test_home_publica(client):
     response = client.get(reverse("core:home"))
 
     assert response.status_code == 200
+    assert "Sua carta convite pronta em minutos." in response.content.decode()
 
 
-def test_dashboard_exige_login(client):
+def test_dashboard_responde_na_fase_visual(client):
+    """
+    Na fase de apresentacao o dashboard usa dados ficticios e nao exige
+    login. O `login_required` volta na fase de autenticacao.
+    """
     response = client.get(reverse("core:dashboard"))
 
-    assert response.status_code == 302
-    assert reverse("accounts:login") in response.url
+    assert response.status_code == 200
+    assert "Olá, Claire" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -40,3 +45,29 @@ def test_dashboard_abre_para_usuario_logado(client):
     response = client.get(reverse("core:dashboard"))
 
     assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "nome",
+    [
+        "backoffice:overview",
+        "backoffice:users",
+        "backoffice:permissions",
+        "backoffice:letters",
+        "backoffice:templates",
+        "backoffice:content",
+        "backoffice:languages",
+        "backoffice:system",
+    ],
+)
+def test_backoffice_responde(client, nome):
+    """Cada item do menu administrativo resolve para uma tela."""
+    response = client.get(reverse(nome))
+
+    assert response.status_code == 200
+
+
+def test_backoffice_nao_conflita_com_django_admin(client):
+    """A area visual vive em /backoffice/; o Django Admin continua em /admin/."""
+    assert reverse("backoffice:overview") == "/pt/backoffice/"
+    assert reverse("admin:index") == "/pt/admin/"

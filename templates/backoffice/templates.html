@@ -1,0 +1,90 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administracao · Modelos, conteudo e idiomas (layout 1j). No celular nao ha
+layout proprio: os cards empilham numa coluna. Contexto: languages.
+{% endcomment %}
+
+{% block bo_main_class %}bo-grid{% endblock %}
+
+{% block bo_main %}
+<div class="bo-head span-2 d-only">
+  <h1>{% translate "Modelos de documento" %}</h1>
+  <a class="btn btn-primary push" href="#"><i class="ph ph-upload-simple" aria-hidden="true"></i> {% translate "Novo modelo" %}</a>
+</div>
+
+<div class="card elev-sm tpl-card span-2" id="modelos">
+  <div class="paper tpl-thumb" aria-hidden="true">{% include "components/paper_letter.html" with variant="thumb" %}</div>
+  <div class="tpl-body">
+    <div class="tpl-title-row">
+      <span class="card-title">{% translate "Carta Convite e de Hospedagem — curta duração" %}</span>
+      <span class="tag tag-accent">{% translate "Ativo" %}</span>
+    </div>
+    <div class="card-meta">{% translate "Versão 2.1 · PDF oficial · 14 campos · FR ✓ NL ✓ EN ✓ · atualizado 02/09/2026 por Ana Martins" %}</div>
+  </div>
+  <button type="button" class="btn btn-secondary"><i class="ph ph-eye" aria-hidden="true"></i> {% translate "Pré-visualizar" %}</button>
+  <button type="button" class="btn btn-ghost"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> {% translate "Versões" %}</button>
+</div>
+
+<div class="card elev-sm bo-card" id="conteudo">
+  <div class="bo-card-head">
+    <span class="card-title">{% translate "Conteúdo do site" %}</span>
+    <span class="right">{% translate "Landing · Hero" %}</span>
+  </div>
+  <div class="seg seg-sm" role="radiogroup" aria-label="{% translate 'Idioma do conteúdo' %}">
+    <label class="seg-opt"><input type="radio" name="content_lang" value="pt" checked>PT</label>
+    <label class="seg-opt"><input type="radio" name="content_lang" value="fr">FR</label>
+    <label class="seg-opt"><input type="radio" name="content_lang" value="nl">NL</label>
+    <label class="seg-opt"><input type="radio" name="content_lang" value="en">EN</label>
+  </div>
+  <div class="field"><label for="c_title">{% translate "Título" %}</label><input class="input" id="c_title" name="hero_title" type="text" value="{% translate 'Sua carta convite pronta em minutos.' %}"></div>
+  <div class="field"><label for="c_text">{% translate "Texto de apoio" %}</label><textarea class="input" id="c_text" name="hero_text" rows="3">{% translate "Você preenche os seus dados e os do seu convidado. O Desenrola gera a Carta Convite e de Hospedagem no modelo oficial, pronta para imprimir, assinar e enviar." %}</textarea></div>
+  <div class="field"><label for="c_button">{% translate "Botão principal" %}</label><input class="input" id="c_button" name="hero_button" type="text" value="{% translate 'Gerar carta convite' %}"></div>
+  <div class="bo-card-actions">
+    <button type="button" class="btn btn-primary">{% translate "Publicar" %}</button>
+    <button type="button" class="btn btn-ghost">{% translate "Salvar rascunho" %}</button>
+    <span class="when">{% translate "Publicado há 3 dias" %}</span>
+  </div>
+</div>
+
+<div class="card elev-sm bo-card" id="idiomas">
+  <div class="bo-card-head">
+    <span class="card-title">{% translate "Idiomas" %}</span>
+    <button type="button" class="btn btn-ghost"><i class="ph ph-plus" aria-hidden="true"></i> {% translate "Adicionar" %}</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>{% translate "Idioma" %}</th>
+          <th>{% translate "Interface" %}</th>
+          <th>{% translate "Carta" %}</th>
+          <th>{% translate "Padrão" %}</th>
+          <th><span class="visually-hidden">{% translate "Ativo" %}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lang in languages %}
+        <tr>
+          <td>{{ lang.name }}</td>
+          <td><span class="text-{{ lang.interface_tone }}">{{ lang.interface }}</span></td>
+          <td>{% if lang.letter_tone == "muted" %}<span class="text-muted">{{ lang.letter }}</span>{% else %}<span class="text-success">{{ lang.letter }}</span>{% endif %}</td>
+          <td>{% if lang.default %}<i class="ph-fill ph-check-circle text-accent" aria-hidden="true"></i><span class="visually-hidden">{% translate "Padrão" %}</span>{% endif %}</td>
+          <td class="right">{% include "components/switch.html" with size="sm" checked=True label=lang.name %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="alert alert-warning" role="status"><i class="ph ph-warning" aria-hidden="true"></i><span>{% translate "3 textos em neerlandês usam o fallback em francês." %} <a href="#">{% translate "Revisar agora" %}</a></span></div>
+</div>
+
+<div class="card elev-sm sys-card span-2" id="sistema">
+  <span class="card-title">{% translate "Sistema" %}</span>
+  <span class="sys-item is-ok"><i class="ph-fill ph-circle" aria-hidden="true"></i>{% translate "Geração de PDF operacional" %}</span>
+  <span class="sys-item"><i class="ph ph-clock" aria-hidden="true"></i>{% translate "Última carta há 4 min" %}</span>
+  <span class="sys-item"><i class="ph ph-database" aria-hidden="true"></i>{% translate "Backup 03:00 · ok" %}</span>
+  <span class="sys-item"><i class="ph ph-shield-check" aria-hidden="true"></i>{% translate "Retenção de dados: 24 meses" %}</span>
+  <a href="#">{% translate "Ver registro de atividade" %}</a>
+</div>
+{% endblock %}

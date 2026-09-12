@@ -1,0 +1,23 @@
+{% load i18n %}{% comment %}
+Barra da landing. Desktop (1b): logotipo, "Como funciona", idioma em
+segmentado, "Entrar" e "Criar conta". Celular (1k): logotipo, tag do idioma
+e botao de menu.
+{% endcomment %}
+<header class="site-header">
+  <nav class="nav site-nav container" aria-label="{% translate 'Navegação principal' %}">
+    <a class="nav-brand" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+    <a class="d-only" href="#como-funciona">{% translate "Como funciona" %}</a>
+    <div class="d-only">{% include "components/language_seg.html" with size="xs" %}</div>
+    <a class="d-only" href="{% url 'accounts:login' %}">{% translate "Entrar" %}</a>
+    <a class="btn btn-primary d-only" href="{% url 'accounts:signup' %}">{% translate "Criar conta" %}</a>
+    <div class="m-only">{% include "components/language_selector.html" %}</div>
+    <details class="dropdown m-only">
+      <summary class="btn btn-secondary btn-icon btn-icon-40" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" href="#como-funciona">{% translate "Como funciona" %}</a>
+        <a class="dropdown-item" href="{% url 'accounts:login' %}">{% translate "Entrar" %}</a>
+        <a class="dropdown-item" href="{% url 'accounts:signup' %}">{% translate "Criar conta" %}</a>
+      </div>
+    </details>
+  </nav>
+</header>

@@ -1,13 +1,18 @@
 {% load i18n %}{% comment %}
-Seletor de idioma. Codigo atual como tag neutra na barra; ao abrir, lista os
-quatro idiomas no nome nativo. Envia para a view set_language do Django
-(fora do prefixo de idioma), que traduz a URL atual para o idioma escolhido.
+Seletor de idioma em dropdown. Padrao: codigo atual como tag neutra na
+barra. variant="footer": globo + nome do idioma, abrindo para cima (rodape
+da landing). Envia para set_language (fora do prefixo de idioma), que
+traduz a URL atual para o idioma escolhido.
 {% endcomment %}{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as AVAILABLE_LANGUAGES %}{% get_language_info_list for AVAILABLE_LANGUAGES as language_list %}
 <details class="dropdown lang">
+  {% if variant == "footer" %}
+  <summary class="lang-footer-summary" aria-label="{% translate 'Idioma' %}"><i class="ph ph-globe" aria-hidden="true"></i>{% for language in language_list %}{% if language.code == CURRENT_LANGUAGE %}{{ language.name_local|capfirst }}{% endif %}{% endfor %} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+  {% else %}
   <summary aria-label="{% translate 'Idioma' %}: {{ CURRENT_LANGUAGE|upper }}">
-    <span class="tag tag-neutral">{{ CURRENT_LANGUAGE|upper }}<i class="ph ph-caret-down" aria-hidden="true"></i></span>
+    <span class="tag tag-neutral">{{ CURRENT_LANGUAGE|upper }}</span>
   </summary>
-  <form class="dropdown-menu" action="{% url 'set_language' %}" method="post">
+  {% endif %}
+  <form class="dropdown-menu{% if variant == 'footer' %} is-up{% endif %}" action="{% url 'set_language' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
     <div class="dropdown-head">{% translate "Idioma" %}</div>
