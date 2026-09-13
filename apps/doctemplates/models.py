@@ -33,6 +33,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.core.models import TimeStampedModel
 
 from .schema import validate_field_schema
+from .visual_schema import validate_visual_schema
 
 
 class TemplateVersionImmutableError(RuntimeError):
@@ -121,8 +122,17 @@ class TemplateVersion(TimeStampedModel):
         PUBLISHED = "published", _("Publicada")
         INACTIVE = "inactive", _("Inativa")
 
-    # Campos que uma versao publicada nao pode mais alterar.
-    STRUCTURAL_FIELDS = ("template_id", "version_number", "field_schema", "snapshot")
+    # Campos que uma versao publicada nao pode mais alterar. `visual_schema`
+    # entra aqui pelo mesmo motivo que `field_schema`: mover um elemento
+    # numa versao ja publicada mudaria retroativamente o documento de
+    # cartas ja emitidas.
+    STRUCTURAL_FIELDS = (
+        "template_id",
+        "version_number",
+        "field_schema",
+        "snapshot",
+        "visual_schema",
+    )
 
     template = models.ForeignKey(
         LetterTemplate,
@@ -143,6 +153,24 @@ class TemplateVersion(TimeStampedModel):
     # legal vigente, referencia do PDF base) independente do que acontecer
     # com o LetterTemplate depois.
     snapshot = models.JSONField(_("snapshot de reprodução"), default=dict, blank=True)
+
+    # O DESENHO da pagina: onde cada elemento fica, em pontos. Separado de
+    # `field_schema` de proposito -- um responde "o que a pessoa preenche",
+    # o outro "onde isso aparece no papel". Tem ciclos de vida distintos:
+    # reposicionar um rotulo nao mexe no formulario, e acrescentar um campo
+    # ao formulario nao obriga a desenha-lo.
+    #
+    # Vazio (`{}`) e valido e e o estado de toda versao criada antes do
+    # editor visual existir. Contrato completo em `visual_schema.py`.
+    visual_schema = models.JSONField(
+        _("modelo visual"),
+        default=dict,
+        blank=True,
+        help_text=_(
+            "Posições e estilos dos elementos do documento, em pontos. "
+            "Editado pelo editor visual do backoffice."
+        ),
+    )
 
     published_at = models.DateTimeField(_("publicada em"), null=True, blank=True)
 
@@ -166,6 +194,11 @@ class TemplateVersion(TimeStampedModel):
     def clean(self):
         super().clean()
         validate_field_schema(self.field_schema)
+        # Sem `field_keys`/`asset_ids`: aqui so a estrutura e cobrada. A
+        # checagem de que cada campo referenciado existe de verdade e de
+        # que cada imagem esta ativa depende do banco e roda na view que
+        # salva o editor, onde o custo da consulta se justifica.
+        validate_visual_schema(self.visual_schema)
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -224,6 +257,11 @@ class TemplateVersion(TimeStampedModel):
             "version_number": next_number,
             "status": TemplateVersion.Status.DRAFT,
             "field_schema": copy.deepcopy(self.field_schema),
+            # O layout tambem e herdado: a proxima versao quase sempre
+            # comeca como um ajuste da anterior, nao de uma pagina em
+            # branco. `deepcopy` para que editar o rascunho nunca toque no
+            # JSON da versao de origem.
+            "visual_schema": copy.deepcopy(self.visual_schema),
             "snapshot": {},
         }
         defaults.update(overrides)

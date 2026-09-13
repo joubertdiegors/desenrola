@@ -22,10 +22,14 @@ from django.views.decorators.debug import sensitive_post_parameters
 from .forms import LoginForm, PasswordChangeForm, ProfileForm, SetPasswordForm, SignupForm
 
 # Secoes do perfil e o titulo usado no cabecalho do celular.
+#
+# Nao ha secao "idioma": a interface e so em portugues (Fase 5, Etapa
+# 4.1) e o idioma da carta e escolhido na etapa 5 do assistente. Um
+# `?secao=idioma` antigo cai no `else` de `profile()` e abre o perfil
+# inteiro -- melhor do que um 404 para quem tinha o link guardado.
 PROFILE_SECTIONS = {
     "dados": gettext_lazy("Dados pessoais"),
     "senha": gettext_lazy("Alterar senha"),
-    "idioma": gettext_lazy("Idioma e aparência"),
     "comunicacoes": gettext_lazy("Comunicações"),
 }
 

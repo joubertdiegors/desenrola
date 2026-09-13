@@ -1,0 +1,84 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Lista de documentos e suas versoes (Fase 5, Etapa 4.2A).
+
+E a porta do editor visual: daqui se abre um rascunho para editar, ou se
+cria a proxima versao a partir de uma publicada -- que e o unico caminho
+legitimo, ja que versao publicada e imutavel.
+
+Contexto: templates, pode_editar, pode_criar, pode_publicar.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <h1 class="d-only">{% translate "Documentos" %}</h1>
+  <span class="count d-only">{{ templates|length }}</span>
+</div>
+
+<div class="card">
+
+  {% if not pode_editar %}
+  <div class="notice" role="status">
+    <i class="ph-fill ph-info" aria-hidden="true"></i>
+    <span>{% translate "Você pode consultar os documentos, mas não tem permissão para editá-los." %}</span>
+  </div>
+  {% endif %}
+
+  {% for modelo in templates %}
+  <div class="doc-grupo">
+    <div class="doc-grupo-head">
+      <h3>{{ modelo.name }}</h3>
+      <span class="tag tag-primary">{{ modelo.get_language_display }}</span>
+      {% if not modelo.is_active %}<span class="tag">{% translate "Inativo" %}</span>{% endif %}
+    </div>
+    <div class="table-wrap">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>{% translate "Versão" %}</th>
+            <th>{% translate "Status" %}</th>
+            <th>{% translate "Elementos" %}</th>
+            <th>{% translate "Atualizada" %}</th>
+            <th class="right"><span class="visually-hidden">{% translate "Ações" %}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for versao in modelo.versions.all %}
+          <tr>
+            <td>v{{ versao.version_number }}</td>
+            <td>
+              {% if versao.status == "published" %}<span class="text-success">{{ versao.get_status_display }}</span>
+              {% else %}<span class="text-muted">{{ versao.get_status_display }}</span>{% endif %}
+            </td>
+            <td>{{ versao.visual_schema.elements|length|default:"0" }}</td>
+            <td>{{ versao.updated_at|date:"d/m/Y H:i" }}</td>
+            <td class="right">
+              <div class="doc-acoes">
+                <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:document_editor' versao.pk %}">
+                  <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                  {% if versao.status == "draft" %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}
+                </a>
+                {% if pode_criar %}
+                <form method="post" action="{% url 'backoffice:document_new_version' versao.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm">
+                    <i class="ph ph-copy" aria-hidden="true"></i>{% translate "Nova versão" %}
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted">{% translate "Nenhuma versão ainda." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-muted">{% translate "Nenhum documento cadastrado." %}</p>
+  {% endfor %}
+</div>
+{% endblock %}

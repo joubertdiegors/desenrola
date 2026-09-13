@@ -1,4 +1,12 @@
-"""Testes de internacionalizacao do roteamento."""
+"""
+Testes de internacionalizacao do roteamento.
+
+A infraestrutura continua multilingue (settings.LANGUAGES, i18n_patterns,
+LocaleMiddleware, set_language) porque e ela que alimenta o idioma da
+CARTA. A INTERFACE, desde a Fase 5 / Etapa 4.1, e sempre portuguesa -- o
+que a interface faz com os prefixos de outro idioma esta em
+apps/core/tests/test_etapa41.py.
+"""
 
 from django.conf import settings
 from django.urls import reverse
@@ -20,12 +28,19 @@ def test_url_recebe_prefixo_do_idioma():
             assert reverse("core:home") == f"/{codigo}/"
 
 
-def test_troca_de_idioma_responde(client):
-    url_pt = "/pt/"
-    url_en = "/en/"
+def test_prefixo_de_outro_idioma_continua_atendido(client):
+    """
+    Nenhum prefixo pode dar 404: links antigos e indexados tem de
+    continuar funcionando. O que mudou e o destino -- /en/ agora leva a
+    interface em portugues, em vez de responder ali mesmo.
+    """
+    assert client.get("/pt/").status_code == 200
 
-    assert client.get(url_pt).status_code == 200
-    assert client.get(url_en).status_code == 200
+    response = client.get("/en/")
+
+    assert response.status_code == 302
+    assert response.url == "/pt/"
+    assert client.get("/en/", follow=True).status_code == 200
 
 
 def test_set_language_fora_do_prefixo():

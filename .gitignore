@@ -30,6 +30,12 @@ db.sqlite3-journal
 # --- Traducoes compiladas ---
 # Os .po sao versionados; os .mo sao gerados por compilemessages.
 *.mo
+# Excecao: os catalogos do proprio projeto. Nao ha passo de build que os
+# compile (o compilemessages do Django exige o GNU gettext, ausente no
+# Windows -- por isso existe scripts/compile_messages.py, que se roda a
+# mao). Se o .mo nao fosse versionado, um clone novo nao teria as
+# mensagens do Django em portugues e os testes da Etapa 4.1 falhariam.
+!/locale/**/*.mo
 
 # --- Testes e ferramentas ---
 .pytest_cache/

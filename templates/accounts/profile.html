@@ -5,8 +5,9 @@ Perfil do usuario autenticado (layout 2h desktop, 4l celular). Desktop:
 menu lateral e secoes numa coluna. Celular: lista de atalhos; cada item
 abre a secao correspondente (?secao=...), que reusa a secao do desktop.
 Contexto: profile_form, password_form, section (ou None), section_title.
-Idioma da interface e real; aparencia e comunicacoes ainda sao
-ilustrativas (sem campo no modelo).
+Nao ha seccao de idioma: a interface e so em portugues (Fase 5,
+Etapa 4.1) e o idioma da CARTA e escolhido na etapa 5 do assistente.
+Comunicacoes ainda sao ilustrativas (sem campo no modelo).
 {% endcomment %}
 
 {% block title %}{% translate "Perfil" %} · Desenrola{% endblock %}
@@ -21,8 +22,6 @@ ilustrativas (sem campo no modelo).
 {% endblock %}
 
 {% block content %}
-{% get_current_language as CURRENT_LANGUAGE %}
-{% get_language_info for CURRENT_LANGUAGE as current_language %}
 {% with current=section|default:"dados" %}
 <div class="container profile{% if section %} has-section{% endif %}">
   <aside class="profile-side d-only card">
@@ -36,7 +35,6 @@ ilustrativas (sem campo no modelo).
     <nav class="side-menu" aria-label="{% translate 'Seções do perfil' %}">
       <a class="{% if current == 'dados' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
       <a class="{% if current == 'senha' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
-      <a class="{% if current == 'idioma' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=idioma"{% if current == "idioma" %} aria-current="page"{% endif %}><i class="ph ph-globe" aria-hidden="true"></i>{% translate "Idioma" %}</a>
       <a class="{% if current == 'comunicacoes' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
       <form method="post" action="{% url 'accounts:logout' %}">
         {% csrf_token %}
@@ -55,7 +53,6 @@ ilustrativas (sem campo no modelo).
       <a class="list-item" href="?secao=dados"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
       <a class="list-item" href="?secao=dados#endereco"><i class="ph ph-map-pin" aria-hidden="true"></i>{% translate "Endereço na Bélgica" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
       <a class="list-item" href="?secao=senha"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Alterar senha" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-      <a class="list-item" href="?secao=idioma"><i class="ph ph-globe" aria-hidden="true"></i>{% translate "Idioma" %}<span class="list-value">{{ current_language.name_local|capfirst }}</span><i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
     </div>
     <div class="card">
       <div class="profile-comm-kicker"><span class="kicker">{% translate "Comunicações" %}</span></div>
@@ -176,20 +173,6 @@ ilustrativas (sem campo no modelo).
           <button class="btn btn-success" type="submit">{% translate "Atualizar senha" %}</button>
         </div>
       </form>
-    </section>
-
-    <section class="card profile-section{% if section == 'idioma' %} is-current{% endif %}" id="idioma">
-      <h2>{% translate "Idioma" %}</h2>
-      <div class="profile-columns">
-        <div class="field">
-          <label>{% translate "Idioma da interface" %}</label>
-          {% include "components/language_seg.html" %}
-        </div>
-        <div class="field">
-          <label for="p_letter_lang">{% translate "Idioma padrão da carta" %}</label>
-          <select class="input" id="p_letter_lang" name="letter_language"><option>Français</option><option>English</option><option>Português</option></select>
-        </div>
-      </div>
     </section>
 
     <section class="card profile-section{% if section == 'comunicacoes' %} is-current{% endif %}" id="comunicacoes">

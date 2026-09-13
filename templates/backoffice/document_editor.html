@@ -1,0 +1,171 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% comment %}
+Editor visual de documentos A4 (Fase 5, Etapa 4.2A).
+
+Quatro areas: barra no topo, paleta a esquerda, canvas no meio, painel de
+propriedades a direita.
+
+O estado inicial vai para o navegador em <script type="application/json">
+e e lido com JSON.parse. NUNCA interpolado dentro de JavaScript: o
+conteudo vem do banco e um `</script>` no meio de uma string viraria
+execucao de codigo. O filtro |json_script do Django escapa exatamente
+isso.
+
+Contexto: version, editavel, pode_publicar, pode_criar_versao,
+documento_json, campos_json, assets_json, config_json.
+{% endcomment %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/editor.css' %}">{% endblock %}
+
+{% block bo_main_class %}bo-main-editor{% endblock %}
+
+{% block bo_main %}
+<div class="ed" data-editor>
+
+  {# ---- Barra superior ------------------------------------------------- #}
+  <header class="ed-topo">
+    <div class="ed-topo-id">
+      <strong>{{ version.template.name }}</strong>
+      <span class="tag tag-primary">{{ version.template.get_language_display }}</span>
+      <span class="text-muted">v{{ version.version_number }}</span>
+      {% if version.status == "published" %}
+        <span class="tag tag-success">{{ version.get_status_display }}</span>
+      {% else %}
+        <span class="tag">{{ version.get_status_display }}</span>
+      {% endif %}
+    </div>
+
+    <div class="ed-topo-acoes">
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="desfazer" title="{% translate 'Desfazer (Ctrl+Z)' %}">
+        <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i><span class="d-only">{% translate "Desfazer" %}</span>
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="refazer" title="{% translate 'Refazer (Ctrl+Y)' %}">
+        <i class="ph ph-arrow-clockwise" aria-hidden="true"></i><span class="d-only">{% translate "Refazer" %}</span>
+      </button>
+      <span class="ed-sep" aria-hidden="true"></span>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-menos" aria-label="{% translate 'Reduzir' %}"><i class="ph ph-minus" aria-hidden="true"></i></button>
+      <span class="ed-zoom" data-zoom-valor>100%</span>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-mais" aria-label="{% translate 'Ampliar' %}"><i class="ph ph-plus" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-caber">{% translate "Ajustar" %}</button>
+      <span class="ed-sep" aria-hidden="true"></span>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="grade" aria-pressed="true">{% translate "Grade" %}</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="snap" aria-pressed="false">{% translate "Encaixe" %}</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="preview" aria-pressed="false">
+        <i class="ph ph-eye" aria-hidden="true"></i>{% translate "Preview" %}
+      </button>
+
+      {% if editavel %}
+      <button type="button" class="btn btn-primary btn-sm push" data-acao="salvar">
+        <i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar" %}
+      </button>
+      {% endif %}
+
+      {% if editavel %}
+      {% comment %}
+      Destrutiva: substitui o layout inteiro. O `confirm` e a barreira
+      para quem clicar sem querer; a regra de verdade (so rascunho, so
+      quem pode editar) esta na view.
+      {% endcomment %}
+      <form method="post" action="{% url 'backoffice:document_import_official' version.pk %}"
+            onsubmit="return confirm('{% translate "Importar o modelo oficial substitui todo o layout atual deste rascunho. Continuar?" %}');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm">
+          <i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Importar modelo oficial" %}
+        </button>
+      </form>
+      {% endif %}
+
+      {% if pode_publicar %}
+      <form method="post" action="{% url 'backoffice:document_publish' version.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm"><i class="ph ph-check-circle" aria-hidden="true"></i>{% translate "Publicar" %}</button>
+      </form>
+      {% endif %}
+
+      {% if pode_criar_versao and version.status != "draft" %}
+      <form method="post" action="{% url 'backoffice:document_new_version' version.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm"><i class="ph ph-copy" aria-hidden="true"></i>{% translate "Criar nova versão" %}</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if not editavel %}
+  <div class="notice notice-warning" role="status">
+    <i class="ph-fill ph-lock" aria-hidden="true"></i>
+    <span>
+      {% if version.status != "draft" %}
+        {% translate "Esta versão está publicada e não pode ser alterada. Para mudar o layout, crie uma nova versão — ela nasce em rascunho, já com este desenho." %}
+      {% else %}
+        {% translate "Você não tem permissão para editar este documento." %}
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
+
+  <p class="ed-aviso" data-aviso hidden role="status"></p>
+
+  <div class="ed-corpo">
+
+    {# ---- Paleta ------------------------------------------------------- #}
+    <aside class="ed-paleta" aria-label="{% translate 'Elementos' %}">
+      <h2>{% translate "Elementos" %}</h2>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="text"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-text-t" aria-hidden="true"></i>{% translate "Texto" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="field"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-brackets-curly" aria-hidden="true"></i>{% translate "Campo" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="rich_text"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-paragraph" aria-hidden="true"></i>{% translate "Parágrafo" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="image"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-image" aria-hidden="true"></i>{% translate "Imagem" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="line"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-minus" aria-hidden="true"></i>{% translate "Linha" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="rect"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-square" aria-hidden="true"></i>{% translate "Retângulo" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="qrcode"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-qr-code" aria-hidden="true"></i>{% translate "QR Code" %}
+      </button>
+      <button type="button" class="ed-ferramenta" data-acao="adicionar" data-tipo="table"{% if not editavel %} disabled{% endif %}>
+        <i class="ph ph-table" aria-hidden="true"></i>{% translate "Tabela" %}
+      </button>
+    </aside>
+
+    {# ---- Canvas ------------------------------------------------------- #}
+    {% comment %}
+    Rolagem horizontal em tela estreita e proposital: o A4 mantem a
+    proporcao em vez de ser espremido para caber no celular.
+    {% endcomment %}
+    <div class="ed-canvas-area">
+      <div class="ed-pagina" data-pagina>
+        <div class="ed-camada" data-camada></div>
+      </div>
+    </div>
+
+    {# ---- Propriedades ------------------------------------------------- #}
+    <aside class="ed-painel" aria-label="{% translate 'Propriedades' %}" data-propriedades></aside>
+  </div>
+
+  <form style="display:none">{% csrf_token %}</form>
+</div>
+
+{{ documento_json|json_script:"editor-documento" }}
+{{ campos_json|json_script:"editor-campos" }}
+{{ assets_json|json_script:"editor-assets" }}
+{{ config_json|json_script:"editor-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/editor/geometry.js' %}"></script>
+<script src="{% static 'js/editor/document.js' %}"></script>
+<script src="{% static 'js/editor/history.js' %}"></script>
+<script src="{% static 'js/editor/render.js' %}"></script>
+<script src="{% static 'js/editor/editor.js' %}"></script>
+{% endblock %}

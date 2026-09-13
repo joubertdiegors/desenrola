@@ -1,3 +1,12 @@
+{% comment %}
+NAO INCLUIDO EM NENHUMA TELA (Fase 5, Etapa 4.1): a interface do site
+e so em portugues, entao nao ha escolha de idioma a oferecer. O
+componente fica aqui, intacto, para quando a interface voltar a ser
+multilingue -- a infraestrutura de i18n continua toda de pe.
+
+Isto NAO tem relacao com o idioma da CARTA, que continua sendo
+escolhido na etapa 5 do assistente (templates/letters/wizard.html).
+{% endcomment %}
 {% load i18n %}{% comment %}
 Escolha de idioma em botoes (perfil > Idioma). Cada opcao envia a troca
 para set_language.

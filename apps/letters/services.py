@@ -59,17 +59,17 @@ def valid_language_codes():
     return {code for code, _label in settings.LANGUAGES}
 
 
-def normalize_language(language):
-    """
-    Devolve `language` se for um idioma do site; senao, o idioma padrao.
-
-    Serve so para o ponto de partida (o idioma em que a pessoa esta
-    navegando). NAO e um substituto de documento: a escolha do template
-    continua sendo estrita pelo idioma resultante.
-    """
-    if language in valid_language_codes():
-        return language
-    return settings.LANGUAGE_CODE
+# Idioma em que toda Carta Convite nova comeca (Fase 5, Etapa 4.2).
+#
+# E uma DECISAO DE PRODUTO explicita, nao um reflexo do idioma da
+# interface: ate a Etapa 4.1 o rascunho nascia no idioma em que a pessoa
+# navegava, o que deixou de fazer sentido quando a interface passou a ser
+# so portuguesa. A pessoa continua trocando o idioma do documento na
+# etapa 5.
+#
+# NAO confundir com `settings.LANGUAGE_CODE` (o idioma da INTERFACE, que
+# e "pt") nem usar um como padrao do outro -- sao decisoes separadas.
+IDIOMA_PADRAO_DA_CARTA = "en"
 
 
 def get_template_version_for_language(language):

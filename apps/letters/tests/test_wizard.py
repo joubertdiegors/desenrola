@@ -144,21 +144,50 @@ class TestCriacao:
 
 class TestSelecaoDeTemplate:
     def test_usa_a_versao_publicada_do_modelo_do_idioma(self, auth_client, user):
+        padrao = services.IDIOMA_PADRAO_DA_CARTA
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
         letter = Letter.objects.get(user=user)
 
-        assert letter.language == "pt"
-        assert letter.template.slug == official_slug("pt")
+        assert letter.language == padrao
+        assert letter.template.slug == official_slug(padrao)
         assert letter.template_version.status == "published"
 
     @pytest.mark.parametrize("language", ["pt", "fr", "nl", "en"])
     def test_cada_idioma_usa_o_seu_proprio_documento(self, auth_client, user, language):
-        auth_client.post(f"/{language}/letters/new/", VALID_STEP_1)
-        letter = Letter.objects.get(user=user)
+        """
+        Um documento oficial por idioma, sem substituicoes.
 
+        O idioma da carta e escolhido na etapa 5. O prefixo da URL nao
+        entra nisto desde a Etapa 4.1: a interface e so portuguesa, e
+        /fr/ e trazido para /pt/ antes de chegar aqui.
+        """
+        auth_client.post(reverse("letters:new"), VALID_STEP_1)
+        letter = Letter.objects.get(user=user)
+        _fill_until(auth_client, letter, 5)
+
+        auth_client.post(_step_url(letter, 5), {"language": language})
+
+        letter.refresh_from_db()
         assert letter.language == language
         assert letter.template.slug == official_slug(language)
         assert letter.template.language == language
+
+    def test_o_prefixo_da_url_nao_escolhe_mais_o_idioma_da_carta(self, auth_client, user):
+        """
+        Antes da Etapa 4.1 o idioma da navegacao virava o idioma da
+        carta. Agora todo rascunho nasce no padrao explicito da Etapa 4.2
+        e so muda na etapa 5 -- uma escolha da pessoa, nao um efeito
+        colateral da URL.
+        """
+        resposta = auth_client.post("/fr/letters/new/", VALID_STEP_1, follow=True)
+        letter = Letter.objects.get(user=user)
+
+        # O envio chega inteiro ao endereco em portugues (307), em vez de
+        # virar um GET e perder o que a pessoa preencheu.
+        assert resposta.redirect_chain[0] == ("/pt/letters/new/", 307)
+        assert letter.language == services.IDIOMA_PADRAO_DA_CARTA
+        assert letter.language != "fr"
+        assert letter.data["guest_name"] == VALID_STEP_1["guest_name"]
 
     def test_nao_usa_uma_versao_em_rascunho_de_outro_template(
         self, auth_client, user, draft_version
@@ -183,7 +212,9 @@ class TestSelecaoDeTemplate:
         assert draft_letter.template_version_id == original_version_id
 
     def test_idioma_sem_documento_publicado_nao_inicia_carta(self, auth_client):
-        LetterTemplate.objects.filter(slug=official_slug("pt")).update(is_active=False)
+        LetterTemplate.objects.filter(
+            slug=official_slug(services.IDIOMA_PADRAO_DA_CARTA)
+        ).update(is_active=False)
 
         response = auth_client.get(reverse("letters:new"))
 
@@ -191,13 +222,24 @@ class TestSelecaoDeTemplate:
         assert response.url == reverse("core:dashboard")
         assert not Letter.objects.exists()
 
-    def test_idioma_sem_documento_nao_cai_no_documento_de_outro_idioma(self, auth_client):
+    def test_idioma_sem_documento_nao_cai_no_documento_de_outro_idioma(
+        self, auth_client, user
+    ):
+        """
+        Sem documento publicado naquele idioma, a etapa 5 recusa a troca
+        -- nunca serve o documento de outro idioma no lugar.
+        """
+        auth_client.post(reverse("letters:new"), VALID_STEP_1)
+        letter = Letter.objects.get(user=user)
+        _fill_until(auth_client, letter, 5)
         LetterTemplate.objects.filter(slug=official_slug("nl")).update(is_active=False)
 
-        response = auth_client.post("/nl/letters/new/", VALID_STEP_1)
+        response = auth_client.post(_step_url(letter, 5), {"language": "nl"})
 
-        assert response.status_code == 302
-        assert not Letter.objects.exists()
+        assert response.status_code == 200
+        letter.refresh_from_db()
+        assert letter.language == services.IDIOMA_PADRAO_DA_CARTA
+        assert letter.template.slug == official_slug(services.IDIOMA_PADRAO_DA_CARTA)
 
 
 # ---------------------------------------------------------------------------

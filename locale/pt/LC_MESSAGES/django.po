@@ -1,0 +1,71 @@
+# Catalogo de mensagens do projeto Desenrola -- portugues.
+#
+# ESTE CATALOGO NAO TRADUZ O SITE. Os textos do projeto ja sao escritos
+# em portugues na origem (as tags {% translate %} dos templates e os
+# gettext() do Python), entao nao ha nada a traduzir do nosso lado.
+#
+# Ele existe para UM caso especifico: mensagens que o proprio Django
+# gera e que o catalogo `pt` distribuido com o Django deixou por
+# traduzir. Sem isto, a interface -- que e so em portugues desde a Fase
+# 5 / Etapa 4.1 -- mostraria essas frases em ingles.
+#
+# REGRA AO MEXER AQUI
+# -------------------
+# Nao inventar traducao. Cada entrada abaixo e copiada textualmente de um
+# catalogo oficial do proprio Django (indicado na origem de cada uma).
+# Se uma mensagem nova precisar de entrada, procurar primeiro em
+# .venv/Lib/site-packages/django/**/locale/pt_BR/LC_MESSAGES/django.mo.
+#
+# DEPOIS DE EDITAR, RECOMPILAR:
+#     python scripts/compile_messages.py
+# (o `manage.py compilemessages` do Django exige o GNU gettext, que nao
+# existe numa instalacao padrao do Windows -- ver o README). O .mo e
+# versionado justamente porque nao ha passo de build que o gere.
+# `test_etapa41.py` falha se o .mo estiver ausente ou desatualizado.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Desenrola\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % "
+"1000000 == 0 ? 1 : 2;\n"
+
+# MinimumLengthValidator, em django/contrib/auth/password_validation.py.
+#
+# O catalogo `pt` do Django tem esta entrada vazia: o texto no codigo usa
+# "%d" e a traducao portuguesa ficou para tras. E a unica mensagem do
+# Django que a nossa interface ainda mostrava em ingles ("This password
+# is too short..."), encontrada na auditoria da Etapa 4.0.
+#
+# Traducao copiada do catalogo oficial pt_BR do Django
+# (django/contrib/auth/locale/pt_BR/LC_MESSAGES/django.mo), incluindo as
+# tres formas plurais que o Django usa para portugues.
+msgid "This password is too short. It must contain at least %d character."
+msgid_plural "This password is too short. It must contain at least %d characters."
+msgstr[0] "Esta senha é muito curta. Ela precisa conter pelo menos %d caractere."
+msgstr[1] "Esta senha é muito curta. Ela precisa conter pelo menos %d caracteres."
+msgstr[2] "Esta senha é muito curta. Ela precisa conter pelo menos %d caracteres."
+
+# Os outros tres validadores de AUTH_PASSWORD_VALIDATORS. O catalogo `pt`
+# do Django traduz estas tres, mas em portugues europeu ("palavra-passe",
+# "semelhante"), enquanto o resto da interface -- incluindo as nossas
+# proprias mensagens em apps/accounts/forms.py -- diz "senha". Sem estas
+# entradas, a mesma lista de erros misturaria "Esta senha e muito curta"
+# com "Esta palavra-passe e muito comum".
+#
+# Traducoes copiadas do catalogo oficial pt_BR do Django
+# (django/contrib/auth/locale/pt_BR/LC_MESSAGES/django.mo), verbatim --
+# incluindo a falta de ponto final na ultima, que e como o Django a
+# distribui.
+msgid "This password is too common."
+msgstr "Esta senha é muito comum."
+
+msgid "This password is entirely numeric."
+msgstr "Esta senha é inteiramente numérica."
+
+msgid "The password is too similar to the %(verbose_name)s."
+msgstr "A senha é muito parecida com %(verbose_name)s"

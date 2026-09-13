@@ -9,6 +9,8 @@ secao correspondente (heranca da v1) ou para uma tela nova e simples
 
 from django.urls import path
 
+from apps.doctemplates import views as doc_views
+
 from . import views
 
 app_name = "backoffice"
@@ -19,6 +21,31 @@ urlpatterns = [
     path("permissions/", views.backoffice_users, {"active": "permissions"}, name="permissions"),
     path("letters/", views.backoffice_letters, name="letters"),
     path("templates/", views.backoffice_templates, name="templates"),
+    # Editor visual de documentos (Etapa 4.2A). As views ficam em
+    # apps.doctemplates, junto do modelo que editam; so a rota mora aqui,
+    # porque a tela pertence ao backoffice.
+    path("documentos/", doc_views.document_list, name="documents"),
+    path("documentos/<int:version_pk>/", doc_views.document_editor, name="document_editor"),
+    path(
+        "documentos/<int:version_pk>/salvar/",
+        doc_views.document_save,
+        name="document_save",
+    ),
+    path(
+        "documentos/<int:version_pk>/publicar/",
+        doc_views.document_publish,
+        name="document_publish",
+    ),
+    path(
+        "documentos/<int:version_pk>/importar-oficial/",
+        doc_views.document_import_official,
+        name="document_import_official",
+    ),
+    path(
+        "documentos/<int:version_pk>/nova-versao/",
+        doc_views.document_new_version,
+        name="document_new_version",
+    ),
     path("content/", views.backoffice_templates, {"active": "content"}, name="content"),
     path("languages/", views.backoffice_templates, {"active": "languages"}, name="languages"),
     path("partners/", views.backoffice_partners, name="partners"),

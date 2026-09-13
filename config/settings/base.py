@@ -73,6 +73,10 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # A interface e so em portugues (Fase 5, Etapa 4.1): este middleware
+    # fecha as tres portas por onde outro idioma entraria (prefixo da URL,
+    # cookie e Accept-Language) ANTES de o LocaleMiddleware decidir.
+    "apps.core.middleware.InterfaceEmPortuguesMiddleware",
     # LocaleMiddleware precisa vir depois de Session e antes de Common.
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",

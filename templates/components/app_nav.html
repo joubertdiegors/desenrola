@@ -9,7 +9,6 @@ mobile_nav e verdadeiro (dashboard, perfil): logotipo + avatar.
     <a class="nav-link d-only{% if active_nav == 'letters' %} is-current{% endif %}" href="{% url 'core:dashboard' %}#minhas-cartas"{% if active_nav == "letters" %} aria-current="page"{% endif %}>{% translate "Minhas cartas" %}</a>
     <a class="nav-link d-only{% if active_nav == 'profile' %} is-current{% endif %}" href="{% url 'accounts:profile' %}"{% if active_nav == "profile" %} aria-current="page"{% endif %}>{% translate "Perfil" %}</a>
     <span class="d-only push"></span>
-    <div class="d-only">{% include "components/language_selector.html" %}</div>
     <details class="dropdown user-menu d-only">
       <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar avatar-md">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">

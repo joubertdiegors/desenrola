@@ -1,0 +1,327 @@
+/* --------------------------------------------------------------------------
+   Editor visual de documentos A4 (Fase 5, Etapa 4.2A)
+
+   Carregado so na tela do editor (bloco extra_css), nao no CSS global: e
+   um subsistema com layout proprio e nada disto serve ao resto do site.
+
+   A pagina NAO se adapta ao celular encolhendo: um A4 espremido em 360px
+   nao serve para posicionar nada com precisao. Em tela estreita a area do
+   canvas rola na horizontal e a pagina mantem a proporcao -- decisao
+   deliberada, nao uma falha de responsividade.
+   -------------------------------------------------------------------------- */
+
+.bo-main-editor { padding: 0; }
+
+.ed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* --- Barra superior ------------------------------------------------------ */
+
+.ed-topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.ed-topo-id { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.ed-topo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.ed-topo-acoes form { display: inline-flex; }
+
+.ed-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--bd);
+}
+
+.ed-zoom {
+  min-width: 52px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mu);
+  font-variant-numeric: tabular-nums;
+}
+
+.ed-aviso {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #eef4ff;
+  color: var(--p);
+  font-size: 13px;
+}
+
+.ed-aviso.is-erro { background: #fdecec; color: var(--e, #c0392b); }
+
+/* --- Corpo: paleta | canvas | propriedades ------------------------------- */
+
+.ed-corpo {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) 264px;
+  gap: 12px;
+  align-items: start;
+}
+
+.ed-paleta,
+.ed-painel {
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 12px;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+
+.ed-paleta h2,
+.ed-painel h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--mu);
+}
+
+.ed-ferramenta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ed-ferramenta:hover:not(:disabled) { background: var(--bg); border-color: var(--bd); }
+.ed-ferramenta:disabled { opacity: .45; cursor: not-allowed; }
+
+/* --- Canvas -------------------------------------------------------------- */
+
+.ed-canvas-area {
+  overflow: auto;
+  padding: 16px;
+  background: #e9edf4;
+  border-radius: 12px;
+  /* A altura acompanha a janela: o canvas rola dentro de si, sem empurrar
+     a barra de ferramentas para fora da tela. */
+  max-height: calc(100vh - 24px);
+}
+
+.ed-pagina {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(16, 32, 64, .16);
+  /* `--grade` e definida pelo script, ja multiplicada pelo zoom. */
+  --grade: 12px;
+}
+
+.ed-pagina.com-grade {
+  background-image:
+    linear-gradient(to right, rgba(26, 95, 214, .08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 95, 214, .08) 1px, transparent 1px);
+  background-size: var(--grade) var(--grade);
+}
+
+.ed-camada { position: absolute; inset: 0; }
+
+/* --- Elementos ----------------------------------------------------------- */
+
+.ed-elemento {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+  outline: 1px solid transparent;
+}
+
+/* EM EDICAO todo elemento mostra os proprios limites.
+   Sem isto, um modelo importado fica intrabalhavel: as mascaras sao
+   retangulos BRANCOS sobre uma pagina branca e os campos sao uma linha
+   de texto de poucos pixels -- tudo presente, nada visivel nem
+   clicavel com precisao. No preview os contornos somem e volta a valer
+   "o que se ve e o documento". */
+.ed:not(.is-preview) .ed-elemento { outline-color: rgba(26, 95, 214, .30); }
+
+.ed-elemento:hover { outline-color: rgba(26, 95, 214, .55); }
+
+/* A pagina oficial rasterizada e referencia, nao conteudo: fica fora do
+   caminho dos cliques para nao roubar os eventos dos elementos que
+   estao por cima dela -- ela cobre a folha inteira. */
+.ed-base-ref {
+  pointer-events: none;
+  cursor: default;
+}
+
+.ed:not(.is-preview) .ed-base-ref,
+.ed-base-ref:hover { outline-color: transparent; }
+
+.ed-elemento.is-selecionado { outline: 1.5px solid var(--p); }
+
+/* Um elemento a que falta a referencia (campo sem campo, imagem sem
+   imagem) tem de saltar aos olhos: publicar assim seria recusado. */
+.ed-elemento.is-incompleto {
+  outline-color: #e0a800;
+  background: rgba(255, 193, 7, .12);
+  font-size: 11px;
+  color: #8a6d00;
+}
+
+/* Trecho de campo dentro de um paragrafo misto: precisa ser
+   distinguivel do texto fixo sem deformar o fluxo da linha. */
+.ed-trecho-campo {
+  background: rgba(26, 95, 214, .10);
+  border-radius: 2px;
+}
+
+.ed-trechos {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bd);
+}
+
+.ed-trechos h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--mu);
+}
+
+.ed-qr-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--mu);
+  color: var(--mu);
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+
+.ed-tabela { font-size: inherit; }
+.ed-tabela td { vertical-align: top; word-break: break-word; }
+
+/* Alcas de redimensionamento. */
+.ed-alca {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 1.5px solid var(--p);
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.ed-alca-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.ed-alca-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.ed-alca-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.ed-alca-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.ed-alca-n { top: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.ed-alca-s { bottom: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.ed-alca-w { left: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+.ed-alca-e { right: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+
+/* No preview o documento e so o documento. */
+.ed.is-preview .ed-elemento { cursor: default; outline-color: transparent; }
+.ed.is-preview .ed-alca { display: none; }
+
+/* --- Painel de propriedades ---------------------------------------------- */
+
+.ed-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.ed-campo .input { font-size: 13px; min-height: 34px; padding: 4px 8px; }
+.ed-campo textarea.input { min-height: 68px; padding: 6px 8px; }
+
+.ed-campo-check { flex-direction: row; align-items: center; gap: 8px; }
+.ed-campo-check input { width: auto; min-height: 0; }
+
+.ed-grade-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+
+.ed-celulas {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bd);
+}
+
+.ed-acoes-elemento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bd);
+}
+
+.ed-vazio { font-size: 13px; color: var(--mu); margin: 0; }
+
+/* --- Lista de documentos -------------------------------------------------- */
+
+.doc-grupo { padding: 16px 0; border-top: 1px solid var(--bd); }
+.doc-grupo:first-of-type { border-top: 0; }
+
+.doc-grupo-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.doc-grupo-head h3 { margin: 0; font-size: 15px; }
+
+.doc-acoes { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.doc-acoes form { display: inline-flex; }
+
+/* --- Telas estreitas ------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  /* As laterais passam para cima e para baixo do canvas; a pagina
+     continua no tamanho real, rolando na horizontal. */
+  .ed-corpo { grid-template-columns: minmax(0, 1fr); }
+
+  .ed-paleta,
+  .ed-painel {
+    position: static;
+    max-height: none;
+  }
+
+  .ed-paleta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 4px;
+  }
+
+  .ed-paleta h2 { grid-column: 1 / -1; margin-bottom: 0; }
+
+  .ed-canvas-area { max-height: 70vh; }
+}

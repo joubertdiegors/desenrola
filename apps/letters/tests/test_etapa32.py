@@ -85,7 +85,7 @@ class TestNavbarDaHome:
         assert 'class="nav-desktop site-nav container"' in html
 
     def test_todo_o_conteudo_fica_dentro_do_mesmo_container(self, client):
-        """Logo, links, idioma e botões participam do mesmo alinhamento."""
+        """Logo, links e botões participam do mesmo alinhamento."""
         html = client.get(reverse("core:home")).content.decode()
         barra = html[html.index('class="nav-desktop site-nav container"') :]
         barra = barra[: barra.index("</nav>")]
@@ -94,7 +94,6 @@ class TestNavbarDaHome:
             "logo",
             "Como funciona",
             "Parceiros",
-            "site-nav-lang",
             reverse("accounts:login"),
             reverse("accounts:signup"),
         ):

@@ -175,15 +175,26 @@ def test_login_respeita_next(client, user):
     assert response.url == destino
 
 
-def test_login_preserva_o_idioma(client, user):
+def test_login_a_partir_de_uma_url_de_outro_idioma_cai_no_painel_portugues(
+    client, user
+):
+    """
+    A interface e so em portugues (Fase 5, Etapa 4.1): uma URL em frances
+    e trazida para /pt/ antes de chegar a view. O login continua
+    funcionando -- so nao sobrevive mais um "idioma da sessao".
+    """
     with translation.override("fr"):
         url = reverse("accounts:login")
     assert url == "/fr/accounts/login/"
 
-    response = client.post(url, {"username": user.email, "password": SENHA})
+    assert client.get(url).url == "/pt/accounts/login/"
+
+    response = client.post(
+        reverse("accounts:login"), {"username": user.email, "password": SENHA}
+    )
 
     assert response.status_code == 302
-    assert response.url == "/fr/dashboard/"
+    assert response.url == "/pt/dashboard/"
 
 
 def test_login_redireciona_quem_ja_esta_logado(auth_client):
@@ -389,21 +400,38 @@ def test_link_de_recuperacao_invalido(client):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_telas_de_conta_respondem_em_todos_os_idiomas(client, idioma):
+def test_telas_de_conta_respondem_em_todos_os_prefixos(client, idioma):
+    """
+    Nenhum prefixo pode dar 404. Em /pt/ a pagina responde direto; nos
+    outros ela e trazida para o portugues antes de responder -- mas
+    sempre acaba em 200, nunca num link morto.
+    """
     for rota in ("accounts:login", "accounts:signup", "accounts:password_reset"):
         with translation.override(idioma):
             url = reverse(rota)
         assert url.startswith(f"/{idioma}/")
-        assert client.get(url).status_code == 200
+
+        response = client.get(url, follow=True)
+
+        assert response.status_code == 200
+        destino = response.redirect_chain[-1][0] if response.redirect_chain else url
+        assert destino.startswith("/pt/")
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_area_protegida_redireciona_para_o_login_do_mesmo_idioma(client, idioma):
-    response = client.get(f"/{idioma}/accounts/profile/")
+def test_area_protegida_sempre_manda_para_o_login_em_portugues(client, idioma):
+    """
+    Quem nao esta logado vai para o login, com `next` de volta -- e, venha
+    de que prefixo vier, o login que abre e o portugues.
+    """
+    response = client.get(f"/{idioma}/accounts/profile/", follow=True)
 
-    assert response.status_code == 302
-    assert response.url == f"/{idioma}/accounts/login/?next=/{idioma}/accounts/profile/"
+    assert response.status_code == 200
+    destino = response.redirect_chain[-1][0]
+    assert destino.startswith("/pt/accounts/login/")
+    assert "next=" in destino
+    assert destino.endswith("/accounts/profile/")
 
 
 @pytest.mark.django_db

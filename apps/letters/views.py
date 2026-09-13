@@ -23,7 +23,6 @@ from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
 from apps.letters import presentation, services
@@ -92,12 +91,14 @@ def start(request):
     Gerar Carta Convite: apresenta a etapa 1 (GET) e cria o rascunho no
     envio (POST).
 
-    O idioma inicial e o idioma em que a pessoa esta navegando; ele decide
-    qual documento oficial sera usado e pode ser trocado na etapa 5. Se
-    aquele idioma ainda nao tem documento publicado, o fluxo para aqui com
-    um aviso claro — nunca usa o documento de outro idioma no lugar.
+    O idioma inicial e sempre `services.IDIOMA_PADRAO_DA_CARTA` — uma
+    decisao de produto, nao o idioma da interface (que e so portugues
+    desde a Etapa 4.1). Ele decide qual documento oficial sera usado e
+    pode ser trocado na etapa 5. Se aquele idioma ainda nao tem documento
+    publicado, o fluxo para aqui com um aviso claro — nunca usa o
+    documento de outro idioma no lugar.
     """
-    language = services.normalize_language(get_language())
+    language = services.IDIOMA_PADRAO_DA_CARTA
     template_version = services.get_template_version_for_language(language)
     if template_version is None:
         messages.error(request, DOCUMENT_UNAVAILABLE)
