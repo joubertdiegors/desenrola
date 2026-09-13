@@ -152,8 +152,10 @@
 
   // --- Campos de data ---------------------------------------------------
   // O input visivel mostra dd/mm/aaaa; digitar 10102026 vira 10/10/2026
-  // sozinho, e o botao do icone abre o calendario NATIVO do navegador.
-  // Antes de enviar, a data vai normalizada para ISO.
+  // sozinho. Ao lado, invisivel mas por cima do icone, fica um
+  // <input type="date"> de verdade: tocar nele abre o calendario NATIVO
+  // do navegador -- inclusive no celular. Antes de enviar, a data vai
+  // normalizada para ISO.
   //
   // Nada aqui e seguranca: o servidor revalida e converte de qualquer
   // jeito (apps/letters/forms.py aceita dd/mm/aaaa e ISO). Sem
@@ -192,20 +194,36 @@
     if (masked !== input.value) { input.value = masked; }
   });
 
-  document.addEventListener("click", function (event) {
-    var button = event.target.closest(".date-input-open");
-    if (!button) { return; }
-    var wrap = button.closest(".date-input");
-    var picker = wrap && wrap.querySelector(".date-input-picker");
-    var input = wrap && wrap.querySelector("[data-date-input]");
-    if (!picker || !input) { return; }
-
+  // O <input type="date"> esta por cima do icone, invisivel e clicavel:
+  // tocar nele ja abre o calendario nativo, sem JavaScript nenhum -- e o
+  // que faz funcionar no celular, onde `showPicker()` nao existe (Safari
+  // do iOS) ou so e aceito a partir de um toque no proprio campo de data.
+  //
+  // Aqui so sincronizamos: ao tocar, o seletor comeca na data que ja
+  // estiver digitada. `pointerdown` vem ANTES do navegador abrir o
+  // calendario, entao o valor chega a tempo.
+  document.addEventListener("pointerdown", function (event) {
+    var picker = event.target.closest(".date-input-picker");
+    if (!picker) { return; }
+    var input = picker.closest(".date-input").querySelector("[data-date-input]");
+    if (!input) { return; }
     picker.value = toIso(input.value) || "";
+    // Data minima (ex.: chegada nao pode ser no passado): o calendario
+    // nativo desabilita os dias anteriores sozinho.
+    var min = input.getAttribute("data-date-min");
+    if (min) { picker.min = min; }
+  });
+
+  // Teclado: Enter/Espaco no seletor tambem abre o calendario onde o
+  // navegador oferecer `showPicker()`.
+  document.addEventListener("keydown", function (event) {
+    var picker = event.target.closest && event.target.closest(".date-input-picker");
+    if (!picker || (event.key !== "Enter" && event.key !== " ")) { return; }
+    var input = picker.closest(".date-input").querySelector("[data-date-input]");
+    if (input) { picker.value = toIso(input.value) || ""; }
     if (typeof picker.showPicker === "function") {
-      try { picker.showPicker(); } catch (err) { picker.focus(); }
-    } else {
-      picker.focus();
-      picker.click();
+      event.preventDefault();
+      try { picker.showPicker(); } catch (err) { /* o navegador decide */ }
     }
   });
 
@@ -213,7 +231,140 @@
     var picker = event.target;
     if (!picker.matches || !picker.matches(".date-input-picker")) { return; }
     var input = picker.closest(".date-input").querySelector("[data-date-input]");
-    if (input && picker.value) { input.value = fromIso(picker.value); }
+    if (!input || !picker.value) { return; }
+    input.value = fromIso(picker.value);
+    // Escrever o valor por codigo nao dispara `input`: avisamos na mao,
+    // senao a duracao e o botao ficariam com o estado antigo.
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  // --- Duracao da estadia (etapa "Viagem") ------------------------------
+  // Recalcula na hora, enquanto a pessoa digita ou escolhe no calendario.
+  //
+  // A conta e a MESMA do servidor (apps/letters/rules.py): contagem
+  // INCLUSIVA, ou seja, diferenca entre as datas + 1 -- de 10/10/2026 a
+  // 24/10/2026 sao 15 dias, como o documento oficial declara. Aqui e so
+  // adiantar o numero; quem valida continua sendo o servidor.
+
+  var MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+  function stayDurationDays(isoChegada, isoPartida) {
+    if (!isoChegada || !isoPartida) { return null; }
+    var chegada = new Date(isoChegada + "T00:00:00");
+    var partida = new Date(isoPartida + "T00:00:00");
+    if (isNaN(chegada) || isNaN(partida) || partida < chegada) { return null; }
+    return Math.round((partida - chegada) / MS_POR_DIA) + 1;
+  }
+
+  function refreshDuration(form) {
+    var caixa = form.querySelector("[data-duration-box]");
+    if (!caixa) { return; }
+
+    var chegada = form.querySelector('[name="stay_arrival"]');
+    var partida = form.querySelector('[name="stay_departure"]');
+    if (!chegada || !partida) { return; }
+
+    // Campo vazio, data incompleta, data impossivel (31/02) ou partida
+    // antes da chegada: `toIso`/`stayDurationDays` devolvem null e a
+    // caixa some, em vez de mostrar um numero errado.
+    var dias = stayDurationDays(toIso(chegada.value), toIso(partida.value));
+    if (dias === null) {
+      caixa.hidden = true;
+      return;
+    }
+
+    var unidade = dias === 1
+      ? caixa.getAttribute("data-unit-one")
+      : caixa.getAttribute("data-unit-many");
+    var valor = caixa.querySelector("[data-duration-value]");
+    if (valor) { valor.textContent = dias + " " + unidade; }
+
+    var maximo = Number(caixa.getAttribute("data-max-stay"));
+    var passou = !!maximo && dias > maximo;
+    caixa.classList.toggle("is-invalid", passou);
+
+    var etiqueta = caixa.querySelector("[data-duration-over]");
+    if (etiqueta) { etiqueta.hidden = !passou; }
+
+    var aviso = form.querySelector("[data-duration-warning]");
+    if (aviso) { aviso.hidden = !passou; }
+
+    caixa.hidden = false;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var caixas = document.querySelectorAll("[data-duration-box]");
+    for (var i = 0; i < caixas.length; i++) {
+      var form = caixas[i].closest("form");
+      if (form) { refreshDuration(form); }
+    }
+  });
+
+  // --- Estado do botao "Proxima etapa" ----------------------------------
+  // O botao fica com CARA de desabilitado enquanto faltar campo
+  // obrigatorio, mas continua clicavel de proposito: se a pessoa insistir
+  // e enviar, o Django valida e devolve as mensagens de erro campo a
+  // campo. Um `disabled` de verdade engoliria esse retorno e deixaria o
+  // formulario mudo.
+  //
+  // Isto e so conforto visual. Quem decide continua sendo o servidor --
+  // nada aqui impede (nem autoriza) o envio.
+
+  function dateFieldIsValid(input) {
+    var iso = toIso(input.value);
+    if (!iso) { return false; }
+    var min = input.getAttribute("data-date-min");
+    return !min || iso >= min;
+  }
+
+  function fieldIsFilled(field) {
+    if (field.type === "checkbox") { return field.checked; }
+    if (field.type === "radio") {
+      var grupo = field.form ? field.form.querySelectorAll('[name="' + field.name + '"]') : [];
+      for (var i = 0; i < grupo.length; i++) {
+        if (grupo[i].checked) { return true; }
+      }
+      return false;
+    }
+    if (!field.value || !field.value.trim()) { return false; }
+    if (field.hasAttribute("data-date-input")) { return dateFieldIsValid(field); }
+    return true;
+  }
+
+  function refreshStepButton(form) {
+    var botao = document.querySelector('[data-step-submit][form="' + form.id + '"]')
+      || form.querySelector("[data-step-submit]");
+    if (!botao) { return; }
+
+    var obrigatorios = form.querySelectorAll("[required]");
+    var completo = true;
+    for (var i = 0; i < obrigatorios.length; i++) {
+      var campo = obrigatorios[i];
+      if (campo.disabled) { completo = false; break; }
+      if (!fieldIsFilled(campo)) { completo = false; break; }
+    }
+
+    botao.classList.toggle("is-disabled", !completo);
+    botao.setAttribute("aria-disabled", completo ? "false" : "true");
+  }
+
+  function refreshAllStepButtons() {
+    var forms = document.querySelectorAll("form");
+    for (var i = 0; i < forms.length; i++) { refreshStepButton(forms[i]); }
+  }
+
+  document.addEventListener("DOMContentLoaded", refreshAllStepButtons);
+  document.addEventListener("input", function (event) {
+    if (event.target.form) {
+      refreshStepButton(event.target.form);
+      refreshDuration(event.target.form);
+    }
+  });
+  document.addEventListener("change", function (event) {
+    if (event.target.form) {
+      refreshStepButton(event.target.form);
+      refreshDuration(event.target.form);
+    }
   });
 
   // Envia ISO quando a data esta completa e valida; se nao estiver, deixa

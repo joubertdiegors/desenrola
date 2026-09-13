@@ -54,8 +54,6 @@ VALID_STEP_1 = {
 }
 VALID_STEP_2 = {"stay_arrival": "10/10/2026", "stay_departure": "24/10/2026"}
 VALID_STEP_3 = {
-    "host_nationality": "belge",
-    "host_birth_date": "14/03/1985",
     "host_confirm": "on",
 }
 VALID_STEP_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
@@ -98,8 +96,6 @@ def snapshot_completo():
             "guest_passport": "YY000000",
             "stay_arrival": "2026-10-10",
             "stay_departure": "2026-10-24",
-            "host_nationality": "belge",
-            "host_birth_date": "1985-03-14",
             "host_confirm": True,
             "notice_informal": True,
             "notice_prise_en_charge": True,
@@ -113,6 +109,7 @@ def snapshot_completo():
             "address": "Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert",
             "city": "Woluwe-Saint-Lambert",
             "document_number": "00000000",
+            "birth_date": "1985-03-14",
         },
         # formas já resolvidas no fechamento (ver nationalities.document_forms)
         "nationalities": {
@@ -503,7 +500,7 @@ class TestErrosExplicitos:
         "remocao",
         [
             lambda s: s["data"].pop("guest_name"),
-            lambda s: s["data"].pop("host_birth_date"),
+            lambda s: s["host"].pop("birth_date"),
             lambda s: s["host"].pop("full_name"),
             lambda s: s.pop("finalized_at"),
         ],

@@ -233,7 +233,12 @@ body { display: flex; flex-direction: column; }
    Dashboard
    -------------------------------------------------------------------------- */
 
-.dash { padding: 40px 48px 56px; max-width: 1000px; }
+/* Sem max-width proprio: a largura vem do .container que envolve a
+   pagina, o mesmo da barra de navegacao. E o que mantem a saudacao, o
+   CTA e a tabela alinhados com o logo da barra de cima -- antes o
+   conteudo ficava numa faixa de 1000px encostada a esquerda do
+   container de 1280px. O padding lateral e o mesmo de .nav-desktop. */
+.dash { padding: 40px 48px 56px; }
 .dash h1 { font-size: 36px; }
 .dash-sub { color: var(--mu); margin: 6px 0 26px; }
 
@@ -266,7 +271,18 @@ body { display: flex; flex-direction: column; }
 .section-head h2 { font-size: 22px; }
 .section-head .count { font-size: 13px; color: var(--mu); }
 
+/* Coluna de acoes da tabela "Minhas cartas".
+
+   A largura e fixa e o conteudo vai para a direita: e isso que faz o
+   botao de detalhes cair sempre na mesma posicao, tenha a linha uma
+   acao ou duas. Sem isso, cada status empurrava os botoes para um lugar
+   diferente. */
+.letters-table .cell-actions { width: 1%; white-space: nowrap; text-align: right; }
+.letter-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .letters-table td .btn { min-height: 38px; padding: 0 12px; font-size: 13px; }
+/* Botao so de icone: quadrado de verdade. O `padding` da regra acima
+   valeria tambem para ele e o deixaria mais largo que alto. */
+.letters-table td .btn-icon-sm { width: 38px; min-height: 38px; padding: 0; }
 .letters-cards { display: flex; flex-direction: column; gap: 10px; }
 .letter-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .letter-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -284,7 +300,7 @@ body { display: flex; flex-direction: column; }
 .letters-empty .btn { margin-top: 8px; }
 
 @media (max-width: 767px) {
-  .dash { padding: 16px 20px 0; max-width: none; }
+  .dash { padding: 16px 20px 0; }
   .dash h1 { font-size: 30px; }
   .hero-cta { flex-direction: column; align-items: stretch; text-align: left; gap: 14px; padding: 20px; background: linear-gradient(150deg, var(--p10), #fff 70%); }
   .hero-cta-icon { width: 52px; height: 52px; font-size: 26px; }
@@ -319,6 +335,11 @@ body { display: flex; flex-direction: column; }
 .wizard-stack { display: flex; flex-direction: column; gap: 14px; }
 
 /* Duracao da estadia calculada (etapa Viagem) */
+/* Link "Editar meus dados", entre os dados do anfitriao e a confirmacao. */
+.host-edit-link { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.host-edit-link a { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.host-edit-hint { font-size: 13px; color: var(--mu); }
+
 .duration-box { padding: 16px; display: flex; gap: 14px; align-items: center; }
 .duration-icon { width: 44px; height: 44px; background: #fff; border-radius: var(--radius-md); display: grid; place-items: center; color: var(--p); font-size: 24px; flex: none; }
 .duration-label { font-size: 13px; font-weight: 600; color: var(--navy); }

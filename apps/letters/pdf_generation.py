@@ -165,8 +165,13 @@ De onde vem cada coisa: os dados do convidado e da viagem de
 
     return {
         "host_name": host_name,
+        # A data de nascimento do anfitriao vem do PERFIL congelado. Em
+        # cartas anteriores a essa mudanca ela ficava em `data`, porque o
+        # assistente ainda perguntava -- por isso as duas origens.
         "host_birth": _format_date(
-            _require(data, "host_birth_date", context="etapa Anfitrião")
+            host.get("birth_date") or _require(
+                data, "host_birth_date", context="data de nascimento no perfil"
+            )
         ),
         "host_nationality": host_nationality,
         # O "belge" de "titulaire de la carte d'identité belge n° ..." é a

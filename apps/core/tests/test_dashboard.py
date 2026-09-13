@@ -11,6 +11,7 @@ import datetime
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.letters import presentation, services
 from apps.letters.models import Letter
@@ -330,10 +331,12 @@ class TestContinuarRascunho:
             "guest_nationality": "Brasileira",
             "guest_birth_date": "1990-08-15",
             "guest_passport": "FA123456",
-            "stay_arrival": "2026-04-10",
-            "stay_departure": "2026-04-25",
-            "host_nationality": "Belga",
-            "host_birth_date": "1988-06-03",
+            "stay_arrival": (
+                timezone.localdate() + datetime.timedelta(days=30)
+            ).isoformat(),
+            "stay_departure": (
+                timezone.localdate() + datetime.timedelta(days=45)
+            ).isoformat(),
             "host_confirm": True,
             "notice_informal": True,
             "notice_prise_en_charge": True,

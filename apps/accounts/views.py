@@ -89,6 +89,10 @@ def profile(request):
     """
     user = request.user
     section = request.GET.get("secao")
+    # De onde a pessoa veio (ex.: uma etapa do assistente que exigia um
+    # dado do perfil). So aceitamos caminhos internos, para o parametro
+    # nao virar um redirecionamento para fora do site.
+    voltar_para = _safe_next(request)
     profile_form = ProfileForm(instance=user)
     password_form = PasswordChangeForm(user)
 
@@ -108,7 +112,7 @@ def profile(request):
             if profile_form.is_valid():
                 profile_form.save()
                 messages.success(request, _("Alterações salvas."))
-                return redirect(_profile_url(section))
+                return redirect(voltar_para or _profile_url(section))
             section = "dados"
 
     if section not in PROFILE_SECTIONS:
@@ -122,6 +126,7 @@ def profile(request):
             "password_form": password_form,
             "section": section,
             "section_title": PROFILE_SECTIONS.get(section, ""),
+            "return_to": voltar_para,
             "active_nav": "profile",
         },
     )

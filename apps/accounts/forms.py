@@ -27,6 +27,8 @@ PROFILE_FIELDS = (
     "full_name",
     "email",
     "phone",
+    "birth_date",
+    "nationality",
     "document_number",
     "address_line1",
     "postal_code",
@@ -121,6 +123,36 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = PROFILE_FIELDS
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Data de nascimento: mesma convencao do assistente -- a pessoa ve
+        # e digita dd/mm/aaaa, o banco guarda ISO. O `data-date-input`
+        # liga a mascara e o calendario nativo (static/js/app.js).
+        nascimento = self.fields["birth_date"]
+        nascimento.input_formats = ["%d/%m/%Y", "%Y-%m-%d"]
+        nascimento.widget = forms.DateInput(
+            format="%d/%m/%Y",
+            attrs={
+                "class": "input",
+                "placeholder": "DD/MM/AAAA",
+                "inputmode": "numeric",
+                "autocomplete": "bday",
+                "maxlength": "10",
+                "data-date-input": "",
+            },
+        )
+
+        # Nacionalidade: so as ativas do cadastro administravel. Nunca
+        # texto livre -- e dela que sai a forma gramatical impressa no
+        # documento oficial.
+        from apps.doctemplates.models import Nationality
+
+        nacionalidade = self.fields["nationality"]
+        nacionalidade.queryset = Nationality.objects.active()
+        nacionalidade.empty_label = "---------"
+        nacionalidade.widget.attrs.setdefault("class", "input")
 
     def clean_email(self):
         email = _normalize_email(self.cleaned_data["email"])

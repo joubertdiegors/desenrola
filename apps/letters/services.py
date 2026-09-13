@@ -333,9 +333,10 @@ def build_snapshot(letter, user):
     carta continuar reproduzivel mesmo que o usuario edite o perfil
     depois.
 
-    Do perfil vem tambem o numero do documento de identidade: e um dado
-    da pessoa, nao da viagem, entao o anfitriao o informa uma vez e todas
-    as cartas o reaproveitam.
+    Do perfil vem tambem o numero do documento de identidade, a data de
+    nascimento e a nacionalidade do anfitriao: sao dados da pessoa, nao
+    da viagem, entao ele os informa uma vez e todas as cartas os
+    reaproveitam.
 
     A cidade e congelada SEPARADA do endereco de proposito. O fechamento
     do documento ("Fait à <cidade>, le <data>") usa a cidade de
@@ -354,13 +355,16 @@ def build_snapshot(letter, user):
             "address": user.get_address_display(),
             "city": user.city,
             "document_number": user.document_number,
+            "birth_date": user.birth_date.isoformat() if user.birth_date else "",
         },
         # As nacionalidades entram ja RESOLVIDAS na forma que o documento
-        # usa. `data` guarda o codigo (estavel); aqui fica o texto que foi
-        # impresso -- e o que faz uma carta emitida continuar igual mesmo
-        # que a nacionalidade seja renomeada ou desativada no cadastro
-        # depois.
-        "nationalities": document_forms(letter.data),
+        # usa. `data` guarda o codigo do convidado (estavel) e o do
+        # anfitriao vem do perfil; aqui fica o texto que foi impresso --
+        # e o que faz uma carta emitida continuar igual mesmo que a
+        # nacionalidade seja renomeada ou desativada no cadastro depois.
+        "nationalities": document_forms(
+            letter.data, host_code=user.nationality and user.nationality.code
+        ),
         "finalized_at": timezone.now().isoformat(),
     }
 
@@ -386,6 +390,10 @@ def missing_host_profile_fields(user):
         missing.append(_("número do documento de identidade"))
     if not (user.phone or "").strip():
         missing.append(_("telefone"))
+    if not user.birth_date:
+        missing.append(_("data de nascimento"))
+    if user.nationality_id is None:
+        missing.append(_("nacionalidade"))
     return missing
 
 

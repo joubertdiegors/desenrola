@@ -189,32 +189,6 @@ CARTA_CONVITE_FIELD_SCHEMA = {
         # Nome, telefone e endereço vêm do usuário autenticado (não
         # duplicados aqui); estes complementam o que o modelo de usuário
         # não guarda.
-        {
-            "key": "host_nationality",
-            "type": "nationality",
-            "required": True,
-            "order": 7,
-            "section": "anfitriao",
-            "label": "Nacionalidade",
-            "translations": {
-                "fr": {"label": "Nationalité"},
-                "nl": {"label": "Nationaliteit"},
-                "en": {"label": "Nationality"},
-            },
-        },
-        {
-            "key": "host_birth_date",
-            "type": "date",
-            "required": True,
-            "order": 8,
-            "section": "anfitriao",
-            "label": "Data de nascimento",
-            "translations": {
-                "fr": {"label": "Date de naissance"},
-                "nl": {"label": "Geboortedatum"},
-                "en": {"label": "Date of birth"},
-            },
-        },
         # Declaração do usuário: sem `translations` de propósito (ver o
         # cabeçalho deste módulo).
         {

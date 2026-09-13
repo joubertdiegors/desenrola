@@ -73,10 +73,14 @@ ilustrativas (sem campo no modelo).
     <section class="card profile-section{% if section == 'dados' %} is-current{% endif %}" id="dados">
       <h2>{% translate "Dados pessoais" %}</h2>
       <p class="section-sub">{% translate "Usados como dados do anfitrião em cada nova carta — por isso a etapa 3 só os exibe." %}</p>
+      {% if return_to %}
+      <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Complete os dados abaixo e você volta direto para onde parou." %}</span></div>
+      {% endif %}
       <form method="post" action="{% url 'accounts:profile' %}" novalidate>
         {% csrf_token %}
         <input type="hidden" name="action" value="dados">
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
+        {% if return_to %}<input type="hidden" name="next" value="{{ return_to }}">{% endif %}
         {% if profile_form.non_field_errors %}
         <div class="notice notice-error" role="alert"><i class="ph-fill ph-x-circle" aria-hidden="true"></i><span>{% for error in profile_form.non_field_errors %}{{ error }} {% endfor %}</span></div>
         {% endif %}
@@ -95,6 +99,26 @@ ilustrativas (sem campo no modelo).
             <label for="p_phone">{% translate "Telefone" %}</label>
             <input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" value="{{ profile_form.phone.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.phone.errors %}
+          </div>
+          <div class="field{% if profile_form.birth_date.errors %} is-invalid{% endif %}">
+            <label for="{{ profile_form.birth_date.id_for_label }}">{% translate "Data de nascimento" %}</label>
+            {% comment %}
+            Mesmo campo de data do assistente: digita-se dd/mm/aaaa (com
+            máscara) e o botão abre o calendário nativo do navegador.
+            {% endcomment %}
+            <div class="input-wrap date-input">
+              {{ profile_form.birth_date }}
+              <input type="date" class="date-input-picker" aria-label="{% translate 'Escolher no calendário' %}">
+              <span class="input-icon is-accent date-input-open" aria-hidden="true"><i class="ph ph-calendar-blank"></i></span>
+            </div>
+            <div class="field-hint">{% translate "Usada na sua Carta Convite." %}</div>
+            {% include "components/field_errors.html" with errors=profile_form.birth_date.errors %}
+          </div>
+          <div class="field{% if profile_form.nationality.errors %} is-invalid{% endif %}">
+            <label for="{{ profile_form.nationality.id_for_label }}">{% translate "Nacionalidade" %}</label>
+            {{ profile_form.nationality }}
+            <div class="field-hint">{% translate "Usada na sua Carta Convite." %}</div>
+            {% include "components/field_errors.html" with errors=profile_form.nationality.errors %}
           </div>
           <div class="field{% if profile_form.document_number.errors %} is-invalid{% endif %}">
             <label for="p_document">{% translate "Número do documento de identidade" %}</label>
@@ -130,6 +154,7 @@ ilustrativas (sem campo no modelo).
         {% csrf_token %}
         <input type="hidden" name="action" value="senha">
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
+        {% if return_to %}<input type="hidden" name="next" value="{{ return_to }}">{% endif %}
         <div class="form-grid">
           <div class="field span-2{% if password_form.old_password.errors %} is-invalid{% endif %}">
             <label for="p_pw0">{% translate "Senha atual" %}</label>

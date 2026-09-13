@@ -30,11 +30,17 @@ import datetime
 
 from django import forms
 from django.core.validators import RegexValidator
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.doctemplates.schema import resolve_field_text, resolve_label, resolve_options
 from apps.letters.nationalities import nationality_choices
 from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_days
+
+# Campos de data que nao aceitam o passado. A carta convida alguem para
+# uma viagem que ainda vai acontecer -- uma chegada de ontem nao existe.
+# (Nascimento, por exemplo, nao entra aqui, pelo motivo oposto.)
+NOT_IN_THE_PAST = ("stay_arrival",)
 
 PHONE_VALIDATOR = RegexValidator(
     regex=r"^[0-9+()\-.\s]{6,32}$",
@@ -143,6 +149,16 @@ def _build_field(field_def, language=None, nationalities=None):
                         "autocomplete": "off",
                         "maxlength": "10",
                         "data-date-input": "",
+                        # Datas que nao podem ser no passado levam a data
+                        # minima junto: e ela que o calendario nativo usa
+                        # para fechar os dias anteriores, e que o script
+                        # consulta para marcar o campo como invalido. A
+                        # regra de verdade continua no servidor.
+                        **(
+                            {"data-date-min": timezone.localdate().isoformat()}
+                            if field_def["key"] in NOT_IN_THE_PAST
+                            else {}
+                        ),
                     },
                 ),
             ),
@@ -211,17 +227,29 @@ def _clean_stay_dates(form):
     Validacao entre as datas da etapa 'Viagem'. Regra de negocio concreta
     deste modelo oficial, nao uma feature generica do schema:
 
+      - a chegada nao pode ser anterior a hoje;
       - a partida nao pode ser anterior a chegada (o mesmo dia vale, e
         conta como 1 dia de estadia);
       - a estadia nao pode passar de `MAX_STAY_DAYS` -- e o limite da
         carta de curta duracao.
 
-    A segunda regra vive aqui, no formulario, e nao so no template: e o
-    que impede contornar o limite mandando o POST direto.
+    Todas vivem aqui, no formulario, e nao so no template: e o que
+    impede contornar as regras mandando o POST direto.
     """
     cleaned = form.cleaned_data
     arrival = cleaned.get("stay_arrival")
     departure = cleaned.get("stay_departure")
+
+    # Chegada no passado nao existe: a carta convida alguem para uma
+    # viagem que ainda vai acontecer. Vale por si so -- nao depende da
+    # partida ter sido preenchida.
+    if arrival and arrival < timezone.localdate():
+        form.add_error(
+            "stay_arrival",
+            _("A data de chegada não pode ser anterior a hoje."),
+        )
+        return cleaned
+
     if not (arrival and departure):
         return cleaned
 

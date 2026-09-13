@@ -7,6 +7,7 @@ campo nenhum -- so o TIPO decide o campo Django gerado.
 import datetime
 
 import pytest
+from django.utils import timezone
 
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
 
@@ -120,9 +121,26 @@ class TestValidacaoCruzadaViagem:
         _field(key="stay_departure", type="date", label="Partida"),
     ]
 
+    # Datas relativas a hoje: a chegada nao pode ser no passado, entao uma
+    # data fixa no codigo venceria com o tempo.
+    CHEGADA = timezone.localdate() + datetime.timedelta(days=30)
+
+    def _br(self, data):
+        return data.strftime("%d/%m/%Y")
+
+    def _viagem(self, *, chegada=None, dias=None, partida=None):
+        chegada = chegada or self.CHEGADA
+        if partida is None:
+            partida = chegada + datetime.timedelta(days=dias or 0)
+        return {
+            "stay_arrival": self._br(chegada),
+            "stay_departure": self._br(partida),
+        }
+
     def test_partida_antes_da_chegada_e_invalida(self):
         form = build_dynamic_form(
-            self.FIELDS, data={"stay_arrival": "10/04/2025", "stay_departure": "05/04/2025"}
+            self.FIELDS,
+            data=self._viagem(partida=self.CHEGADA - datetime.timedelta(days=5)),
         )
         assert not form.is_valid()
         assert "stay_departure" in form.errors
@@ -132,32 +150,38 @@ class TestValidacaoCruzadaViagem:
         Chegar e partir no mesmo dia é uma estadia de 1 dia -- válida.
         (Antes era recusada; a regra passou a ser chegada <= partida.)
         """
+        form = build_dynamic_form(self.FIELDS, data=self._viagem(dias=0))
+        assert form.is_valid(), form.errors
+
+    def test_chegada_no_passado_e_recusada(self):
+        """A carta convida para uma viagem que ainda vai acontecer."""
+        ontem = timezone.localdate() - datetime.timedelta(days=1)
         form = build_dynamic_form(
-            self.FIELDS, data={"stay_arrival": "10/04/2025", "stay_departure": "10/04/2025"}
+            self.FIELDS, data=self._viagem(chegada=ontem, dias=10)
         )
-        assert form.is_valid()
+        assert not form.is_valid()
+        assert "stay_arrival" in form.errors
+
+    def test_chegada_hoje_e_valida(self):
+        hoje = timezone.localdate()
+        form = build_dynamic_form(self.FIELDS, data=self._viagem(chegada=hoje, dias=5))
+        assert form.is_valid(), form.errors
 
     def test_estadia_de_ate_90_dias_e_valida(self):
-        form = build_dynamic_form(
-            self.FIELDS, data={"stay_arrival": "01/01/2026", "stay_departure": "31/03/2026"}
-        )
+        form = build_dynamic_form(self.FIELDS, data=self._viagem(dias=89))
         assert form.is_valid(), form.errors
 
     def test_estadia_acima_de_90_dias_e_recusada(self):
         """O limite da carta de curta duração vive no formulário, não só
         no template -- é o que impede contornar mandando o POST direto."""
-        form = build_dynamic_form(
-            self.FIELDS, data={"stay_arrival": "01/01/2026", "stay_departure": "01/04/2026"}
-        )
+        form = build_dynamic_form(self.FIELDS, data=self._viagem(dias=90))
         assert not form.is_valid()
         assert "stay_departure" in form.errors
         assert "90" in str(form.errors["stay_departure"])
 
     def test_partida_depois_da_chegada_e_valida(self):
-        form = build_dynamic_form(
-            self.FIELDS, data={"stay_arrival": "10/04/2025", "stay_departure": "25/04/2025"}
-        )
-        assert form.is_valid()
+        form = build_dynamic_form(self.FIELDS, data=self._viagem(dias=15))
+        assert form.is_valid(), form.errors
 
 
 class TestIdiomaDosCampos:

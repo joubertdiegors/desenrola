@@ -67,7 +67,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
     </form>
     <div class="wizard-actions is-single">
-      <button type="submit" form="step-form" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      <button type="submit" form="step-form" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
     </div>
 
   {% elif step == 2 %}
@@ -78,28 +78,35 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       {% csrf_token %}
       <div class="card wizard-card form-grid">
         {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
-        {% if duration_days %}
-        <div class="tint duration-box span-2{% if duration_exceeded %} is-invalid{% endif %}">
+        {% comment %}
+        A duração vem calculada do servidor e é recalculada na hora pelo
+        navegador enquanto a pessoa digita (static/js/app.js). A conta é a
+        mesma dos dois lados -- inclusiva, como em apps/letters/rules.py --
+        e os textos saem daqui, traduzidos, para o script não precisar
+        conhecer idioma nenhum.
+
+        Os blocos ficam sempre no HTML e aparecem/somem por `hidden`: é o
+        que permite ao script atualizá-los sem recarregar a página.
+        {% endcomment %}
+        <div class="tint duration-box span-2{% if duration_exceeded %} is-invalid{% endif %}"
+             data-duration-box
+             data-max-stay="{{ max_stay_days }}"
+             data-unit-one="{% translate 'dia' %}"
+             data-unit-many="{% translate 'dias' %}"
+             {% if not duration_days %}hidden{% endif %}>
           <span class="duration-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
           <div>
             <div class="duration-label">{% translate "Duração da estadia" %}</div>
-            <div class="duration-value">{% blocktranslate count n=duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}</div>
+            <div class="duration-value" data-duration-value>{% if duration_days %}{% blocktranslate count n=duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}{% endif %}</div>
           </div>
-          {% if duration_exceeded %}
-          <span class="tag tag-error push">{% blocktranslate %}&gt; {{ max_stay_days }} dias{% endblocktranslate %}</span>
-          {% else %}
-          <span class="tag tag-success push">{% blocktranslate %}&le; {{ max_stay_days }} dias{% endblocktranslate %}</span>
-          {% endif %}
+          <span class="tag tag-error push" data-duration-over{% if not duration_exceeded %} hidden{% endif %}>{% blocktranslate %}&gt; {{ max_stay_days }} dias{% endblocktranslate %}</span>
         </div>
-        {% endif %}
-        {% if duration_exceeded %}
-        <div class="notice notice-error span-2"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{% blocktranslate %}A estadia não pode ultrapassar {{ max_stay_days }} dias. Ajuste as datas para continuar.{% endblocktranslate %}</span></div>
-        {% endif %}
+        <div class="notice notice-error span-2" data-duration-warning{% if not duration_exceeded %} hidden{% endif %}><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{% blocktranslate %}A estadia não pode ultrapassar {{ max_stay_days }} dias. Ajuste as datas para continuar.{% endblocktranslate %}</span></div>
         <div class="notice span-2"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à data de chegada. Cartas de curta duração valem para estadias de até 90 dias." %}</span></div>
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=1 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+        <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       </div>
     </form>
 
@@ -109,21 +116,71 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
     {# nacionalidade/nascimento/documento são campos reais do schema.     #}
     {# ------------------------------------------------------------------ #}
     {% url 'accounts:profile' as profile_url %}
-    <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Seu nome, endereço e telefone não podem ser editados aqui. Eles vêm do seu perfil e garantem que a carta seja emitida em seu nome. Para corrigir algo, <a href="{{ profile_url }}">edite seu perfil</a> e volte a esta etapa.{% endblocktranslate %}</span></div>
+    {% comment %}
+    O link de edição fica logo acima da confirmação, junto dos dados a
+    conferir -- não aqui, onde a mensagem é só explicativa.
+    {% endcomment %}
+    <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% translate "Os dados abaixo são obtidos do seu perfil e não são editados aqui — é o que garante que a carta seja emitida em seu nome." %}</span></div>
+
+    {% if missing_profile_fields %}
+    {# Perfil incompleto: a etapa não avança e o modal diz exatamente o que falta. #}
+    <div class="notice notice-error" id="perfil-incompleto">
+      <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+      <span>
+        <strong>{% translate "Faltam dados no seu perfil." %}</strong>
+        {% blocktranslate with campos=missing_profile_fields|join:", " %}Para continuar, informe: {{ campos }}.{% endblocktranslate %}
+      </span>
+    </div>
+    {% endif %}
+
     <form method="post" id="step-form" class="card wizard-card form-grid" novalidate>
       {% csrf_token %}
       <div class="field span-2">
         <label>{% translate "Nome completo do anfitrião" %}</label>
-        <div class="input is-readonly">{{ user.full_name }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div>
+        <div class="input is-readonly">{{ user.full_name|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div>
       </div>
       <div class="field span-2"><label>{% translate "Endereço completo na Bélgica" %}</label><div class="input is-readonly">{{ user.get_address_display|default:"—" }}</div></div>
       <div class="field"><label>{% translate "Número de telefone" %}</label><div class="input is-readonly">{{ user.phone|default:"—" }}</div></div>
+      <div class="field"><label>{% translate "Data de nascimento" %}</label><div class="input is-readonly">{{ user.birth_date|date:"d/m/Y"|default:"—" }}</div></div>
+      <div class="field"><label>{% translate "Nacionalidade" %}</label><div class="input is-readonly">{{ user.nationality|default:"—" }}</div></div>
+      <div class="field"><label>{% translate "Número do documento de identidade" %}</label><div class="input is-readonly">{{ user.document_number|default:"—" }}</div></div>
+      {% comment %}
+      Última parada antes de confirmar: se algo acima estiver errado, é
+      daqui que a pessoa sai para corrigir -- e volta para esta mesma
+      etapa (o `next` é validado no servidor, em accounts._safe_next).
+      {% endcomment %}
+      <p class="host-edit-link span-2">
+        <a href="{{ profile_url }}?next={{ profile_return_url|urlencode }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar meus dados" %}</a>
+        <span class="host-edit-hint">{% translate "Alguma informação está incorreta? Corrija no seu perfil." %}</span>
+      </p>
       {% for row in field_rows %}{% include "letters/_field.html" with checkbox_class="check confirm-check" %}{% endfor %}
     </form>
     <div class="wizard-actions">
       <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=2 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-      <button type="submit" form="step-form" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      {% if missing_profile_fields %}
+      <button type="button" class="btn btn-primary" data-dialog-open="dlg-perfil">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      {% else %}
+      <button type="submit" form="step-form" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+      {% endif %}
     </div>
+
+    {% if missing_profile_fields %}
+    <div class="dialog-backdrop" id="dlg-perfil" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-perfil-titulo">
+        <h2 class="dialog-title" id="dlg-perfil-titulo">{% translate "Complete seu perfil" %}</h2>
+        <div class="dialog-body">
+          <p>{% translate "A Carta Convite é emitida em seu nome, e estes dados aparecem no documento oficial. Faltam:" %}</p>
+          <ul class="dialog-list">
+            {% for campo in missing_profile_fields %}<li>{{ campo }}</li>{% endfor %}
+          </ul>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary" data-dialog-close>{% translate "Agora não" %}</button>
+          <a class="btn btn-primary" href="{% url 'accounts:profile' %}?next={{ profile_return_url|urlencode }}"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Atualizar meu perfil" %}</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
   {% elif step == 4 %}
     {# ------------------------------------------------------------------ #}
@@ -138,7 +195,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=3 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+        <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       </div>
     </form>
 
@@ -164,7 +221,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=4 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-        <button type="submit" class="btn btn-primary">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+        <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       </div>
     </form>
 

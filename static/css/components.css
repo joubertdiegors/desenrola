@@ -650,6 +650,17 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .dialog-title { font-size: 20px; }
 .dialog-body { font-size: 14px; color: var(--mu); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+/* Botao com CARA de desabilitado, mas ainda clicavel: usado no
+   "Proxima etapa" do assistente enquanto falta campo obrigatorio. Se a
+   pessoa clicar assim mesmo, o formulario e enviado e o servidor
+   devolve as mensagens de erro -- um `disabled` de verdade deixaria o
+   formulario mudo. Por isso e uma CLASSE, nao o atributo. */
+.btn.is-disabled { opacity: 0.55; }
+.btn.is-disabled:hover { filter: none; }
+
+/* Lista do que falta, dentro do dialogo (ex.: dados do perfil). */
+.dialog-list { margin: 8px 0 0; padding-left: 20px; list-style: disc; }
+.dialog-list li { margin-top: 2px; }
 
 
 /* --------------------------------------------------------------------------
@@ -691,16 +702,30 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
    calendario nativo, aberto pelo botao do icone. O <input type="date">
    fica sobreposto ao botao e invisivel -- e ele que o navegador ancora
    ao abrir o calendario, entao nao pode ser display:none. */
+/* O <input type="date"> nativo fica INVISIVEL mas clicavel, exatamente
+   por cima do botao do calendario. Tocar ali abre o seletor nativo do
+   proprio navegador -- no celular e a unica forma que funciona em todos
+   eles, porque `showPicker()` nao existe no Safari do iOS e, mesmo onde
+   existe, alguns navegadores so o aceitam a partir de um toque no
+   proprio campo de data. Embaixo dele fica so o icone (um <span>
+   decorativo): quem recebe o foco do teclado e o proprio input. */
 .date-input .date-input-picker {
   position: absolute;
-  right: 14px;
+  right: 6px;
   top: 50%;
-  width: 1px;
-  height: 1px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
   padding: 0;
+  margin: 0;
   border: 0;
+  background: transparent;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
+  z-index: 2;
+  /* iOS ignora width/height em input[type=date] sem isto */
+  -webkit-appearance: none;
+  appearance: none;
 }
 .date-input .date-input-open {
   position: absolute;
@@ -713,6 +738,13 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
   line-height: 1;
   cursor: pointer;
   border-radius: var(--radius-sm);
+  z-index: 1;
+}
+/* O foco do teclado cai no <input type="date"> (que e o controle de
+   verdade, mas e invisivel); o realce aparece no icone, que e o que se ve. */
+.date-input .date-input-picker:focus-visible + .date-input-open {
+  outline: 2px solid var(--p);
+  outline-offset: 1px;
 }
 .date-input .date-input-open:hover { background: var(--p10); }
 .date-input .date-input-open:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }

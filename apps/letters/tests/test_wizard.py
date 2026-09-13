@@ -11,6 +11,7 @@ import uuid
 import pytest
 from django.contrib.auth.models import Group, Permission
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.doctemplates.models import LetterTemplate
 from apps.doctemplates.official_templates import official_slug
@@ -42,10 +43,15 @@ VALID_STEP_1 = {
     "guest_birth_date": "15/08/1990",
     "guest_passport": "FA123456",
 }
-VALID_STEP_2 = {"stay_arrival": "10/04/2025", "stay_departure": "25/04/2025"}
+# Datas relativas a hoje: a chegada nao pode ser no passado (regra do
+# servidor), entao uma data fixa no codigo venceria com o tempo.
+CHEGADA = timezone.localdate() + datetime.timedelta(days=30)
+PARTIDA = CHEGADA + datetime.timedelta(days=15)
+VALID_STEP_2 = {
+    "stay_arrival": CHEGADA.strftime("%d/%m/%Y"),
+    "stay_departure": PARTIDA.strftime("%d/%m/%Y"),
+}
 VALID_STEP_3 = {
-    "host_nationality": "Belga",
-    "host_birth_date": "03/06/1988",
     "host_confirm": "on",
 }
 VALID_STEP_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
@@ -233,7 +239,7 @@ class TestAssistente:
 
         response = auth_client.get(_step_url(draft_letter, 2))
 
-        assert response.context["form"].initial["stay_arrival"] == datetime.date(2025, 4, 10)
+        assert response.context["form"].initial["stay_arrival"] == CHEGADA
 
     def test_etapa_3_mostra_dados_do_usuario_logado(self, auth_client, draft_letter, user):
         _fill_until(auth_client, draft_letter, 3)
@@ -249,7 +255,7 @@ class TestAssistente:
 
         draft_letter.refresh_from_db()
         assert draft_letter.data["guest_name"] == "Maria Santos da Silva"
-        assert draft_letter.data["stay_arrival"] == "2025-04-10"
+        assert draft_letter.data["stay_arrival"] == CHEGADA.isoformat()
         assert draft_letter.status == Letter.Status.DRAFT
 
     def test_etapa_acima_do_intervalo_da_404(self, auth_client, draft_letter):
@@ -328,7 +334,10 @@ class TestValidacao:
         _fill_until(auth_client, draft_letter, 2)
         response = auth_client.post(
             _step_url(draft_letter, 2),
-            {"stay_arrival": "20/04/2025", "stay_departure": "10/04/2025"},
+            {
+                "stay_arrival": PARTIDA.strftime("%d/%m/%Y"),
+                "stay_departure": CHEGADA.strftime("%d/%m/%Y"),
+            },
         )
 
         assert response.status_code == 200

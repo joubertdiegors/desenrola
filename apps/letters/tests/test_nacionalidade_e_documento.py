@@ -145,6 +145,7 @@ class TestSomenteAtivasNoFormulario:
         nacionalidade ativa, o campo fica travado (widget desabilitado) e
         avisa o motivo -- nunca aceita um valor digitado à mão.
         """
+        Nationality.objects.update(is_active=False)
         assert Nationality.objects.filter(is_active=True).count() == 0
 
         html = auth_client.get(_step_url(draft, 1)).content.decode()
@@ -156,6 +157,8 @@ class TestSomenteAtivasNoFormulario:
         """O bloqueio vale mesmo enviando um valor manualmente -- o campo
         desabilitado ignora o que veio no POST e a validação falha do
         mesmo jeito."""
+        Nationality.objects.update(is_active=False)
+
         response = auth_client.post(
             _step_url(draft, 1),
             {
@@ -174,6 +177,8 @@ class TestSomenteAtivasNoFormulario:
     def test_sem_ativas_nao_salva_nenhum_valor_arbitrario(self, auth_client, draft):
         """Mesmo se o valor malicioso não vazio for forçado no POST bruto
         (contornando o `disabled` do HTML), nada é gravado."""
+        Nationality.objects.update(is_active=False)
+
         auth_client.post(
             _step_url(draft, 1),
             {
@@ -192,8 +197,8 @@ class TestSomenteAtivasNoFormulario:
         self, auth_client, draft, brasileira
     ):
         """Zero ATIVAS -- não zero cadastradas -- é a condição que conta."""
-        brasileira.is_active = False
-        brasileira.save()
+        Nationality.objects.update(is_active=False)
+        assert Nationality.objects.count() > 0
 
         html = auth_client.get(_step_url(draft, 1)).content.decode()
 
@@ -280,17 +285,13 @@ class TestArmazenaOCodigo:
             },
         )
         auth_client.post(_step_url(draft, 2), VALID_2)
-        auth_client.post(
-            _step_url(draft, 3),
-            {"host_nationality": "BE", "host_birth_date": "03/06/1988", "host_confirm": "on"},
-        )
+        auth_client.post(_step_url(draft, 3), VALID_3)
         auth_client.post(_step_url(draft, 4), VALID_4)
         auth_client.post(_step_url(draft, 5), {"language": "fr"})
 
         html = auth_client.get(_step_url(draft, 6)).content.decode()
 
         assert "Brésilienne" in html
-        assert "Belge" in html
         assert ">BR<" not in html
 
     def test_carta_antiga_com_texto_livre_continua_funcionando(self):
@@ -354,14 +355,19 @@ class TestDocumentoDoAnfitriao:
         assert draft.snapshot["host"]["document_number"] == "00000000"
 
     def test_sem_documento_no_perfil_a_carta_nao_finaliza(self, auth_client, user, draft):
+        """
+        O bloqueio acontece já na etapa do anfitrião -- é lá que os dados
+        do perfil entram na carta --, então a pessoa nem chega ao fim.
+        """
         user.document_number = ""
         user.save(update_fields=["document_number"])
 
         response = _finalizar(auth_client, draft)
 
         draft.refresh_from_db()
-        assert response.url == reverse("accounts:profile")
+        assert response.url == _step_url(draft, 3)
         assert draft.status == Letter.Status.DRAFT
+        assert draft.snapshot == {}
 
 
 VALID_1 = {
@@ -372,8 +378,6 @@ VALID_1 = {
 }
 VALID_2 = {"stay_arrival": "10/10/2026", "stay_departure": "24/10/2026"}
 VALID_3 = {
-    "host_nationality": "BE",  # o código da fixture `belga`
-    "host_birth_date": "03/06/1988",
     "host_confirm": "on",
 }
 VALID_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
@@ -440,7 +444,6 @@ def snapshot_com_nacionalidades():
             "guest_passport": "YY000000",
             "stay_arrival": "2026-10-10",
             "stay_departure": "2026-10-24",
-            "host_birth_date": "1985-03-14",
         },
         "host": {
             "full_name": "Claire Dubois",
@@ -448,6 +451,7 @@ def snapshot_com_nacionalidades():
             "address": "Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert",
             "city": "Woluwe-Saint-Lambert",
             "document_number": "00000000",
+            "birth_date": "1985-03-14",
         },
         "nationalities": {"guest_nationality": "Brésilienne", "host_nationality": "belge"},
         "finalized_at": "2026-09-09T10:00:00+00:00",

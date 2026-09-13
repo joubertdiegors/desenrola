@@ -112,6 +112,11 @@ img { display: block; max-width: 100%; }
 /* Empurra o restante do flex container para a direita */
 .push { margin-left: auto; }
 
+/* `hidden` tem de vencer o `display` de quem foi estilizado (flex, grid).
+   Sem isto, um elemento com display proprio continua aparecendo mesmo
+   com o atributo -- e o atributo e como o script mostra/esconde blocos. */
+[hidden] { display: none !important; }
+
 /* Icones Phosphor: por padrao, do tamanho do texto ao redor. Componentes
    que precisam de um tamanho proprio (avatar, stepper, hero...) o definem. */
 .ph, .ph-fill, .ph-bold { font-size: 1em; line-height: 1; }

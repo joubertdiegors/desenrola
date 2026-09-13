@@ -22,6 +22,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
@@ -174,9 +175,30 @@ def _steps_context(letter, step):
     }
 
 
+HOST_STEP = 3
+
+
 def _handle_form_step(request, letter, step):
     data = request.POST if request.method == "POST" else None
     form = services.form_for_step(letter, step, data=data)
+
+    # A etapa do anfitriao usa dados do PERFIL (nome, endereco, telefone,
+    # nascimento, nacionalidade, documento). Faltando qualquer um deles,
+    # nao ha o que preencher aqui nem carta possivel adiante -- entao a
+    # etapa nao deixa avancar, e diz exatamente o que falta.
+    #
+    # Isto vale tambem no POST: tentar enviar a etapa direto, sem passar
+    # pela tela, esbarra na mesma checagem.
+    faltando = (
+        services.missing_host_profile_fields(request.user) if step == HOST_STEP else []
+    )
+    if faltando and request.method == "POST":
+        messages.error(
+            request,
+            _("Complete o seu perfil antes de continuar. Falta: %(campos)s.")
+            % {"campos": ", ".join(str(item) for item in faltando)},
+        )
+        return redirect("letters:step", letter_uuid=letter.uuid, step=step)
 
     if request.method == "POST":
         if form.is_valid():
@@ -196,6 +218,15 @@ def _handle_form_step(request, letter, step):
         context["duration_days"] = duracao
         context["duration_exceeded"] = exceeds_max_stay(duracao)
         context["max_stay_days"] = MAX_STAY_DAYS
+        # A chegada nao pode ser no passado: o `min` fecha o calendario
+        # nativo nas datas anteriores a hoje. A regra de verdade continua
+        # sendo a do servidor (apps/letters/forms.py).
+        context["today"] = timezone.localdate()
+
+    if step == HOST_STEP:
+        context["missing_profile_fields"] = faltando
+        # Depois de completar o perfil, a pessoa volta para esta etapa.
+        context["profile_return_url"] = request.get_full_path()
 
     return render(request, "letters/wizard.html", context)
 

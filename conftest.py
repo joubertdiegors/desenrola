@@ -1,5 +1,7 @@
 """Fixtures compartilhadas pelos testes do projeto."""
 
+import datetime
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.utils import translation
@@ -20,7 +22,29 @@ def idioma_padrao():
 
 
 @pytest.fixture
-def user(db):
+def nacionalidade_do_perfil(db):
+    """
+    A nacionalidade do perfil da usuaria de teste -- a mesma do anfitriao
+    do documento oficial ("de nationalité belge").
+    """
+    from apps.doctemplates.models import Nationality
+
+    nacionalidade, _criada = Nationality.objects.get_or_create(
+        code="belge",
+        defaults={
+            "name_pt": "Belga",
+            "name_fr": "Belge",
+            "name_nl": "Belgische",
+            "name_en": "Belgian",
+            "guest_form": "Belge",
+            "host_form": "belge",
+        },
+    )
+    return nacionalidade
+
+
+@pytest.fixture
+def user(db, nacionalidade_do_perfil):
     """
     Usuaria comum com senha conhecida (SENHA).
 
@@ -37,6 +61,8 @@ def user(db):
         full_name="Claire Dubois",
         phone="+32 470 00 00 00",
         document_number="00000000",
+        birth_date=datetime.date(1985, 3, 14),
+        nationality=nacionalidade_do_perfil,
         address_line1="Rue des Exemple 25",
         postal_code="1200",
         city="Woluwe-Saint-Lambert",
@@ -140,15 +166,18 @@ def nacionalidade_factory(db):
 
     def _criar(code, *, name_pt=None, guest_form=None, host_form=None):
         nome = name_pt or code
-        return Nationality.objects.create(
+        nacionalidade, _criada = Nationality.objects.get_or_create(
             code=code,
-            name_pt=nome,
-            name_fr=guest_form or nome,
-            name_nl=nome,
-            name_en=nome,
-            guest_form=guest_form or nome,
-            host_form=host_form or nome,
+            defaults={
+                "name_pt": nome,
+                "name_fr": guest_form or nome,
+                "name_nl": nome,
+                "name_en": nome,
+                "guest_form": guest_form or nome,
+                "host_form": host_form or nome,
+            },
         )
+        return nacionalidade
 
     return _criar
 

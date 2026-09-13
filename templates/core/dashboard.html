@@ -48,7 +48,7 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
           <th>{% translate "Período" %}</th>
           <th>{% translate "Idioma" %}</th>
           <th>{% translate "Status" %}</th>
-          <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
+          <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
         </tr>
       </thead>
       <tbody>
@@ -59,13 +59,20 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
           <td class="cell-muted">{% if card.has_period %}{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}{% else %}—{% endif %}</td>
           <td>{{ card.language_name }}</td>
           <td>{% include "letters/_status_tag.html" with card=card %}</td>
-          <td class="right">
-            {% if card.is_draft %}
-              <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-            {% else %}
-              {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
-              <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
-            {% endif %}
+          {% comment %}
+          Coluna de ações: sempre a mesma caixa, alinhada à direita, com
+          as ações lado a lado. Assim o botão de detalhes cai no mesmo
+          lugar em toda linha, tenha a carta PDF ou não.
+          {% endcomment %}
+          <td class="cell-actions">
+            <div class="letter-actions">
+              {% if card.is_draft %}
+                <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+              {% else %}
+                {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+                <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}

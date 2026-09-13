@@ -81,17 +81,26 @@ def _resolve(value, attribute):
     return getattr(item, attribute) or item.name_pt or item.code
 
 
-def document_forms(data):
+def document_forms(data, host_code=None):
     """
     As formas que VAO PARA O DOCUMENTO, prontas para congelar no snapshot:
     `{"guest_nationality": "Brésilienne", "host_nationality": "belge"}`.
+
+    A do convidado sai de `data` (o assistente pergunta); a do anfitriao
+    vem de `host_code`, o codigo da nacionalidade do PERFIL -- o
+    assistente nao pergunta mais isso. Cartas anteriores a essa mudanca
+    guardaram `host_nationality` em `data`, e e dali que sai quando
+    `host_code` nao vem.
 
     Resolvido uma vez, no fechamento. Depois disso a carta nao consulta
     mais o cadastro -- e o que mantem o documento igual ao que foi
     emitido, mesmo que a nacionalidade seja renomeada ou desativada.
     """
+    valores = dict(data or {})
+    if host_code:
+        valores["host_nationality"] = host_code
     return {
-        campo: _resolve((data or {}).get(campo), atributo)
+        campo: _resolve(valores.get(campo), atributo)
         for campo, atributo in FORM_BY_FIELD.items()
     }
 

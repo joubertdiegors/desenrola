@@ -12,6 +12,7 @@ import datetime
 import pytest
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.letters import services
 from apps.letters.models import Letter
@@ -42,10 +43,16 @@ VALID_STEP_1 = {
     "guest_birth_date": "15/08/1990",
     "guest_passport": "YY0000",
 }
-VALID_STEP_2 = {"stay_arrival": "10/10/2026", "stay_departure": "24/10/2026"}
+# Datas relativas a hoje: a chegada nao pode ser no passado, entao uma
+# data fixa no codigo venceria com o tempo. O intervalo de 15 dias
+# (inclusivo) e o mesmo do documento oficial.
+CHEGADA = timezone.localdate() + datetime.timedelta(days=30)
+PARTIDA = CHEGADA + datetime.timedelta(days=14)
+VALID_STEP_2 = {
+    "stay_arrival": CHEGADA.strftime("%d/%m/%Y"),
+    "stay_departure": PARTIDA.strftime("%d/%m/%Y"),
+}
 VALID_STEP_3 = {
-    "host_nationality": "Belga",
-    "host_birth_date": "03/06/1988",
     "host_confirm": "on",
 }
 VALID_STEP_4 = {"notice_informal": "on", "notice_prise_en_charge": "on"}
@@ -212,8 +219,14 @@ class TestDuracaoDaEstadia:
 
 
 class TestLimiteDeNoventaDias:
-    ACIMA = {"stay_arrival": "01/01/2026", "stay_departure": "01/04/2026"}  # 91 dias
-    NO_LIMITE = {"stay_arrival": "01/01/2026", "stay_departure": "31/03/2026"}  # 90 dias
+    ACIMA = {
+        "stay_arrival": CHEGADA.strftime("%d/%m/%Y"),
+        "stay_departure": (CHEGADA + datetime.timedelta(days=90)).strftime("%d/%m/%Y"),
+    }  # 91 dias (contagem inclusiva)
+    NO_LIMITE = {
+        "stay_arrival": CHEGADA.strftime("%d/%m/%Y"),
+        "stay_departure": (CHEGADA + datetime.timedelta(days=89)).strftime("%d/%m/%Y"),
+    }  # 90 dias
 
     def test_exatamente_noventa_dias_passa(self, auth_client, draft):
         _fill_until(auth_client, draft, 2)
@@ -222,7 +235,10 @@ class TestLimiteDeNoventaDias:
 
         draft.refresh_from_db()
         assert response.status_code == 302
-        assert draft.data["stay_departure"] == "2026-03-31"
+        assert (
+            draft.data["stay_departure"]
+            == (CHEGADA + datetime.timedelta(days=89)).isoformat()
+        )
 
     def test_acima_de_noventa_dias_nao_avanca(self, auth_client, draft):
         _fill_until(auth_client, draft, 2)
@@ -250,7 +266,11 @@ class TestLimiteDeNoventaDias:
         """
         _fill_until(auth_client, draft, 2)
         draft.refresh_from_db()
-        draft.data = dict(draft.data, stay_arrival="2026-01-01", stay_departure="2026-04-01")
+        draft.data = dict(
+            draft.data,
+            stay_arrival=CHEGADA.isoformat(),
+            stay_departure=(CHEGADA + datetime.timedelta(days=90)).isoformat(),
+        )
         draft.save(update_fields=["data"])
 
         response = auth_client.get(_step_url(draft, 5))
@@ -261,7 +281,11 @@ class TestLimiteDeNoventaDias:
     def test_estadia_longa_nunca_chega_a_virar_carta(self, auth_client, draft):
         _fill_until(auth_client, draft, 5)
         draft.refresh_from_db()
-        draft.data = dict(draft.data, stay_arrival="2026-01-01", stay_departure="2026-04-01")
+        draft.data = dict(
+            draft.data,
+            stay_arrival=CHEGADA.isoformat(),
+            stay_departure=(CHEGADA + datetime.timedelta(days=90)).isoformat(),
+        )
         draft.save(update_fields=["data"])
 
         auth_client.post(_step_url(draft, 6))
@@ -314,15 +338,21 @@ class TestConfirmacao:
 
         assert str(draft.uuid) in response.url
 
-    def test_sem_pdf_a_pagina_explica_em_vez_de_prometer(self, auth_client, draft, user):
-        """Perfil sem cidade: a carta nem é finalizada, e a pessoa é
-        mandada ao perfil -- não a uma confirmação falsa."""
+    def test_perfil_incompleto_para_na_etapa_do_anfitriao(self, auth_client, draft, user):
+        """
+        Perfil sem cidade: a pessoa é barrada já na etapa do anfitrião --
+        e não lá no fim, depois de preencher tudo. A carta não é
+        finalizada nem chega a uma confirmação falsa.
+        """
         user.city = ""
         user.save(update_fields=["city"])
 
         response = self._finalizar(auth_client, draft)
 
-        assert response.url == reverse("accounts:profile")
+        draft.refresh_from_db()
+        assert response.url == _step_url(draft, 3)
+        assert draft.status == Letter.Status.DRAFT
+        assert draft.snapshot == {}
 
 
 class TestAcoesDoPdf:

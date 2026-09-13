@@ -72,6 +72,24 @@ class User(AbstractBaseUser, PermissionsMixin):
         _("número do documento de identidade"), max_length=64, blank=True
     )
 
+    # Data de nascimento e nacionalidade seguem a mesma logica do numero
+    # do documento: sao dados da PESSOA, nao da viagem. Ficam no perfil e
+    # o assistente os le do usuario autenticado, em vez de perguntar de
+    # novo a cada carta.
+    birth_date = models.DateField(_("data de nascimento"), null=True, blank=True)
+
+    # Referencia ao cadastro administravel, nunca texto livre: e ele que
+    # define a forma gramatical que o documento oficial imprime (ver
+    # apps.doctemplates.models.Nationality).
+    nationality = models.ForeignKey(
+        "doctemplates.Nationality",
+        on_delete=models.PROTECT,
+        related_name="users",
+        null=True,
+        blank=True,
+        verbose_name=_("nacionalidade"),
+    )
+
     # --- Endereco (opcional) ----------------------------------------------
     address_line1 = models.CharField(_("endereco"), max_length=255, blank=True)
     address_line2 = models.CharField(_("complemento"), max_length=255, blank=True)

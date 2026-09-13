@@ -4,10 +4,18 @@ funciona", "Parceiros", idioma, "Fazer login" e "Criar minha conta".
 No celular: logotipo + menu.
 {% endcomment %}
 <header class="d-only">
-  <nav class="nav-desktop site-nav" aria-label="{% translate 'Navegação principal' %}">
+  {% comment %}
+  `container` e o mesmo max-width do resto do site (ver .container em
+  static/css/layout.css) -- e o que mantem o conteudo da barra alinhado
+  com o conteudo das paginas. O `push` no meio empurra idioma e botoes
+  para a direita, em vez de deixar tudo amontoado a esquerda. Mesmo
+  padrao da barra da area logada (components/app_nav.html).
+  {% endcomment %}
+  <nav class="nav-desktop site-nav container" aria-label="{% translate 'Navegação principal' %}">
     <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
     <a class="nav-link" href="#como-funciona">{% translate "Como funciona" %}</a>
     <a class="nav-link" href="#parceiros">{% translate "Parceiros" %}</a>
+    <span class="push"></span>
     {% include "components/language_selector.html" %}
     <a class="btn btn-text" href="{% url 'accounts:login' %}">{% translate "Fazer login" %}</a>
     <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}</a>

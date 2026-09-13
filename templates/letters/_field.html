@@ -32,8 +32,8 @@ original ja aprovado.
   {% endcomment %}
   <div class="input-wrap date-input">
     {{ row.bound }}
-    <input type="date" class="date-input-picker" tabindex="-1" aria-hidden="true">
-    <button type="button" class="input-icon is-accent date-input-open" aria-label="{% translate 'Abrir calendário' %}"><i class="ph ph-calendar-blank" aria-hidden="true"></i></button>
+    <input type="date" class="date-input-picker" aria-label="{% translate 'Escolher no calendário' %}">
+    <span class="input-icon is-accent date-input-open" aria-hidden="true"><i class="ph ph-calendar-blank"></i></span>
   </div>
   {% else %}
   {{ row.bound }}
