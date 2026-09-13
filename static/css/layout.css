@@ -644,3 +644,23 @@ body { display: flex; flex-direction: column; }
   .tpl-card { flex-direction: column; align-items: stretch; }
   .tpl-card .btn { width: 100%; }
 }
+
+/* --------------------------------------------------------------------------
+   Biblioteca de modelos (Etapa 3.2.1)
+
+   Arquivo proprio: NAO depende de editor.css (que e da 4.2C e so carrega
+   na tela do editor anterior). A biblioteca fica dentro do backoffice
+   global, entao usa os mesmos tokens de sempre (.card, .table, .tag).
+   -------------------------------------------------------------------------- */
+
+.doc-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.doc-filtros .input { min-height: 38px; padding: 0 10px; font-size: 13px; width: auto; }
+
+.doc-acoes { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.doc-acoes form { display: inline-flex; }

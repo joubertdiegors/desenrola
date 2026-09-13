@@ -1,0 +1,148 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Biblioteca de modelos da nova arquitetura (Etapa 3.2.1).
+
+Fonte de dados: exclusivamente `DocumentTemplate`. Esta tela SUBSTITUI
+"documents.html" (a listagem de `TemplateVersion`, com versionamento)
+como porta de entrada do menu "Modelos" -- aquela continua existindo
+para o legado, mas nao e mais alcancada pela navegacao normal.
+
+Duplicar abre um dialogo pedindo o nome da copia (o componente de
+dialogo ja existe em static/js/app.js, usado tambem no assistente); o
+POST vai direto para `services.duplicacao.duplicar_modelo()`, sem logica
+propria aqui.
+
+Contexto: modelos, tipos, idiomas, filtros.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <h1 class="d-only">{% translate "Modelos" %}</h1>
+  <span class="count d-only">{{ modelos|length }}</span>
+</div>
+
+<div class="card">
+  <form method="get" class="doc-filtros" aria-label="{% translate 'Filtrar modelos' %}">
+    <select class="input" name="type" onchange="this.form.submit()">
+      <option value="">{% translate "Todos os tipos" %}</option>
+      {% for tipo in tipos %}
+      <option value="{{ tipo.pk }}"{% if filtros.type == tipo.pk|stringformat:"s" %} selected{% endif %}>
+        {{ tipo.name }}
+      </option>
+      {% endfor %}
+    </select>
+    <select class="input" name="language" onchange="this.form.submit()">
+      <option value="">{% translate "Todos os idiomas" %}</option>
+      {% for codigo, nome in idiomas %}
+      <option value="{{ codigo }}"{% if filtros.language == codigo %} selected{% endif %}>{{ nome }}</option>
+      {% endfor %}
+    </select>
+    <select class="input" name="system" onchange="this.form.submit()">
+      <option value="">{% translate "Oficiais e comuns" %}</option>
+      <option value="1"{% if filtros.system == "1" %} selected{% endif %}>{% translate "Somente oficiais" %}</option>
+      <option value="0"{% if filtros.system == "0" %} selected{% endif %}>{% translate "Somente comuns" %}</option>
+    </select>
+    <select class="input" name="active" onchange="this.form.submit()">
+      <option value="">{% translate "Ativos e inativos" %}</option>
+      <option value="1"{% if filtros.active == "1" %} selected{% endif %}>{% translate "Somente ativos" %}</option>
+      <option value="0"{% if filtros.active == "0" %} selected{% endif %}>{% translate "Somente inativos" %}</option>
+    </select>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>{% translate "Nome" %}</th>
+          <th>{% translate "Tipo" %}</th>
+          <th>{% translate "Idioma" %}</th>
+          <th>{% translate "Estado" %}</th>
+          <th class="right"><span class="visually-hidden">{% translate "Ações" %}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for modelo in modelos %}
+        <tr>
+          <td>
+            {{ modelo.name }}
+            {% if modelo.duplicated_from %}
+            <div class="text-muted" style="font-size:12px">
+              {% translate "duplicado de" %} {{ modelo.duplicated_from.name }}
+            </div>
+            {% endif %}
+          </td>
+          <td>{{ modelo.type.name }}</td>
+          <td>{{ modelo.get_language_display }}</td>
+          <td>
+            {% if modelo.is_system %}<span class="tag tag-primary">{% translate "Oficial" %}</span>{% endif %}
+            {% if modelo.is_locked %}<span class="tag">{% translate "Travado" %}</span>{% endif %}
+            {% if not modelo.is_active %}<span class="tag text-muted">{% translate "Inativo" %}</span>{% endif %}
+            {% if not modelo.is_system and not modelo.is_locked and modelo.is_active %}
+            <span class="text-success">{% translate "Editável" %}</span>
+            {% endif %}
+          </td>
+          <td class="right">
+            <div class="doc-acoes">
+              <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:template_editor' modelo.pk %}">
+                <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                {% if modelo.is_system or modelo.is_locked %}{% translate "Ver" %}{% else %}{% translate "Editar" %}{% endif %}
+              </a>
+
+              <button type="button" class="btn btn-ghost btn-sm" data-dialog-open="dlg-duplicar-{{ modelo.pk }}">
+                <i class="ph ph-copy" aria-hidden="true"></i>{% translate "Duplicar" %}
+              </button>
+
+              {% if not modelo.is_system and not modelo.is_locked %}
+              <form method="post" action="{% url 'backoffice:document_library_delete' modelo.pk %}"
+                    onsubmit="return confirm('{% translate "Excluir este modelo? Esta ação não pode ser desfeita." %}');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm">
+                  <i class="ph ph-trash" aria-hidden="true"></i>{% translate "Excluir" %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-muted">{% translate "Nenhum modelo encontrado." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% comment %}
+Um dialogo por modelo, fora da tabela: cada um posta so para a
+duplicacao daquele modelo especifico. O componente (abrir/fechar/Esc) ja
+existe em static/js/app.js -- nada de JS novo aqui.
+{% endcomment %}
+{% for modelo in modelos %}
+<div class="dialog-backdrop" id="dlg-duplicar-{{ modelo.pk }}" hidden>
+  <div class="dialog" role="dialog" aria-modal="true"
+       aria-labelledby="dlg-duplicar-{{ modelo.pk }}-titulo">
+    <h2 class="dialog-title" id="dlg-duplicar-{{ modelo.pk }}-titulo">
+      {% translate "Duplicar modelo" %}
+    </h2>
+    <form method="post" action="{% url 'backoffice:document_library_duplicate' modelo.pk %}">
+      {% csrf_token %}
+      <div class="dialog-body">
+        <div class="field">
+          <label for="nome-copia-{{ modelo.pk }}">{% translate "Nome da cópia" %}</label>
+          <input class="input" type="text" required
+                 id="nome-copia-{{ modelo.pk }}" name="name"
+                 value="{% blocktranslate with nome=modelo.name %}Cópia de {{ nome }}{% endblocktranslate %}">
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" data-dialog-close>{% translate "Cancelar" %}</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="ph ph-copy" aria-hidden="true"></i>{% translate "Duplicar" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

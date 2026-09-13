@@ -1,0 +1,125 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% comment %}
+Editor visual dos modelos da biblioteca (Etapa 3.2).
+
+Quatro areas: barra no topo, paleta a esquerda (tipos de elemento e
+campos de dados), pagina no meio, propriedades a direita.
+
+O estado inicial vai para o navegador pelo filtro |json_script, que
+serializa E escapa. NUNCA interpolar dados dentro de <script>: o conteudo
+vem do banco e um `</script>` no meio de uma string viraria execucao de
+codigo.
+
+As listas de tipos e de campos NAO sao escritas aqui: vem dos registros
+`elements.py` e `datasources.py`, montadas pelo JavaScript. Repetir as
+listas no template seria uma segunda fonte de verdade.
+
+Contexto: modelo, editavel, motivo_da_leitura, voltar_url, layout_json,
+pagina_json, tipos_json, fontes_json, ids_json, config_json.
+{% endcomment %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/template-editor.css' %}">{% endblock %}
+
+{% block bo_main_class %}bo-main-editor{% endblock %}
+
+{% block bo_main %}
+<div class="te" data-editor>
+
+  {# ---- Barra superior ------------------------------------------------- #}
+  <header class="te-topo">
+    <a class="btn btn-ghost btn-sm" href="{{ voltar_url }}">
+      <i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}
+    </a>
+
+    <div class="te-identidade">
+      <strong>{{ modelo.name }}</strong>
+      <span class="tag tag-primary">{{ modelo.get_language_display }}</span>
+      <span class="text-muted">{{ modelo.type.name }}</span>
+      {% if modelo.is_system %}<span class="tag">{% translate "Oficial" %}</span>{% endif %}
+      {% if modelo.is_locked %}<span class="tag">{% translate "Travado" %}</span>{% endif %}
+    </div>
+
+    <div class="te-acoes">
+      {% if editavel %}
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="desfazer"
+              title="{% translate 'Desfazer (Ctrl+Z)' %}">
+        <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="refazer"
+              title="{% translate 'Refazer (Ctrl+Y)' %}">
+        <i class="ph ph-arrow-clockwise" aria-hidden="true"></i>
+      </button>
+      <span class="te-sep" aria-hidden="true"></span>
+      {% endif %}
+
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-menos"
+              aria-label="{% translate 'Reduzir' %}"><i class="ph ph-minus" aria-hidden="true"></i></button>
+      <span class="te-zoom" data-zoom-valor>100%</span>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-mais"
+              aria-label="{% translate 'Ampliar' %}"><i class="ph ph-plus" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-caber">{% translate "Ajustar" %}</button>
+
+      {% if editavel %}
+      <span class="te-estado" data-estado hidden></span>
+      <button type="button" class="btn btn-primary btn-sm" data-acao="salvar">
+        <i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar" %}
+      </button>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if not editavel %}
+  <div class="notice notice-warning" role="status">
+    <i class="ph-fill ph-lock" aria-hidden="true"></i>
+    <span>{{ motivo_da_leitura }}</span>
+  </div>
+  {% endif %}
+
+  <p class="te-aviso" data-aviso hidden role="status"></p>
+
+  <div class="te-corpo">
+
+    {# ---- Paleta: tipos e campos, vindos dos registros ------------------ #}
+    <aside class="te-paleta" aria-label="{% translate 'Elementos e dados' %}">
+      <h2>{% translate "Documento" %}</h2>
+      <div class="te-tipos" data-paleta-tipos></div>
+
+      <h2>{% translate "Dados" %}</h2>
+      <div class="te-fontes" data-paleta-fontes></div>
+    </aside>
+
+    {# ---- Pagina ------------------------------------------------------- #}
+    {% comment %}
+    Rolagem horizontal em tela estreita e proposital: a pagina mantem a
+    proporcao em vez de ser espremida para caber no celular.
+    {% endcomment %}
+    <div class="te-area">
+      <div class="te-pagina" data-pagina>
+        <div class="te-camada" data-camada></div>
+      </div>
+    </div>
+
+    {# ---- Propriedades -------------------------------------------------- #}
+    <aside class="te-painel" aria-label="{% translate 'Propriedades' %}" data-propriedades></aside>
+  </div>
+
+  <form class="te-csrf">{% csrf_token %}</form>
+</div>
+
+{{ layout_json|json_script:"te-layout" }}
+{{ pagina_json|json_script:"te-pagina" }}
+{{ tipos_json|json_script:"te-tipos" }}
+{{ fontes_json|json_script:"te-fontes" }}
+{{ ids_json|json_script:"te-ids" }}
+{{ config_json|json_script:"te-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/template-editor/geometry.js' %}"></script>
+<script src="{% static 'js/template-editor/state.js' %}"></script>
+<script src="{% static 'js/template-editor/canvas.js' %}"></script>
+<script src="{% static 'js/template-editor/properties.js' %}"></script>
+<script src="{% static 'js/template-editor/api.js' %}"></script>
+<script src="{% static 'js/template-editor/editor.js' %}"></script>
+{% endblock %}

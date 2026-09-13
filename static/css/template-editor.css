@@ -1,0 +1,286 @@
+/* --------------------------------------------------------------------------
+   Editor visual dos modelos da biblioteca (Etapa 3.2)
+
+   Arquivo proprio, sem relacao com `editor.css`, que serve o editor da
+   arquitetura anterior. Carregado so nesta tela (bloco extra_css).
+
+   A pagina NAO encolhe para caber no celular: uma folha espremida em
+   360px nao serve para posicionar nada com precisao. Em tela estreita a
+   area rola na horizontal e a pagina mantem a proporcao -- decisao
+   deliberada, nao falha de responsividade.
+   -------------------------------------------------------------------------- */
+
+.bo-main-editor { padding: 0; }
+
+.te {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* --- Barra superior ------------------------------------------------------ */
+
+.te-topo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.te-identidade { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.te-acoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.te-sep { width: 1px; height: 20px; background: var(--bd); }
+
+.te-zoom {
+  min-width: 52px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mu);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Indicador de alteracoes por salvar: discreto, mas presente. */
+.te-estado {
+  font-size: 12px;
+  color: #8a6d00;
+  background: rgba(255, 193, 7, .15);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.te-aviso {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #eef4ff;
+  color: var(--p);
+  font-size: 13px;
+}
+
+.te-aviso.is-erro { background: #fdecec; color: var(--e, #c0392b); }
+
+/* --- Corpo: paleta | pagina | propriedades -------------------------------- */
+
+.te-corpo {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) 280px;
+  gap: 12px;
+  align-items: start;
+}
+
+.te-paleta,
+.te-painel {
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 12px;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+
+.te-paleta h2,
+.te-painel h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--mu);
+}
+
+.te-paleta h2 + .te-tipos { margin-bottom: 16px; }
+
+.te-ferramenta {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.te-ferramenta:hover:not(:disabled) { background: var(--bg); border-color: var(--bd); }
+.te-ferramenta:disabled { opacity: .45; cursor: not-allowed; }
+
+.te-fonte { margin-bottom: 6px; }
+
+.te-fonte > summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.te-fonte > summary:hover { background: var(--bg); }
+
+.te-ferramenta-campo {
+  font-size: 12.5px;
+  padding-left: 22px;
+  color: var(--mu);
+}
+
+/* --- Pagina --------------------------------------------------------------- */
+
+.te-area {
+  overflow: auto;
+  padding: 20px;
+  background: #e9edf4;
+  border-radius: 12px;
+  /* A altura acompanha a janela: a pagina rola dentro de si, sem empurrar
+     a barra de ferramentas para fora da tela. */
+  max-height: calc(100vh - 24px);
+}
+
+.te-pagina {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(16, 32, 64, .16);
+}
+
+.te-camada { position: absolute; inset: 0; }
+
+/* --- Elementos ------------------------------------------------------------ */
+
+.te-elemento {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+  outline: 1px solid transparent;
+}
+
+/* Em edicao, todo elemento mostra os proprios limites. Sem isso um
+   retangulo sem borda ou um texto curto ficam impossiveis de encontrar e
+   de clicar com precisao. */
+.te:not(.is-preview) .te-elemento { outline-color: rgba(26, 95, 214, .28); }
+
+.te-elemento:hover { outline-color: rgba(26, 95, 214, .55); }
+.te-elemento.is-selecionado { outline: 1.5px solid var(--p); }
+
+/* Falta escolher o campo ou a imagem: tem de saltar aos olhos, porque o
+   servidor recusa publicar assim. */
+.te-elemento.is-incompleto {
+  outline-color: #e0a800;
+  background: rgba(255, 193, 7, .12);
+  font-size: 11px;
+  color: #8a6d00;
+}
+
+.te-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--mu);
+  color: var(--mu);
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+
+.te-tabela { font-size: inherit; }
+.te-tabela td { vertical-align: top; word-break: break-word; }
+
+/* Alcas de redimensionamento. */
+.te-alca {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 1.5px solid var(--p);
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.te-alca-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.te-alca-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.te-alca-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.te-alca-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.te-alca-n { top: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.te-alca-s { bottom: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.te-alca-w { left: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+.te-alca-e { right: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+
+/* --- Painel de propriedades ----------------------------------------------- */
+
+.te-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.te-campo .input { font-size: 13px; min-height: 34px; padding: 4px 8px; }
+.te-campo textarea.input { min-height: 62px; padding: 6px 8px; }
+
+.te-campo-check { flex-direction: row; align-items: center; gap: 8px; }
+.te-campo-check input { width: auto; min-height: 0; }
+
+.te-grade-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.te-grade-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.te-grade-4 .input { min-height: 30px; font-size: 12px; padding: 2px 4px; }
+
+.te-resumo {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--mu);
+  padding: 6px 8px;
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.te-acoes-elemento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bd);
+}
+
+.te-vazio { font-size: 13px; color: var(--mu); margin: 0; }
+
+.te-csrf { display: none; }
+
+/* --- Telas estreitas ------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  /* As laterais passam para cima e para baixo da pagina; a pagina
+     continua no tamanho real, rolando na horizontal. */
+  .te-corpo { grid-template-columns: minmax(0, 1fr); }
+
+  .te-paleta,
+  .te-painel {
+    position: static;
+    max-height: none;
+  }
+
+  .te-tipos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 4px;
+  }
+
+  .te-area { max-height: 70vh; }
+}

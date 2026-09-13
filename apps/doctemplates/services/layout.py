@@ -45,8 +45,19 @@ class ElementoNaoEncontradoError(KeyError):
     """
 
 
-def _novo_id_aleatorio():
+def novo_id():
+    """
+    Um identificador de elemento.
+
+    Publico de proposito: o editor recebe do servidor um lote destes ao
+    abrir, em vez de inventar ids no navegador -- assim ha um gerador so
+    para o sistema inteiro. Ver `apps/doctemplates/editor_views.py`.
+    """
     return uuid.uuid4().hex[:12]
+
+
+# Nome interno historico, mantido para nao quebrar quem ja o usava.
+_novo_id_aleatorio = novo_id
 
 
 def _indice_de(layout, element_id):
