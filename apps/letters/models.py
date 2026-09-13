@@ -26,6 +26,19 @@ from django.utils.translation import gettext_lazy as _
 from apps.core.models import TimeStampedModel
 
 
+class DocumentSnapshotImmutableError(RuntimeError):
+    """
+    A carta ja capturou o modelo estrutural (`DocumentTemplate`) que vai
+    gerar o documento: a partir dai, `document_template`,
+    `document_snapshot` e `document_snapshot_hash` nao podem mais mudar.
+
+    Levantado por `Letter.save()` -- vale para qualquer caminho de codigo
+    que tente reescrever esses tres campos, nao so a view de
+    finalizacao. E erro de uso indevido (RuntimeError), no mesmo espirito
+    de `DocumentTemplateLockedError` em apps.doctemplates.models.
+    """
+
+
 class LetterQuerySet(models.QuerySet):
     def visible_to(self, user):
         """
@@ -92,6 +105,44 @@ class Letter(TimeStampedModel):
     # historica mesmo que o perfil do usuario ou o modelo mudem depois.
     snapshot = models.JSONField(_("snapshot da geração"), default=dict, blank=True)
 
+    # --- integracao com a nova arquitetura de modelos (Etapa 3.5.1) -----
+    #
+    # Paralela e SEPARADA de `template`/`template_version` (a arquitetura
+    # antiga, ainda a unica que de fato gera PDF -- ver
+    # `pdf_generation.py`). Enquanto nenhuma tela escolhe um
+    # `DocumentTemplate` para a carta, os tres campos abaixo ficam vazios
+    # e nada muda no comportamento existente -- inclusive em cartas ja
+    # gravadas antes desta etapa.
+    #
+    # `document_template` pode ser trocado livremente enquanto a carta
+    # ainda nao tem snapshot capturado (o rascunho "escolhe/troca
+    # modelo"). A partir do momento em que `document_snapshot_hash`
+    # deixa de estar vazio -- o que acontece na finalizacao, via
+    # `services.capture_document_template_snapshot()` -- os tres campos
+    # ficam congelados: `save()` recusa qualquer tentativa de mudar
+    # qualquer um deles (`DocumentSnapshotImmutableError`).
+    document_template = models.ForeignKey(
+        "doctemplates.DocumentTemplate",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="letters",
+        verbose_name=_("modelo estrutural"),
+    )
+    # Copia profunda e congelada de tudo que o renderer generico
+    # (apps.doctemplates.services.pdf) precisa para reproduzir o
+    # documento -- field_schema, layout, a pagina do tipo de documento e
+    # o idioma do modelo. Ver apps.doctemplates.services.snapshot.
+    document_snapshot = models.JSONField(
+        _("snapshot do modelo estrutural"), default=dict, blank=True
+    )
+    # SHA-256 do conteudo ESTRUTURAL de `document_snapshot` (sem o
+    # "captured_at"), em JSON canonico -- permite conferir depois que o
+    # snapshot nao foi alterado, sem comparar o dict inteiro.
+    document_snapshot_hash = models.CharField(
+        _("hash do snapshot estrutural"), max_length=64, blank=True
+    )
+
     generated_at = models.DateTimeField(_("gerada em"), null=True, blank=True)
 
     # Arquivo privado: nunca por mapeamento estatico publico (ver
@@ -120,7 +171,36 @@ class Letter(TimeStampedModel):
             self.template = self.template_version.template
         if not self.reference:
             self.reference = self._build_reference()
+        if self.pk:
+            self._recusar_reescrita_do_snapshot_estrutural()
         super().save(*args, **kwargs)
+
+    def _recusar_reescrita_do_snapshot_estrutural(self):
+        """
+        A regra vale pelo que esta GRAVADO, nao pelo que se esta tentando
+        gravar -- mesmo padrao de `DocumentTemplate.save()`. So passa a
+        valer quando `document_snapshot_hash` ja estiver preenchido: ate
+        la (rascunho, sem snapshot capturado) `document_template` pode
+        ser trocado livremente.
+        """
+        anterior = (
+            Letter.objects.filter(pk=self.pk)
+            .values("document_template_id", "document_snapshot", "document_snapshot_hash")
+            .first()
+        )
+        if not anterior or not anterior["document_snapshot_hash"]:
+            return
+        mudou = (
+            anterior["document_template_id"] != self.document_template_id
+            or anterior["document_snapshot"] != self.document_snapshot
+            or anterior["document_snapshot_hash"] != self.document_snapshot_hash
+        )
+        if mudou:
+            raise DocumentSnapshotImmutableError(
+                "Esta carta já capturou um modelo estrutural; document_template, "
+                "document_snapshot e document_snapshot_hash não podem mais ser "
+                "alterados."
+            )
 
     def _build_reference(self):
         # `created_at` (auto_now_add) so existe apos o INSERT, entao usamos
@@ -128,3 +208,54 @@ class Letter(TimeStampedModel):
         # identico ao timestamp gravado.
         stamp = self.generated_at or timezone.now()
         return f"DSR-{stamp:%Y%m}-{str(self.uuid)[:8].upper()}"
+
+
+class DocumentSnapshotAssetMissingError(RuntimeError):
+    """
+    O layout que estava sendo congelado referencia um `content.Asset`
+    que nao existe. Capturar assim produziria uma carta irreproduzivel
+    desde o nascimento -- melhor recusar a finalizacao agora do que
+    descobrir na geracao do PDF.
+    """
+
+
+class LetterAsset(models.Model):
+    """
+    Vinculo entre uma carta finalizada e cada `content.Asset` que o seu
+    `document_snapshot` precisa para ser reproduzido (Etapa 3.5.1,
+    integridade de assets).
+
+    O snapshot congela o LAYOUT, mas o layout so guarda `asset_id` --
+    os bytes da imagem continuam num unico lugar, o Asset. Duplicar o
+    arquivo em cada carta seria a solucao facil e errada; a certa e
+    garantir que o Asset original nao possa sumir nem mudar: a FK
+    `asset` e PROTECT (exclusao recusada pelo ORM em qualquer caminho) e
+    `Asset.save()` recusa trocar o arquivo enquanto houver uma linha aqui.
+
+    Criado em `services.capture_document_template_snapshot()`, na MESMA
+    transacao do snapshot; apagado junto com a carta (CASCADE). Nunca
+    editado a mao.
+    """
+
+    letter = models.ForeignKey(
+        Letter,
+        on_delete=models.CASCADE,
+        related_name="asset_links",
+        verbose_name=_("carta"),
+    )
+    asset = models.ForeignKey(
+        "content.Asset",
+        on_delete=models.PROTECT,
+        related_name="letter_references",
+        verbose_name=_("imagem"),
+    )
+
+    class Meta:
+        verbose_name = _("imagem usada por carta")
+        verbose_name_plural = _("imagens usadas por cartas")
+        constraints = [
+            models.UniqueConstraint(fields=["letter", "asset"], name="uniq_letter_asset")
+        ]
+
+    def __str__(self):
+        return f"{self.letter_id} -> asset #{self.asset_id}"

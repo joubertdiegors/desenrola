@@ -314,6 +314,16 @@ def _finalize(request, letter):
     letter.status = Letter.Status.COMPLETED
     letter.save(update_fields=["snapshot", "status", "updated_at"])
 
+    # Integracao com a nova arquitetura de modelos (Etapa 3.5.1). Nenhuma
+    # tela escolhe um DocumentTemplate para a carta ainda, entao isto e
+    # inerte hoje para toda carta chegando pelo assistente normal -- mas
+    # se algum caminho futuro (ou um teste) ja tiver associado um
+    # `document_template` ao rascunho, e AQUI, no mesmo instante da
+    # finalizacao, que o snapshot estrutural e congelado -- nunca depois,
+    # para nao correr atras de um modelo que ja pode ter mudado.
+    if letter.document_template_id and not letter.document_snapshot_hash:
+        services.capture_document_template_snapshot(letter, letter.document_template)
+
     # A carta ja fica registrada (COMPLETED) aconteca o que acontecer com
     # o PDF: e melhor do que perder o preenchimento. O status so vira
     # GENERATED quando o arquivo existir de verdade.

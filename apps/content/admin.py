@@ -16,10 +16,42 @@ from .models import (
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "kind", "key", "is_active", "updated_at")
+    """
+    Espelha as regras de integridade do Asset (ver `Asset.save()` e as
+    FKs PROTECT de `template_references`/`letter_references`): o que o
+    modelo vai recusar nem aparece como opcao. A regra de verdade continua
+    no modelo e no ORM -- isto e so para o administrador nao tentar o que
+    seria recusado.
+    """
+
+    list_display = ("__str__", "kind", "key", "is_active", "em_uso", "updated_at")
     list_filter = ("kind", "is_active")
     search_fields = ("key", "alt_text")
     ordering = ("kind", "key")
+
+    @admin.display(description=_("em uso por"), boolean=False)
+    def em_uso(self, obj):
+        usos = []
+        if obj.referenciado_por_modelo():
+            usos.append(str(_("modelo")))
+        if obj.referenciado_por_carta_finalizada():
+            usos.append(str(_("carta finalizada")))
+        return ", ".join(usos) or "—"
+
+    def get_readonly_fields(self, request, obj=None):
+        campos = list(super().get_readonly_fields(request, obj))
+        if obj is not None and obj.referenciado_por_carta_finalizada():
+            # O arquivo e o que uma carta finalizada reproduz; `save()`
+            # recusaria a troca de qualquer jeito.
+            campos.append("file")
+        return campos
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and (
+            obj.referenciado_por_modelo() or obj.referenciado_por_carta_finalizada()
+        ):
+            return False
+        return super().has_delete_permission(request, obj)
 
 
 class ContentTranslationInline(admin.TabularInline):

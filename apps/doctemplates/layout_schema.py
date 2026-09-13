@@ -570,3 +570,47 @@ def referencias_usadas(layout):
                 if isinstance(celula, dict):
                     usadas |= referencias_de(celula.get("content"))
     return usadas
+
+
+def _assets_de(bloco):
+    """Os ids de asset num bloco de conteudo (0 = "ainda nao escolhido", ignorado)."""
+    if not isinstance(bloco, dict):
+        return set()
+    if bloco.get("kind") == KIND_ASSET:
+        asset_id = bloco.get("asset_id")
+        if isinstance(asset_id, int) and not isinstance(asset_id, bool) and asset_id > 0:
+            return {asset_id}
+        return set()
+    if bloco.get("kind") == KIND_MIXED:
+        encontrados = set()
+        for parte in bloco.get("parts") or []:
+            encontrados |= _assets_de(parte)
+        return encontrados
+    return set()
+
+
+def assets_referenciados(layout):
+    """
+    Os ids de `content.Asset` que o layout usa (imagens).
+
+    E o que liga o desenho, guardado em JSON, aos arquivos que ele
+    precisa: quem protege um asset contra exclusao ou substituicao (ver
+    `DocumentTemplateAsset` e `letters.LetterAsset`) descobre por aqui
+    quais sao. Percorre os mesmos lugares que `referencias_usadas()` --
+    conteudo solto, `source` de imagem e celulas de tabela -- para nada
+    escapar.
+    """
+    encontrados = set()
+    for elemento in (layout or {}).get("elements", []):
+        if not isinstance(elemento, dict):
+            continue
+        propriedades = elemento.get("properties") or {}
+        for chave in ("content", "source"):
+            encontrados |= _assets_de(propriedades.get(chave))
+        for linha in propriedades.get("rows") or []:
+            if not isinstance(linha, dict):
+                continue
+            for celula in linha.get("cells") or []:
+                if isinstance(celula, dict):
+                    encontrados |= _assets_de(celula.get("content"))
+    return encontrados

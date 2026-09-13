@@ -32,7 +32,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.core.models import TimeStampedModel
 
-from .layout_schema import validate_layout
+from .layout_schema import assets_referenciados, validate_layout
 from .schema import validate_field_schema
 from .visual_schema import validate_visual_schema
 
@@ -538,6 +538,10 @@ class DocumentTemplate(TimeStampedModel):
                             "podem mudar; tentou alterar " + ", ".join(alterados)
                         )
         super().save(*args, **kwargs)
+        # Os vinculos com os assets do layout acompanham cada gravacao:
+        # e o que mantem o PROTECT de `DocumentTemplateAsset` fiel ao que
+        # o desenho referencia HOJE (ver `sincronizar_assets_do_modelo`).
+        sincronizar_assets_do_modelo(type(self), self)
 
     def delete(self, *args, **kwargs):
         if self.is_locked:
@@ -547,3 +551,80 @@ class DocumentTemplate(TimeStampedModel):
         # Dependencias protegidas (documentos que apontem para este modelo,
         # em etapa posterior) ficam por conta do PROTECT das FKs.
         return super().delete(*args, **kwargs)
+
+
+class DocumentTemplateAsset(models.Model):
+    """
+    Vinculo explicito entre um modelo e cada `content.Asset` que o seu
+    `layout` referencia (Etapa 3.5.1, integridade de assets).
+
+    O layout guarda `{"kind": "asset", "asset_id": N}` dentro de JSON, e o
+    banco nao enxerga isso: sem esta tabela, apagar o Asset pelo admin
+    deixaria o modelo apontando para uma imagem que nao existe mais. Com
+    ela, a FK `asset` e PROTECT -- o ORM recusa a exclusao, seja por
+    `delete()`, por `queryset.delete()` ou pelo bulk do admin.
+
+    E DERIVADA do layout, nunca editada a mao: `sincronizar_assets_do_
+    modelo()` a recompoe a cada gravacao. Trocar o modelo para outro
+    asset solta o vinculo antigo e cria o novo -- e ai o asset antigo
+    volta a ser excluivel, a menos que uma carta finalizada ainda dependa
+    dele (`letters.LetterAsset`).
+    """
+
+    template = models.ForeignKey(
+        DocumentTemplate,
+        on_delete=models.CASCADE,
+        related_name="asset_links",
+        verbose_name=_("modelo"),
+    )
+    asset = models.ForeignKey(
+        "content.Asset",
+        on_delete=models.PROTECT,
+        related_name="template_references",
+        verbose_name=_("imagem"),
+    )
+
+    class Meta:
+        verbose_name = _("imagem usada por modelo")
+        verbose_name_plural = _("imagens usadas por modelos")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["template", "asset"], name="uniq_documenttemplate_asset"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.template_id} -> asset #{self.asset_id}"
+
+
+def sincronizar_assets_do_modelo(DocumentTemplate, modelo):
+    """
+    Deixa `DocumentTemplateAsset` igual ao que `modelo.layout` referencia.
+
+    Recebe a CLASSE do modelo para funcionar tambem com o modelo
+    historico das migrations (`apps.get_model()`), que e por onde
+    `services.modelo_fr.aplicar()`/`vincular_logo()` passam. Num estado
+    historico anterior a existencia da tabela de vinculos, nao ha o que
+    sincronizar -- e a funcao simplesmente nao faz nada.
+
+    Um `asset_id` que nao existe no banco NAO gera vinculo nem erro: o
+    editor grava `0` para "ainda nao escolhido", e um id orfao e recusado
+    depois, na geracao do PDF (`AssetAusenteError`) -- nao aqui, para nao
+    quebrar a edicao normal de um modelo.
+    """
+    registro = DocumentTemplate._meta.apps
+    try:
+        Vinculo = registro.get_model("doctemplates", "DocumentTemplateAsset")
+        Asset = registro.get_model("content", "Asset")
+    except LookupError:
+        return
+
+    desejados = assets_referenciados(modelo.layout or {})
+    existentes = set(Asset.objects.filter(pk__in=desejados).values_list("pk", flat=True))
+    atuais = set(Vinculo.objects.filter(template_id=modelo.pk).values_list("asset_id", flat=True))
+
+    a_remover = atuais - existentes
+    if a_remover:
+        Vinculo.objects.filter(template_id=modelo.pk, asset_id__in=a_remover).delete()
+    for asset_id in existentes - atuais:
+        Vinculo.objects.get_or_create(template_id=modelo.pk, asset_id=asset_id)

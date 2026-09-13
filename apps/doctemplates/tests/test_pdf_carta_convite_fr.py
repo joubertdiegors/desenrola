@@ -340,6 +340,15 @@ class TestElementosDoFr:
         assert "/XObject" in documento.pages[0]["/Resources"]
 
     def test_sem_o_asset_a_geracao_falha_claramente(self, modelo):
+        """
+        O asset do logo esta protegido contra exclusao pelo vinculo
+        `DocumentTemplateAsset` (PROTECT). Para simular "o arquivo sumiu"
+        e conferir que o RENDERER falha alto, o vinculo e desfeito antes
+        -- e exatamente o cenario que a protecao existe para impedir.
+        """
+        from apps.doctemplates.models import DocumentTemplateAsset
+
+        DocumentTemplateAsset.objects.filter(asset__key=modelo_fr.LOGO_CHAVE_DO_ASSET).delete()
         Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).delete()
 
         with pytest.raises(pdf.AssetAusenteError):

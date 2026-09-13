@@ -82,6 +82,57 @@ class Asset(TimeStampedModel):
     def __str__(self):
         return self.key or f"{self.get_kind_display()} #{self.pk}"
 
+    # -- integridade para reproducao historica (Etapa 3.5.1) --------------
+    #
+    # Dois consumidores referenciam um Asset de dentro de JSON, onde o
+    # banco nao enxerga: o `layout` de um `doctemplates.DocumentTemplate`
+    # e o `document_snapshot` de uma `letters.Letter` finalizada. Cada um
+    # mantem uma tabela de vinculo com FK PROTECT para ca
+    # (`template_references`, `letter_references`) -- e o PROTECT que
+    # recusa a exclusao, em qualquer caminho: `delete()`, queryset, admin.
+    #
+    # O que o PROTECT nao cobre e a SUBSTITUICAO do arquivo: trocar o PNG
+    # de um asset que uma carta finalizada usa mudaria o documento
+    # historico em silencio. Por isso o `save()` abaixo recusa isso.
+
+    def referenciado_por_carta_finalizada(self):
+        """Ha uma Letter finalizada cujo snapshot depende deste asset?"""
+        vinculos = getattr(self, "letter_references", None)
+        return bool(self.pk and vinculos is not None and vinculos.exists())
+
+    def referenciado_por_modelo(self):
+        """Ha um DocumentTemplate cujo layout usa este asset?"""
+        vinculos = getattr(self, "template_references", None)
+        return bool(self.pk and vinculos is not None and vinculos.exists())
+
+    def save(self, *args, **kwargs):
+        if self.pk and self.referenciado_por_carta_finalizada():
+            gravado = Asset.objects.filter(pk=self.pk).values_list("file", flat=True).first()
+            if gravado is not None and gravado != self.file.name:
+                # `FieldFile.save()` grava o arquivo NOVO no storage antes
+                # de chegar aqui. Recusar e sair deixaria esse arquivo
+                # orfao em MEDIA_ROOT a cada tentativa; apaga-lo so quando
+                # foi de fato gravado (`_committed`) -- um upload apenas
+                # atribuido ainda nao esta no disco, e apagar pelo nome
+                # poderia atingir outro arquivo.
+                if getattr(self.file, "_committed", False):
+                    self.file.storage.delete(self.file.name)
+                self.file.name = gravado
+                raise AssetFileImmutableError(
+                    "Este arquivo é usado por uma carta já finalizada e não pode ser "
+                    "substituído. Crie um novo asset e aponte o modelo para ele."
+                )
+        super().save(*args, **kwargs)
+
+
+class AssetFileImmutableError(RuntimeError):
+    """
+    Tentativa de trocar o arquivo de um Asset do qual uma carta finalizada
+    depende. Erro de uso indevido, nao de formulario -- vale para qualquer
+    caminho que chame `save()`, no mesmo espirito de
+    `DocumentTemplateLockedError` e `DocumentSnapshotImmutableError`.
+    """
+
 
 class ContentBlock(TimeStampedModel):
     """Um slot de conteudo editavel (ex.: 'landing.hero.title')."""

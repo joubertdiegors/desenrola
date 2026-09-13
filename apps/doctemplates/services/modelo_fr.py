@@ -702,6 +702,12 @@ def aplicar(DocumentTemplate, *, asset_do_logo=0, forcar=False):
     validate_layout(layout)
     DocumentTemplate.objects.filter(pk=modelo.pk).update(layout=layout)
     modelo.layout = layout
+    # `update()` pula o `save()` -- e com ele a sincronizacao dos vinculos
+    # com os assets. Refeita aqui, para o PROTECT valer tambem para o
+    # logo do oficial. Tolerante ao modelo historico das migrations.
+    from ..models import sincronizar_assets_do_modelo
+
+    sincronizar_assets_do_modelo(DocumentTemplate, modelo)
     return modelo
 
 
@@ -737,6 +743,12 @@ def vincular_logo(DocumentTemplate, asset_id):
     validate_layout(layout)
     DocumentTemplate.objects.filter(pk=modelo.pk).update(layout=layout)
     modelo.layout = layout
+    # `update()` pula o `save()` -- e com ele a sincronizacao dos vinculos
+    # com os assets. Refeita aqui, para o PROTECT valer tambem para o
+    # logo do oficial. Tolerante ao modelo historico das migrations.
+    from ..models import sincronizar_assets_do_modelo
+
+    sincronizar_assets_do_modelo(DocumentTemplate, modelo)
     return modelo
 
 

@@ -19,14 +19,23 @@ import hashlib
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.doctemplates.models import LetterTemplate
+from apps.content.models import Asset
+from apps.doctemplates.layout_schema import assets_referenciados
+from apps.doctemplates.models import DocumentTemplate, LetterTemplate
 from apps.doctemplates.official_templates import official_slug
 from apps.doctemplates.schema import OPTION_BASED_TYPES, resolve_label, resolve_options
+from apps.doctemplates.services import snapshot as document_snapshot
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
-from apps.letters.models import Letter
+from apps.letters.models import (
+    DocumentSnapshotAssetMissingError,
+    DocumentSnapshotImmutableError,
+    Letter,
+    LetterAsset,
+)
 from apps.letters.nationalities import display_name as nationality_display_name
 from apps.letters.nationalities import document_forms
 from apps.letters.pdf_generation import render_letter_pdf
@@ -367,6 +376,89 @@ def build_snapshot(letter, user):
         ),
         "finalized_at": timezone.now().isoformat(),
     }
+
+
+def capture_document_template_snapshot(letter, document_template):
+    """
+    Congela `document_template` em `letter`: grava `document_template`,
+    `document_snapshot` (copia estrutural profunda) e
+    `document_snapshot_hash` -- ver `apps.doctemplates.services.snapshot`.
+
+    Esta e a integracao com a NOVA arquitetura de modelos (Etapa 3.5.1),
+    paralela ao `build_snapshot()` acima (que continua servindo so a
+    arquitetura antiga). Nenhuma tela escolhe um `DocumentTemplate` para
+    a carta ainda; esta funcao existe para quando uma escolher, e para
+    testes exercitarem o mecanismo.
+
+    PROTEGIDA CONTRA EDICAO CONCORRENTE DO MODELO
+    -----------------------------------------------
+    `select_for_update()` trava a linha do `DocumentTemplate` dentro da
+    transacao: se um administrador estiver salvando uma alteracao nesse
+    exato modelo neste exato instante, uma das duas operacoes espera a
+    outra terminar -- nunca ha uma leitura pela metade de um `save()`
+    alheio. So LE o modelo travado; nunca o altera nem o salva (por isso
+    "o template original não deve ser alterado durante a criação do
+    snapshot").
+
+    (Em SQLite -- usado em desenvolvimento e nos testes -- o travamento
+    e um no-op sem erro; o efeito pratico so existe em PostgreSQL, o
+    banco de producao. Ver `config/settings/prod.py`.)
+
+    IMUTAVEL DEPOIS DE CAPTURADO
+    ------------------------------
+    Chamar isto numa `letter` que ja tem `document_snapshot_hash`
+    preenchido levanta `DocumentSnapshotImmutableError` -- a mesma regra
+    que `Letter.save()` ja aplica a qualquer tentativa de reescrever os
+    tres campos; aqui so falha mais cedo, antes do trabalho de montar o
+    snapshot e travar a linha do modelo.
+
+    TUDO OU NADA
+    ------------
+    A montagem do snapshot, o calculo do hash e o `save()` acontecem
+    dentro da MESMA transacao: se qualquer passo falhar, nada e gravado
+    -- nunca sobra um snapshot parcial (hash sem conteudo, ou conteudo
+    sem hash).
+    """
+    if letter.document_snapshot_hash:
+        raise DocumentSnapshotImmutableError(
+            "Esta carta já capturou um modelo estrutural; o snapshot não pode "
+            "ser substituído."
+        )
+
+    with transaction.atomic():
+        travado = DocumentTemplate.objects.select_for_update().get(pk=document_template.pk)
+        estrutura = document_snapshot.build_snapshot(travado)
+
+        # Os assets que o layout congelado precisa tem de EXISTIR agora e
+        # continuar existindo depois. Existir: senao a carta nasceria
+        # irreproduzivel, e e melhor recusar a finalizacao. Continuar
+        # existindo: `LetterAsset` (FK PROTECT) e o que impede a exclusao
+        # e, via `Asset.save()`, a troca do arquivo -- ver letters/models.
+        necessarios = assets_referenciados(estrutura["layout"])
+        existentes = set(Asset.objects.filter(pk__in=necessarios).values_list("pk", flat=True))
+        faltando = sorted(necessarios - existentes)
+        if faltando:
+            raise DocumentSnapshotAssetMissingError(
+                "O modelo referencia imagens que não existem mais (asset "
+                f"{', '.join(map(str, faltando))}); a carta não pode ser finalizada "
+                "com um documento irreproduzível."
+            )
+
+        letter.document_template = travado
+        letter.document_snapshot = estrutura
+        letter.document_snapshot_hash = document_snapshot.compute_hash(estrutura)
+        letter.save(
+            update_fields=[
+                "document_template",
+                "document_snapshot",
+                "document_snapshot_hash",
+                "updated_at",
+            ]
+        )
+        LetterAsset.objects.bulk_create(
+            [LetterAsset(letter=letter, asset_id=asset_id) for asset_id in sorted(existentes)]
+        )
+    return letter
 
 
 def missing_host_profile_fields(user):
