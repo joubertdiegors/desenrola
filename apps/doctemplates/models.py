@@ -342,3 +342,204 @@ class Nationality(TimeStampedModel):
     def display_name(self, language=None):
         """O nome no idioma pedido, caindo no portugues se faltar."""
         return getattr(self, f"name_{language}", "") or self.name_pt or self.code
+
+
+# ===========================================================================
+# Biblioteca de modelos de documentos (nova arquitetura -- Etapa 1)
+# ===========================================================================
+#
+# Substitui, conceitualmente, o par LetterTemplate + TemplateVersion. Os dois
+# modelos antigos continuam existindo ate o cutover (nada aqui os toca): a
+# geracao de cartas, o assistente e o editor atual seguem lendo deles.
+#
+# A ideia central mudou: nao ha mais "versao publicada imutavel". Um modelo
+# e um registro so, editado e salvo diretamente. A reprodutibilidade de um
+# documento emitido deixa de depender do modelo e passa a ser garantida no
+# snapshot do proprio documento (etapa posterior).
+#
+# Dois conceitos que NAO se confundem:
+#
+#   is_system  -- e um modelo oficial do sistema (os quatro da Carta
+#                 Convite). Diz de onde o modelo veio e o que ele e.
+#   is_locked  -- esta, neste momento, fechado para edicao. Diz o que se
+#                 pode fazer com ele agora.
+#
+# Um modelo oficial nasce DESTRAVADO (is_locked=False) e so e travado
+# depois que o administrador aprovar visualmente que esta correto. Nenhuma
+# regra aqui trava um modelo sozinha.
+
+
+class DocumentTemplateLockedError(RuntimeError):
+    """
+    Tentativa de alterar ou apagar o que um modelo, no seu estado atual,
+    nao permite. E erro de uso indevido, nao ValidationError de formulario:
+    a regra vale para qualquer caminho de codigo que chame `.save()` ou
+    `.delete()`.
+    """
+
+
+class DocumentType(TimeStampedModel):
+    """
+    Um TIPO de documento da biblioteca (Carta Convite, Contrato, ...).
+
+    Agrupa os modelos e declara o que eles tem em comum: o tamanho da
+    pagina e quais fontes de dados podem aparecer no editor. Nao carrega
+    conteudo -- isso e dos modelos.
+    """
+
+    code = models.SlugField(_("código"), max_length=60, unique=True)
+    name = models.CharField(_("nome"), max_length=120)
+    description = models.TextField(_("descrição"), blank=True)
+    is_active = models.BooleanField(_("ativo"), default=True)
+
+    # Tamanho da pagina em PONTOS, o mesmo sistema do `layout` dos modelos
+    # (ver visual_schema.py). Ex.: A4 = {"width": 595.2756, "height": 841.8898, "unit": "pt"}.
+    page = models.JSONField(_("página"), default=dict)
+
+    # Codigos das fontes de dados que os modelos deste tipo podem usar
+    # (ex.: ["documento", "convidado", "anfitriao", "calculado"]). O
+    # registro que da significado a cada codigo e etapa posterior; aqui
+    # so a lista, para o dado ja existir onde vai ser lido.
+    data_sources = models.JSONField(_("fontes de dados"), default=list, blank=True)
+
+    order = models.PositiveIntegerField(_("ordem"), default=0)
+
+    class Meta:
+        verbose_name = _("tipo de documento")
+        verbose_name_plural = _("tipos de documento")
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class DocumentTemplate(TimeStampedModel):
+    """
+    Um MODELO da biblioteca: um documento A4 completo, descrito por
+    `field_schema` (o que o formulario pergunta) e `layout` (como a pagina
+    e desenhada). Um registro so; edita-se e salva-se diretamente.
+    """
+
+    # O que um modelo TRAVADO nao pode mais mudar. `is_locked` em si nao
+    # entra: destravar e uma acao administrativa legitima (interface em
+    # etapa posterior).
+    STRUCTURAL_FIELDS = ("type_id", "language", "slug", "field_schema", "layout")
+
+    # O que um modelo OFICIAL (is_system) aceita alterar, travado ou nao:
+    # so o administrativo simples. Tudo o resto e recusado -- inclusive
+    # `name`, que e a identidade do modelo oficial, e `is_system`, para um
+    # oficial nao virar "comum" por um clique. `is_locked` entra porque e
+    # exatamente o que o administrador fara com um oficial quando o
+    # aprovar.
+    SYSTEM_MUTABLE_FIELDS = ("description", "is_active", "is_locked")
+
+    type = models.ForeignKey(
+        DocumentType,
+        on_delete=models.PROTECT,
+        related_name="templates",
+        verbose_name=_("tipo"),
+    )
+    name = models.CharField(_("nome"), max_length=150)
+    slug = models.SlugField(_("identificador"), max_length=80, unique=True)
+    language = models.CharField(_("idioma"), max_length=8, choices=settings.LANGUAGES)
+    description = models.TextField(_("descrição"), blank=True)
+
+    is_system = models.BooleanField(
+        _("modelo do sistema"),
+        default=False,
+        help_text=_("Modelo oficial do Desenrola. Serve de base; não é apagado."),
+    )
+    is_locked = models.BooleanField(
+        _("travado"),
+        default=False,
+        help_text=_("Fechado para edição neste momento."),
+    )
+
+    # Linhagem: de qual modelo este foi duplicado. SET_NULL de proposito:
+    # apagar a origem nao pode arrastar a copia, que e independente.
+    duplicated_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="duplicates",
+        verbose_name=_("duplicado de"),
+    )
+
+    # Contrato de apps.doctemplates.schema (o formulario do assistente).
+    field_schema = models.JSONField(_("configuração dos campos"), default=dict, blank=True)
+    # Contrato de apps.doctemplates.visual_schema (o desenho da pagina).
+    layout = models.JSONField(_("layout"), default=dict, blank=True)
+
+    is_active = models.BooleanField(_("ativo"), default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="document_templates",
+        verbose_name=_("criado por"),
+    )
+
+    class Meta:
+        verbose_name = _("modelo de documento")
+        verbose_name_plural = _("modelos de documento")
+        ordering = ["type", "-is_system", "language", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_language_display()})"
+
+    def clean(self):
+        super().clean()
+        validate_field_schema(self.field_schema)
+        validate_visual_schema(self.layout)
+
+    # -- regras de integridade -------------------------------------------
+
+    def _campos_alterados(self, campos):
+        """Quais dos `campos` diferem do que esta gravado no banco."""
+        gravado = DocumentTemplate.objects.filter(pk=self.pk).values(*campos).first()
+        if gravado is None:
+            return []
+        return [campo for campo in campos if gravado[campo] != getattr(self, campo)]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anterior = (
+                DocumentTemplate.objects.filter(pk=self.pk)
+                .values("is_system", "is_locked")
+                .first()
+            )
+            if anterior:
+                # A regra vale pelo estado GRAVADO, nao pelo que se esta
+                # tentando gravar -- senao bastaria mudar `is_locked` e o
+                # layout na mesma chamada.
+                if anterior["is_locked"]:
+                    alterados = self._campos_alterados(self.STRUCTURAL_FIELDS)
+                    if alterados:
+                        raise DocumentTemplateLockedError(
+                            "Modelo travado: não é possível alterar " + ", ".join(alterados)
+                        )
+                if anterior["is_system"]:
+                    todos = [
+                        f.attname
+                        for f in self._meta.concrete_fields
+                        if f.attname not in ("id", "created_at", "updated_at")
+                    ]
+                    proibidos = [c for c in todos if c not in self.SYSTEM_MUTABLE_FIELDS]
+                    alterados = self._campos_alterados(proibidos)
+                    if alterados:
+                        raise DocumentTemplateLockedError(
+                            "Modelo do sistema: só description, is_active e is_locked "
+                            "podem mudar; tentou alterar " + ", ".join(alterados)
+                        )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.is_locked:
+            raise DocumentTemplateLockedError("Um modelo travado não pode ser excluído.")
+        if self.is_system:
+            raise DocumentTemplateLockedError("Um modelo do sistema não pode ser excluído.")
+        # Dependencias protegidas (documentos que apontem para este modelo,
+        # em etapa posterior) ficam por conta do PROTECT das FKs.
+        return super().delete(*args, **kwargs)
