@@ -32,6 +32,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.core.models import TimeStampedModel
 
+from .layout_schema import validate_layout
 from .schema import validate_field_schema
 from .visual_schema import validate_visual_schema
 
@@ -492,7 +493,10 @@ class DocumentTemplate(TimeStampedModel):
     def clean(self):
         super().clean()
         validate_field_schema(self.field_schema)
-        validate_visual_schema(self.layout)
+        # Contrato NOVO (`layout_schema`), nao o `visual_schema` do
+        # legado: sao arquiteturas diferentes convivendo. Ver o cabecalho
+        # de layout_schema.py para a comparacao dos dois formatos.
+        validate_layout(self.layout)
 
     # -- regras de integridade -------------------------------------------
 

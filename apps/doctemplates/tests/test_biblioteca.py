@@ -34,11 +34,9 @@ pytestmark = pytest.mark.django_db
 
 A4 = {"width": 595.2756, "height": 841.8898, "unit": "pt"}
 
-LAYOUT_MINIMO = {
-    "schema_version": 1,
-    "page": {"width": 595.2756, "height": 841.8898, "unit": "pt", "origin": "top-left"},
-    "elements": [],
-}
+# Formato do contrato NOVO (`layout_schema`), que `DocumentTemplate`
+# valida desde a Etapa 3.1 -- nao o `visual_schema` do legado.
+LAYOUT_MINIMO = {"version": 1, "elements": []}
 
 
 @pytest.fixture
@@ -180,7 +178,7 @@ class TestDocumentTemplateCriacao:
         with pytest.raises(ValidationError):
             modelo.full_clean()
         modelo.field_schema = {}
-        modelo.layout = {"schema_version": 99}
+        modelo.layout = {"version": 99}
         with pytest.raises(ValidationError):
             modelo.full_clean()
 
@@ -227,7 +225,8 @@ class TestModeloTravado:
             # Um elemento a mais: tem de DIFERIR do que a fixture gravou.
             ("layout", LAYOUT_MINIMO | {"elements": [{
                 "id": "t1", "type": "text", "x": 1.0, "y": 1.0, "width": 10.0,
-                "height": 5.0, "z_index": 1, "properties": {"content": "x"},
+                "height": 5.0,
+                "properties": {"content": {"kind": "text", "value": "x"}},
             }]}),
             ("field_schema", {"fields": []}),
             ("language", "fr"),

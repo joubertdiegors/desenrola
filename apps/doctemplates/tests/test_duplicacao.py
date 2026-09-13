@@ -24,20 +24,24 @@ pytestmark = pytest.mark.django_db
 
 A4 = {"width": 595.2756, "height": 841.8898, "unit": "pt"}
 
+# Formato do contrato NOVO (`layout_schema`), adotado na Etapa 3.1.
 LAYOUT = {
-    "schema_version": 1,
-    "page": {"width": 595.2756, "height": 841.8898, "unit": "pt", "origin": "top-left"},
+    "version": 1,
     "elements": [
         {
             "id": "t1", "type": "text", "x": 72.0, "y": 100.0, "width": 200.0,
-            "height": 14.0, "z_index": 1, "properties": {"content": "Título"},
+            "height": 14.0,
+            "properties": {"content": {"kind": "text", "value": "Título"}},
         },
         {
             "id": "tb", "type": "table", "x": 50.0, "y": 200.0, "width": 400.0,
-            "height": 60.0, "z_index": 2,
+            "height": 60.0,
             "properties": {
                 "columns": [{"width": 100, "align": "left"}, {"width": 300, "align": "left"}],
-                "rows": [{"min_height": 20, "cells": [{"content": "a"}, {"content": "b"}]}],
+                "rows": [{"min_height": 20, "cells": [
+                    {"content": {"kind": "text", "value": "a"}},
+                    {"content": {"kind": "text", "value": "b"}},
+                ]}],
             },
         },
     ],
@@ -203,8 +207,10 @@ class TestIndependencia:
     def test_alterar_layout_aninhado_da_copia_nao_altera_a_origem(self, origem):
         copia = duplicar_modelo(origem, "Cópia")
 
-        copia.layout["elements"][1]["properties"]["rows"][0]["cells"][0]["content"] = "X"
-        copia.layout["elements"][0]["properties"]["content"] = "Outro"
+        copia.layout["elements"][1]["properties"]["rows"][0]["cells"][0]["content"][
+            "value"
+        ] = "X"
+        copia.layout["elements"][0]["properties"]["content"]["value"] = "Outro"
         copia.layout["elements"].pop()
         copia.save()
 
@@ -214,7 +220,7 @@ class TestIndependencia:
     def test_alterar_a_origem_depois_nao_alcanca_a_copia(self, origem):
         copia = duplicar_modelo(origem, "Cópia")
 
-        origem.layout["elements"][0]["properties"]["content"] = "Alterado na origem"
+        origem.layout["elements"][0]["properties"]["content"]["value"] = "Na origem"
         origem.description = "Nova descrição"
         origem.save()
 
@@ -349,7 +355,7 @@ class TestValidacao:
         assert DocumentTemplate.objects.count() == antes
 
     def test_nada_fica_gravado_quando_a_validacao_falha(self, origem):
-        origem.layout = {"schema_version": 99}  # invalido, so em memoria
+        origem.layout = {"version": 99}  # invalido, so em memoria
         antes = DocumentTemplate.objects.count()
 
         with pytest.raises(ValidationError):
