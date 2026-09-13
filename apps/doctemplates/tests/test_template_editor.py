@@ -439,11 +439,19 @@ class TestSystemELocked:
         assert travado.layout == {}
 
     def test_modelo_do_sistema_nao_salva(self, cliente, oficial):
+        """
+        O que este teste afirma e que o salvamento foi RECUSADO e nada
+        mudou -- nao que o oficial esteja vazio. Desde a Etapa 3.3 o
+        frances tem o seu layout reconstruido, e e justamente ele que
+        nao pode ser sobrescrito por aqui.
+        """
+        antes = oficial.layout
+
         resposta = _salvar(cliente, oficial, layout_com(elemento_de_texto()))
 
         assert resposta.status_code == 409
         oficial.refresh_from_db()
-        assert oficial.layout == {}
+        assert oficial.layout == antes
 
     def test_a_tela_em_leitura_nao_mostra_o_botao_salvar(self, cliente, travado):
         html = cliente.get(_url("template_editor", travado)).content.decode()

@@ -22,6 +22,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import ProtectedError
 
+from apps.doctemplates.layout_schema import validate_layout
 from apps.doctemplates.models import (
     DocumentTemplate,
     DocumentTemplateLockedError,
@@ -355,7 +356,14 @@ class TestSemeaduraCartaConvite:
         assert m.is_system is True
         assert m.is_locked is False
         assert m.is_active is True
-        assert m.layout == {}
+        # A semeadura nasce sem desenho. O frances ganhou o dele na Etapa
+        # 3.3 (reconstruido do PDF oficial); os outros tres seguem vazios
+        # ate serem reconstruidos.
+        if slug == "carta-convite-fr":
+            validate_layout(m.layout)
+            assert m.layout["elements"]
+        else:
+            assert m.layout == {}
         assert m.field_schema == CARTA_CONVITE_FIELD_SCHEMA
         assert m.duplicated_from is None
         assert m.created_by is None

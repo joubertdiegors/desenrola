@@ -59,6 +59,19 @@ aceita, porque so ele sabe fluir trechos de pesos diferentes. Cada
 `source` e conferido contra `datasources.py`: uma referencia inexistente
 e recusada aqui, nao descoberta na hora de gerar o documento.
 
+Um trecho de `mixed` pode ainda declarar `font_weight` e/ou `font_style`
+proprios:
+
+    {"kind": "text", "value": "Je soussignée, "}
+    {"kind": "field", "source": "anfitriao.nome", "font_weight": "bold"}
+
+E o que permite ENFASE DENTRO da linha corrida -- negritar so o nome no
+meio da frase. Ausentes, o trecho herda o peso e o estilo do elemento; o
+vocabulario e o mesmo de `elements.py`, para nao haver um segundo jeito
+de dizer "negrito". So valem dentro de `mixed`: num bloco de conteudo
+solto quem manda e a propriedade do proprio elemento, e aceitar os dois
+caminhos criaria ambiguidade sobre qual vence.
+
 
 CAMADAS
 -------
@@ -183,6 +196,27 @@ def _escolha(valor, opcoes, descricao):
 # ---------------------------------------------------------------------------
 
 
+# Estilo que um TRECHO de `mixed` pode sobrepor ao do elemento. Mesmos
+# vocabularios de `elements.py`.
+ENFASE_DO_TRECHO = ("font_weight", "font_style")
+
+
+def _validar_enfase(parte, descricao):
+    """
+    A enfase opcional de um trecho de `mixed`.
+
+    Ausente significa "herda do elemento" -- por isso nada aqui e
+    obrigatorio. Presente, tem de ser um valor do vocabulario, senao um
+    "font_weight": "negrito" passaria batido e sumiria na geracao.
+    """
+    if not isinstance(parte, dict):
+        return
+    if "font_weight" in parte:
+        _escolha(parte["font_weight"], elements.FONT_WEIGHTS, f"{descricao} (peso)")
+    if "font_style" in parte:
+        _escolha(parte["font_style"], elements.FONT_STYLES, f"{descricao} (estilo)")
+
+
 def validar_conteudo(bloco, descricao, *, permite_misto=False, profundidade=0):
     """
     Um bloco de conteudo: texto fixo, referencia de campo, imagem ou uma
@@ -249,6 +283,7 @@ def validar_conteudo(bloco, descricao, *, permite_misto=False, profundidade=0):
         validar_conteudo(
             parte, f"{descricao} (trecho {posicao})", permite_misto=False, profundidade=1
         )
+        _validar_enfase(parte, f"{descricao} (trecho {posicao})")
     return bloco
 
 

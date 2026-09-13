@@ -486,12 +486,97 @@ class TestConteudoEstrutural:
 
 
 # ===========================================================================
+# 3b. Enfase por trecho de `mixed` (Etapa 3.3)
+# ===========================================================================
+
+
+class TestEnfaseDoTrecho:
+    """
+    Um trecho de `mixed` pode declarar peso e estilo proprios -- e o que
+    permite negritar so o nome no meio da frase corrida. Capacidade
+    GENERICA: nada aqui sabe que existe um documento frances.
+    """
+
+    def misto(self, *partes):
+        return {"kind": "mixed", "parts": list(partes)}
+
+    def test_trecho_pode_declarar_negrito(self):
+        bloco = self.misto(
+            texto("Je soussignée, "),
+            {"kind": "field", "source": "anfitriao.nome", "font_weight": "bold"},
+        )
+
+        layout_schema.validar_conteudo(bloco, "c", permite_misto=True)
+
+    def test_trecho_de_texto_fixo_tambem_pode(self):
+        bloco = self.misto({"kind": "text", "value": "visite privée", "font_weight": "bold"})
+
+        layout_schema.validar_conteudo(bloco, "c", permite_misto=True)
+
+    def test_trecho_pode_declarar_italico(self):
+        bloco = self.misto({"kind": "text", "value": "nota", "font_style": "italic"})
+
+        layout_schema.validar_conteudo(bloco, "c", permite_misto=True)
+
+    def test_a_enfase_e_opcional(self):
+        """Ausente significa "herda do elemento" -- nao e um erro."""
+        layout_schema.validar_conteudo(
+            self.misto(texto("sem ênfase")), "c", permite_misto=True
+        )
+
+    @pytest.mark.parametrize("peso", ["negrito", "700", "Bold", "", None, True])
+    def test_peso_fora_do_vocabulario_e_recusado(self, peso):
+        bloco = self.misto({"kind": "text", "value": "x", "font_weight": peso})
+
+        with pytest.raises(ValidationError):
+            layout_schema.validar_conteudo(bloco, "c", permite_misto=True)
+
+    @pytest.mark.parametrize("estilo", ["oblique", "Italic", "", 1])
+    def test_estilo_fora_do_vocabulario_e_recusado(self, estilo):
+        bloco = self.misto({"kind": "text", "value": "x", "font_style": estilo})
+
+        with pytest.raises(ValidationError):
+            layout_schema.validar_conteudo(bloco, "c", permite_misto=True)
+
+    def test_o_vocabulario_e_o_mesmo_do_registro_de_elementos(self):
+        """Nao pode existir um segundo jeito de dizer "negrito"."""
+        for peso in elements.FONT_WEIGHTS:
+            layout_schema.validar_conteudo(
+                self.misto({"kind": "text", "value": "x", "font_weight": peso}),
+                "c", permite_misto=True,
+            )
+        for estilo in elements.FONT_STYLES:
+            layout_schema.validar_conteudo(
+                self.misto({"kind": "text", "value": "x", "font_style": estilo}),
+                "c", permite_misto=True,
+            )
+
+    def test_um_rich_text_com_enfase_passa_pelo_layout_inteiro(self):
+        elemento_rico = elemento("rich_text", "r1")
+        elemento_rico["properties"]["content"] = self.misto(
+            texto("Je soussignée, "),
+            {"kind": "field", "source": "anfitriao.nome", "font_weight": "bold"},
+        )
+
+        layout_schema.validate_layout(layout(elemento_rico))
+
+    def test_enfase_invalida_derruba_o_layout_inteiro(self):
+        elemento_rico = elemento("rich_text", "r1")
+        elemento_rico["properties"]["content"] = self.misto(
+            {"kind": "text", "value": "x", "font_weight": "negrito"}
+        )
+
+        with pytest.raises(ValidationError):
+            layout_schema.validate_layout(layout(elemento_rico))
+
+
+# ===========================================================================
 # 4. Registro de fontes de dados
 # ===========================================================================
 
 
 class TestFontesDeDados:
-    NAMESPACES = ("documento", "convidado", "anfitriao", "calculado")
+    NAMESPACES = ("documento", "convidado", "anfitriao", "estadia", "calculado")
 
     @pytest.mark.parametrize("code", NAMESPACES)
     def test_os_quatro_namespaces_existem(self, code):
@@ -989,14 +1074,30 @@ class TestCamadas:
 @pytest.mark.django_db
 class TestCompatibilidadeComOModelo:
     def test_os_quatro_oficiais_continuam_validos(self):
+        """
+        Desde a Etapa 3.3 o francês tem desenho; os outros três ainda
+        não. Os quatro continuam validando contra o contrato -- que é o
+        que este teste protege.
+        """
         from apps.doctemplates.models import DocumentTemplate
 
         oficiais = DocumentTemplate.objects.filter(is_system=True)
 
         assert oficiais.count() == 4
         for modelo in oficiais:
-            assert modelo.layout == {}
+            layout_schema.validate_layout(modelo.layout)
             modelo.full_clean()
+
+    def test_so_o_frances_foi_reconstruido_ate_aqui(self):
+        from apps.doctemplates.models import DocumentTemplate
+
+        com_desenho = {
+            modelo.slug
+            for modelo in DocumentTemplate.objects.filter(is_system=True)
+            if modelo.layout
+        }
+
+        assert com_desenho == {"carta-convite-fr"}
 
     def test_um_modelo_aceita_o_layout_novo(self, db):
         from apps.doctemplates.models import DocumentTemplate, DocumentType

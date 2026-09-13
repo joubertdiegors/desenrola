@@ -113,16 +113,36 @@ FONTES_PADRAO = (
         label="Anfitrião",
         campos=(
             Campo("nome", "Nome completo"),
+            Campo("nacionalidade", "Nacionalidade"),
+            Campo("data_nascimento", "Data de nascimento", kind="data"),
+            Campo("documento_identidade", "Documento de identidade"),
             Campo("endereco", "Endereço"),
             Campo("cidade", "Cidade"),
             Campo("telefone", "Telefone"),
             Campo("email", "E-mail"),
         ),
     ),
+    # A visita em si. Nao cabia em nenhum dos outros namespaces: as datas
+    # nao sao do documento (que tem a sua propria), nao sao um atributo do
+    # convidado nem do anfitriao -- sao da estadia.
+    FonteDeDados(
+        code="estadia",
+        label="Estadia",
+        campos=(
+            Campo("chegada", "Data de chegada", kind="data"),
+            Campo("partida", "Data de partida", kind="data"),
+        ),
+    ),
     FonteDeDados(
         code="calculado",
         label="Calculado",
-        campos=(Campo("data_documento", "Data de emissão", kind="data"),),
+        campos=(
+            Campo("data_documento", "Data de emissão", kind="data"),
+            # Sempre recalculada a partir de chegada/partida, nunca lida
+            # de um campo guardado -- por isso mora em "calculado" e nao
+            # em "estadia".
+            Campo("duracao_dias", "Duração em dias", kind="numero"),
+        ),
     ),
 )
 
