@@ -1,21 +1,18 @@
 """
-Biblioteca de modelos da nova arquitetura (Etapa 3.2.1).
+Biblioteca de modelos (Etapa 3.2.1).
 
     GET  backoffice/modelos/                    lista os DocumentTemplate
     POST backoffice/modelos/<pk>/duplicar/       duplica um modelo
     POST backoffice/modelos/<pk>/excluir/        exclui um modelo comum
 
-Arquivo PROPRIO, separado de `editor_views.py` (o editor em si) e de
-`views.py` (a arquitetura anterior, `LetterTemplate`/`TemplateVersion`
-com versionamento). Esta tela e a porta de entrada da biblioteca nova; o
-editor, para onde ela leva, ja existia desde a Etapa 3.2.
+Arquivo PROPRIO, separado de `editor_views.py` (o editor em si). E a
+unica biblioteca de modelos do produto: a listagem antiga, com
+versionamento, foi aposentada na Etapa 3.5.3.
 
 FONTE DE DADOS
 --------------
-Exclusivamente `DocumentTemplate`. Nada aqui consulta `LetterTemplate`
-nem `TemplateVersion` -- a arquitetura antiga continua existindo (suas
-rotas e testes nao foram tocados), mas deixa de ser a interface
-principal: o menu do backoffice aponta para ca.
+Exclusivamente `DocumentTemplate`: e a unica arquitetura de documentos
+do produto.
 
 DUPLICAR
 --------

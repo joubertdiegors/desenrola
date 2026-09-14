@@ -495,13 +495,21 @@ body { display: flex; flex-direction: column; }
    -------------------------------------------------------------------------- */
 
 .profile { display: grid; grid-template-columns: 260px 1fr; gap: 40px; padding: 36px 48px 60px; max-width: 1100px; }
-.profile-side { padding: 14px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+/* `align-self: start` (e nao o `stretch` padrao do grid) da ao item a
+   altura do proprio conteudo -- sem isso o sticky nao teria folga para
+   deslizar. O cabecalho da area logada nao e fixo nem sticky: rola
+   junto, entao o `top` aqui e so uma margem de respiro, nao compensacao
+   de header. Abaixo de 768px o menu e `.d-only` (display:none), entao
+   isto nao alcanca o celular. */
+.profile-side { padding: 14px; align-self: start; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 2px; }
 .profile-user { display: flex; align-items: center; gap: 12px; padding: 8px 8px 16px; }
 .profile-user-name { font-weight: 700; color: var(--navy); }
 .profile-user-sub { font-size: 12px; color: var(--mu); }
 
 .profile-main { display: flex; flex-direction: column; gap: 22px; }
-.profile-section { padding: 28px; }
+/* As ancoras do menu lateral (#dados/#senha/#comunicacoes) param no topo
+   da viewport; a folga evita o titulo da secao colado na borda. */
+.profile-section { padding: 28px; scroll-margin-top: 24px; }
 .profile-section h2 { font-size: 22px; }
 .profile-section .section-sub { font-size: 13.5px; color: var(--mu); margin: 4px 0 18px; }
 .profile-actions { display: flex; gap: 10px; margin-top: 18px; }
@@ -648,9 +656,8 @@ body { display: flex; flex-direction: column; }
 /* --------------------------------------------------------------------------
    Biblioteca de modelos (Etapa 3.2.1)
 
-   Arquivo proprio: NAO depende de editor.css (que e da 4.2C e so carrega
-   na tela do editor anterior). A biblioteca fica dentro do backoffice
-   global, entao usa os mesmos tokens de sempre (.card, .table, .tag).
+   A biblioteca fica dentro do backoffice global, entao usa os mesmos
+   tokens de sempre (.card, .table, .tag).
    -------------------------------------------------------------------------- */
 
 .doc-filtros {

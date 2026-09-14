@@ -17,32 +17,18 @@ Contrato do LAYOUT de um `DocumentTemplate` (Etapa 3.1).
 quatro oficiais nascem assim.
 
 
-POR QUE UM CONTRATO NOVO, E NAO A EVOLUCAO DE `visual_schema.py`
-----------------------------------------------------------------
-`visual_schema.py` existe e descreve um layout -- mas descreve o layout
-da arquitetura ANTIGA (`TemplateVersion.visual_schema`), que continua em
-uso: e ele que `TemplateVersion.clean()` valida, que o importador do PDF
-produz e que o editor atual desenha. Mais de uma dezena de modulos
-dependem daquele formato exato.
+O UNICO CONTRATO DE LAYOUT
+--------------------------
+Ate a Etapa 3.5.3 existia um segundo, o `visual_schema` da 4.2A/4.2C
+(o `visual_schema` das versoes de modelo), com um formato incompativel:
+`schema_version` + `page` na raiz, `z_index` numerico, um tipo `field`
+proprio, `rect`/`qrcode` no lugar de `rectangle`/`qr_code` e referencias
+de campo num vocabulario plano (`"guest_name"`) em vez de namespace
+(`{kind, source}` com `"convidado.nome"`).
 
-Os dois contratos divergem em pontos que nao dao para conciliar sem
-quebrar um dos lados:
-
-    visual_schema (antigo)          layout (novo)
-    ----------------------          -------------------------------
-    schema_version + page           version (a pagina vem do
-                                    DocumentType, nao se repete)
-    z_index numerico                a ORDEM da lista e a camada
-    tipo `field` proprio            campo e CONTEUDO de text/number
-    `rect`, `qrcode`                `rectangle`, `qr_code`
-    sem `number`                    `number`
-    properties.field = "guest_name" content = {kind, source} com
-    (vocabulario plano)             namespace: "convidado.nome"
-
-Evoluir o modulo antigo no lugar quebraria a importacao do documento
-frances e a suite que a protege. Entao sao dois contratos, um por
-arquitetura, enquanto as duas coexistem. O antigo morre junto com
-`TemplateVersion`, no cutover -- e este fica.
+Aquela arquitetura foi aposentada inteira -- editor, importador, contrato
+e campo no banco. Este e o contrato de layout do produto; um JSON no
+formato antigo e recusado por `validate_layout`, e ha teste para isso.
 
 
 CONTEUDO ESTRUTURAL, NAO PLACEHOLDER

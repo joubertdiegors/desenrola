@@ -22,6 +22,16 @@ from apps.letters.models import Letter
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado -- sem eles
+    `official_document_template()` devolve `None` e o assistente
+    recusa criar carta nenhuma (e esta certo: seria uma carta que
+    nao viraria PDF).
+    """
+
+
 def _step_url(letter, step):
     return reverse("letters:step", args=[letter.uuid, step])
 
@@ -137,7 +147,10 @@ class TestSomenteAtivasNoFormulario:
 
         assert '<select name="guest_nationality"' in html
         assert 'value="BR"' in html
-        assert "Brésilienne" in html
+        # A interface do assistente e sempre em portugues (item 1 da
+        # etapa de correcoes pos-validacao manual), mesmo a carta sendo
+        # em outro idioma (`draft` comeca em "fr").
+        assert "Brasileira" in html
 
     def test_sem_nenhuma_ativa_o_campo_fica_indisponivel(self, auth_client, draft):
         """
@@ -274,7 +287,9 @@ class TestArmazenaOCodigo:
     def test_a_revisao_mostra_o_nome_e_nao_o_codigo(
         self, auth_client, draft, brasileira, belga
     ):
-        """Quem revisa a carta tem de ler "Brésilienne", não "BR"."""
+        """Quem revisa a carta tem de ler "Brasileira", não "BR" -- no
+        idioma da INTERFACE (português), mesmo a carta sendo em francês:
+        a revisão é tela do assistente, não o documento."""
         auth_client.post(
             _step_url(draft, 1),
             {
@@ -291,7 +306,7 @@ class TestArmazenaOCodigo:
 
         html = auth_client.get(_step_url(draft, 6)).content.decode()
 
-        assert "Brésilienne" in html
+        assert "Brasileira" in html
         assert ">BR<" not in html
 
     def test_carta_antiga_com_texto_livre_continua_funcionando(self):
@@ -333,8 +348,8 @@ class TestDocumentoDoAnfitriao:
             assert 'name="host_document_label"' not in html
 
     def test_o_schema_nao_tem_mais_os_campos(self):
-        versao = services.get_template_version_for_language("fr")
-        chaves = {f["key"] for f in versao.field_schema["fields"]}
+        modelo = services.official_document_template("fr")
+        chaves = {f["key"] for f in modelo.field_schema["fields"]}
 
         assert "host_document_label" not in chaves
         assert "host_document_number" not in chaves
@@ -420,44 +435,23 @@ class TestRegressaoDoPdfOficial:
         assert "00000000" in texto
 
     def test_a_nacionalidade_do_anfitriao_alimenta_a_frase_do_documento(
-        self, snapshot_com_nacionalidades
+        self, auth_client, draft
     ):
         """
         O “belge” da frase do documento é a nacionalidade do anfitrião --
         nunca foi um segundo dado.
+
+        Conferido no CONTEXTO que o renderer estrutural consome, uma
+        camada antes do desenho: se viesse de outro lugar, apareceria
+        aqui como outra chave.
         """
-        from apps.letters.pdf_generation import build_pdf_fields
+        _finalizar(auth_client, draft)
+        draft.refresh_from_db()
 
-        campos = build_pdf_fields(snapshot_com_nacionalidades)
+        contexto = services.build_document_context(draft)
 
-        assert campos["host_nationality"] == "belge"
-        assert campos["host_document_type"] == "belge"
-        assert campos["host_document"] == "00000000"
-
-
-@pytest.fixture
-def snapshot_com_nacionalidades():
-    return {
-        "data": {
-            "guest_name": "Carlos Eduardo Silva",
-            "guest_birth_date": "1990-07-22",
-            "guest_passport": "YY000000",
-            "stay_arrival": "2026-10-10",
-            "stay_departure": "2026-10-24",
-        },
-        "host": {
-            "full_name": "Claire Dubois",
-            "phone": "+32 470 00 00 00",
-            "address": "Rue des Exemple 25 - 1200 Woluwe-Saint-Lambert",
-            "city": "Woluwe-Saint-Lambert",
-            "document_number": "00000000",
-            "birth_date": "1985-03-14",
-        },
-        "nationalities": {"guest_nationality": "Brésilienne", "host_nationality": "belge"},
-        "finalized_at": "2026-09-09T10:00:00+00:00",
-    }
-
-
+        assert contexto["anfitriao.nacionalidade"] == "belge"
+        assert contexto["anfitriao.documento_identidade"] == "00000000"
 # ---------------------------------------------------------------------------
 # Campos de data
 # ---------------------------------------------------------------------------

@@ -1,14 +1,12 @@
 """
-Editor visual dos modelos da biblioteca (Etapa 3.2).
+Editor estrutural dos modelos da biblioteca (Etapa 3.2).
 
     GET  backoffice/modelos/<pk>/editar/        abre o editor
     POST backoffice/modelos/<pk>/salvar/        grava o layout
     POST backoffice/modelos/<pk>/ids/           mais ids para elementos novos
 
-Arquivo PROPRIO, separado de `views.py`: aquele serve o editor da
-arquitetura anterior (`TemplateVersion.visual_schema`), que continua de
-pe ate o cutover. Misturar os dois num modulo so faria um deles quebrar
-o outro por engano.
+E o unico editor de documentos do produto desde a Etapa 3.5.3, que
+aposentou o editor visual da 4.2A/4.2C e a tela que o servia.
 
 
 O SERVIDOR E A AUTORIDADE
@@ -47,6 +45,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from apps.content.models import Asset
 from apps.core import demo
 from apps.core.views import staff_required
 
@@ -124,6 +123,14 @@ def template_editor(request, pk):
             "tipos_json": elements.para_o_editor(),
             "fontes_json": datasources.para_o_editor(),
             "ids_json": _lote_de_ids(),
+            "assets_json": [
+                {
+                    "id": asset.pk,
+                    "label": str(asset),
+                    "url": asset.file.url if asset.file else "",
+                }
+                for asset in Asset.objects.filter(is_active=True).order_by("kind", "key")
+            ],
             "config_json": {
                 "editable": editavel,
                 "saveUrl": reverse("backoffice:template_editor_save", args=[modelo.pk]),

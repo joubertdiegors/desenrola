@@ -1,7 +1,7 @@
 """
 Formulario dinamico do assistente de Carta Convite.
 
-Transforma o `field_schema` de uma `TemplateVersion` (contrato documentado
+Transforma o `field_schema` de um `DocumentTemplate` (contrato documentado
 em `apps.doctemplates.schema`) em um `django.forms.Form` de verdade — este
 e o unico lugar do projeto que interpreta o schema para gerar campos; a
 view so agrupa os campos por etapa e o template so renderiza o que o
@@ -13,11 +13,17 @@ So os 10 tipos de `FIELD_TYPE_CHOICES` sao suportados; nenhum tipo novo e
 inventado aqui.
 
 Idioma: os textos do campo (rotulo, placeholder, ajuda e os rotulos das
-opcoes) saem de `apps.doctemplates.schema.resolve_*`, no idioma da carta
-(`Letter.language`), com fallback para o texto de origem quando aquele
-idioma nao tem traducao. O VALOR de uma opcao nao muda com o idioma — so
-o rotulo —, entao trocar o idioma da carta nunca invalida o que ja foi
-preenchido.
+opcoes) saem de `apps.doctemplates.schema.resolve_*`, no idioma PEDIDO
+por quem chama `build_dynamic_form` (parametro `language`), com fallback
+para o texto de origem quando aquele idioma nao tem traducao. Esta
+funcao e generica -- sabe montar o formulario em qualquer idioma do
+field_schema -- mas quem chama de dentro do assistente real sempre passa
+`apps.core.middleware.IDIOMA_DA_INTERFACE` (portugues): o ASSISTENTE e
+sempre em portugues, seja qual for o idioma do DOCUMENTO
+(`Letter.language`), que e uma decisao de produto separada (ver
+`apps.letters.services.IDIOMA_PADRAO_DA_CARTA`). O VALOR de uma opcao nao
+muda com o idioma — so o rotulo —, entao trocar o idioma da carta nunca
+invalida o que ja foi preenchido.
 
 Upload de arquivo (`type="file"`): o mapeamento existe para o schema
 poder declarar o tipo sem quebrar o formulario, mas o modelo oficial
@@ -41,6 +47,13 @@ from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_da
 # uma viagem que ainda vai acontecer -- uma chegada de ontem nao existe.
 # (Nascimento, por exemplo, nao entra aqui, pelo motivo oposto.)
 NOT_IN_THE_PAST = ("stay_arrival",)
+
+# Os dois formatos que um campo de data aceita na ENTRADA: "%d/%m/%Y"
+# quando a pessoa digita (com ou sem JavaScript) e "%Y-%m-%d" (ISO), que
+# e como `serialize_cleaned_data` grava em `Letter.data` -- precisa
+# continuar aceito para `blocking_step_before`/`validate_all_steps`
+# revalidarem uma etapa ja salva sem um POST novo.
+DATE_INPUT_FORMATS = ["%d/%m/%Y", "%Y-%m-%d"]
 
 PHONE_VALIDATOR = RegexValidator(
     regex=r"^[0-9+()\-.\s]{6,32}$",
@@ -99,6 +112,35 @@ class _UnavailableNationalityField(forms.ChoiceField):
         )
 
 
+class _RobustDateInput(forms.DateInput):
+    """
+    Reexibe em dd/mm/aaaa qualquer valor já vinculado reconhecível, não
+    só um `date` de verdade.
+
+    `DateInput` padrão só aplica `format=` a um `date` real -- o que
+    `initial=` carrega numa exibição (GET). Um valor vinculado a partir
+    de um POST é uma STRING, e `django.utils.formats.localize_input`
+    devolve string sem tocar, nunca reformata. Como o navegador manda
+    esse valor sem alteração (ver `static/js/app.js`), isso nunca foi
+    problema -- até um erro em OUTRO campo da MESMA etapa reexibir esta
+    mesma página: sem este widget, uma data que chegasse num dos outros
+    formatos aceitos (`DATE_INPUT_FORMATS`) apareceria do jeito que
+    chegou, não em dd/mm/aaaa. Tentar cada formato aceito antes de
+    desistir é o que garante dd/mm/aaaa sempre, não importa qual deles
+    trouxe o valor.
+    """
+
+    def format_value(self, value):
+        if isinstance(value, str) and value:
+            for input_format in DATE_INPUT_FORMATS:
+                try:
+                    parsed = datetime.datetime.strptime(value, input_format).date()
+                except ValueError:
+                    continue
+                return parsed.strftime(self.format or "%d/%m/%Y")
+        return super().format_value(value)
+
+
 def _build_field(field_def, language=None, nationalities=None):
     """Constroi um `forms.Field` a partir de uma definicao do field_schema."""
     field_type = field_def["type"]
@@ -120,22 +162,16 @@ def _build_field(field_def, language=None, nationalities=None):
         )
 
     if field_type == "date":
-        # Dois formatos aceitos na entrada, e os dois chegam mesmo:
-        # "%d/%m/%Y" quando a pessoa digita (ou quando nao ha JavaScript)
-        # e "%Y-%m-%d" (ISO) quando o calendario nativo preenche e o
-        # script normaliza antes de enviar. ISO tambem e o formato em que
-        # `serialize_cleaned_data` grava em Letter.data, entao precisa
-        # continuar aceito para revalidar o conjunto no fechamento.
-        # Validar os dois no servidor e o que mantem a regra de pe sem
-        # depender de JavaScript.
-        # `DateInput` (e nao um TextInput comum) e o que faz um valor
-        # `date` ja salvo re-exibir formatado como "10/04/2025", em vez de
-        # "2025-04-10", ao reabrir uma etapa ja preenchida.
+        # `DATE_INPUT_FORMATS`: aceitar os dois na ENTRADA e o que mantem
+        # a regra de pe sem depender de JavaScript. `_RobustDateInput` (e
+        # nao um `DateInput`/`TextInput` comum) e o que garante dd/mm/aaaa
+        # na SAIDA tambem, mesmo quando o valor vinculado e uma string
+        # (POST) e nao um `date` (initial) -- ver o docstring da classe.
         placeholder = resolve_field_text(field_def, language, "placeholder") or "DD/MM/AAAA"
         return forms.DateField(
             **common,
-            input_formats=["%d/%m/%Y", "%Y-%m-%d"],
-            widget=forms.DateInput(
+            input_formats=DATE_INPUT_FORMATS,
+            widget=_RobustDateInput(
                 format="%d/%m/%Y",
                 attrs=_base_attrs(
                     field_def,

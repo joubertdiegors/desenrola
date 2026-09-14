@@ -1075,9 +1075,10 @@ class TestCamadas:
 class TestCompatibilidadeComOModelo:
     def test_os_quatro_oficiais_continuam_validos(self):
         """
-        Desde a Etapa 3.3 o francês tem desenho; os outros três ainda
-        não. Os quatro continuam validando contra o contrato -- que é o
-        que este teste protege.
+        Os quatro modelos oficiais são a ÚNICA fonte de layout do
+        sistema desde que `LetterTemplate`/`TemplateVersion` saíram.
+        Todos continuam validando contra o contrato -- que é o que
+        este teste protege.
         """
         from apps.doctemplates.models import DocumentTemplate
 
@@ -1088,7 +1089,8 @@ class TestCompatibilidadeComOModelo:
             layout_schema.validate_layout(modelo.layout)
             modelo.full_clean()
 
-    def test_so_o_frances_foi_reconstruido_ate_aqui(self):
+    def test_os_quatro_oficiais_tem_desenho(self):
+        """Etapa 3.6: EN/NL/PT ganharam o layout, traduzido do frances."""
         from apps.doctemplates.models import DocumentTemplate
 
         com_desenho = {
@@ -1097,7 +1099,10 @@ class TestCompatibilidadeComOModelo:
             if modelo.layout
         }
 
-        assert com_desenho == {"carta-convite-fr"}
+        assert com_desenho == {
+            "carta-convite-fr", "carta-convite-en",
+            "carta-convite-nl", "carta-convite-pt",
+        }
 
     def test_um_modelo_aceita_o_layout_novo(self, db):
         from apps.doctemplates.models import DocumentTemplate, DocumentType
@@ -1126,33 +1131,22 @@ class TestCompatibilidadeComOModelo:
         with pytest.raises(ValidationError):
             modelo.full_clean()
 
-    def test_os_dois_contratos_sao_mesmo_independentes(self):
+    def test_o_contrato_recusa_o_formato_do_editor_aposentado(self):
         """
-        `visual_schema` (legado) e `layout_schema` (novo) descrevem
-        formatos diferentes, e cada um recusa o do outro. E o que garante
-        que ninguem confunda os dois enquanto as duas arquiteturas
-        convivem.
+        O formato do `visual_schema` da 4.2A/4.2C (aposentada na Etapa
+        3.5.3) tinha `schema_version` e `page` na raiz. Um documento
+        naquele formato nao pode passar por aqui -- se um JSON antigo
+        sobrar em algum lugar, o contrato novo tem de recusa-lo em vez de
+        aceitar meio desenho.
         """
-        from apps.doctemplates import visual_schema
-
-        formato_antigo = {
+        formato_aposentado = {
             "schema_version": 1,
             "page": {"width": 595.2756, "height": 841.8898, "unit": "pt",
                      "origin": "top-left"},
             "elements": [],
         }
-        formato_novo = layout_schema.layout_vazio()
 
-        visual_schema.validate_visual_schema(formato_antigo)
-        layout_schema.validate_layout(formato_novo)
+        layout_schema.validate_layout(layout_schema.layout_vazio())
 
         with pytest.raises(ValidationError):
-            layout_schema.validate_layout(formato_antigo)
-        with pytest.raises(ValidationError):
-            visual_schema.validate_visual_schema(formato_novo)
-
-    def test_o_legado_continua_de_pe(self):
-        """A 4.2C nao foi tocada: as versoes antigas seguem publicadas."""
-        from apps.doctemplates.models import TemplateVersion
-
-        assert TemplateVersion.objects.filter(status="published").count() == 4
+            layout_schema.validate_layout(formato_aposentado)

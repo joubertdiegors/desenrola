@@ -36,7 +36,7 @@ from ..official_templates import CARTA_CONVITE_FIELD_SCHEMA
 
 CODIGO_CARTA_CONVITE = "carta-convite"
 
-# A4 em pontos -- a mesma referencia de visual_schema.py.
+# A4 em pontos -- a unidade do `layout` (ver layout_schema.py).
 PAGINA_A4 = {"width": 595.2756, "height": 841.8898, "unit": "pt"}
 
 # Fontes de dados que a Carta Convite expoe no editor. O registro que da

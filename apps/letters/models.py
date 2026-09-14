@@ -7,13 +7,9 @@ Letter e o registro de uma Carta Convite gerada por um usuario. Guarda:
   - uma copia congelada de tudo que influenciou o resultado (`snapshot`) —
     para que o documento continue reproduzivel mesmo que o usuario edite
     o perfil ou o modelo mude depois;
-  - o vinculo protegido com a TemplateVersion exata usada (nunca apagavel
-    enquanto existir uma Letter apontando para ela — ver
+  - o vinculo protegido com o `DocumentTemplate` usado (nunca apagavel
+    enquanto existir uma Letter apontando para ele — ver
     apps/doctemplates/models.py).
-
-Ainda NAO implementados nesta fase: o formulario real, a geracao do PDF e
-o dashboard. Este modulo so estabelece a estrutura de dados e as regras de
-propriedade/privacidade (quem pode ver o que).
 """
 
 import uuid
@@ -74,18 +70,6 @@ class Letter(TimeStampedModel):
         related_name="letters",
         verbose_name=_("usuário"),
     )
-    template = models.ForeignKey(
-        "doctemplates.LetterTemplate",
-        on_delete=models.PROTECT,
-        related_name="letters",
-        verbose_name=_("modelo"),
-    )
-    template_version = models.ForeignKey(
-        "doctemplates.TemplateVersion",
-        on_delete=models.PROTECT,
-        related_name="letters",
-        verbose_name=_("versão do modelo"),
-    )
     language = models.CharField(_("idioma"), max_length=8, choices=settings.LANGUAGES)
 
     # Numero/referencia legivel para o usuario (ex.: em e-mails, no nome do
@@ -97,7 +81,7 @@ class Letter(TimeStampedModel):
     )
 
     # Dados preenchidos pelo usuario no formulario (estrutura livre; o
-    # schema efetivo vem de template_version.field_schema).
+    # schema efetivo vem de document_template.field_schema).
     data = models.JSONField(_("dados preenchidos"), default=dict, blank=True)
 
     # Copia congelada de tudo que influenciou a geracao (dados do usuario
@@ -105,29 +89,22 @@ class Letter(TimeStampedModel):
     # historica mesmo que o perfil do usuario ou o modelo mudem depois.
     snapshot = models.JSONField(_("snapshot da geração"), default=dict, blank=True)
 
-    # --- integracao com a nova arquitetura de modelos (Etapa 3.5.1) -----
+    # O modelo oficial que esta carta usa. Resolvido pelo IDIOMA, em
+    # `services.official_document_template()` -- nunca escolhido pelo
+    # cliente.
     #
-    # Paralela e SEPARADA de `template`/`template_version` (a arquitetura
-    # antiga, ainda a unica que de fato gera PDF -- ver
-    # `pdf_generation.py`). Enquanto nenhuma tela escolhe um
-    # `DocumentTemplate` para a carta, os tres campos abaixo ficam vazios
-    # e nada muda no comportamento existente -- inclusive em cartas ja
-    # gravadas antes desta etapa.
-    #
-    # `document_template` pode ser trocado livremente enquanto a carta
-    # ainda nao tem snapshot capturado (o rascunho "escolhe/troca
-    # modelo"). A partir do momento em que `document_snapshot_hash`
-    # deixa de estar vazio -- o que acontece na finalizacao, via
+    # Pode ser trocado enquanto a carta ainda nao tem snapshot capturado
+    # (trocar o idioma na etapa 5 troca o modelo junto). A partir do
+    # momento em que `document_snapshot_hash` deixa de estar vazio -- o
+    # que acontece na finalizacao, via
     # `services.capture_document_template_snapshot()` -- os tres campos
     # ficam congelados: `save()` recusa qualquer tentativa de mudar
     # qualquer um deles (`DocumentSnapshotImmutableError`).
     document_template = models.ForeignKey(
         "doctemplates.DocumentTemplate",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name="letters",
-        verbose_name=_("modelo estrutural"),
+        verbose_name=_("modelo"),
     )
     # Copia profunda e congelada de tudo que o renderer generico
     # (apps.doctemplates.services.pdf) precisa para reproduzir o
@@ -167,8 +144,6 @@ class Letter(TimeStampedModel):
         return self.reference or str(self.uuid)
 
     def save(self, *args, **kwargs):
-        if self.template_version_id and not self.template_id:
-            self.template = self.template_version.template
         if not self.reference:
             self.reference = self._build_reference()
         if self.pk:
@@ -216,6 +191,49 @@ class DocumentSnapshotAssetMissingError(RuntimeError):
     que nao existe. Capturar assim produziria uma carta irreproduzivel
     desde o nascimento -- melhor recusar a finalizacao agora do que
     descobrir na geracao do PDF.
+    """
+
+
+class MissingDocumentSnapshotError(RuntimeError):
+    """
+    `render_letter()` foi chamada numa carta sem `document_snapshot`.
+
+    E erro de programacao: o snapshot e capturado na finalizacao, antes
+    de qualquer geracao de PDF. Chegar aqui significa ter pulado esse
+    passo.
+    """
+
+
+class LetterRenderError(RuntimeError):
+    """
+    O renderer generico (apps.doctemplates.services.pdf) nao conseguiu
+    produzir o PDF a partir do `document_snapshot`: campo sem valor,
+    asset ausente, pagina invalida, fonte sem face embutida, layout
+    corrompido, etc.
+
+    Um tipo SO, que embrulha qualquer erro daquele modulo
+    (`__cause__` guarda a causa original) -- para `views._finalize()`
+    conhecer um unico tipo de excecao do pipeline novo, em vez de se
+    acoplar a toda a taxonomia de erros de `services.pdf`.
+    """
+
+
+class DefaultDocumentTemplateMissingError(RuntimeError):
+    """
+    O modelo estrutural oficial do idioma pedido nao existe ou esta
+    inativo -- levantado por `services.official_document_template()`.
+
+    A migration de semeadura (`doctemplates.0010`) sempre cria os quatro
+    oficiais (`carta-convite-fr/nl/en/pt`), todos ativos: chegar aqui
+    significa banco fora do estado esperado (semeadura nao rodou, ou um
+    administrador desativou/apagou o registro por engano), nao "aquele
+    idioma ainda nao tem conteudo pronto" -- esse segundo caso e tratado
+    a parte, sem levantar (ver o docstring da funcao).
+
+    `services.start_draft()` resolve o modelo ANTES de criar a `Letter`:
+    se isto for levantado, nenhuma carta chega a existir -- nunca uma
+    parcialmente criada, presa sem `document_template` por um bug de
+    infraestrutura.
     """
 
 

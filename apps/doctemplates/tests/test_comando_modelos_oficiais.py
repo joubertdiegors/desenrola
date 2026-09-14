@@ -26,7 +26,7 @@ from django.core.management import call_command
 from apps.content.models import Asset
 from apps.doctemplates.layout_schema import validate_layout
 from apps.doctemplates.models import DocumentTemplate
-from apps.doctemplates.services import modelo_fr
+from apps.doctemplates.services import carta_convite
 
 pytestmark = pytest.mark.django_db
 
@@ -57,7 +57,7 @@ def modelo_fr_do_banco():
 
 def logo_do_layout(modelo):
     for elemento in modelo.layout["elements"]:
-        if elemento["id"] == modelo_fr.ID_DO_LOGO:
+        if elemento["id"] == carta_convite.id_do_logo("fr"):
             return elemento
     raise AssertionError("o layout não tem o elemento do logo")
 
@@ -94,17 +94,17 @@ class TestPrimeiraExecucao:
         validate_layout(modelo_fr_do_banco().layout)
 
     def test_cria_o_asset_do_logo(self, media):
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 0
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 0
 
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         assert asset.is_active is True
 
     def test_o_arquivo_fisico_do_asset_existe(self, media):
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         arquivo = media / asset.file.name
         assert arquivo.is_file()
         assert arquivo.stat().st_size > 0
@@ -112,14 +112,14 @@ class TestPrimeiraExecucao:
     def test_o_arquivo_e_um_png_de_verdade(self, media):
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         with open(media / asset.file.name, "rb") as fh:
             assert fh.read(8) == b"\x89PNG\r\n\x1a\n"
 
     def test_o_layout_aponta_para_o_asset_criado(self, media):
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         origem = logo_do_layout(modelo_fr_do_banco())["properties"]["source"]
         assert origem == {"kind": "asset", "asset_id": asset.pk}
 
@@ -142,7 +142,7 @@ class TestIdempotencia:
         rodar()
         rodar()
 
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 1
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 1
 
     def test_nao_duplica_o_arquivo(self, media):
         """
@@ -168,11 +168,11 @@ class TestIdempotencia:
 
     def test_o_asset_continua_o_mesmo(self, media):
         rodar()
-        antes = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        antes = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
 
         rodar()
 
-        depois = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        depois = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         assert depois.pk == antes.pk
         assert depois.file.name == antes.file.name
 
@@ -190,7 +190,7 @@ class TestIdempotencia:
         rodar()
 
         assert len(pngs_em(media)) == 1
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 1
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 1
 
 
 # ===========================================================================
@@ -204,7 +204,7 @@ class TestAssetJaExistente:
         Um administrador pode ter substituído o arquivo. O comando
         reaproveita o registro e NUNCA troca o arquivo dele.
         """
-        asset, criado = modelo_fr.garantir_asset_do_logo(Asset)
+        asset, criado = carta_convite.garantir_asset_do_logo(Asset)
         assert criado is True
         nome_original = asset.file.name
 
@@ -212,10 +212,10 @@ class TestAssetJaExistente:
 
         asset.refresh_from_db()
         assert asset.file.name == nome_original
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 1
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 1
 
     def test_vincula_o_asset_existente_ao_layout(self, media):
-        asset, _criado = modelo_fr.garantir_asset_do_logo(Asset)
+        asset, _criado = carta_convite.garantir_asset_do_logo(Asset)
 
         rodar()
 
@@ -223,11 +223,11 @@ class TestAssetJaExistente:
         assert origem["asset_id"] == asset.pk
 
     def test_corrige_um_layout_que_aponta_para_o_asset_errado(self, media):
-        modelo_fr.vincular_logo(DocumentTemplate, 9999)
+        carta_convite.vincular_logo(DocumentTemplate, "fr", 9999)
 
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         origem = logo_do_layout(modelo_fr_do_banco())["properties"]["source"]
         assert origem["asset_id"] == asset.pk
 
@@ -248,17 +248,20 @@ class TestAssetJaExistente:
 
 
 class TestLimites:
-    def test_os_outros_tres_idiomas_ficam_intactos(self, media):
-        antes = {
-            slug: DocumentTemplate.objects.get(slug=slug).layout
-            for slug in OUTROS_OFICIAIS
-        }
-
+    def test_os_outros_tres_idiomas_tambem_sao_reconstruidos(self, media):
+        """Etapa 3.6: o comando cobre os quatro oficiais, nao so o frances."""
         rodar()
 
         for slug in OUTROS_OFICIAIS:
-            assert DocumentTemplate.objects.get(slug=slug).layout == antes[slug]
-            assert DocumentTemplate.objects.get(slug=slug).layout == {}
+            assert len(DocumentTemplate.objects.get(slug=slug).layout["elements"]) == 23
+
+    def test_um_idioma_de_cada_vez(self, media):
+        """`--idioma` restringe, para conferir uma traducao isolada."""
+        saida = rodar(idioma=["pt"])
+
+        assert "carta-convite-pt" in saida
+        for outro in ("carta-convite-nl", "carta-convite-en", SLUG_FR):
+            assert outro not in saida
 
     def test_nao_cria_asset_para_os_outros_idiomas(self, media):
         rodar()
@@ -290,7 +293,7 @@ class TestLimites:
     def test_o_asset_vai_para_assets_e_nao_para_letters(self, media):
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         assert asset.file.name.startswith("assets/")
         assert "letters" not in asset.file.name
 
@@ -351,7 +354,7 @@ class TestSeparacaoComAMigration:
 
         codigo = inspect.getsource(comando)
 
-        assert "modelo_fr.reconstruir" in codigo
+        assert "carta_convite.reconstruir" in codigo
         for proibido in ("fr-titulo", "fr-tabela", "MARGEM_ESQUERDA", "extrair_logo"):
             assert proibido not in codigo
 
@@ -408,7 +411,7 @@ class TestSimboloDoRelato:
 
 class TestOrigemDoBinario:
     def test_o_pdf_de_origem_e_o_versionado_no_repositorio(self):
-        caminho = modelo_fr.CAMINHO_DO_PDF
+        caminho = carta_convite.CAMINHO_DO_PDF
 
         assert caminho.is_file()
         assert caminho.name == "Modelo-Carta-Convite-FR.pdf"
@@ -417,11 +420,11 @@ class TestOrigemDoBinario:
     def test_o_binario_gerado_confere_com_o_extraido_do_pdf(self, media):
         rodar()
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         with open(media / asset.file.name, "rb") as fh:
             gravado = fh.read()
 
-        assert gravado == modelo_fr.extrair_logo_ibz()
+        assert gravado == carta_convite.extrair_logo_ibz()
 
     def test_o_comando_nao_le_nada_de_fora_do_repositorio(self, media):
         """
@@ -434,7 +437,7 @@ class TestOrigemDoBinario:
             reconstruir_modelos_oficiais as comando,
         )
 
-        codigo = inspect.getsource(comando) + inspect.getsource(modelo_fr)
+        codigo = inspect.getsource(comando) + inspect.getsource(carta_convite)
 
         assert "C:\\" not in codigo
         assert "/home/" not in codigo

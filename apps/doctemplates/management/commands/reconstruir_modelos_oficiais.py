@@ -25,27 +25,25 @@ Do PDF oficial versionado no repositorio -- `pdfengine/assets/fr/
 Modelo-Carta-Convite-FR.pdf`. Nada depende de arquivo que exista so na
 maquina de quem desenvolveu: um clone novo tem tudo o que e preciso.
 
+OS QUATRO IDIOMAS
+-----------------
+FR, EN, NL e PT compartilham a mesma estrutura e o MESMO asset de logo
+(a arte e uma so). `--idioma` restringe a execucao a um deles, util para
+conferir uma traducao isolada.
+
 IDEMPOTENTE
 -----------
 Rodar de novo nao cria asset nem arquivo duplicado, e NAO reescreve um
 layout ja existente -- um administrador pode ter ajustado o documento, e
 nenhum passo de deploy tem o direito de apagar esse trabalho. Quem
-precisar mesmo reconstruir por cima chama
-`services.modelo_fr.aplicar(..., forcar=True)` explicitamente.
+precisar mesmo reconstruir por cima passa `--forcar`.
 """
 
 from django.core.management.base import BaseCommand
 
 from apps.content.models import Asset
 from apps.doctemplates.models import DocumentTemplate
-from apps.doctemplates.services import modelo_fr
-
-# Os modelos oficiais que tem reconstrucao controlada, e o servico que
-# sabe reconstruir cada um. NL/EN/PT entram aqui quando ganharem o seu:
-# hoje ainda nascem com `layout` vazio (ver `services/biblioteca.py`).
-RECONSTRUCOES = (
-    (modelo_fr.SLUG_DO_MODELO_FR, modelo_fr.reconstruir),
-)
+from apps.doctemplates.services import carta_convite
 
 
 class Command(BaseCommand):
@@ -54,11 +52,23 @@ class Command(BaseCommand):
         "estrutural e materializa os assets (logo) em MEDIA_ROOT."
     )
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--idioma", action="append", choices=carta_convite.IDIOMAS,
+            help="reconstroi so este idioma (pode repetir); o padrão são os quatro",
+        )
+        parser.add_argument(
+            "--forcar", action="store_true",
+            help="reescreve o layout mesmo se o modelo já tiver um",
+        )
+
     def handle(self, *args, **opcoes):
         self.stdout.write("Reconstruindo os modelos oficiais...")
+        idiomas = opcoes["idioma"] or list(carta_convite.IDIOMAS)
 
         reconstruidos = 0
-        for slug, reconstruir in RECONSTRUCOES:
+        for idioma in idiomas:
+            slug = carta_convite.slug_do_modelo(idioma)
             if not DocumentTemplate.objects.filter(slug=slug).exists():
                 # Sem o modelo na biblioteca nao ha o que reconstruir. Nao
                 # e erro: pode ser um banco onde a semeadura ainda nao
@@ -68,7 +78,9 @@ class Command(BaseCommand):
                 )
                 continue
 
-            resultado = reconstruir(DocumentTemplate, Asset)
+            resultado = carta_convite.reconstruir(
+                DocumentTemplate, Asset, idioma, forcar=opcoes["forcar"]
+            )
             reconstruidos += 1
             for linha in self._relatar(resultado):
                 self.stdout.write(linha)

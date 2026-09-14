@@ -1,6 +1,10 @@
 """
 Reconstrucao estrutural do modelo oficial frances (Etapa 3.3).
 
+O servico testado aqui e `apps.doctemplates.services.carta_convite`
+(era `modelo_fr.py` ate a Etapa 3.6, quando passou a gerar os quatro
+idiomas; os outros tres tem cobertura em test_carta_convite_idiomas.py).
+
 O que estes testes protegem, no fundo, e uma afirmacao so: o documento
 frances agora existe como ELEMENTOS, nao como uma folha rasterizada com
 texto por cima. Por isso ha testes que parecem obvios -- "nenhum
@@ -16,7 +20,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from apps.doctemplates import datasources, elements, layout_schema
-from apps.doctemplates.services import modelo_fr
+from apps.doctemplates.services import carta_convite
 
 SLUG_FR = "carta-convite-fr"
 OUTROS_OFICIAIS = ["carta-convite-nl", "carta-convite-en", "carta-convite-pt"]
@@ -24,7 +28,7 @@ OUTROS_OFICIAIS = ["carta-convite-nl", "carta-convite-en", "carta-convite-pt"]
 
 @pytest.fixture
 def layout():
-    return modelo_fr.layout_carta_convite_fr()
+    return carta_convite.layout("fr")
 
 
 @pytest.fixture
@@ -102,11 +106,12 @@ class TestModeloNaBiblioteca:
         assert pagina["height"] == 841.8898
         assert pagina["unit"] == "pt"
 
-    def test_os_outros_tres_idiomas_continuam_sem_desenho(self):
+    def test_os_outros_tres_idiomas_tambem_tem_desenho(self):
+        """Etapa 3.6: EN/NL/PT deixaram de nascer vazios."""
         from apps.doctemplates.models import DocumentTemplate
 
         for slug in OUTROS_OFICIAIS:
-            assert DocumentTemplate.objects.get(slug=slug).layout == {}
+            assert len(DocumentTemplate.objects.get(slug=slug).layout["elements"]) == 23
 
     def test_o_field_schema_do_fr_nao_foi_tocado(self):
         """A Etapa 3.3 mexe no desenho, não no formulário."""
@@ -137,8 +142,8 @@ class TestLayout:
 
     def test_os_ids_sao_estaveis_entre_execucoes(self):
         """Semeadura determinística: duas montagens dão o mesmo layout."""
-        primeira = modelo_fr.layout_carta_convite_fr()
-        segunda = modelo_fr.layout_carta_convite_fr()
+        primeira = carta_convite.layout("fr")
+        segunda = carta_convite.layout("fr")
 
         assert primeira == segunda
 
@@ -178,7 +183,7 @@ class TestLayout:
         """Arredondar deslocaria o texto: o original foi medido com decimais."""
         titulo = por_id(elementos, "fr-titulo")
 
-        assert titulo["x"] == modelo_fr.MARGEM_ESQUERDA == 49.6063
+        assert titulo["x"] == carta_convite.MARGEM_ESQUERDA == 49.6063
 
 
 # ===========================================================================
@@ -218,7 +223,7 @@ class TestIndependenciaDoPdf:
     def test_os_retangulos_sao_so_a_faixa_tricolor(self, elementos):
         cores = [e["properties"]["fill_color"] for e in do_tipo(elementos, "rectangle")]
 
-        assert cores == list(modelo_fr.FAIXA_CORES)
+        assert cores == list(carta_convite.FAIXA_CORES)
 
     def test_o_qr_nao_e_uma_imagem(self, elementos):
         qr = por_id(elementos, "fr-qr-code")
@@ -489,7 +494,7 @@ class TestGraficos:
         larguras = {faixa["width"] for faixa in faixas}
 
         assert len(larguras) == 1
-        assert sum(f["width"] for f in faixas) == modelo_fr.FAIXA_LARGURA_TOTAL
+        assert sum(f["width"] for f in faixas) == carta_convite.FAIXA_LARGURA_TOTAL
 
     def test_a_faixa_fica_no_topo_da_pagina(self, elementos):
         for faixa in do_tipo(elementos, "rectangle"):
@@ -568,12 +573,9 @@ class TestSemArquiteturaAntiga:
     def test_o_servico_nao_importa_a_arquitetura_antiga(self):
         import inspect
 
-        codigo = inspect.getsource(modelo_fr)
+        codigo = inspect.getsource(carta_convite)
 
-        for proibido in (
-            "TemplateVersion", "LetterTemplate", "visual_schema",
-            "visual_import", "elementos_fixos",
-        ):
+        for proibido in ("TemplateVersion", "LetterTemplate"):
             assert proibido not in codigo, f"{proibido} não pode aparecer aqui"
 
     def test_o_layout_nao_usa_z_index(self, layout):
@@ -583,7 +585,7 @@ class TestSemArquiteturaAntiga:
         assert "z_index" not in json.dumps(layout)
 
     def test_nao_ha_tipos_do_contrato_antigo(self, elementos):
-        """`rect`/`qrcode`/`field` eram do visual_schema, não deste."""
+        """`rect`/`qrcode`/`field` eram do contrato aposentado, não deste."""
         tipos = {elemento["type"] for elemento in elementos}
 
         assert tipos.isdisjoint({"rect", "qrcode", "field", "paragraph"})
@@ -613,7 +615,7 @@ class TestSemeadura:
             layout={"version": 1, "elements": []}
         )
 
-        assert modelo_fr.aplicar(DocumentTemplate) is None
+        assert carta_convite.aplicar(DocumentTemplate, "fr") is None
         assert self.modelo().layout == {"version": 1, "elements": []}
 
     def test_forcar_reescreve(self):
@@ -623,7 +625,7 @@ class TestSemeadura:
             layout={"version": 1, "elements": []}
         )
 
-        modelo_fr.aplicar(DocumentTemplate, forcar=True)
+        carta_convite.aplicar(DocumentTemplate, "fr", forcar=True)
 
         assert len(self.modelo().layout["elements"]) == 23
 
@@ -631,14 +633,14 @@ class TestSemeadura:
         from apps.doctemplates.models import DocumentTemplate
 
         primeiro = self.modelo().layout
-        modelo_fr.aplicar(DocumentTemplate, forcar=True)
+        carta_convite.aplicar(DocumentTemplate, "fr", forcar=True)
 
         assert self.modelo().layout == primeiro
 
     def test_a_semeadura_nao_trava_o_modelo(self):
         from apps.doctemplates.models import DocumentTemplate
 
-        modelo_fr.aplicar(DocumentTemplate, forcar=True)
+        carta_convite.aplicar(DocumentTemplate, "fr", forcar=True)
 
         assert self.modelo().is_locked is False
 
@@ -647,7 +649,7 @@ class TestSemeadura:
 
         antes = self.modelo().layout
 
-        modelo_fr.vincular_logo(DocumentTemplate, 77)
+        carta_convite.vincular_logo(DocumentTemplate, "fr", 77)
 
         depois = self.modelo().layout
         assert por_id(depois["elements"], "fr-logo-ibz")["properties"]["source"] == {
@@ -661,14 +663,14 @@ class TestSemeadura:
     def test_vincular_o_mesmo_asset_duas_vezes_nao_regrava(self):
         from apps.doctemplates.models import DocumentTemplate
 
-        modelo_fr.vincular_logo(DocumentTemplate, 77)
+        carta_convite.vincular_logo(DocumentTemplate, "fr", 77)
 
-        assert modelo_fr.vincular_logo(DocumentTemplate, 77) is None
+        assert carta_convite.vincular_logo(DocumentTemplate, "fr", 77) is None
 
     def test_a_semeadura_nao_cria_um_segundo_modelo(self):
         from apps.doctemplates.models import DocumentTemplate
 
-        modelo_fr.aplicar(DocumentTemplate, forcar=True)
+        carta_convite.aplicar(DocumentTemplate, "fr", forcar=True)
 
         assert DocumentTemplate.objects.filter(slug=SLUG_FR).count() == 1
 
@@ -680,16 +682,16 @@ class TestSemeadura:
 
 class TestLogo:
     def test_extrai_um_png(self):
-        assert modelo_fr.extrair_logo_ibz()[:8] == b"\x89PNG\r\n\x1a\n"
+        assert carta_convite.extrair_logo_ibz()[:8] == b"\x89PNG\r\n\x1a\n"
 
     def test_o_recorte_tem_a_proporcao_da_caixa_do_layout(self):
         import io as _io
 
         from PIL import Image
 
-        figura = Image.open(_io.BytesIO(modelo_fr.extrair_logo_ibz()))
+        figura = Image.open(_io.BytesIO(carta_convite.extrair_logo_ibz()))
         proporcao_da_arte = figura.width / figura.height
-        proporcao_da_caixa = modelo_fr.LOGO_LARGURA / modelo_fr.LOGO_ALTURA
+        proporcao_da_caixa = carta_convite.LOGO_LARGURA / carta_convite.LOGO_ALTURA
 
         assert proporcao_da_arte == pytest.approx(proporcao_da_caixa, abs=0.01)
 
@@ -699,7 +701,7 @@ class TestLogo:
 
         from PIL import Image, ImageChops
 
-        figura = Image.open(_io.BytesIO(modelo_fr.extrair_logo_ibz())).convert("RGB")
+        figura = Image.open(_io.BytesIO(carta_convite.extrair_logo_ibz())).convert("RGB")
         branco = Image.new("RGB", figura.size, (255, 255, 255))
 
         assert ImageChops.difference(figura, branco).getbbox() == (
@@ -707,8 +709,8 @@ class TestLogo:
         )
 
     def test_um_pdf_inexistente_falha_claramente(self, tmp_path):
-        with pytest.raises(modelo_fr.LogoNaoEncontradoError, match="não foi encontrado"):
-            modelo_fr.extrair_logo_ibz(tmp_path / "nao-existe.pdf")
+        with pytest.raises(carta_convite.LogoNaoEncontradoError, match="não foi encontrado"):
+            carta_convite.extrair_logo_ibz(tmp_path / "nao-existe.pdf")
 
 
 @pytest.mark.django_db
@@ -718,13 +720,13 @@ class TestAssetDoLogo:
 
         settings.MEDIA_ROOT = tmp_path
 
-        primeiro, criado = modelo_fr.garantir_asset_do_logo(Asset)
-        segundo, recriado = modelo_fr.garantir_asset_do_logo(Asset)
+        primeiro, criado = carta_convite.garantir_asset_do_logo(Asset)
+        segundo, recriado = carta_convite.garantir_asset_do_logo(Asset)
 
         assert criado is True
         assert recriado is False
         assert primeiro.pk == segundo.pk
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 1
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 1
 
     def test_reconstruir_liga_o_asset_ao_layout(self, tmp_path, settings):
         from apps.content.models import Asset
@@ -732,9 +734,9 @@ class TestAssetDoLogo:
 
         settings.MEDIA_ROOT = tmp_path
 
-        resultado = modelo_fr.reconstruir(DocumentTemplate, Asset)
+        resultado = carta_convite.reconstruir(DocumentTemplate, Asset, "fr")
 
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         origem = por_id(
             resultado.modelo.layout["elements"], "fr-logo-ibz"
         )["properties"]["source"]
@@ -747,8 +749,8 @@ class TestAssetDoLogo:
 
         settings.MEDIA_ROOT = tmp_path
 
-        primeiro = modelo_fr.reconstruir(DocumentTemplate, Asset)
-        segundo = modelo_fr.reconstruir(DocumentTemplate, Asset)
+        primeiro = carta_convite.reconstruir(DocumentTemplate, Asset, "fr")
+        segundo = carta_convite.reconstruir(DocumentTemplate, Asset, "fr")
 
         assert primeiro.asset_criado is True
         assert primeiro.logo_vinculado is True
@@ -763,11 +765,11 @@ class TestAssetDoLogo:
 
         settings.MEDIA_ROOT = tmp_path
 
-        primeiro = modelo_fr.reconstruir(DocumentTemplate, Asset).modelo.layout
-        segundo = modelo_fr.reconstruir(DocumentTemplate, Asset).modelo.layout
+        primeiro = carta_convite.reconstruir(DocumentTemplate, Asset, "fr").modelo.layout
+        segundo = carta_convite.reconstruir(DocumentTemplate, Asset, "fr").modelo.layout
 
         assert primeiro == segundo
-        assert Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).count() == 1
+        assert Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).count() == 1
 
 
 # ===========================================================================
@@ -777,28 +779,28 @@ class TestAssetDoLogo:
 
 class TestInventario:
     def test_cobre_todos_os_elementos(self, layout):
-        assert len(modelo_fr.inventario(layout)) == len(layout["elements"])
+        assert len(carta_convite.inventario(layout)) == len(layout["elements"])
 
     def test_preserva_a_ordem_das_camadas(self, layout):
-        linhas = modelo_fr.inventario(layout)
+        linhas = carta_convite.inventario(layout)
 
         assert [linha["id"] for linha in linhas] == [
             elemento["id"] for elemento in layout["elements"]
         ]
 
     def test_lista_os_campos_de_cada_elemento(self, layout):
-        linhas = {linha["id"]: linha for linha in modelo_fr.inventario(layout)}
+        linhas = {linha["id"]: linha for linha in carta_convite.inventario(layout)}
 
         assert linhas["fr-assinatura-nome"]["campos"] == ["anfitriao.nome"]
         assert linhas["fr-titulo"]["campos"] == []
 
     def test_enxerga_os_campos_dentro_da_tabela(self, layout):
-        linhas = {linha["id"]: linha for linha in modelo_fr.inventario(layout)}
+        linhas = {linha["id"]: linha for linha in carta_convite.inventario(layout)}
 
         assert "convidado.passaporte" in linhas["fr-tabela"]["campos"]
 
     def test_o_texto_sai_legivel(self, layout):
-        saida = modelo_fr.inventario_texto(layout)
+        saida = carta_convite.inventario_texto(layout)
 
         assert "fr-titulo" in saida
         assert "23 elementos" in saida
@@ -820,7 +822,7 @@ def baselines_do_pdf():
     """
     from pypdf import PdfReader
 
-    pagina = PdfReader(str(modelo_fr.CAMINHO_DO_PDF)).pages[0]
+    pagina = PdfReader(str(carta_convite.CAMINHO_DO_PDF)).pages[0]
     altura = float(pagina.mediabox.height)
     encontrados = []
 
@@ -866,7 +868,7 @@ class TestConfereComOPdfOficial:
     }
 
     def test_o_pdf_oficial_esta_no_lugar(self):
-        assert modelo_fr.CAMINHO_DO_PDF.is_file()
+        assert carta_convite.CAMINHO_DO_PDF.is_file()
 
     def test_as_bases_medidas_existem_no_pdf(self, medidas):
         bases = {base for base, _x, _tam in medidas}
@@ -879,7 +881,7 @@ class TestConfereComOPdfOficial:
     ):
         elemento = por_id(elementos, identificador)
         base_reconstruida = elemento["y"] + elemento["properties"]["font_size"] * (
-            modelo_fr.ASCENT
+            carta_convite.ASCENT
         )
 
         assert base_reconstruida == pytest.approx(
@@ -895,7 +897,7 @@ class TestConfereComOPdfOficial:
     def test_a_margem_esquerda_e_a_do_pdf(self, medidas):
         do_corpo = [x for base, x, _t in medidas if base == 134.06]
 
-        assert min(do_corpo) == pytest.approx(modelo_fr.MARGEM_ESQUERDA, abs=0.001)
+        assert min(do_corpo) == pytest.approx(carta_convite.MARGEM_ESQUERDA, abs=0.001)
 
     def test_a_entrelinha_e_a_do_pdf(self, medidas):
         """13,5pt de baseline a baseline, medido em linhas seguidas."""
@@ -905,13 +907,13 @@ class TestConfereComOPdfOficial:
         ]
 
         assert distancias.count(13.5) >= 8
-        assert modelo_fr.ALTURA_DA_LINHA == 13.5
+        assert carta_convite.ALTURA_DA_LINHA == 13.5
 
     def test_o_marcador_e_o_corpo_da_lista_nas_posicoes_medidas(self, elementos, medidas):
         xs = sorted({x for base, x, _t in medidas if base == 371.06})
 
-        assert xs[0] == pytest.approx(modelo_fr.LISTA_X_MARCADOR, abs=0.001)
-        assert xs[1] == pytest.approx(modelo_fr.LISTA_X_CORPO, abs=0.001)
+        assert xs[0] == pytest.approx(carta_convite.LISTA_X_MARCADOR, abs=0.001)
+        assert xs[1] == pytest.approx(carta_convite.LISTA_X_CORPO, abs=0.001)
 
 
 # ===========================================================================

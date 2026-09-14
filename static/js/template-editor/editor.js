@@ -34,6 +34,7 @@
   var pagina = lerJson("te-pagina") || {};
   var catalogo = lerJson("te-tipos") || [];
   var fontes = lerJson("te-fontes") || [];
+  var assets = lerJson("te-assets") || [];
   var camposPorReferencia = Canvas.indiceDeCampos(fontes);
 
   // Lista plana de referencias, para o seletor de campo do painel.
@@ -192,7 +193,7 @@
     Canvas.desenharLayout(document, noCamada, doc, {
       zoom: estado.zoom,
       campos: camposPorReferencia,
-      assets: [],
+      assets: assets,
       selecionado: estado.selecionado,
       editavel: config.editable
     });
@@ -213,7 +214,7 @@
       editavel: config.editable,
       catalogo: catalogo,
       referencias: referencias,
-      assets: [],
+      assets: assets,
       modelo: [
         "Página: " + Math.round(Number(pagina.width) || 0) + " × " +
           Math.round(Number(pagina.height) || 0) + " " + (pagina.unit || "pt"),

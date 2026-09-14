@@ -20,6 +20,16 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado -- sem eles
+    `official_document_template()` devolve `None` e o assistente
+    recusa criar carta nenhuma (e esta certo: seria uma carta que
+    nao viraria PDF).
+    """
+
+
+@pytest.fixture(autouse=True)
 def _nacionalidades_de_teste(nacionalidade_factory):
     """
     Nacionalidades usadas pelos payloads deste arquivo -- desde a decisão

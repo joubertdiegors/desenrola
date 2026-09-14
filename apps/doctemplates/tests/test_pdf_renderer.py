@@ -882,7 +882,6 @@ class TestGenerico:
         codigo = self.codigo()
 
         for proibido in (
-            "visual_schema", "visual_import", "elementos_fixos",
             "TemplateVersion", "LetterTemplate", "render_invitation_letter",
         ):
             assert proibido not in codigo

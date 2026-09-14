@@ -46,6 +46,8 @@ __all__ = [
     "FonteIndisponivelError",
     "PaginaInvalidaError",
     "ValorAusenteError",
+    "campos_do_layout",
+    "carregar_assets",
     "render_layout",
     "render_template",
 ]
@@ -159,17 +161,24 @@ def render_template(modelo, dados=None, *, estrito=True, validar=True):
         layout,
         modelo.type.page,
         contexto,
-        assets=_carregar_assets(layout),
+        assets=carregar_assets(layout),
         validar=validar,
     )
 
 
-def _carregar_assets(layout):
+def carregar_assets(layout):
     """
     Os bytes de cada `Asset` que o layout referencia.
 
     Carregados de uma vez, antes de desenhar: se faltar um arquivo, o
     erro aparece agora e nao no meio da pagina.
+
+    PUBLICA de proposito (Etapa 3.5.2): `apps.letters.services.render_letter()`
+    chama isto com o `layout` de um `document_snapshot` CONGELADO -- nao o
+    de um `DocumentTemplate` ao vivo -- para resolver os assets de uma
+    carta ja finalizada pelos mesmos ids que `LetterAsset` protege contra
+    exclusao/substituicao (Etapa 3.5.1). A funcao em si nao sabe de onde o
+    `layout` veio; so precisa que seja um layout valido.
     """
     from apps.content.models import Asset
 

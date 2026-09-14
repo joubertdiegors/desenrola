@@ -118,29 +118,6 @@ def test_todo_javascript_tem_sintaxe_valida(node, arquivo):
     assert resultado.returncode == 0, resultado.stderr
 
 
-def _sem_comentarios(texto):
-    """
-    O código executável, sem comentários. Os cabeçalhos DESCREVEM a
-    separação em relação ao editor anterior e citam os arquivos dele —
-    procurar no texto cru acusaria a própria documentação.
-    """
-    import re
-
-    texto = re.sub(r"/\*.*?\*/", "", texto, flags=re.S)
-    return re.sub(r"^\s*//.*$", "", texto, flags=re.M)
-
-
-def test_nao_depende_do_editor_anterior():
-    """Arquivos próprios: nenhum módulo carrega ou usa os da 4.2C."""
-    antigos = ("EditorRender", "EditorDocument", "EditorHistory",
-               "EditorGeometry", "js/editor/")
-
-    for arquivo in JS.glob("*.js"):
-        codigo = _sem_comentarios(arquivo.read_text(encoding="utf-8"))
-        for nome in antigos:
-            assert nome not in codigo, f"{arquivo.name} usa {nome}"
-
-
 # ---------------------------------------------------------------------------
 # 1. Geometria: pt ↔ pixel
 # ---------------------------------------------------------------------------
@@ -889,6 +866,42 @@ class TestCanvas:
 
         assert "Nome :" in no["texto"]
         assert "[Convidado · Nome completo]" in no["texto"]
+
+    def test_a_celula_da_tabela_usa_a_fonte_do_documento(self, node):
+        """
+        Sem tamanho e altura de linha próprios a célula cai no padrão do
+        navegador -- bem maior que os 11pt do documento -- e o texto
+        ocupa mais linhas do que a `min_height` da linha prevê. A tabela
+        cresce além da própria caixa e passa a sobrepor o que vem depois
+        dela no documento: foi o que a validação manual do modelo FR
+        encontrou no centro da página.
+        """
+        elemento = {
+            "id": "t", "type": "table", "x": 0, "y": 0, "width": 300, "height": 40,
+            "properties": {
+                "columns": [{"width": 100}, {"width": 200}],
+                "rows": [{"min_height": 18, "cells": [
+                    {"content": {"kind": "text", "value": "Nome :"}},
+                ]}],
+                "font_size": 11,
+                "line_height": 1.2,
+            },
+        }
+
+        saida = executar(
+            node,
+            f"var doc = require({_caminho(DOM_STUB)!r});"
+            "var alvo = doc.createElement('div');"
+            f"Canvas.desenharLayout(doc, alvo, {{version: 1, elements: [{json.dumps(elemento)}]}},"
+            "{zoom: 2, campos: {}, assets: [], selecionado: null, editavel: true});"
+            "var td = alvo.children[0].children[0].children[1].children[0].children[0];"
+            "console.log(JSON.stringify({fontSize: td.style.fontSize,"
+            "  fontFamily: td.style.fontFamily, lineHeight: td.style.lineHeight}));",
+        )
+
+        assert saida["fontSize"] == "22px"
+        assert "Liberation Sans" in saida["fontFamily"]
+        assert saida["lineHeight"] == "1.2"
 
     def test_o_zoom_escala_tudo_igualmente(self, node, catalogo):
         elemento = {

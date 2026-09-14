@@ -13,12 +13,23 @@ from django.contrib.auth.models import Group, Permission
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.doctemplates.models import LetterTemplate
-from apps.doctemplates.official_templates import official_slug
+from apps.doctemplates.models import DocumentTemplate
+from apps.doctemplates.services.biblioteca import slug_oficial
 from apps.letters import services
 from apps.letters.models import Letter
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado.
+
+    `services.official_document_template()` so devolve um modelo quando o
+    asset do layout existe de verdade -- sem isto o assistente recusaria
+    criar qualquer carta (e estaria certo).
+    """
 
 
 @pytest.fixture(autouse=True)
@@ -143,14 +154,14 @@ class TestCriacao:
 
 
 class TestSelecaoDeTemplate:
-    def test_usa_a_versao_publicada_do_modelo_do_idioma(self, auth_client, user):
+    def test_usa_o_modelo_oficial_do_idioma(self, auth_client, user):
         padrao = services.IDIOMA_PADRAO_DA_CARTA
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
         letter = Letter.objects.get(user=user)
 
         assert letter.language == padrao
-        assert letter.template.slug == official_slug(padrao)
-        assert letter.template_version.status == "published"
+        assert letter.document_template.slug == slug_oficial(padrao)
+        assert letter.document_template.is_system is True
 
     @pytest.mark.parametrize("language", ["pt", "fr", "nl", "en"])
     def test_cada_idioma_usa_o_seu_proprio_documento(self, auth_client, user, language):
@@ -169,8 +180,8 @@ class TestSelecaoDeTemplate:
 
         letter.refresh_from_db()
         assert letter.language == language
-        assert letter.template.slug == official_slug(language)
-        assert letter.template.language == language
+        assert letter.document_template.slug == slug_oficial(language)
+        assert letter.document_template.language == language
 
     def test_o_prefixo_da_url_nao_escolhe_mais_o_idioma_da_carta(self, auth_client, user):
         """
@@ -189,32 +200,32 @@ class TestSelecaoDeTemplate:
         assert letter.language != "fr"
         assert letter.data["guest_name"] == VALID_STEP_1["guest_name"]
 
-    def test_nao_usa_uma_versao_em_rascunho_de_outro_template(
-        self, auth_client, user, draft_version
+    def test_nao_aceita_modelo_arbitrario_enviado_pelo_cliente(
+        self, auth_client, draft_letter
     ):
-        auth_client.post(reverse("letters:new"), VALID_STEP_1)
-        letter = Letter.objects.get(user=user)
-
-        assert letter.template_version_id != draft_version.pk
-        assert letter.template_version.status == "published"
-
-    def test_nao_aceita_versao_arbitraria_enviada_pelo_cliente(
-        self, auth_client, draft_letter, published_version
-    ):
-        original_version_id = draft_letter.template_version_id
+        """O modelo vem do idioma, nunca de um id no corpo do POST."""
+        original = draft_letter.document_template_id
+        outro = DocumentTemplate.objects.exclude(pk=original).first()
 
         auth_client.post(
             _step_url(draft_letter, 1),
-            {**VALID_STEP_1, "template_version": published_version.pk, "template": 999},
+            {**VALID_STEP_1, "document_template": outro.pk},
         )
 
         draft_letter.refresh_from_db()
-        assert draft_letter.template_version_id == original_version_id
+        assert draft_letter.document_template_id == original
 
-    def test_idioma_sem_documento_publicado_nao_inicia_carta(self, auth_client):
-        LetterTemplate.objects.filter(
-            slug=official_slug(services.IDIOMA_PADRAO_DA_CARTA)
-        ).update(is_active=False)
+    def test_idioma_sem_documento_pronto_nao_inicia_carta(self, auth_client):
+        """
+        Sem desenho no modelo oficial do idioma padrao, o assistente
+        devolve a pessoa ao painel em vez de criar uma carta que nao
+        conseguiria virar PDF. (Modelo INATIVO e outra coisa: e banco
+        fora do estado esperado, e levanta -- ver
+        test_default_document_template.py.)
+        """
+        DocumentTemplate.objects.filter(
+            slug=slug_oficial(services.IDIOMA_PADRAO_DA_CARTA)
+        ).update(layout={})
 
         response = auth_client.get(reverse("letters:new"))
 
@@ -226,20 +237,22 @@ class TestSelecaoDeTemplate:
         self, auth_client, user
     ):
         """
-        Sem documento publicado naquele idioma, a etapa 5 recusa a troca
+        Sem desenho naquele idioma, a etapa 5 recusa a troca
         -- nunca serve o documento de outro idioma no lugar.
         """
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
         letter = Letter.objects.get(user=user)
         _fill_until(auth_client, letter, 5)
-        LetterTemplate.objects.filter(slug=official_slug("nl")).update(is_active=False)
+        DocumentTemplate.objects.filter(slug=slug_oficial("nl")).update(layout={})
 
         response = auth_client.post(_step_url(letter, 5), {"language": "nl"})
 
         assert response.status_code == 200
         letter.refresh_from_db()
         assert letter.language == services.IDIOMA_PADRAO_DA_CARTA
-        assert letter.template.slug == official_slug(services.IDIOMA_PADRAO_DA_CARTA)
+        assert letter.document_template.slug == slug_oficial(
+            services.IDIOMA_PADRAO_DA_CARTA
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -435,9 +448,8 @@ class TestIdioma:
         draft_letter.refresh_from_db()
         assert response.status_code == 302
         assert draft_letter.language == "fr"
-        assert draft_letter.template.slug == official_slug("fr")
-        assert draft_letter.template_version.template.language == "fr"
-        assert draft_letter.template_version.status == "published"
+        assert draft_letter.document_template.slug == slug_oficial("fr")
+        assert draft_letter.document_template.language == "fr"
 
     def test_trocar_o_idioma_preserva_os_dados_ja_preenchidos(self, auth_client, draft_letter):
         auth_client.post(_step_url(draft_letter, 1), VALID_STEP_1)
@@ -448,44 +460,34 @@ class TestIdioma:
         assert draft_letter.language == "en"
         assert draft_letter.data["guest_name"] == "Maria Santos da Silva"
 
-    @pytest.mark.parametrize(
-        ("language", "esperado"),
-        [
-            ("pt", "Data de nascimento"),
-            ("fr", "Date de naissance"),
-            ("nl", "Geboortedatum"),
-            ("en", "Date of birth"),
-        ],
-    )
-    def test_rotulos_do_formulario_nos_quatro_idiomas(
-        self, auth_client, draft_letter, language, esperado
+    @pytest.mark.parametrize("language", ["pt", "fr", "nl", "en"])
+    def test_rotulos_do_formulario_sao_sempre_em_portugues(
+        self, auth_client, draft_letter, language
     ):
+        """
+        A interface do assistente é sempre em português -- só o DOCUMENTO
+        tem idioma próprio (Etapa de correções pós-validação manual, item
+        1). Trocar o idioma da carta muda o que sai impresso na Carta
+        Convite, nunca o rótulo que a pessoa lê no próprio assistente.
+        """
         auth_client.post(_step_url(draft_letter, 5), {"language": language})
 
         response = auth_client.get(_step_url(draft_letter, 1))
 
-        assert response.context["form"]["guest_birth_date"].label == esperado
-        assert esperado in response.content.decode()
+        assert response.context["form"]["guest_birth_date"].label == "Data de nascimento"
+        assert "Data de nascimento" in response.content.decode()
 
-    @pytest.mark.parametrize(
-        ("language", "placeholder", "ajuda"),
-        [
-            ("pt", "Nome completo", "Digite exatamente como aparece no passaporte."),
-            ("fr", "Nom complet", "Saisissez exactement comme indiqué sur le passeport."),
-            ("nl", "Volledige naam", "Neem exact over zoals vermeld in het paspoort."),
-            ("en", "Full name", "Enter exactly as it appears in the passport."),
-        ],
-    )
-    def test_placeholder_e_ajuda_no_idioma_da_carta(
-        self, auth_client, draft_letter, language, placeholder, ajuda
+    @pytest.mark.parametrize("language", ["pt", "fr", "nl", "en"])
+    def test_placeholder_e_ajuda_sao_sempre_em_portugues(
+        self, auth_client, draft_letter, language
     ):
         auth_client.post(_step_url(draft_letter, 5), {"language": language})
 
         response = auth_client.get(_step_url(draft_letter, 1))
         campo = response.context["form"]["guest_name"]
 
-        assert campo.field.widget.attrs["placeholder"] == placeholder
-        assert campo.help_text == ajuda
+        assert campo.field.widget.attrs["placeholder"] == "Nome completo"
+        assert campo.help_text == "Digite exatamente como aparece no passaporte."
 
     def test_texto_sem_traducao_volta_ao_original(self, auth_client, draft_letter):
         """
@@ -500,7 +502,9 @@ class TestIdioma:
 
         assert rotulo.startswith("Declaro estar ciente")
 
-    def test_revisao_mostra_rotulos_no_idioma_da_carta(self, auth_client, draft_letter):
+    def test_revisao_mostra_rotulos_sempre_em_portugues(self, auth_client, draft_letter):
+        """A revisão é tela do assistente, não do documento -- mesmo com
+        a carta terminando em outro idioma, os rótulos ficam em português."""
         _fill_all_steps(auth_client, draft_letter)  # termina em "fr"
 
         response = auth_client.get(_step_url(draft_letter, 6))
@@ -510,25 +514,23 @@ class TestIdioma:
             for item in secao["items"]
         ]
 
-        assert "Date de naissance" in rotulos
-        assert "Nom complet de l'invité" in rotulos
+        assert "Data de nascimento" in rotulos
+        assert "Nome completo do convidado" in rotulos
 
-    def test_idioma_sem_documento_publicado_nao_pode_ser_escolhido(
-        self, auth_client, draft_letter
-    ):
-        LetterTemplate.objects.filter(slug=official_slug("nl")).update(is_active=False)
+    def test_idioma_sem_desenho_nao_pode_ser_escolhido(self, auth_client, draft_letter):
+        DocumentTemplate.objects.filter(slug=slug_oficial("nl")).update(layout={})
 
         response = auth_client.post(_step_url(draft_letter, 5), {"language": "nl"})
 
         draft_letter.refresh_from_db()
         assert response.status_code == 200
         assert draft_letter.language == "pt"
-        assert draft_letter.template.slug == official_slug("pt")
+        assert draft_letter.document_template.slug == slug_oficial("pt")
 
-    def test_etapa_5_marca_idioma_sem_documento_como_indisponivel(
+    def test_etapa_5_marca_idioma_sem_desenho_como_indisponivel(
         self, auth_client, draft_letter
     ):
-        LetterTemplate.objects.filter(slug=official_slug("nl")).update(is_active=False)
+        DocumentTemplate.objects.filter(slug=slug_oficial("nl")).update(layout={})
 
         response = auth_client.get(_step_url(draft_letter, 5))
         opcoes = {lang["code"]: lang["available"] for lang in response.context["language_options"]}
@@ -602,7 +604,7 @@ class TestFinalizacao:
         draft_letter.refresh_from_db()
         assert draft_letter.snapshot["host"]["full_name"] == user.full_name
         assert draft_letter.snapshot["language"] == "fr"
-        assert draft_letter.snapshot["template_slug"] == official_slug("fr")
+        assert draft_letter.snapshot["document_template_slug"] == slug_oficial("fr")
         assert draft_letter.snapshot["data"]["guest_name"] == "Maria Santos da Silva"
 
     def test_finalizar_gera_e_guarda_o_pdf(self, auth_client, draft_letter):

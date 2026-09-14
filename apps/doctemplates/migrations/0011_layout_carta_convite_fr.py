@@ -7,7 +7,7 @@ PDF oficial. E o que esta migration faz, sem tocar naquela.
 
 SO GRAVA SE AINDA ESTIVER VAZIO
 -------------------------------
-Quem decide e `services.modelo_fr.aplicar()`: se o modelo ja tiver
+Quem decide e `services.carta_convite.aplicar()`: se o modelo ja tiver
 qualquer layout, esta migration nao faz nada. Um administrador pode ter
 ajustado o documento antes desta atualizacao chegar, e semeadura nenhuma
 tem o direito de apagar esse trabalho.
@@ -19,17 +19,17 @@ ainda sem binario. Criar o `content.Asset` exige gravar em MEDIA_ROOT, e
 migration que escreve em disco quebra em armazenamento remoto ou
 sistema de arquivos somente-leitura, alem de deixar uma copia do PNG por
 execucao da suite. O binario e anexado por
-`services.modelo_fr.reconstruir()`.
+`services.carta_convite.reconstruir()`.
 """
 
 from django.db import migrations
 
-from apps.doctemplates.services import modelo_fr
+from apps.doctemplates.services import carta_convite
 
 
 def aplicar(apps, schema_editor):
     DocumentTemplate = apps.get_model("doctemplates", "DocumentTemplate")
-    modelo_fr.aplicar(DocumentTemplate)
+    carta_convite.aplicar(DocumentTemplate, "fr")
 
 
 def desfazer(apps, schema_editor):
@@ -39,7 +39,9 @@ def desfazer(apps, schema_editor):
     reverso nao destroi a edicao: prefere nao fazer nada.
     """
     DocumentTemplate = apps.get_model("doctemplates", "DocumentTemplate")
-    modelo = DocumentTemplate.objects.filter(slug=modelo_fr.SLUG_DO_MODELO_FR).first()
+    modelo = DocumentTemplate.objects.filter(
+        slug=carta_convite.slug_do_modelo("fr")
+    ).first()
     if modelo is None or not modelo.layout:
         return
 
@@ -47,10 +49,10 @@ def desfazer(apps, schema_editor):
     # mesmo asset evita achar que houve edicao onde nao houve.
     asset = 0
     for elemento in modelo.layout.get("elements", []):
-        if elemento.get("id") == modelo_fr.ID_DO_LOGO:
+        if elemento.get("id") == carta_convite.id_do_logo("fr"):
             asset = (elemento.get("properties", {}).get("source") or {}).get("asset_id", 0)
 
-    if modelo.layout == modelo_fr.layout_carta_convite_fr(asset_do_logo=asset):
+    if modelo.layout == carta_convite.layout("fr", asset_do_logo=asset):
         DocumentTemplate.objects.filter(pk=modelo.pk).update(layout={})
 
 

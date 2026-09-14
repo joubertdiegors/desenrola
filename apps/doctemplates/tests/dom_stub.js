@@ -1,5 +1,6 @@
 /*
- * DOM minimo para testar `static/js/editor/render.js` fora do navegador.
+ * DOM minimo para testar o canvas do editor estrutural
+ * (`static/js/template-editor/canvas.js`) fora do navegador.
  *
  * Implementa exatamente o que o renderizador usa -- `createElement`,
  * `appendChild`, `style`, `classList`, `dataset`, `textContent`,
@@ -7,11 +8,8 @@
  * ha layout, nao ha CSS aplicado, nao ha eventos.
  *
  * Para que serve, entao: provar que cada elemento do documento produz um
- * no, com a posicao, o tamanho, a camada e o conteudo certos. Foi assim
- * que se descobriu, na correcao da Etapa 4.2B, que os 19 elementos
- * importados JA estavam sendo desenhados -- o problema era de CSS e de
- * zoom, nao de renderizacao. Um teste que so procurasse strings no HTML
- * do servidor nunca teria mostrado isso.
+ * no, com a posicao, o tamanho, a camada e o conteudo certos -- coisa que
+ * um teste procurando strings no HTML do servidor nunca mostraria.
  *
  * O que ele nao cobre continua dependendo de olhar no navegador:
  * empilhamento real, tamanho em tela, e se da para clicar.

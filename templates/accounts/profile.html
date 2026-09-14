@@ -33,9 +33,9 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       </div>
     </div>
     <nav class="side-menu" aria-label="{% translate 'Seções do perfil' %}">
-      <a class="{% if current == 'dados' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
-      <a class="{% if current == 'senha' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
-      <a class="{% if current == 'comunicacoes' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
+      <a class="{% if current == 'dados' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=dados#dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
+      <a class="{% if current == 'senha' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=senha#senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
+      <a class="{% if current == 'comunicacoes' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=comunicacoes#comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
       <form method="post" action="{% url 'accounts:logout' %}">
         {% csrf_token %}
         <button type="submit" class="hr-item"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair" %}</button>
@@ -73,7 +73,7 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       {% if return_to %}
       <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Complete os dados abaixo e você volta direto para onde parou." %}</span></div>
       {% endif %}
-      <form method="post" action="{% url 'accounts:profile' %}" novalidate>
+      <form method="post" action="{% url 'accounts:profile' %}#dados" novalidate>
         {% csrf_token %}
         <input type="hidden" name="action" value="dados">
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
@@ -147,7 +147,7 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
 
     <section class="card profile-section{% if section == 'senha' %} is-current{% endif %}" id="senha">
       <h2>{% translate "Alterar senha" %}</h2>
-      <form method="post" action="{% url 'accounts:profile' %}" novalidate>
+      <form method="post" action="{% url 'accounts:profile' %}#senha" novalidate>
         {% csrf_token %}
         <input type="hidden" name="action" value="senha">
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">

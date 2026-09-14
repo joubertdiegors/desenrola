@@ -114,7 +114,7 @@ def _renderizar_do_snapshot(carta):
         estrutura["layout"],
         estrutura["type"]["page"],
         pdf.Contexto({}, estrito=False),
-        assets=pdf._carregar_assets(estrutura["layout"]),
+        assets=pdf.carregar_assets(estrutura["layout"]),
     )
     return dados, relatorio
 
@@ -284,7 +284,7 @@ class TestModeloMudaCartaNao:
 
     def test_a_reproducao_usa_o_arquivo_original(self, finalizada, asset):
         """Os bytes que entram no PDF são exatamente os do Asset congelado."""
-        assets = pdf._carregar_assets(finalizada.document_snapshot["layout"])
+        assets = pdf.carregar_assets(finalizada.document_snapshot["layout"])
 
         with asset.file.open("rb") as arquivo:
             assert assets[asset.pk] == arquivo.read()
@@ -433,18 +433,28 @@ class TestFinalizacaoReal:
     def _nacionalidade(self, nacionalidade_factory):
         nacionalidade_factory("Brasileira", guest_form="Brésilienne")
 
-    def test_finalizar_pelo_assistente_vincula_o_asset(self, auth_client, user, modelo, asset):
+    def test_finalizar_pelo_assistente_vincula_o_asset(
+        self, auth_client, user, modelos_oficiais_prontos
+    ):
+        """
+        Pelo caminho REAL, sem anexar modelo nenhum à mão: o modelo sai
+        do idioma escolhido na etapa 5, e o asset conferido aqui é o que
+        o layout oficial de verdade usa (o logo do IBZ).
+        """
+        from apps.doctemplates.services import carta_convite
+
+        logo = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         client = auth_client
         client.post(reverse("letters:new"), PASSO_1)
         carta = Letter.objects.get(user=user)
-        carta.document_template = modelo
-        carta.save(update_fields=["document_template", "updated_at"])
 
         for numero in (1, 2, 3, 4):
             client.post(_step_url(carta, numero), PASSOS[numero])
         client.post(_step_url(carta, 5), {"language": "fr"})
         client.post(_step_url(carta, 6))
 
-        assert LetterAsset.objects.filter(letter=carta, asset=asset).exists()
+        carta.refresh_from_db()
+        assert carta.document_template.slug == carta_convite.slug_do_modelo("fr")
+        assert LetterAsset.objects.filter(letter=carta, asset=logo).exists()
         with pytest.raises(ProtectedError):
-            asset.delete()
+            logo.delete()

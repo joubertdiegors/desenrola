@@ -1,6 +1,5 @@
 """
-Contrato de formato para `LetterTemplate.default_field_schema` e
-`TemplateVersion.field_schema`.
+Contrato de formato para `DocumentTemplate.field_schema`.
 
 O campo continua sendo um JSONField livre (e precisa continuar assim: a
 imutabilidade de uma versao publicada depende de ser um unico bloco

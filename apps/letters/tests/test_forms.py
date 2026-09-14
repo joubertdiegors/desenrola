@@ -114,6 +114,111 @@ class TestCampoData:
         form = build_dynamic_form([_field(type="date")], data={"campo": "2025/04/10"})
         assert not form.is_valid()
 
+    def test_13_09_2026_e_13_de_setembro_nao_9_de_setembro(self):
+        """13/09/2026: dia 13, mes 09 -- se dia e mes fossem trocados,
+        13 nao existe como mes e o valor teria de ser recusado, nao virar
+        setembro."""
+        form = build_dynamic_form([_field(type="date")], data={"campo": "13/09/2026"})
+        assert form.is_valid(), form.errors
+        assert form.cleaned_data["campo"] == datetime.date(2026, 9, 13)
+
+    def test_09_12_2026_e_9_de_dezembro_nao_12_de_setembro(self):
+        """09/12/2026: dia 9, mes 12 -- o caso ambiguo por excelencia.
+        Trocado, viraria 12/09 (12 de setembro); o certo e 9 de dezembro."""
+        form = build_dynamic_form([_field(type="date")], data={"campo": "09/12/2026"})
+        assert form.is_valid(), form.errors
+        assert form.cleaned_data["campo"] == datetime.date(2026, 12, 9)
+
+    @pytest.mark.parametrize(
+        "valor",
+        [
+            "31/02/2026",  # fevereiro nao tem dia 31
+            "32/01/2026",  # dia inexistente
+            "13/13/2026",  # mes 13 nao existe -- so faz sentido se fosse dia
+            "00/09/2026",
+            "13/00/2026",
+            "13/09/226",  # ano incompleto
+            "",
+        ],
+    )
+    def test_datas_invalidas_sao_recusadas(self, valor):
+        form = build_dynamic_form([_field(type="date")], data={"campo": valor})
+        assert not form.is_valid()
+
+    def test_submissao_armazena_a_data_correta_nao_invertida(self):
+        """O que `serialize_cleaned_data` grava (o que vai para
+        `Letter.data`) tem de ser o mesmo dia e mes que a pessoa digitou,
+        em ISO -- nunca com dia e mes trocados de lugar."""
+        form = build_dynamic_form([_field(type="date")], data={"campo": "13/09/2026"})
+        assert form.is_valid(), form.errors
+
+        armazenado = serialize_cleaned_data(form.cleaned_data)
+
+        assert armazenado["campo"] == "2026-09-13"
+
+
+class TestCampoDataReexibicao:
+    """
+    A reexibicao apos um erro em OUTRO campo da mesma etapa: e aqui que a
+    validacao manual encontrou "2026-09-13" no lugar de "13/09/2026" --
+    o `DateInput` padrao do Django so reformata um `date` de verdade
+    (`initial=`), nunca uma string ja vinculada (o que chega de volta
+    depois de um POST). `_RobustDateInput` cobre os dois casos.
+    """
+
+    def _campo_renderizado(self, form, chave="campo"):
+        return str(form[chave])
+
+    def test_valor_vinculado_em_dd_mm_aaaa_reexibe_sem_alteracao(self):
+        form = build_dynamic_form([_field(type="date")], data={"campo": "13/09/2026"})
+
+        assert 'value="13/09/2026"' in self._campo_renderizado(form)
+
+    def test_valor_vinculado_em_iso_reexibe_em_dd_mm_aaaa(self):
+        """
+        O caso central do bug: um valor que chegue vinculado em ISO (o
+        formato que `DATE_INPUT_FORMATS` tambem aceita, usado por
+        `validate_all_steps` para revalidar `Letter.data`) tem de
+        aparecer em dd/mm/aaaa na tela -- nunca no formato em que
+        chegou.
+        """
+        form = build_dynamic_form([_field(type="date")], data={"campo": "2026-09-13"})
+
+        html = self._campo_renderizado(form)
+        assert 'value="13/09/2026"' in html
+        assert "2026-09-13" not in html
+
+    def test_erro_em_outro_campo_da_mesma_etapa_nao_corrompe_a_data_valida(self):
+        """
+        Reproduz o bug relatado na validacao manual: numa etapa com dois
+        campos de data, uma chegada valida ao lado de uma partida que
+        fere a regra de negocio (antes da chegada) nao pode fazer a
+        chegada -- que a pessoa digitou certo -- reexibir errada.
+
+        Datas RELATIVAS a hoje, nao fixas: `stay_arrival` esta em
+        `NOT_IN_THE_PAST`, entao uma data fixa no codigo venceria com o
+        tempo e o erro cairia na chegada em vez da partida.
+        """
+        chegada = timezone.localdate() + datetime.timedelta(days=30)
+        partida = chegada - datetime.timedelta(days=5)
+        campos = [
+            _field(key="stay_arrival", type="date", label="Chegada"),
+            _field(key="stay_departure", type="date", label="Partida"),
+        ]
+        form = build_dynamic_form(
+            campos,
+            data={
+                "stay_arrival": chegada.strftime("%d/%m/%Y"),
+                "stay_departure": partida.strftime("%d/%m/%Y"),
+            },
+        )
+
+        assert not form.is_valid()
+        assert "stay_departure" in form.errors
+
+        esperado = f'value="{chegada.strftime("%d/%m/%Y")}"'
+        assert esperado in self._campo_renderizado(form, "stay_arrival")
+
 
 class TestValidacaoCruzadaViagem:
     FIELDS = [

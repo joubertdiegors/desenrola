@@ -13,6 +13,8 @@ A troca de senha e a recuperacao usam os formularios nativos
 (PasswordChangeForm, PasswordResetForm, SetPasswordForm).
 """
 
+import datetime
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm
 from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
@@ -21,6 +23,32 @@ from django.contrib.auth.forms import UserChangeForm as DjangoUserChangeForm
 from django.utils.translation import gettext_lazy as _
 
 from .models import User
+
+# Os dois formatos que o campo de nascimento aceita na entrada -- mesma
+# convencao do assistente (apps/letters/forms.py).
+BIRTH_DATE_INPUT_FORMATS = ["%d/%m/%Y", "%Y-%m-%d"]
+
+
+class _RobustDateInput(forms.DateInput):
+    """
+    Reexibe em dd/mm/aaaa qualquer valor já vinculado reconhecível, não
+    só um `date` de verdade -- mesmo problema e mesma solução do widget
+    homônimo em `apps.letters.forms`: um valor vinculado a partir de um
+    POST é uma string, e o `DateInput` padrão só reformata um `date`
+    real, nunca uma string já vinculada. Sem isto, um erro no e-mail (por
+    exemplo) reexibia a data de nascimento do jeito que chegasse no
+    corpo do POST, não necessariamente em dd/mm/aaaa.
+    """
+
+    def format_value(self, value):
+        if isinstance(value, str) and value:
+            for input_format in BIRTH_DATE_INPUT_FORMATS:
+                try:
+                    parsed = datetime.datetime.strptime(value, input_format).date()
+                except ValueError:
+                    continue
+                return parsed.strftime(self.format or "%d/%m/%Y")
+        return super().format_value(value)
 
 # Campos que o usuario edita no cadastro e no perfil.
 PROFILE_FIELDS = (
@@ -131,8 +159,8 @@ class ProfileForm(forms.ModelForm):
         # e digita dd/mm/aaaa, o banco guarda ISO. O `data-date-input`
         # liga a mascara e o calendario nativo (static/js/app.js).
         nascimento = self.fields["birth_date"]
-        nascimento.input_formats = ["%d/%m/%Y", "%Y-%m-%d"]
-        nascimento.widget = forms.DateInput(
+        nascimento.input_formats = BIRTH_DATE_INPUT_FORMATS
+        nascimento.widget = _RobustDateInput(
             format="%d/%m/%Y",
             attrs={
                 "class": "input",

@@ -1,9 +1,7 @@
 /*
  * Desenha o layout como DOM: os oito tipos da Etapa 3.1.
  *
- * Editor visual dos modelos da biblioteca (Etapa 3.2). Arquivo proprio,
- * sem relacao com `static/js/editor/render.js`, que serve o editor da
- * arquitetura anterior.
+ * Editor estrutural dos modelos da biblioteca (Etapa 3.2).
  *
  * SEGURANCA
  * ---------
@@ -146,7 +144,13 @@
           (props.border_color || "#000000");
         td.style.padding = caixaEmPixels(props.cell_padding, zoom);
         td.style.textAlign = celula.align || coluna.align || "left";
-        td.style.fontWeight = celula.bold ? "700" : "400";
+        td.style.fontFamily = '"Liberation Sans", Arial, Helvetica, sans-serif';
+        td.style.fontSize = Number(props.font_size || 11) * zoom + "px";
+        td.style.fontWeight = celula.bold ? "700" : PESOS[props.font_weight] || "400";
+        td.style.fontStyle = props.font_style === "italic" ? "italic" : "normal";
+        td.style.color = props.color || "#000000";
+        td.style.lineHeight = String(props.line_height || 1.25);
+        td.style.letterSpacing = Number(props.letter_spacing || 0) * zoom + "px";
         td.style.height = Number(linha.min_height || 0) * zoom + "px";
         // A altura da linha inclui o padding: sem isto uma tabela medida
         // sairia com linhas mais altas do que as bordas.

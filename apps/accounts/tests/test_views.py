@@ -287,7 +287,22 @@ def test_perfil_volta_para_a_secao_do_celular(auth_client, user):
     )
 
     assert response.status_code == 302
-    assert response.url == reverse("accounts:profile") + "?secao=dados"
+    assert response.url == reverse("accounts:profile") + "?secao=dados#dados"
+
+
+@pytest.mark.django_db
+def test_menu_lateral_do_perfil_aponta_para_as_secoes_da_pagina(auth_client):
+    """
+    No desktop as três seções ficam empilhadas na mesma página: o item do
+    menu precisa levar direto para a seção (âncora), não só recarregar a
+    página do topo -- era o que faltava e deixava o clique parecendo não
+    fazer nada.
+    """
+    html = auth_client.get(reverse("accounts:profile")).content.decode()
+
+    for secao in ("dados", "senha", "comunicacoes"):
+        assert f'id="{secao}"' in html
+        assert f'href="{reverse("accounts:profile")}?secao={secao}#{secao}"' in html
 
 
 def test_alteracao_de_senha(auth_client, user):
@@ -326,6 +341,10 @@ def test_alteracao_de_senha_com_senha_atual_errada(auth_client, user):
     assert response.context["password_form"].errors["old_password"]
     user.refresh_from_db()
     assert user.check_password(SENHA)
+    # A pagina de erro e a mesma URL do formulario: o "#senha" no `action`
+    # e o que faz o navegador devolver o foco a secao certa em vez do
+    # topo da pagina.
+    assert f'action="{reverse("accounts:profile")}#senha"' in response.content.decode()
 
 
 # ---------------------------------------------------------------------------

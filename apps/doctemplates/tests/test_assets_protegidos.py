@@ -198,12 +198,12 @@ class TestVinculoComOModelo:
 
     def test_o_oficial_fr_fica_vinculado_ao_logo(self, media):
         """`vincular_logo()` grava por `update()`; o vínculo tem de vir junto."""
-        from apps.doctemplates.services import modelo_fr
+        from apps.doctemplates.services import carta_convite
 
-        modelo_fr.reconstruir(DocumentTemplate, Asset)
+        carta_convite.reconstruir(DocumentTemplate, Asset, "fr")
 
-        logo = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
-        fr = DocumentTemplate.objects.get(slug=modelo_fr.SLUG_DO_MODELO_FR)
+        logo = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
+        fr = DocumentTemplate.objects.get(slug=carta_convite.slug_do_modelo("fr"))
         assert DocumentTemplateAsset.objects.filter(template=fr, asset=logo).exists()
 
 

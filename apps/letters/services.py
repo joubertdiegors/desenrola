@@ -8,37 +8,43 @@ Mantem a interpretacao do field_schema fora da view e do template (secao
 6 do pedido da Fase 3): a view so chama estas funcoes e passa o resultado
 pronto ao contexto; o template so exibe.
 
-Idioma: cada idioma tem o seu LetterTemplate (um documento oficial
-proprio, decisao da Fase 2). O idioma da carta e a unica coisa que
-escolhe o template — nunca um identificador vindo do cliente — e um
-idioma sem versao publicada NAO cai no documento de outro idioma: o
-fluxo para e avisa.
+Idioma: cada idioma tem o seu `DocumentTemplate` oficial na biblioteca.
+O idioma da carta e a unica coisa que escolhe o modelo — nunca um
+identificador vindo do cliente — e um idioma sem documento pronto NAO
+cai no documento de outro idioma: o fluxo para e avisa.
 """
 
+import datetime
 import hashlib
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import Asset
+from apps.core.middleware import IDIOMA_DA_INTERFACE
 from apps.doctemplates.layout_schema import assets_referenciados
-from apps.doctemplates.models import DocumentTemplate, LetterTemplate
-from apps.doctemplates.official_templates import official_slug
+from apps.doctemplates.models import DocumentTemplate
 from apps.doctemplates.schema import OPTION_BASED_TYPES, resolve_label, resolve_options
+from apps.doctemplates.services import pdf as document_pdf
 from apps.doctemplates.services import snapshot as document_snapshot
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
 from apps.letters.models import (
+    DefaultDocumentTemplateMissingError,
     DocumentSnapshotAssetMissingError,
     DocumentSnapshotImmutableError,
     Letter,
     LetterAsset,
+    LetterRenderError,
+    MissingDocumentSnapshotError,
 )
 from apps.letters.nationalities import display_name as nationality_display_name
 from apps.letters.nationalities import document_forms
-from apps.letters.pdf_generation import render_letter_pdf
+from apps.letters.rules import stay_duration_days
+from pdfengine.textnorm import normalize_for_document
 
 # Etapas 1-4 tem campos vindos do field_schema, cada uma na sua secao;
 # 5 (idioma) grava direto em Letter.language; 6 (revisao) so exibe.
@@ -81,28 +87,98 @@ def valid_language_codes():
 IDIOMA_PADRAO_DA_CARTA = "en"
 
 
-def get_template_version_for_language(language):
-    """
-    A TemplateVersion PUBLICADA do modelo oficial daquele idioma, ou None
-    se aquele idioma ainda nao tem documento publicado.
-
-    Nunca devolve o documento de outro idioma como substituto.
-    """
-    template = LetterTemplate.objects.filter(
-        slug=official_slug(language), is_active=True
-    ).first()
-    if template is None:
-        return None
-    return template.published_version
-
-
 def available_languages():
-    """Os idiomas que hoje tem um documento oficial publicado."""
-    return [
-        code
-        for code, _label in settings.LANGUAGES
-        if get_template_version_for_language(code) is not None
-    ]
+    """
+    Os idiomas cujo modelo oficial ja consegue gerar o documento --
+    a lista que a etapa 5 oferece.
+
+    LISTAR nao e USAR: um idioma cujo modelo oficial esteja ausente
+    ou inativo sai da lista, em vez de derrubar a pagina inteira por
+    causa de um idioma que a pessoa talvez nem fosse escolher. A
+    falha continua explicita no momento que importa -- `start_draft`
+    e `change_language` levantam se alguem tentar USAR aquele idioma.
+    """
+    disponiveis = []
+    for code, _label in settings.LANGUAGES:
+        try:
+            modelo = official_document_template(code)
+        except DefaultDocumentTemplateMissingError:
+            continue
+        if modelo is not None:
+            disponiveis.append(code)
+    return disponiveis
+
+
+def official_document_template(language):
+    """
+    O `DocumentTemplate` oficial do idioma pedido, SE ele ja tiver
+    conteudo real para desenhar -- `None` se ainda nao tiver.
+
+    E a UNICA resolucao de modelo do assistente: nao ha selecao manual,
+    nao ha segundo mecanismo, e o cliente nunca escolhe um id de modelo.
+
+    "Ter conteudo real" e DUAS condicoes, nao uma:
+
+      * o `layout` tem elementos -- ate a Etapa 3.6 so o frances tinha;
+      * e todo elemento de imagem aponta para um `Asset` que existe.
+
+    A segunda nao e teorica. O layout nasce da migration com
+    `asset_id: 0` (migration nao escreve em MEDIA_ROOT, de proposito) e
+    so ganha o binario quando `reconstruir_modelos_oficiais` roda, no
+    deploy. Entre uma coisa e outra o modelo tem desenho mas nao tem
+    logo: renderizar assim levanta `AssetAusenteError` no meio da
+    finalizacao da carta.
+
+    Devolver `None` nos dois casos -- em vez de devolver o modelo mesmo
+    assim -- e o que faz o assistente avisar "documento ainda nao
+    disponivel" em vez de deixar nascer uma carta que falharia na hora
+    de gerar, ou produzir um PDF incompleto marcado como gerado com
+    sucesso -- o tipo de erro silencioso que este projeto rejeita em
+    toda outra etapa.
+
+    So levanta `DefaultDocumentTemplateMissingError` quando o slug
+    oficial (`biblioteca.slug_oficial`) nao existe ou esta inativo -- a
+    seed da biblioteca (migration 0010) sempre o cria, entao essa falta
+    e sinal de banco fora do estado esperado, nao de "conteudo ainda nao
+    pronto".
+    """
+    from apps.doctemplates.services import biblioteca
+
+    slug = biblioteca.slug_oficial(language)
+    modelo = DocumentTemplate.objects.filter(slug=slug).select_related("type").first()
+    if modelo is None or not modelo.is_active:
+        raise DefaultDocumentTemplateMissingError(
+            f'O modelo estrutural oficial "{slug}" não existe ou está inativo; '
+            "a biblioteca de modelos não foi semeada corretamente."
+        )
+    if not (modelo.layout or {}).get("elements"):
+        return None
+    if not _os_assets_do_layout_existem(modelo.layout):
+        return None
+    return modelo
+
+
+def _os_assets_do_layout_existem(layout):
+    """
+    Todo elemento de imagem do layout aponta para um `Asset` que existe.
+
+    `layout_schema.assets_referenciados()` NAO serve aqui: para ele
+    `asset_id: 0` significa "sem asset" e simplesmente nao entra no
+    conjunto. Para esta pergunta zero e justamente o caso que interessa
+    -- o layout recem-semeado, ainda sem o binario.
+    """
+    exigidos = set()
+    for elemento in (layout or {}).get("elements", []):
+        if not isinstance(elemento, dict) or elemento.get("type") != "image":
+            continue
+        origem = (elemento.get("properties") or {}).get("source") or {}
+        exigidos.add(int(origem.get("asset_id") or 0))
+
+    if not exigidos:
+        return True
+    if 0 in exigidos:
+        return False
+    return Asset.objects.filter(pk__in=exigidos).count() == len(exigidos)
 
 
 # ---------------------------------------------------------------------------
@@ -112,19 +188,24 @@ def available_languages():
 
 def start_draft(user, language):
     """
-    Cria uma Letter em rascunho para `user`, no modelo oficial publicado
-    do idioma pedido (nunca uma versao em rascunho, nunca uma versao
-    escolhida pelo cliente — ver secao 15 do pedido).
+    Cria uma Letter em rascunho para `user`, no modelo oficial do idioma
+    pedido -- resolvido pelo slug, nunca escolhido pelo cliente.
 
-    None se aquele idioma nao tiver documento publicado.
+    `None` se aquele idioma ainda nao tem documento pronto: e o que faz
+    a view avisar em vez de deixar nascer uma carta que nao geraria PDF.
+
+    A resolucao roda ANTES do `create()`: se o modelo oficial faltar ou
+    estiver inativo (erro de infraestrutura, nao "conteudo ainda nao
+    pronto"), a excecao sobe e NENHUMA carta chega a existir -- nunca
+    uma parcialmente criada, presa sem modelo por um bug de semeadura.
     """
-    template_version = get_template_version_for_language(language)
-    if template_version is None:
+    modelo = official_document_template(language)
+    if modelo is None:
         return None
+
     return Letter.objects.create(
         user=user,
-        template=template_version.template,
-        template_version=template_version,
+        document_template=modelo,
         language=language,
         status=Letter.Status.DRAFT,
     )
@@ -136,19 +217,18 @@ def change_language(letter, language):
 
     Os dados preenchidos ficam intactos: os quatro modelos oficiais tem
     exatamente as mesmas chaves de campo. Devolve False (sem gravar nada)
-    se o idioma nao existir ou ainda nao tiver documento publicado.
+    se o idioma nao existir ou ainda nao tiver documento pronto.
     """
     if language not in valid_language_codes():
         return False
 
-    template_version = get_template_version_for_language(language)
-    if template_version is None:
+    modelo = official_document_template(language)
+    if modelo is None:
         return False
 
     letter.language = language
-    letter.template_version = template_version
-    letter.template = template_version.template
-    letter.save(update_fields=["language", "template", "template_version", "updated_at"])
+    letter.document_template = modelo
+    letter.save(update_fields=["language", "document_template", "updated_at"])
     return True
 
 
@@ -170,7 +250,7 @@ def get_owned_draft(user, letter_uuid):
 
 def fields_for_section(letter, section):
     """Os campos do field_schema da secao indicada, na ordem definida por `order`."""
-    return fields_for_section_in(letter.template_version.field_schema, section)
+    return fields_for_section_in(letter.document_template.field_schema, section)
 
 
 def fields_for_section_in(schema, section):
@@ -180,29 +260,35 @@ def fields_for_section_in(schema, section):
 
 def all_fields(letter):
     """Todos os campos do field_schema, na ordem definida por `order`."""
-    schema = letter.template_version.field_schema or {}
+    schema = letter.document_template.field_schema or {}
     return sorted(schema.get("fields", []), key=lambda f: f.get("order", 0))
 
 
 def form_for_step(letter, step, data=None):
     """
     O forms.Form dinamico da etapa `step` (1 a 4), com os textos no idioma
-    da carta. Sem `data` (GET), vem pre-preenchido com o que ja estiver
-    salvo em `letter.data`.
+    da INTERFACE (`IDIOMA_DA_INTERFACE`), nunca no idioma da carta. Sem
+    `data` (GET), vem pre-preenchido com o que ja estiver salvo em
+    `letter.data`.
     """
     fields = fields_for_section(letter, STEP_SECTIONS[step])
     initial = None if data is not None else deserialize_initial(fields, letter.data)
-    return build_dynamic_form(fields, data=data, initial=initial, language=letter.language)
+    # IDIOMA_DA_INTERFACE, nao letter.language: o wizard e sempre em
+    # portugues, so o DOCUMENTO tem idioma proprio (ver o comentario de
+    # IDIOMA_PADRAO_DA_CARTA acima).
+    return build_dynamic_form(
+        fields, data=data, initial=initial, language=IDIOMA_DA_INTERFACE
+    )
 
 
-def form_for_new_letter(template_version, language, data=None):
+def form_for_new_letter(document_template, data=None):
     """
     O formulario da primeira etapa ANTES de a carta existir: a tela de
     "Gerar Carta Convite" (GET) so apresenta; e o POST valido e que cria
     a Letter. Mesmo formulario da etapa 1, sem nenhum efeito no banco.
     """
-    fields = fields_for_section_in(template_version.field_schema, STEP_SECTIONS[FIRST_STEP])
-    return build_dynamic_form(fields, data=data, language=language)
+    fields = fields_for_section_in(document_template.field_schema, STEP_SECTIONS[FIRST_STEP])
+    return build_dynamic_form(fields, data=data, language=IDIOMA_DA_INTERFACE)
 
 
 def save_step_data(letter, step, cleaned_data):
@@ -235,7 +321,7 @@ def blocking_step_before(letter, target_step):
         fields = fields_for_section(letter, STEP_SECTIONS[step])
         if not fields:
             continue
-        form = build_dynamic_form(fields, data=letter.data, language=letter.language)
+        form = build_dynamic_form(fields, data=letter.data, language=IDIOMA_DA_INTERFACE)
         if not form.is_valid():
             return step
 
@@ -277,9 +363,12 @@ def grouped_review(letter):
     Os dados preenchidos, agrupados por secao, com o label e o titulo/link
     de cada secao ja resolvidos -- a Etapa 6 so percorre esta lista, sem
     interpretar o schema nem conhecer a relacao secao->etapa. Os textos
-    saem no idioma da carta.
+    saem no idioma da INTERFACE (`IDIOMA_DA_INTERFACE`): esta e a tela de
+    revisao do assistente, nao o documento -- o valor da nacionalidade,
+    por exemplo, e so exibicao aqui, o que vai impresso na carta e
+    resolvido a parte, no idioma dela.
     """
-    language = letter.language
+    language = IDIOMA_DA_INTERFACE
     sections = {}
     for field_def in all_fields(letter):
         section = field_def.get("section", "")
@@ -356,8 +445,7 @@ def build_snapshot(letter, user):
     return {
         "data": dict(letter.data),
         "language": letter.language,
-        "template_slug": letter.template.slug,
-        "template_version_number": letter.template_version.version_number,
+        "document_template_slug": letter.document_template.slug,
         "host": {
             "full_name": user.full_name,
             "phone": user.phone,
@@ -384,11 +472,10 @@ def capture_document_template_snapshot(letter, document_template):
     `document_snapshot` (copia estrutural profunda) e
     `document_snapshot_hash` -- ver `apps.doctemplates.services.snapshot`.
 
-    Esta e a integracao com a NOVA arquitetura de modelos (Etapa 3.5.1),
-    paralela ao `build_snapshot()` acima (que continua servindo so a
-    arquitetura antiga). Nenhuma tela escolhe um `DocumentTemplate` para
-    a carta ainda; esta funcao existe para quando uma escolher, e para
-    testes exercitarem o mecanismo.
+    Congela o MODELO; `build_snapshot()` acima congela os DADOS. As duas
+    rodam no mesmo instante da finalizacao, nessa ordem (ver
+    `views._finalize()`). O modelo vem do IDIOMA da carta, resolvido em
+    `official_document_template()` -- nunca de um id enviado pelo cliente.
 
     PROTEGIDA CONTRA EDICAO CONCORRENTE DO MODELO
     -----------------------------------------------
@@ -461,6 +548,165 @@ def capture_document_template_snapshot(letter, document_template):
     return letter
 
 
+def _data_br(valor):
+    """
+    Uma data guardada no snapshot (ISO, `date`/`datetime` ou vazia) como
+    "DD/MM/AAAA" -- o mesmo formato que o documento oficial usa.
+
+    O valor sai do snapshot em ISO; o documento mostra DD/MM/AAAA.
+    """
+    if not valor:
+        return ""
+    if isinstance(valor, datetime.datetime):
+        return valor.date().strftime("%d/%m/%Y")
+    if isinstance(valor, datetime.date):
+        return valor.strftime("%d/%m/%Y")
+    texto = str(valor)
+    try:
+        data = datetime.date.fromisoformat(texto)
+    except ValueError:
+        data = datetime.datetime.fromisoformat(texto).date()
+    return data.strftime("%d/%m/%Y")
+
+
+def build_document_context(letter):
+    """
+    O contexto que o renderer generico (Etapa 3.4) consome, montado a
+    partir do que a carta JA TEM CONGELADO -- nunca do perfil ATUAL do
+    usuario.
+
+    A fonte e `letter.snapshot` (o dict antigo, congelado por
+    `build_snapshot()` no MESMO instante da finalizacao, sempre antes de
+    `capture_document_template_snapshot()` rodar -- ver
+    `views._finalize()`). Reutiliza-lo aqui, em vez de resolver o perfil
+    de novo, e o que evita duas fontes de verdade sobre "qual era o
+    endereco do anfitriao quando esta carta foi emitida" -- e o que
+    `build_snapshot()` ja resolve, uma vez, ficaria fora de sincronia se
+    fosse recalculado aqui a partir de `User` ao vivo.
+
+    So os nomes das chaves mudam: de `host.full_name` (como o snapshot
+    guarda) para `anfitriao.nome` (o vocabulario do registro de fontes
+    de dados, `apps.doctemplates.datasources`).
+
+    `calculado.duracao_dias` e recalculada aqui, nunca lida de um campo
+    gravado -- os dados de entrada
+    (`estadia.chegada`/`estadia.partida`) ja estao congelados,
+    entao recalcular da sempre o mesmo resultado, e nunca fica
+    desatualizada se a formula mudar.
+
+    `documento.numero` e `documento.data` nao tem um dado especifico
+    proprio na Letter: usam a referencia da carta e a data de finalizacao,
+    respectivamente -- os dados EQUIVALENTES mais proximos que ja
+    existem, em vez de inventar um conceito novo. O modelo FR nao os usa;
+    ficam disponiveis para um documento futuro que precise deles.
+
+    NORMALIZACAO TIPOGRAFICA
+    ------------------------
+    Todo valor passa por `pdfengine.textnorm.normalize_for_document()`
+    antes de sair daqui. Sem isso, o travessao que
+    `User.get_address_display()` usa para exibicao ("Rua 25 – 1200
+    Cidade") apareceria assim no PDF, em vez do hifen simples que o
+    documento oficial usa ("Rue des Exemple 25 - 1200 ..."). Aplicar
+    aqui, na camada do documento -- e nao em `get_address_display()`,
+    que tem a sua propria convencao de tela --, e o que mantem a
+    convencao tipografica do documento num lugar so.
+    """
+    snapshot = letter.snapshot or {}
+    dados = snapshot.get("data") or {}
+    host = snapshot.get("host") or {}
+    nacionalidades = snapshot.get("nationalities") or {
+        chave: dados.get(chave) for chave in ("guest_nationality", "host_nationality")
+    }
+
+    chegada = dados.get("stay_arrival")
+    partida = dados.get("stay_departure")
+    duracao = ""
+    if chegada and partida:
+        dias = stay_duration_days(
+            datetime.date.fromisoformat(str(chegada)), datetime.date.fromisoformat(str(partida))
+        )
+        duracao = str(dias) if dias is not None else ""
+
+    contexto = {
+        "documento.numero": letter.reference,
+        "documento.data": _data_br(snapshot.get("finalized_at")),
+        "convidado.nome": dados.get("guest_name") or "",
+        "convidado.nacionalidade": nacionalidades.get("guest_nationality") or "",
+        "convidado.data_nascimento": _data_br(dados.get("guest_birth_date")),
+        "convidado.passaporte": dados.get("guest_passport") or "",
+        "anfitriao.nome": host.get("full_name") or "",
+        "anfitriao.nacionalidade": nacionalidades.get("host_nationality") or "",
+        "anfitriao.data_nascimento": _data_br(
+            host.get("birth_date") or dados.get("host_birth_date")
+        ),
+        "anfitriao.documento_identidade": host.get("document_number") or "",
+        "anfitriao.endereco": host.get("address") or "",
+        "anfitriao.cidade": host.get("city") or "",
+        "anfitriao.telefone": host.get("phone") or "",
+        "anfitriao.email": letter.user.email or "",
+        "estadia.chegada": _data_br(chegada),
+        "estadia.partida": _data_br(partida),
+        "calculado.duracao_dias": duracao,
+        "calculado.data_documento": _data_br(snapshot.get("finalized_at")),
+    }
+    return {chave: normalize_for_document(valor) for chave, valor in contexto.items()}
+
+
+def render_letter(letter):
+    """
+    O PDF de `letter` pelo renderer GENERICO (Etapa 3.4), a partir do seu
+    `document_snapshot` -- nunca do `DocumentTemplate` atual.
+
+    Os quatro passos que o renderer generico pede, aqui montados a partir
+    do que a carta ja tem congelado:
+
+      1. verificar que ha snapshot estrutural -- senao,
+         `MissingDocumentSnapshotError`, que e erro de programacao: o
+         snapshot e capturado na finalizacao, antes de qualquer geracao;
+      2. montar o contexto com os dados REAIS da carta
+         (`build_document_context`);
+      3. resolver os assets do layout CONGELADO, pelos ids do proprio
+         snapshot (`document_pdf.carregar_assets`) -- protegidos contra
+         exclusao/substituicao por `LetterAsset` (Etapa 3.5.1);
+      4. chamar `document_pdf.render_layout()` e devolver os bytes.
+
+    NUNCA CONSULTA O DOCUMENTTEMPLATE ATUAL
+    -----------------------------------------
+    Nem o layout, nem a pagina, nem o idioma vem de `letter.document_
+    template` -- vem inteiramente de `letter.document_snapshot`, onde a
+    Etapa 3.5.1 os congelou no instante da finalizacao. Alterar o
+    `DocumentTemplate` depois -- trocar o layout, mudar de asset, ate
+    apaga-lo (se nada mais o protege) -- nao muda uma linha do que sai
+    daqui: e esse o ponto central desta etapa.
+    """
+    estrutura = letter.document_snapshot
+    if not estrutura:
+        raise MissingDocumentSnapshotError(
+            f'A carta "{letter.reference}" não tem snapshot estrutural '
+            "(document_snapshot); não há o que o renderer genérico desenhe."
+        )
+
+    try:
+        contexto = document_pdf.Contexto(build_document_context(letter))
+        assets = document_pdf.carregar_assets(estrutura["layout"])
+        dados, _relatorio = document_pdf.render_layout(
+            estrutura["layout"], estrutura["type"]["page"], contexto, assets=assets,
+        )
+    except (
+        document_pdf.CampoDesconhecidoError,
+        document_pdf.ValorAusenteError,
+        document_pdf.AssetAusenteError,
+        document_pdf.FonteIndisponivelError,
+        document_pdf.PaginaInvalidaError,
+        ValidationError,
+    ) as erro:
+        raise LetterRenderError(
+            f'Não foi possível gerar o PDF de "{letter.reference}" a partir do '
+            f"modelo estrutural: {erro}"
+        ) from erro
+    return dados
+
+
 def missing_host_profile_fields(user):
     """
     Os dados de perfil que o documento oficial exige e o perfil ainda
@@ -496,18 +742,27 @@ def generate_pdf(letter):
     `Letter.pdf_sha256`, o instante em `Letter.generated_at`, e so entao
     o status passa a GENERATED.
 
-    A fonte dos dados e SEMPRE o snapshot, nunca o perfil atual do
-    usuario -- e o que faz uma carta antiga continuar reproduzindo os
-    dados que tinha quando foi emitida, mesmo que o perfil tenha mudado
-    desde entao.
+    SEMPRE O RENDERER ESTRUTURAL, SEMPRE A PARTIR DO SNAPSHOT
+    ---------------------------------------------------------
+    O PDF sai de `render_letter()`, a partir do modelo estrutural
+    congelado na finalizacao -- nunca do `DocumentTemplate` atual. Isto
+    vale tanto para a primeira geracao quanto para uma eventual
+    REGERACAO: chamar esta funcao de novo, mais tarde, sobre a MESMA
+    carta, sempre relê o MESMO `document_snapshot` (imutavel desde a
+    Etapa 3.5.1) e produz o MESMO documento -- nunca o layout/pagina que
+    o `DocumentTemplate` tiver NAQUELE momento.
+
+    A fonte dos dados e SEMPRE um snapshot congelado, nunca o perfil
+    atual do usuario nem o modelo atual -- e o que faz uma carta antiga
+    continuar reproduzindo o que tinha quando foi emitida, mesmo que o
+    perfil ou o modelo tenham mudado desde entao.
 
     Se a geracao falhar (falta um dado, um valor nao cabe na area
-    reservada, o PDF base nao pode ser lido), o erro sobe e NADA e
-    gravado: a carta nao vira GENERATED com um arquivo errado.
+    reservada, um asset nao pode ser lido), o erro sobe ANTES de
+    qualquer `save()`: a carta nao vira GENERATED com um arquivo errado,
+    nem fica com o arquivo antigo meio-substituido.
     """
-    pdf_bytes = render_letter_pdf(
-        template_version=letter.template_version, snapshot=letter.snapshot
-    )
+    pdf_bytes = render_letter(letter)
     checksum = hashlib.sha256(pdf_bytes).hexdigest()
 
     letter.pdf_file.save(f"{letter.reference}.pdf", ContentFile(pdf_bytes), save=False)

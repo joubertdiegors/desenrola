@@ -22,6 +22,16 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado -- sem eles
+    `official_document_template()` devolve `None` e o assistente
+    recusa criar carta nenhuma (e esta certo: seria uma carta que
+    nao viraria PDF).
+    """
+
+
+@pytest.fixture(autouse=True)
 def _nacionalidades_de_teste(nacionalidade_factory):
     """
     Nacionalidades usadas pelos payloads deste arquivo -- desde a decisão
@@ -418,22 +428,22 @@ class TestPlaceholderDoPassaporte:
         from apps.doctemplates.schema import resolve_field_text
         from apps.letters import services as svc
 
-        versao = svc.get_template_version_for_language(idioma)
+        modelo = svc.official_document_template(idioma)
         campo = next(
-            f for f in versao.field_schema["fields"] if f["key"] == "guest_passport"
+            f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )
         assert resolve_field_text(campo, idioma, "placeholder") == "YY0000"
 
-    def test_a_versao_publicada_no_banco_ja_tem_o_novo_placeholder(self):
+    def test_o_schema_gravado_no_banco_ja_tem_o_novo_placeholder(self):
         """
-        Não basta mudar a constante: o assistente lê o schema gravado na
-        TemplateVersion publicada, que é imutável -- por isso a mudança
-        entrou por migração, criando uma versão nova.
+        Não basta mudar a constante: o assistente lê o `field_schema`
+        gravado no `DocumentTemplate` oficial -- por isso a mudança
+        entrou por migração.
         """
         from apps.letters import services as svc
 
-        versao = svc.get_template_version_for_language("fr")
+        modelo = svc.official_document_template("fr")
         campo = next(
-            f for f in versao.field_schema["fields"] if f["key"] == "guest_passport"
+            f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )
         assert campo["placeholder"] == "YY0000"

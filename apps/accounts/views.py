@@ -77,7 +77,7 @@ class LoginView(auth_views.LoginView):
 def _profile_url(section):
     url = reverse("accounts:profile")
     if section in PROFILE_SECTIONS:
-        url += f"?secao={section}"
+        url += f"?secao={section}#{section}"
     return url
 
 

@@ -1,8 +1,7 @@
 /* --------------------------------------------------------------------------
    Editor visual dos modelos da biblioteca (Etapa 3.2)
 
-   Arquivo proprio, sem relacao com `editor.css`, que serve o editor da
-   arquitetura anterior. Carregado so nesta tela (bloco extra_css).
+   Arquivo proprio, carregado so nesta tela (bloco extra_css).
 
    A pagina NAO encolhe para caber no celular: uma folha espremida em
    360px nao serve para posicionar nada com precisao. Em tela estreita a

@@ -2,7 +2,7 @@
 Views de cartas.
 
 `start`/`wizard_step` sao o assistente real (Fase 3): alimentado pelo
-field_schema da TemplateVersion publicada do modelo oficial DO IDIOMA da
+field_schema do DocumentTemplate oficial DO IDIOMA da
 carta, persistido em Letter.data por etapa.
 
 Criacao: `GET /letters/new/` so APRESENTA a primeira etapa — nao grava
@@ -26,10 +26,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.letters import presentation, services
-from apps.letters.models import Letter
-from apps.letters.pdf_generation import UnsupportedLanguageError
+from apps.letters.models import DefaultDocumentTemplateMissingError, Letter, LetterRenderError
 from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_days
-from pdfengine.exceptions import PdfEngineError
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +70,28 @@ DOCUMENT_UNAVAILABLE = _(
 )
 
 
+def _biblioteca_quebrada(request):
+    """
+    Resposta para `DefaultDocumentTemplateMissingError`: o modelo
+    oficial do idioma nao existe ou esta inativo.
+
+    E erro de INFRAESTRUTURA (biblioteca nao semeada, ou registro
+    desativado por engano) -- diferente de "este idioma ainda nao tem
+    documento pronto", que e o `DOCUMENT_UNAVAILABLE`. Por isso a
+    pessoa recebe um aviso generico e a equipe recebe o traceback,
+    em vez de um 500.
+
+    So faz sentido chamada de dentro de um `except`: usa
+    `logger.exception`.
+    """
+    logger.exception("Modelo estrutural oficial indisponível ao iniciar uma carta")
+    messages.error(
+        request,
+        _("Não foi possível iniciar a Carta Convite agora. Nossa equipe foi avisada."),
+    )
+    return redirect("core:dashboard")
+
+
 def _field_rows(fields, form):
     """As linhas que o template renderiza: tipo, layout e o campo ja ligado."""
     return [
@@ -99,17 +119,28 @@ def start(request):
     documento de outro idioma no lugar.
     """
     language = services.IDIOMA_PADRAO_DA_CARTA
-    template_version = services.get_template_version_for_language(language)
-    if template_version is None:
+    try:
+        document_template = services.official_document_template(language)
+    except DefaultDocumentTemplateMissingError:
+        return _biblioteca_quebrada(request)
+    if document_template is None:
         messages.error(request, DOCUMENT_UNAVAILABLE)
         return redirect("core:dashboard")
 
     data = request.POST if request.method == "POST" else None
-    form = services.form_for_new_letter(template_version, language, data=data)
+    form = services.form_for_new_letter(document_template, data=data)
 
     if request.method == "POST":
         if form.is_valid():
-            letter = services.start_draft(request.user, language)
+            try:
+                letter = services.start_draft(request.user, language)
+            except DefaultDocumentTemplateMissingError:
+                # `start_draft` resolve o modelo de novo, por conta
+                # propria (o cliente nunca manda um id). Entre a
+                # resolucao la em cima e esta, alguem pode ter
+                # desativado o registro: nenhuma Letter chega a
+                # existir nesse caso -- nada para desfazer, so avisar.
+                return _biblioteca_quebrada(request)
             if letter is None:
                 messages.error(request, DOCUMENT_UNAVAILABLE)
                 return redirect("core:dashboard")
@@ -118,7 +149,7 @@ def start(request):
         messages.error(request, _("Corrija os campos destacados antes de continuar."))
 
     fields = services.fields_for_section_in(
-        template_version.field_schema, services.STEP_SECTIONS[services.FIRST_STEP]
+        document_template.field_schema, services.STEP_SECTIONS[services.FIRST_STEP]
     )
     return render(
         request,
@@ -329,20 +360,9 @@ def _finalize(request, letter):
     # GENERATED quando o arquivo existir de verdade.
     try:
         services.generate_pdf(letter)
-    except UnsupportedLanguageError:
-        # Nao e uma falha: e o limite conhecido de so existir documento
-        # oficial em frances por enquanto. Dizer isso claramente, em vez
-        # de sugerir que algo deu errado.
-        messages.warning(
-            request,
-            _(
-                "A carta foi registrada. O documento oficial em PDF ainda só "
-                "existe em francês — escolha o francês na etapa de idioma "
-                "para gerá-lo."
-            ),
-        )
-        return redirect("letters:detail", letter_uuid=letter.uuid)
-    except PdfEngineError:
+    except LetterRenderError:
+        # `LetterRenderError` embrulha qualquer falha do renderer
+        # estrutural -- ver `services.render_letter()`.
         logger.exception("Falha ao gerar o PDF da carta %s", letter.reference)
         messages.warning(
             request,
@@ -375,7 +395,7 @@ def _get_own_letter(user, letter_uuid):
     """
     return (
         Letter.objects.filter(uuid=letter_uuid, user=user)
-        .select_related("template", "template_version")
+        .select_related("document_template")
         .first()
     )
 

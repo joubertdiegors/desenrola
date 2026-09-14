@@ -37,10 +37,25 @@ CARTA_CONVITE_FR = {
     "calculado.data_documento": "09/09/2026",
 }
 
+# EN/NL/PT (Etapa 3.6) usam os MESMOS valores: e a mesma pessoa
+# ficticia, o mesmo endereco, as mesmas datas -- o que muda e so a
+# nacionalidade, que no documento real vem do cadastro `Nationality` ja
+# escrita no idioma da carta. Manter o resto identico e o que permite
+# comparar as quatro previas lado a lado e ver SO a traducao.
+NACIONALIDADES = {
+    "en": {"anfitriao.nacionalidade": "Belgian", "convidado.nacionalidade": "Brazilian"},
+    "nl": {"anfitriao.nacionalidade": "Belgische", "convidado.nacionalidade": "Braziliaanse"},
+    "pt": {"anfitriao.nacionalidade": "belga", "convidado.nacionalidade": "brasileira"},
+}
+
 # Por slug. Um modelo novo entra aqui quando tiver layout; sem entrada,
 # a previa sai com os campos vazios -- o que ainda mostra a estrutura.
 POR_SLUG = {
     "carta-convite-fr": CARTA_CONVITE_FR,
+    **{
+        f"carta-convite-{idioma}": {**CARTA_CONVITE_FR, **valores}
+        for idioma, valores in NACIONALIDADES.items()
+    },
 }
 
 

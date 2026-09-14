@@ -1,12 +1,11 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Biblioteca de modelos da nova arquitetura (Etapa 3.2.1).
+Biblioteca de modelos (Etapa 3.2.1).
 
-Fonte de dados: exclusivamente `DocumentTemplate`. Esta tela SUBSTITUI
-"documents.html" (a listagem de `TemplateVersion`, com versionamento)
-como porta de entrada do menu "Modelos" -- aquela continua existindo
-para o legado, mas nao e mais alcancada pela navegacao normal.
+Fonte de dados: exclusivamente `DocumentTemplate`. E a unica biblioteca
+de modelos do produto -- a listagem antiga, com versionamento, foi
+aposentada na Etapa 3.5.3.
 
 Duplicar abre um dialogo pedindo o nome da copia (o componente de
 dialogo ja existe em static/js/app.js, usado tambem no assistente); o

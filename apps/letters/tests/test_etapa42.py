@@ -1,22 +1,15 @@
 """
-Fase 5 / Etapa 4.2 -- idioma do documento.
+Idioma do documento (Fase 5 / Etapa 4.2, revisto na 3.6).
 
-DUAS PARTES, e so uma foi entregue:
+  * o idioma PADRAO de uma carta nova e `en`, explicito, sem relacao com
+    o idioma da interface;
 
-  * o idioma PADRAO de uma carta nova passou a ser `en`, explicito, sem
-    relacao com o idioma da interface -- isto esta implementado e coberto
-    aqui;
+  * cada idioma usa o SEU `DocumentTemplate` oficial -- nunca o de outro
+    idioma como substituto;
 
-  * os renderers oficiais de PT/NL/EN -- BLOQUEADOS. O repositorio so tem
-    o PDF oficial frances (`pdfengine/assets/fr/`). Sem os arquivos
-    oficiais dos outros tres idiomas nao ha como medir coordenadas, e
-    inventar um layout aproximado foi explicitamente proibido.
-
-Enquanto os renderers nao existem, o que estes testes protegem e o
-comportamento SEGURO do vazio: um idioma sem renderer falha alto e
-claro, nunca entrega um PDF de outro idioma. Quando os modelos oficiais
-chegarem, `TestEnquantoNaoHaRenderer` e o lugar a atualizar -- e falhar
-nele sera justamente o sinal de que o idioma passou a ser suportado.
+  * desde a Etapa 3.6 os quatro tem layout, entao os quatro geram PDF.
+    Ate ali so o frances gerava, e este arquivo protegia o comportamento
+    seguro do vazio.
 """
 
 import datetime
@@ -28,17 +21,13 @@ from django.urls import reverse
 from django.utils import timezone
 from pypdf import PdfReader
 
-from apps.doctemplates.models import TemplateVersion
-from apps.doctemplates.official_templates import official_slug
+from apps.doctemplates.services.biblioteca import slug_oficial
 from apps.letters import services
 from apps.letters.models import Letter
-from apps.letters.pdf_generation import RENDERERS, UnsupportedLanguageError, render_letter_pdf
 
 pytestmark = pytest.mark.django_db
 
 IDIOMAS_DO_SITE = ["pt", "fr", "nl", "en"]
-# Os idiomas que ainda nao tem documento oficial implementado.
-SEM_RENDERER = ["pt", "nl", "en"]
 
 
 @pytest.fixture(autouse=True)
@@ -46,10 +35,10 @@ def _nacionalidades(nacionalidade_factory):
     nacionalidade_factory("Brasileira", guest_form="Brésilienne")
 
 
-def _versao_oficial(idioma):
-    return TemplateVersion.objects.get(
-        template__slug=official_slug(idioma), status=TemplateVersion.Status.PUBLISHED
-    )
+@pytest.fixture(autouse=True)
+def _oficiais(modelos_oficiais_prontos):
+    """Os quatro modelos com o logo materializado -- sem isso o
+    assistente recusa criar a carta, corretamente."""
 
 
 # --- Percorrer o assistente pelo caminho real ------------------------------
@@ -124,9 +113,9 @@ class TestIdiomaPadraoDaCarta:
         auth_client.post(reverse("letters:new"), PASSO_1)
 
         letter = Letter.objects.get(user=user)
-        assert letter.template.slug == official_slug("en")
-        assert letter.template.language == "en"
-        assert letter.template_version.status == "published"
+        assert letter.document_template.slug == slug_oficial("en")
+        assert letter.document_template.language == "en"
+        assert letter.document_template.is_system is True
 
     def test_o_padrao_e_explicito_e_nao_o_idioma_da_interface(self):
         """
@@ -171,20 +160,20 @@ class TestIdiomaPadraoDaCarta:
 
 class TestCadaIdiomaUsaOSeuDocumento:
     @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
-    def test_o_modelo_publicado_e_o_daquele_idioma(self, idioma):
-        versao = services.get_template_version_for_language(idioma)
+    def test_o_modelo_oficial_e_o_daquele_idioma(self, idioma):
+        modelo = services.official_document_template(idioma)
 
-        assert versao is not None
-        assert versao.template.slug == official_slug(idioma)
-        assert versao.template.language == idioma
+        assert modelo is not None
+        assert modelo.slug == slug_oficial(idioma)
+        assert modelo.language == idioma
 
-    @pytest.mark.parametrize("idioma", SEM_RENDERER)
+    @pytest.mark.parametrize("idioma", ["pt", "nl", "en"])
     def test_nenhum_idioma_aponta_para_o_documento_frances(self, idioma):
         """PT, NL e EN nunca podem cair no modelo FR."""
-        versao = services.get_template_version_for_language(idioma)
+        modelo = services.official_document_template(idioma)
 
-        assert versao.template.slug != official_slug("fr")
-        assert versao.template.language != "fr"
+        assert modelo.slug != slug_oficial("fr")
+        assert modelo.language != "fr"
 
     @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
     def test_trocar_o_idioma_troca_o_documento(self, auth_client, user, idioma):
@@ -196,48 +185,58 @@ class TestCadaIdiomaUsaOSeuDocumento:
 
         letter.refresh_from_db()
         assert letter.language == idioma
-        assert letter.template_version == _versao_oficial(idioma)
+        assert letter.document_template == services.official_document_template(idioma)
 
-    def test_sem_documento_publicado_a_troca_e_recusada(self, auth_client, user):
+    def test_sem_modelo_pronto_a_troca_e_recusada(self, auth_client, user):
         """
-        Nao existindo modelo ativo naquele idioma, a etapa 5 recusa --
-        em vez de servir o documento de outro idioma.
+        Sem desenho naquele idioma, a etapa 5 recusa -- em vez de servir
+        o documento de outro idioma.
         """
-        from apps.doctemplates.models import LetterTemplate
+        from apps.doctemplates.models import DocumentTemplate
 
         auth_client.post(reverse("letters:new"), PASSO_1)
         letter = Letter.objects.get(user=user)
         _ate_a_etapa_do_idioma(auth_client, letter)
-        LetterTemplate.objects.filter(slug=official_slug("nl")).update(is_active=False)
+        DocumentTemplate.objects.filter(slug=slug_oficial("nl")).update(layout={})
 
         auth_client.post(_step_url(letter, 5), {"language": "nl"})
 
         letter.refresh_from_db()
         assert letter.language == "en"
-        assert letter.template.slug == official_slug("en")
+        assert letter.document_template.slug == slug_oficial("en")
 
 
 # ---------------------------------------------------------------------------
-# 3. O PDF frances -- o unico implementado -- nao pode ter regredido
+# 3. Os quatro idiomas geram PDF (Etapa 3.6)
 # ---------------------------------------------------------------------------
 
 
-class TestPdfFrances:
-    def test_o_frances_gera_o_pdf(self, snapshot_fr):
-        pdf = render_letter_pdf(
-            template_version=_versao_oficial("fr"), snapshot=snapshot_fr
-        )
+class TestOsQuatroGeramPdf:
+    """
+    Ate a Etapa 3.6 so o frances tinha documento, e esta secao protegia o
+    comportamento seguro do vazio: falhar alto em vez de entregar um PDF
+    no idioma errado. Com os quatro modelos desenhados, o que se protege
+    agora e o oposto -- todos geram, cada um no seu idioma.
+    """
 
-        assert pdf.startswith(b"%PDF-")
-        assert len(PdfReader(io.BytesIO(pdf)).pages) == 1
-
-    def test_o_pdf_fica_mesmo_anexado_a_carta(self, auth_client, user):
-        letter = _carta_finalizada_em(auth_client, user, "fr")
+    @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
+    def test_a_carta_sai_gerada_com_arquivo(self, auth_client, user, idioma):
+        letter = _carta_finalizada_em(auth_client, user, idioma)
 
         assert letter.status == Letter.Status.GENERATED
         assert letter.pdf_file
         assert letter.pdf_file.size > 0
         assert letter.generated_at is not None
+
+    @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
+    def test_o_pdf_tem_uma_pagina_e_texto_real(self, auth_client, user, idioma):
+        letter = _carta_finalizada_em(auth_client, user, idioma)
+
+        with letter.pdf_file.open("rb") as arquivo:
+            documento = PdfReader(io.BytesIO(arquivo.read()))
+
+        assert len(documento.pages) == 1
+        assert len(documento.pages[0].extract_text()) > 800
 
     def test_o_sha256_corresponde_ao_arquivo_guardado(self, auth_client, user):
         letter = _carta_finalizada_em(auth_client, user, "fr")
@@ -247,83 +246,27 @@ class TestPdfFrances:
 
         assert letter.pdf_sha256 == gravado
 
-    def test_os_dados_variaveis_aparecem_no_pdf(self, snapshot_fr):
-        pdf = render_letter_pdf(
-            template_version=_versao_oficial("fr"), snapshot=snapshot_fr
-        )
-
-        # `extract_text` devolve cada palavra numa linha; o que importa
-        # aqui e que o valor esteja no PDF, nao como o pypdf o quebra.
-        texto = " ".join(PdfReader(io.BytesIO(pdf)).pages[0].extract_text().split())
-
-        assert snapshot_fr["data"]["guest_name"] in texto
-        assert snapshot_fr["host"]["full_name"] in texto
-        assert snapshot_fr["data"]["guest_passport"] in texto
-
-
-# ---------------------------------------------------------------------------
-# 4. Enquanto PT/NL/EN nao tem renderer: falhar alto, nunca improvisar
-# ---------------------------------------------------------------------------
-
-
-class TestEnquantoNaoHaRenderer:
-    """
-    ATUALIZAR QUANDO OS MODELOS OFICIAIS CHEGAREM. Estes testes descrevem
-    uma ausencia, nao um objetivo: quando o renderer de um idioma for
-    implementado, o teste daquele idioma passa a falhar -- e e esse o
-    sinal de que a Etapa 4.2 avancou.
-    """
-
-    def test_hoje_so_o_frances_tem_renderer(self):
-        assert set(RENDERERS) == {"fr"}
-
-    @pytest.mark.parametrize("idioma", SEM_RENDERER)
-    def test_um_idioma_sem_renderer_falha_de_forma_explicita(self, idioma, snapshot_fr):
-        snapshot = {**snapshot_fr, "language": idioma}
-
-        with pytest.raises(UnsupportedLanguageError) as erro:
-            render_letter_pdf(
-                template_version=_versao_oficial(idioma), snapshot=snapshot
-            )
-
-        assert idioma in str(erro.value)
-
-    @pytest.mark.parametrize("idioma", SEM_RENDERER)
-    def test_nunca_devolve_o_pdf_frances_no_lugar(self, idioma, snapshot_fr):
-        """
-        O ponto central da etapa: preferir o erro a um documento no
-        idioma errado. Um PDF frances entregue como se fosse portugues
-        seria pior do que nenhum PDF.
-        """
-        snapshot = {**snapshot_fr, "language": idioma}
-
-        with pytest.raises(UnsupportedLanguageError):
-            render_letter_pdf(
-                template_version=_versao_oficial(idioma), snapshot=snapshot
-            )
-
-    @pytest.mark.parametrize("idioma", SEM_RENDERER)
-    def test_a_carta_fica_registrada_mas_sem_pdf(self, auth_client, user, idioma):
-        """
-        A falha nao pode parecer sucesso: a carta e registrada (nao se
-        perde o preenchimento), mas sem arquivo, sem checksum e sem o
-        status GENERATED.
-        """
+    @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
+    def test_os_dados_variaveis_aparecem_no_pdf(self, auth_client, user, idioma):
         letter = _carta_finalizada_em(auth_client, user, idioma)
 
-        assert letter.status == Letter.Status.COMPLETED
-        assert not letter.pdf_file
-        assert letter.pdf_sha256 == ""
-        assert letter.generated_at is None
+        with letter.pdf_file.open("rb") as arquivo:
+            bruto = PdfReader(io.BytesIO(arquivo.read())).pages[0].extract_text()
+        # `extract_text` devolve cada palavra numa linha; o que importa
+        # aqui e que o valor esteja no PDF, nao como o pypdf o quebra.
+        texto = " ".join(bruto.split())
 
-    @pytest.mark.parametrize("idioma", SEM_RENDERER)
-    def test_a_pessoa_e_avisada_do_motivo_real(self, auth_client, user, idioma):
-        from django.contrib.messages import get_messages
+        assert letter.snapshot["data"]["guest_name"] in texto
+        assert letter.snapshot["host"]["full_name"] in texto
+        assert letter.snapshot["data"]["guest_passport"] in texto
 
-        resposta = _finaliza(auth_client, user, idioma)
-        textos = " ".join(str(m) for m in get_messages(resposta.wsgi_request))
+    @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
+    def test_cada_carta_congela_o_seu_proprio_modelo(self, auth_client, user, idioma):
+        """Nunca o documento de outro idioma como substituto."""
+        letter = _carta_finalizada_em(auth_client, user, idioma)
 
-        assert "francês" in textos
+        assert letter.document_snapshot["language"] == idioma
+        assert letter.document_template.slug == slug_oficial(idioma)
 
 
 # ---------------------------------------------------------------------------
@@ -332,12 +275,9 @@ class TestEnquantoNaoHaRenderer:
 
 
 class TestTrocaDeIdiomaAntesDeFinalizar:
-    def test_trocar_para_frances_passa_a_gerar_o_pdf(self, auth_client, user):
-        """
-        A carta nasce em ingles (sem renderer). Trocar para frances antes
-        de finalizar tem de mudar o documento de destino -- e ai o PDF
-        sai.
-        """
+    def test_trocar_para_frances_muda_o_documento_gerado(self, auth_client, user):
+        """A carta nasce em ingles; trocar antes de finalizar tem de
+        mudar o documento de destino."""
         auth_client.post(reverse("letters:new"), PASSO_1)
         letter = Letter.objects.get(user=user)
         _ate_a_etapa_do_idioma(auth_client, letter)
@@ -354,7 +294,7 @@ class TestTrocaDeIdiomaAntesDeFinalizar:
         letter = _carta_finalizada_em(auth_client, user, "fr")
 
         assert letter.snapshot["language"] == "fr"
-        assert letter.snapshot["template_slug"] == official_slug("fr")
+        assert letter.snapshot["document_template_slug"] == slug_oficial("fr")
 
 
 # ---------------------------------------------------------------------------

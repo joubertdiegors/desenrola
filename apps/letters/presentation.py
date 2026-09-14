@@ -144,7 +144,7 @@ def own_letters(user):
     """
     return (
         Letter.objects.filter(user=user)
-        .select_related("template", "template_version")
+        .select_related("document_template")
         .order_by("-updated_at")
     )
 

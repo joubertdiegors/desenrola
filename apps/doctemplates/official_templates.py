@@ -1,67 +1,44 @@
 """
-Dados dos modelos oficiais da Carta Convite (curta duração), seguindo o
-contrato de `apps.doctemplates.schema`.
+O field_schema do modelo oficial da Carta Convite, no contrato de
+`apps.doctemplates.schema`.
 
-Este modulo e codigo Python puro (nao um modelo Django) de proposito: as
-migracoes de dados que semeiam os LetterTemplate/TemplateVersion oficiais
-importam apenas isto, sem depender do app registry do Django ainda estar
-totalmente carregado.
+Codigo Python puro (nao um modelo Django) de proposito: e daqui que
+`services.biblioteca` semeia `DocumentTemplate.field_schema` dos quatro
+oficiais, e uma migration de dados consegue importa-lo sem depender do
+app registry estar totalmente carregado.
 
-UM TEMPLATE POR IDIOMA
-----------------------
-Como decidido na Fase 2, cada idioma e um documento oficial proprio (nao
-uma traducao de strings): ha um LetterTemplate por idioma de
-settings.LANGUAGES, todos com a MESMA configuracao de campos — mesmas
-`key`, mesmo `type`, mesma ordem. E isso que permite trocar o idioma da
-carta no meio do assistente sem invalidar o que ja foi preenchido: os
-valores gravados em `Letter.data` sao os mesmos; so muda o documento
-oficial de destino e o idioma dos rotulos.
+UM MODELO POR IDIOMA, O MESMO FORMULARIO
+----------------------------------------
+Cada idioma tem o seu `DocumentTemplate`, mas todos com a MESMA
+configuracao de campos -- mesmas `key`, mesmo `type`, mesma ordem. E
+isso que permite trocar o idioma da carta no meio do assistente sem
+invalidar o que ja foi preenchido: os valores gravados em `Letter.data`
+sao os mesmos; so muda o documento de destino.
 
 TEXTOS E TRADUCOES
 ------------------
 O texto de origem (pt) fica na propria definicao do campo (`label`,
-`placeholder`, `help_text`); `translations` traz fr/nl/en. A configuracao
-tecnica nunca e duplicada por idioma.
+`placeholder`, `help_text`); `translations` traz fr/nl/en. A
+configuracao tecnica nunca e duplicada por idioma. Desde a Etapa de
+correcoes pos-validacao manual o ASSISTENTE mostra sempre o portugues --
+as traducoes seguem aqui porque descrevem o campo, nao a interface.
 
-LIMITE DELIBERADO — nenhum texto que o usuario DECLARA/ACEITA foi
+LIMITE DELIBERADO -- nenhum texto que o usuario DECLARA/ACEITA foi
 traduzido por nos: as tres caixas de confirmacao (`host_confirm`,
 `notice_informal`, `notice_prise_en_charge`) ficam sem `translations` e
-caem no texto original fornecido pelo projeto, em portugues, em qualquer
-idioma. Traduzir uma declaracao que menciona Espaco Schengen, "Prise en
-Charge (Annexe 3bis)" e responsabilidade legal seria inventar conteudo
-juridico — isso tem que vir do cliente, em texto oficial, e entra depois
-como uma nova versao do template (sem alterar as ja publicadas).
+caem no texto original fornecido pelo projeto, em portugues. Traduzir
+uma declaracao que menciona Espaco Schengen, "Prise en Charge (Annexe
+3bis)" e responsabilidade legal seria inventar conteudo juridico.
 
 `full_width` e uma chave extra, fora do contrato documentado em
-`schema.py` — o validador ali ignora chaves desconhecidas, entao isto e
+`schema.py` -- o validador ali ignora chaves desconhecidas, entao isto e
 so uma dica de layout para o template (campo ocupa as duas colunas do
 `.form-grid`), sem quebrar o contrato nem exigir mudanca em schema.py.
 """
 
-CARTA_CONVITE_SLUG_PREFIX = "carta-convite-curta-duracao"
-CARTA_CONVITE_NAME = "Carta Convite — curta duração"
-CARTA_CONVITE_DESCRIPTION = (
-    "Modelo oficial da Carta Convite para estadias de curta duração "
-    "(até 90 dias), usado pelo assistente de geração."
-)
-
 # Idioma em que os textos de origem deste modulo estao escritos: e para
 # ele que `resolve_field_text` volta quando um idioma nao tem traducao.
 SOURCE_LANGUAGE = "pt"
-
-# --- Compatibilidade com a migracao 0002 ----------------------------------
-# 0002 semeou um unico template com este slug (sem sufixo de idioma) e o
-# importa por estes nomes. A migracao 0003 renomeia esse registro para
-# "<prefixo>-fr" e cria os demais idiomas; estas constantes existem so
-# para que 0002 continue rodando sem ser alterada.
-CARTA_CONVITE_SLUG = CARTA_CONVITE_SLUG_PREFIX
-CARTA_CONVITE_LANGUAGE = "fr"
-
-
-def official_slug(language):
-    """O identificador do modelo oficial daquele idioma."""
-    return f"{CARTA_CONVITE_SLUG_PREFIX}-{language}"
-
 
 NOTICE_INFORMAL = (
     "Declaro estar ciente de que a Carta Convite é um documento de caráter "

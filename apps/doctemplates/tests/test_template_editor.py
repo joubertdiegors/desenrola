@@ -8,12 +8,16 @@ cada teste de permissão bate direto na URL, sem passar pela interface,
 que é exatamente o que alguém mal-intencionado faria.
 """
 
+import io
 import json
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
 
+from apps.content.models import Asset
 from apps.doctemplates import datasources, elements, layout_schema
 from apps.doctemplates.models import DocumentTemplate, DocumentType
 from apps.doctemplates.services import biblioteca
@@ -71,6 +75,12 @@ def staff(db):
 def cliente(client, staff):
     client.force_login(staff)
     return client
+
+
+def _png(nome="imagem.png", cor=(10, 20, 30)):
+    buffer = io.BytesIO()
+    Image.new("RGB", (4, 4), cor).save(buffer, format="PNG")
+    return SimpleUploadedFile(nome, buffer.getvalue(), content_type="image/png")
 
 
 def _url(nome, modelo):
@@ -177,19 +187,32 @@ class TestContextoDaPagina:
         assert len(set(ids)) == 200
         assert all(isinstance(i, str) and i for i in ids)
 
+    def test_os_assets_ativos_vem_para_o_editor(self, cliente, modelo, tmp_path, settings):
+        """
+        Sem isto o canvas nunca resolve uma imagem: `image` cai sempre no
+        placeholder "não escolhida", mesmo com o `asset_id` certo no
+        layout -- era o que acontecia com o logo do modelo FR.
+        """
+        settings.MEDIA_ROOT = tmp_path
+        ativo = Asset.objects.create(kind=Asset.Kind.LOGO, file=_png("logo.png"), alt_text="logo")
+        inativo = Asset.objects.create(
+            kind=Asset.Kind.LOGO, file=_png("velho.png"), alt_text="velho", is_active=False
+        )
+
+        contexto = cliente.get(_url("template_editor", modelo)).context
+
+        ids = {a["id"] for a in contexto["assets_json"]}
+        assert ativo.pk in ids
+        assert inativo.pk not in ids
+        (ativo_json,) = [a for a in contexto["assets_json"] if a["id"] == ativo.pk]
+        assert ativo_json["url"] == ativo.file.url
+
     def test_o_html_carrega_os_modulos_do_editor_novo(self, cliente, modelo):
         html = cliente.get(_url("template_editor", modelo)).content.decode()
 
         for modulo in ("geometry", "state", "canvas", "properties", "api", "editor"):
             assert f"template-editor/{modulo}.js" in html
         assert "css/template-editor.css" in html
-
-    def test_nao_usa_nada_do_editor_anterior(self, cliente, modelo):
-        """A 4.2C tem os seus arquivos; esta tela não os toca."""
-        html = cliente.get(_url("template_editor", modelo)).content.decode()
-
-        assert "js/editor/render.js" not in html
-        assert "css/editor.css" not in html
 
     def test_nenhum_comentario_django_vaza_para_a_pagina(self, cliente, modelo):
         html = cliente.get(_url("template_editor", modelo)).content.decode()
@@ -510,27 +533,11 @@ class TestIdentificadores:
 
 
 # ---------------------------------------------------------------------------
-# 8. Nada da arquitetura anterior foi tocado
+# 8. O formato do editor aposentado não passa por aqui
 # ---------------------------------------------------------------------------
 
 
 class TestNadaDeRegressao:
-    def test_o_editor_anterior_continua_respondendo(self, cliente, draft_version):
-        """A 4.2C segue de pé: rotas e views próprias, intactas."""
-        resposta = cliente.get(
-            reverse("backoffice:document_editor", args=[draft_version.pk])
-        )
-
-        assert resposta.status_code in (200, 403)
-
-    def test_as_rotas_dos_dois_editores_sao_distintas(self, modelo, draft_version):
-        nova = reverse("backoffice:template_editor", args=[modelo.pk])
-        antiga = reverse("backoffice:document_editor", args=[draft_version.pk])
-
-        assert nova != antiga
-        assert "/modelos/" in nova
-        assert "/documentos/" in antiga
-
     def test_o_contrato_novo_nao_aceita_o_formato_antigo(self, cliente, modelo):
         antigo = {
             "schema_version": 1,

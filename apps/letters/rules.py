@@ -1,11 +1,11 @@
 """
 Regras de negocio da estadia, num so lugar.
 
-Estao aqui, e nao em `services.py`, para que tanto o assistente
-(`forms`/`views`) quanto a geracao do PDF (`pdf_generation`) usem a MESMA
-conta sem que um precise importar o outro -- `services` ja importa
-`pdf_generation`, entao o caminho inverso fecharia um ciclo. Este modulo
-nao importa nada do app de proposito.
+Estao aqui, e nao em `services.py`, para que tanto o formulario do
+assistente (`forms`) quanto a geracao do documento (`services`) usem a
+MESMA conta: `services` ja importa `forms`, entao a regra morar em
+`services` obrigaria `forms` a importar `services` e fecharia um ciclo.
+Este modulo nao importa nada do app de proposito.
 """
 
 import datetime

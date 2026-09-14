@@ -27,6 +27,16 @@ from apps.letters.rules import MAX_STAY_DAYS, stay_duration_days
 
 pytestmark = pytest.mark.django_db
 
+
+@pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado -- sem eles
+    `official_document_template()` devolve `None` e o assistente
+    recusa criar carta nenhuma (e esta certo: seria uma carta que
+    nao viraria PDF).
+    """
+
 RAIZ = Path(__file__).resolve().parents[3]
 CSS = RAIZ / "static" / "css"
 APP_JS = RAIZ / "static" / "js" / "app.js"

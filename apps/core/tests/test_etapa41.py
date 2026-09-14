@@ -25,7 +25,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.core.middleware import IDIOMA_DA_INTERFACE, caminho_em_portugues
-from apps.doctemplates.official_templates import official_slug
+from apps.doctemplates.services.biblioteca import slug_oficial
 from apps.letters import services
 
 RAIZ = Path(__file__).resolve().parents[3]
@@ -46,7 +46,7 @@ def _nacionalidade(nacionalidade_factory):
 
 
 @pytest.fixture
-def draft(user):
+def draft(user, modelos_oficiais_prontos):
     return services.start_draft(user, "pt")
 
 
@@ -494,13 +494,22 @@ class TestIdiomaDaCartaNaoFoiAfetado:
 
         draft.refresh_from_db()
         assert draft.language == idioma
-        assert draft.template.slug == official_slug(idioma)
+        assert draft.document_template.slug == slug_oficial(idioma)
 
-    def test_os_rotulos_da_carta_seguem_o_idioma_da_carta(self, auth_client, draft):
+    def test_os_rotulos_do_assistente_ficam_em_portugues_mesmo_trocando_a_carta(
+        self, auth_client, draft
+    ):
         """
-        INTENCIONAL: numa carta em frances os rotulos saem em frances,
-        dentro de uma interface portuguesa. O rotulo descreve o que vai
-        para o documento oficial -- nao e um vazamento de idioma.
+        Revisto na etapa de correções pós-validação manual (posterior a
+        esta): a Etapa 4.1 deixava o rótulo seguir o idioma da carta de
+        propósito ("descreve o que vai para o documento oficial"), mas a
+        validação manual mostrou que isso lia como a interface tendo
+        vazado para inglês/francês/neerlandês -- o rótulo é texto do
+        ASSISTENTE, não o documento em si (que continua saindo no idioma
+        certo, pelo renderer -- ver apps.doctemplates.services.pdf). O
+        idioma da carta em si não foi afetado: os quatro continuam
+        disponíveis e gravando corretamente (ver os outros testes desta
+        classe).
         """
         services.change_language(draft, "fr")
 
@@ -508,8 +517,9 @@ class TestIdiomaDaCartaNaoFoiAfetado:
             reverse("letters:step", args=[draft.uuid, services.FIRST_STEP])
         ).content.decode()
 
-        assert "Date de naissance" in html
-        assert "Numéro de passeport" in html
+        assert "Data de nascimento" in html
+        assert "Número do passaporte" in html
+        assert "Date de naissance" not in html
         # E a moldura da pagina continua em portugues.
         assert "Próxima etapa" in html
         assert '<html lang="pt">' in html
@@ -531,9 +541,9 @@ class TestIdiomaDaCartaNaoFoiAfetado:
         assert draft.data["guest_name"] == "Maria Santos da Silva"
         assert draft.data["guest_nationality"] == "Brasileira"
 
-    def test_os_quatro_documentos_oficiais_continuam_publicados(self):
+    def test_os_quatro_documentos_oficiais_continuam_disponiveis(self, modelos_oficiais_prontos):
         for idioma in IDIOMAS_DO_SITE:
-            assert services.get_template_version_for_language(idioma) is not None
+            assert services.official_document_template(idioma) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +553,7 @@ class TestIdiomaDaCartaNaoFoiAfetado:
 
 class TestNadaDeRegressao:
     def test_o_middleware_nao_mexe_em_metodos_nao_seguros_em_portugues(
-        self, auth_client, user
+        self, auth_client, user, modelos_oficiais_prontos
     ):
         """Um POST em /pt/ passa direto, sem redirecionamento."""
         response = auth_client.post(reverse("letters:new"), {})

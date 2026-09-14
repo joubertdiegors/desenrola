@@ -4,7 +4,8 @@ entrega do PDF (`letters:pdf`), ambos sempre pela UUID publica e sempre
 so para o dono.
 
 O assistente (`letters:new` -> `letters:step`) tem cobertura propria em
-test_wizard.py; a ponte com o motor de PDF, em test_pdf_generation.py.
+test_wizard.py; a ponte com o renderer estrutural, em
+test_render_letter.py.
 """
 
 import uuid as uuid_lib

@@ -367,15 +367,13 @@
     }
   });
 
-  // Envia ISO quando a data esta completa e valida; se nao estiver, deixa
-  // seguir como foi digitada, para o servidor apontar o erro no campo.
-  document.addEventListener("submit", function (event) {
-    var campos = event.target.querySelectorAll("[data-date-input]");
-    Array.prototype.forEach.call(campos, function (input) {
-      var iso = toIso(input.value);
-      if (iso) { input.value = iso; }
-    });
-  });
+  // O campo ja envia dd/mm/aaaa, e o servidor aceita esse formato direto
+  // (`input_formats` em apps/letters/forms.py) -- nao converter para ISO
+  // aqui de proposito. Convertendo, um erro em OUTRO campo da mesma
+  // etapa reexibia este (valido) em "2026-09-13" em vez de
+  // "13/09/2026": o widget so reformata um `date` de verdade, e uma
+  // string ja vinculada volta sem tocar. Foi o que pareceu "dia e mes
+  // invertidos" na validacao manual.
 
   // Imprimir a carta: usa o PDF REAL da Letter, nunca um substituto.
   // O <a> ja abre o PDF em outra aba sozinho (funciona sem JavaScript);

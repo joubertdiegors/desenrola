@@ -97,50 +97,35 @@ def auth_client(client, user):
 
 
 @pytest.fixture
-def letter_template(db):
+def modelos_oficiais_prontos(tmp_path, settings):
     """
-    Um LetterTemplate qualquer, para testes de doctemplates/letters.
+    Os quatro modelos oficiais completos: layout (ja vem da migration) e
+    o asset do logo materializado.
 
-    O slug e deliberadamente diferente dos modelos oficiais semeados por
-    migracao (apps/doctemplates/official_templates.py): este e um modelo
-    de teste generico, nao o documento oficial de nenhum idioma.
+    `services.official_document_template()` so devolve um modelo quando o
+    asset existe de verdade -- sem isto, `start_draft()` devolveria None
+    e nenhuma carta nasceria. E o equivalente, no teste, ao passo de
+    deploy `reconstruir_modelos_oficiais`.
+
+    MEDIA_ROOT proprio: sem isso a suite gravaria um PNG no `media/` do
+    repositorio a cada execucao.
     """
-    from apps.doctemplates.models import LetterTemplate
+    from apps.content.models import Asset
+    from apps.doctemplates.models import DocumentTemplate
+    from apps.doctemplates.services import carta_convite
 
-    return LetterTemplate.objects.create(
-        name="Carta Convite — curta duração",
-        slug="carta-convite-de-teste",
-        description="Modelo oficial para visitas de curta duração.",
-        language="fr",
-    )
-
-
-@pytest.fixture
-def draft_version(letter_template):
-    """Uma TemplateVersion em rascunho, ligada a `letter_template`."""
-    from apps.doctemplates.models import TemplateVersion
-
-    return TemplateVersion.objects.create(
-        template=letter_template,
-        version_number=1,
-        field_schema={"fields": ["nome_convidado", "passaporte"]},
-    )
+    settings.MEDIA_ROOT = tmp_path
+    carta_convite.reconstruir_todos(DocumentTemplate, Asset)
+    return tmp_path
 
 
 @pytest.fixture
-def published_version(draft_version):
-    """Uma TemplateVersion publicada (imutável), a partir de `draft_version`."""
-    draft_version.publish()
-    return draft_version
-
-
-@pytest.fixture
-def letter(user):
+def letter(user, modelos_oficiais_prontos):
     """
     Um rascunho real de `user`, criado pelo mesmo caminho que o sistema
-    usa (`services.start_draft`) -- ou seja, ligado ao modelo oficial
-    publicado do idioma, com o field_schema de verdade. E o que as telas
-    do usuario encontram na pratica.
+    usa (`services.start_draft`) -- ou seja, ligado ao `DocumentTemplate`
+    oficial do idioma, com o field_schema de verdade. E o que as telas do
+    usuario encontram na pratica.
     """
     from apps.letters import services
 
@@ -154,7 +139,7 @@ def nacionalidade_factory(db):
 
     Usada pelos arquivos de teste cujos payloads submetem o assistente
     real via HTTP (test_wizard.py, test_navegacao.py, test_dashboard.py,
-    test_pdf_generation.py): desde a decisão final da Fase 5/Etapa 3, o
+    test_render_letter.py): desde a decisão final da Fase 5/Etapa 3, o
     campo de nacionalidade não aceita mais texto livre -- precisa de uma
     `Nationality` ativa cujo `code` bata com o valor enviado no POST.
 

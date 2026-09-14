@@ -19,6 +19,29 @@ from apps.letters import services
 
 pytestmark = pytest.mark.django_db
 
+
+def conteudo_do(pdf_bytes):
+    """
+    O CONTENT STREAM da primeira pagina -- os operadores de desenho --
+    e nao o arquivo inteiro. Ver o docstring da funcao homonima em
+    `test_render_letter.py`.
+    """
+    import io
+
+    from pypdf import PdfReader
+
+    return PdfReader(io.BytesIO(pdf_bytes)).pages[0].get_contents().get_data()
+
+
+@pytest.fixture(autouse=True)
+def _modelos_oficiais_prontos(modelos_oficiais_prontos):
+    """
+    Os quatro modelos oficiais com o logo materializado -- sem eles
+    `official_document_template()` devolve `None` e o assistente
+    recusa criar carta nenhuma (e esta certo: seria uma carta que
+    nao viraria PDF).
+    """
+
 HOJE = timezone.localdate()
 CHEGADA = HOJE + datetime.timedelta(days=30)
 PARTIDA = CHEGADA + datetime.timedelta(days=14)
@@ -257,8 +280,8 @@ class TestDadosDoAnfitriaoNoPerfil:
         assert f'name="{campo}"' not in html
 
     def test_o_schema_nao_tem_mais_esses_campos(self):
-        versao = services.get_template_version_for_language("fr")
-        chaves = {f["key"] for f in versao.field_schema["fields"]}
+        modelo = services.official_document_template("fr")
+        chaves = {f["key"] for f in modelo.field_schema["fields"]}
 
         assert "host_nationality" not in chaves
         assert "host_birth_date" not in chaves
@@ -282,9 +305,17 @@ class TestDadosDoAnfitriaoNoPerfil:
         assert draft.snapshot["nationalities"]["host_nationality"] == "belge"
 
     def test_mudar_o_perfil_depois_nao_altera_a_carta_emitida(self, auth_client, draft, user):
+        """
+        O DESENHO do documento, não os bytes do arquivo: o reportlab
+        grava um `/ID` novo (derivado do instante) a cada chamada,
+        então dois arquivos do mesmo documento nunca são byte a byte
+        iguais. O content stream -- os operadores de desenho -- é
+        determinístico, e é ele que diz se a carta mudou. Mesmo
+        critério de `test_render_letter.py`.
+        """
         _finalizar(auth_client, draft)
         draft.refresh_from_db()
-        sha_antes = draft.pdf_sha256
+        conteudo_antes = conteudo_do(draft.pdf_file.read())
 
         outra = Nationality.objects.create(
             code="FR",
@@ -304,7 +335,7 @@ class TestDadosDoAnfitriaoNoPerfil:
 
         assert draft.snapshot["host"]["birth_date"] == "1985-03-14"
         assert draft.snapshot["nationalities"]["host_nationality"] == "belge"
-        assert draft.pdf_sha256 == sha_antes
+        assert conteudo_do(draft.pdf_file.read()) == conteudo_antes
 
     def test_a_carta_gerada_imprime_os_dados_do_perfil(self, auth_client, draft):
         import io as _io

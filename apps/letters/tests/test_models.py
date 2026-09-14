@@ -7,17 +7,23 @@ from django.contrib.auth.models import Group, Permission
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 
+from apps.doctemplates.models import DocumentTemplate
 from apps.letters.models import Letter
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def letter(user, published_version):
+def modelo_oficial(modelos_oficiais_prontos):
+    """O `DocumentTemplate` oficial francês -- toda Letter precisa de um."""
+    return DocumentTemplate.objects.get(slug="carta-convite-fr")
+
+
+@pytest.fixture
+def letter(user, modelo_oficial):
     return Letter.objects.create(
         user=user,
-        template=published_version.template,
-        template_version=published_version,
+        document_template=modelo_oficial,
         language="fr",
         data={"convidado": "Maria Santos da Silva"},
         snapshot={"anfitriao": {"nome": user.full_name}},
@@ -50,20 +56,11 @@ class TestLetterCriacao:
         letter.refresh_from_db()
         assert letter.snapshot == {"anfitriao": {"nome": "Claire Dubois"}}
 
-    def test_template_e_derivado_da_template_version_quando_nao_informado(
-        self, user, published_version
-    ):
-        letter = Letter.objects.create(
-            user=user, template_version=published_version, language="fr"
-        )
-
-        assert letter.template_id == published_version.template_id
-
-    def test_referencia_e_gerada_e_unica(self, letter, user, published_version):
+    def test_referencia_e_gerada_e_unica(self, letter, user, modelo_oficial):
         assert letter.reference.startswith("DSR-")
 
         outra = Letter.objects.create(
-            user=user, template_version=published_version, language="fr"
+            user=user, document_template=modelo_oficial, language="fr"
         )
         assert outra.reference != letter.reference
 
@@ -78,31 +75,19 @@ class TestLetterCriacao:
         assert letter.updated_at is not None
 
 
-class TestLetterVinculoComVersao:
-    def test_nao_pode_excluir_template_version_com_carta_historica(self, letter, published_version):
+class TestLetterVinculoComOModelo:
+    def test_nao_pode_excluir_o_modelo_com_carta_historica(self, letter, modelo_oficial):
+        """
+        A FK e PROTECT: enquanto uma carta apontar para o modelo, o
+        ORM recusa a exclusao por qualquer caminho -- inclusive o
+        `queryset.delete()`, que nao passa pelo `save()`/`delete()`
+        do modelo e portanto nao seria barrado pela regra de
+        `is_system`.
+        """
         with pytest.raises(ProtectedError):
-            published_version.delete()
+            DocumentTemplate.objects.filter(pk=modelo_oficial.pk).delete()
 
-    def test_carta_permanece_vinculada_a_versao_exata(
-        self, user, letter_template, draft_version
-    ):
-        from apps.doctemplates.models import TemplateVersion
-
-        draft_version.publish()
-        letter_v1 = Letter.objects.create(
-            user=user, template_version=draft_version, language="fr"
-        )
-
-        v2 = draft_version.create_next_version()
-        v2.field_schema = {"fields": ["novo_campo"]}
-        v2.publish()
-
-        letter_v1.refresh_from_db()
-        assert letter_v1.template_version_id == draft_version.pk
-        assert letter_v1.template_version.version_number == 1
-        assert TemplateVersion.objects.get(pk=letter_v1.template_version_id).field_schema == {
-            "fields": ["nome_convidado", "passaporte"]
-        }
+        assert DocumentTemplate.objects.filter(pk=modelo_oficial.pk).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -111,20 +96,20 @@ class TestLetterVinculoComVersao:
 
 
 class TestLetterPrivacidade:
-    def test_usuario_a_nao_ve_carta_do_usuario_b(self, user, other_user, published_version):
+    def test_usuario_a_nao_ve_carta_do_usuario_b(self, user, other_user, modelo_oficial):
         carta_de_a = Letter.objects.create(
-            user=user, template_version=published_version, language="fr"
+            user=user, document_template=modelo_oficial, language="fr"
         )
-        Letter.objects.create(user=other_user, template_version=published_version, language="en")
+        Letter.objects.create(user=other_user, document_template=modelo_oficial, language="en")
 
         visiveis_para_a = Letter.objects.visible_to(user)
 
         assert list(visiveis_para_a) == [carta_de_a]
 
-    def test_usuario_b_nao_ve_carta_do_usuario_a(self, user, other_user, published_version):
-        Letter.objects.create(user=user, template_version=published_version, language="fr")
+    def test_usuario_b_nao_ve_carta_do_usuario_a(self, user, other_user, modelo_oficial):
+        Letter.objects.create(user=user, document_template=modelo_oficial, language="fr")
         carta_de_b = Letter.objects.create(
-            user=other_user, template_version=published_version, language="en"
+            user=other_user, document_template=modelo_oficial, language="en"
         )
 
         visiveis_para_b = Letter.objects.visible_to(other_user)
@@ -137,25 +122,25 @@ class TestLetterPrivacidade:
         assert list(Letter.objects.visible_to(AnonymousUser())) == []
 
     def test_staff_sem_permissao_nao_ve_cartas_de_outros(
-        self, staff_user, user, published_version
+        self, staff_user, user, modelo_oficial
     ):
-        Letter.objects.create(user=user, template_version=published_version, language="fr")
+        Letter.objects.create(user=user, document_template=modelo_oficial, language="fr")
 
         # is_staff sozinho nao concede acesso administrativo: e a
         # permissao granular que decide (ver secao de permissoes).
         assert list(Letter.objects.visible_to(staff_user)) == []
 
     def test_usuario_com_permissao_view_all_letters_ve_tudo(
-        self, user, other_user, published_version, django_user_model
+        self, user, other_user, modelo_oficial, django_user_model
     ):
         gerente = django_user_model.objects.create_user(
             email="gerente@desenrola.be", password="senha-forte-123", full_name="Gerente Geral"
         )
         carta_a = Letter.objects.create(
-            user=user, template_version=published_version, language="fr"
+            user=user, document_template=modelo_oficial, language="fr"
         )
         carta_b = Letter.objects.create(
-            user=other_user, template_version=published_version, language="en"
+            user=other_user, document_template=modelo_oficial, language="en"
         )
 
         grupo = Group.objects.create(name="Gerente")
@@ -168,16 +153,16 @@ class TestLetterPrivacidade:
         assert visiveis == {carta_a, carta_b}
 
     def test_superusuario_ve_tudo_mesmo_sem_permissao_explicita(
-        self, user, other_user, published_version, django_user_model
+        self, user, other_user, modelo_oficial, django_user_model
     ):
         superuser = django_user_model.objects.create_superuser(
             email="root@desenrola.be", password="senha-forte-123", full_name="Root"
         )
         carta_a = Letter.objects.create(
-            user=user, template_version=published_version, language="fr"
+            user=user, document_template=modelo_oficial, language="fr"
         )
         carta_b = Letter.objects.create(
-            user=other_user, template_version=published_version, language="en"
+            user=other_user, document_template=modelo_oficial, language="en"
         )
 
         visiveis = set(Letter.objects.visible_to(superuser))
@@ -192,11 +177,11 @@ class TestLetterPermissaoDeclarada:
 
 
 class TestLetterUnicidade:
-    def test_uuid_nao_pode_ser_duplicado(self, user, published_version, letter):
+    def test_uuid_nao_pode_ser_duplicado(self, user, modelo_oficial, letter):
         duplicado = Letter(
             uuid=letter.uuid,
             user=user,
-            template_version=published_version,
+            document_template=modelo_oficial,
             language="fr",
         )
         with pytest.raises(IntegrityError), transaction.atomic():

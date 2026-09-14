@@ -35,8 +35,8 @@ pytestmark = pytest.mark.django_db
 
 A4 = {"width": 595.2756, "height": 841.8898, "unit": "pt"}
 
-# Formato do contrato NOVO (`layout_schema`), que `DocumentTemplate`
-# valida desde a Etapa 3.1 -- nao o `visual_schema` do legado.
+# Formato do contrato de layout (`layout_schema`), que `DocumentTemplate`
+# valida desde a Etapa 3.1.
 LAYOUT_MINIMO = {"version": 1, "elements": []}
 
 
@@ -356,27 +356,28 @@ class TestSemeaduraCartaConvite:
         assert m.is_system is True
         assert m.is_locked is False
         assert m.is_active is True
-        # A semeadura nasce sem desenho. O frances ganhou o dele na Etapa
-        # 3.3 (reconstruido do PDF oficial); os outros tres seguem vazios
-        # ate serem reconstruidos.
-        if slug == "carta-convite-fr":
-            validate_layout(m.layout)
-            assert m.layout["elements"]
-        else:
-            assert m.layout == {}
+        # A semeadura nasce sem desenho; o layout vem depois, por
+        # migration. O frances na Etapa 3.3 (reconstruido do PDF oficial)
+        # e os outros tres na 3.6 (traduzidos dele).
+        validate_layout(m.layout)
+        assert len(m.layout["elements"]) == 23
         assert m.field_schema == CARTA_CONVITE_FIELD_SCHEMA
         assert m.duplicated_from is None
         assert m.created_by is None
 
-    def test_o_schema_e_o_mesmo_da_versao_publicada_antiga(self):
-        """Nenhum conteudo novo: e exatamente o schema vigente do legado."""
-        from apps.doctemplates.models import LetterTemplate
-        from apps.doctemplates.official_templates import official_slug
+    def test_os_quatro_idiomas_compartilham_o_mesmo_schema(self):
+        """
+        Um unico conjunto de campos, quatro idiomas: e o que permite
+        trocar o idioma na etapa 5 sem perder nada do que a pessoa ja
+        preencheu (`services.change_language`).
+        """
+        schemas = [
+            DocumentTemplate.objects.get(slug=biblioteca.slug_oficial(idioma)).field_schema
+            for idioma in ("fr", "nl", "en", "pt")
+        ]
 
-        for idioma in ("fr", "nl", "en", "pt"):
-            novo = DocumentTemplate.objects.get(slug=biblioteca.slug_oficial(idioma))
-            antigo = LetterTemplate.objects.get(slug=official_slug(idioma)).published_version
-            assert novo.field_schema == antigo.field_schema
+        for schema in schemas:
+            assert schema == CARTA_CONVITE_FIELD_SCHEMA
 
     def test_executar_de_novo_nao_duplica(self):
         antes = DocumentTemplate.objects.count()
@@ -404,8 +405,15 @@ class TestSemeaduraCartaConvite:
         with pytest.raises(ValueError):
             biblioteca.slug_oficial("de")
 
-    def test_o_legado_continua_intocado(self):
-        from apps.doctemplates.models import LetterTemplate, TemplateVersion
-
-        assert LetterTemplate.objects.count() == 4
-        assert TemplateVersion.objects.filter(status="published").count() == 4
+    def test_nao_sobrou_nenhum_modelo_alem_dos_quatro_oficiais(self):
+        """
+        A semeadura e a UNICA origem de modelo do sistema: quatro
+        oficiais, um por idioma. Substitui o antigo
+        `test_o_legado_continua_intocado`, que conferia as tabelas de
+        `LetterTemplate`/`TemplateVersion` -- removidas do banco.
+        """
+        assert DocumentTemplate.objects.count() == 4
+        assert DocumentTemplate.objects.filter(is_system=True).count() == 4
+        assert sorted(DocumentTemplate.objects.values_list("language", flat=True)) == [
+            "en", "fr", "nl", "pt",
+        ]

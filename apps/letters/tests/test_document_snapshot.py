@@ -1,16 +1,16 @@
 """
-Integração DocumentTemplate <-> Letter (Etapa 3.5.1).
+Integração DocumentTemplate <-> Letter.
 
-Duas coisas distintas coexistem em `Letter` a partir desta etapa:
+Duas coisas distintas coexistem em `Letter`:
 
-  * `Letter.snapshot` -- a arquitetura ANTIGA (`LetterTemplate`/
-    `TemplateVersion`), continua exatamente como estava, e alimenta o
-    renderer atual (`pdf_generation.py`);
+  * `Letter.snapshot` -- os DADOS congelados da carta (o que a pessoa
+    preencheu, o perfil do anfitrião no instante da emissão), a
+    fonte de `services.build_document_context()`;
   * `Letter.document_template` / `document_snapshot` /
-    `document_snapshot_hash` -- a integração NOVA, desta etapa. Ainda
-    não há tela que escolha um `DocumentTemplate` para uma carta -- por
-    isso quase todo teste aqui monta esse vínculo manualmente, do jeito
-    que um fluxo futuro (ou um teste) faria.
+    `document_snapshot_hash` -- o MODELO ESTRUTURAL congelado (o
+    desenho, a página, o field_schema). Vários testes aqui montam
+    esse vínculo com um modelo de teste próprio, para exercitar o
+    congelamento sem depender do conteúdo dos modelos oficiais.
 
 O ponto central de todos os testes: uma vez capturado, o snapshot é
 congelado. O que muda por baixo -- o `DocumentTemplate` em si, ou até um
@@ -33,8 +33,8 @@ pytestmark = pytest.mark.django_db
 
 
 # ---------------------------------------------------------------------------
-# Fixtures: um DocumentTemplate qualquer, e uma Letter real (arquitetura
-# antiga) para anexá-lo -- exatamente como um fluxo futuro faria.
+# Fixtures: um DocumentTemplate de teste (pequeno e previsível, para
+# conferir o snapshot com os olhos) e um rascunho real para anexá-lo.
 # ---------------------------------------------------------------------------
 
 
@@ -79,7 +79,9 @@ def outro_modelo(tipo):
     )
 
 
-# `letter` (rascunho real, arquitetura antiga) vem do conftest raiz.
+# `letter` (rascunho real, já ligado ao modelo oficial francês) vem do
+# conftest raiz. Trocá-lo pelo `modelo` daqui é legítimo enquanto a
+# carta é rascunho -- é o que a etapa 5 faz ao trocar de idioma.
 
 
 # ===========================================================================
@@ -209,8 +211,7 @@ class TestHashNaLetter:
         hash_do_primeiro = letter.document_snapshot_hash
 
         outra_letter = Letter.objects.create(
-            user=letter.user, template=letter.template, template_version=letter.template_version,
-            language="fr",
+            user=letter.user, document_template=letter.document_template, language="fr",
         )
         services.capture_document_template_snapshot(outra_letter, outro_modelo)
 
@@ -285,11 +286,13 @@ class TestImutabilidadeEFalhas:
 
         monkeypatch.setattr(document_snapshot, "compute_hash", _explode)
 
+        original = letter.document_template_id
+
         with pytest.raises(RuntimeError, match="falha simulada"):
             services.capture_document_template_snapshot(letter, modelo)
 
         letter.refresh_from_db()
-        assert letter.document_template_id is None
+        assert letter.document_template_id == original  # nem o vínculo mudou
         assert letter.document_snapshot == {}
         assert letter.document_snapshot_hash == ""
 
@@ -300,12 +303,13 @@ class TestImutabilidadeEFalhas:
         finalização".
         """
         fantasma = DocumentTemplate(pk=999999, type=tipo, name="X", slug="x", language="fr")
+        original = letter.document_template_id
 
         with pytest.raises(DocumentTemplate.DoesNotExist):
             services.capture_document_template_snapshot(letter, fantasma)
 
         letter.refresh_from_db()
-        assert letter.document_template_id is None
+        assert letter.document_template_id == original
         assert letter.document_snapshot == {}
 
 
@@ -370,8 +374,13 @@ class TestConcorrencia:
 
 
 class TestRascunho:
-    def test_rascunho_sem_document_template_e_o_padrao(self, letter):
-        assert letter.document_template_id is None
+    def test_rascunho_nasce_com_modelo_e_sem_snapshot(self, letter):
+        """
+        O vínculo com o modelo existe desde o primeiro instante (é o
+        que diz quais campos o assistente pede); o CONGELAMENTO só
+        acontece na finalização.
+        """
+        assert letter.document_template_id is not None
         assert letter.document_snapshot == {}
         assert letter.document_snapshot_hash == ""
 
@@ -393,59 +402,9 @@ class TestRascunho:
         letter.refresh_from_db()
         assert letter.document_template_id == outro_modelo.pk
 
-    def test_trocar_para_none_tambem_e_permitido_antes_da_captura(self, letter, modelo):
-        letter.document_template = modelo
-        letter.save(update_fields=["document_template", "updated_at"])
-
-        letter.document_template = None
-        letter.save(update_fields=["document_template", "updated_at"])  # não deve levantar
-
-        letter.refresh_from_db()
-        assert letter.document_template_id is None
-
 
 # ===========================================================================
-# 15. Compatibilidade com Letters existentes (sem a nova arquitetura)
-# ===========================================================================
-
-
-class TestCompatibilidade:
-    def test_uma_letter_da_arquitetura_antiga_nao_e_afetada(self, letter):
-        """
-        Uma carta criada exatamente como hoje (`services.start_draft`),
-        sem nenhum contato com esta etapa, continua com os três campos
-        novos vazios e salva normalmente.
-        """
-        letter.data = {"guest_name": "Sem relação com a etapa 3.5.1"}
-        letter.save(update_fields=["data", "updated_at"])
-
-        letter.refresh_from_db()
-        assert letter.document_template_id is None
-        assert letter.document_snapshot == {}
-        assert letter.document_snapshot_hash == ""
-
-    def test_finalizar_sem_document_template_nao_captura_nada(
-        self, auth_client, user, nacionalidade_factory
-    ):
-        """
-        O caminho real (assistente completo) não escolhe um
-        `DocumentTemplate` em lugar nenhum ainda -- finalizar continua
-        funcionando exatamente como antes desta etapa.
-        """
-        nacionalidade_factory("Brasileira", guest_form="Brésilienne")
-        letter = _finaliza_pelo_assistente(auth_client, user, "fr")
-
-        assert letter.status in (Letter.Status.COMPLETED, Letter.Status.GENERATED)
-        assert letter.document_template_id is None
-        assert letter.document_snapshot == {}
-        assert letter.document_snapshot_hash == ""
-        # o snapshot ANTIGO continua sendo capturado, como sempre foi.
-        assert letter.snapshot != {}
-
-
-# ===========================================================================
-# Integração real: a view de finalização captura quando há um
-# document_template associado ao rascunho.
+# A finalizacao real: o modelo vem do idioma, e o snapshot e capturado
 # ===========================================================================
 
 
@@ -471,34 +430,22 @@ def _step_url(carta, step):
     return reverse("letters:step", args=[carta.uuid, step])
 
 
-def _finaliza_pelo_assistente(client, user, idioma):
-    """Cria, preenche e finaliza uma carta pelo caminho HTTP real."""
-    client.post(reverse("letters:new"), PASSO_1)
-    carta = Letter.objects.get(user=user)
-    for numero in (1, 2, 3, 4):
-        client.post(_step_url(carta, numero), PASSOS[numero])
-    client.post(_step_url(carta, 5), {"language": idioma})
-    client.post(_step_url(carta, 6))
-    carta.refresh_from_db()
-    return carta
 
 
 class TestIntegracaoComAFinalizacaoReal:
     @pytest.fixture(autouse=True)
-    def _nacionalidade(self, nacionalidade_factory):
+    def _nacionalidade(self, nacionalidade_factory, modelos_oficiais_prontos):
         nacionalidade_factory("Brasileira", guest_form="Brésilienne")
 
-    def test_a_finalizacao_real_captura_o_snapshot_quando_ha_document_template(
-        self, auth_client, user, modelo
-    ):
+    def test_a_finalizacao_real_captura_o_snapshot(self, auth_client, user):
+        """
+        Sem preparar nada na carta: o modelo sai do idioma da etapa 5,
+        e a finalização congela o desenho DAQUELE modelo.
+        """
+        oficial = services.official_document_template("fr")
         client = auth_client
         client.post(reverse("letters:new"), PASSO_1)
         carta = Letter.objects.get(user=user)
-
-        # Um rascunho "escolhendo" um modelo estrutural -- do jeito que
-        # uma tela futura faria.
-        carta.document_template = modelo
-        carta.save(update_fields=["document_template", "updated_at"])
 
         for numero in (1, 2, 3, 4):
             client.post(_step_url(carta, numero), PASSOS[numero])
@@ -507,16 +454,14 @@ class TestIntegracaoComAFinalizacaoReal:
 
         carta.refresh_from_db()
         assert carta.document_snapshot_hash != ""
-        assert carta.document_snapshot["layout"] == modelo.layout
-        assert carta.document_template_id == modelo.pk
+        assert carta.document_snapshot["layout"] == oficial.layout
+        assert carta.document_template_id == oficial.pk
 
-    def test_a_captura_na_finalizacao_real_e_so_uma_vez(self, auth_client, user, modelo):
+    def test_a_captura_na_finalizacao_real_e_so_uma_vez(self, auth_client, user):
         """Reenviar o POST de finalização não recaptura nem levanta erro visível ao usuário."""
         client = auth_client
         client.post(reverse("letters:new"), PASSO_1)
         carta = Letter.objects.get(user=user)
-        carta.document_template = modelo
-        carta.save(update_fields=["document_template", "updated_at"])
         for numero in (1, 2, 3, 4):
             client.post(_step_url(carta, numero), PASSOS[numero])
         client.post(_step_url(carta, 5), {"language": "fr"})

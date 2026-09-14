@@ -20,7 +20,7 @@ from pypdf import PdfReader
 
 from apps.content.models import Asset
 from apps.doctemplates.models import DocumentTemplate
-from apps.doctemplates.services import dados_de_exemplo, modelo_fr, pdf
+from apps.doctemplates.services import carta_convite, dados_de_exemplo, pdf
 
 pytestmark = pytest.mark.django_db
 
@@ -36,7 +36,7 @@ DADOS = dados_de_exemplo.para(SLUG)
 def modelo(tmp_path, settings):
     """O modelo oficial com o logo materializado, em MEDIA_ROOT próprio."""
     settings.MEDIA_ROOT = tmp_path
-    modelo_fr.reconstruir(DocumentTemplate, Asset)
+    carta_convite.reconstruir(DocumentTemplate, Asset, "fr")
     return DocumentTemplate.objects.get(slug=SLUG)
 
 
@@ -215,7 +215,7 @@ class TestSemFundoOficial:
         Prova de comportamento: com o PDF oficial fora do lugar, a
         geração continua funcionando igual.
         """
-        caminho = modelo_fr.CAMINHO_DO_PDF
+        caminho = carta_convite.CAMINHO_DO_PDF
         original = caminho.read_bytes()
         caminho.unlink()
         try:
@@ -325,15 +325,15 @@ class TestElementosDoFr:
         modelo.layout = outro
         segundo, _ = pdf.render_layout(
             outro, modelo.type.page, pdf.Contexto(DADOS),
-            assets=pdf._carregar_assets(outro),
+            assets=pdf.carregar_assets(outro),
         )
 
         assert primeiro != segundo
 
     def test_o_logo_vem_do_asset(self, modelo, documento):
-        asset = Asset.objects.get(key=modelo_fr.LOGO_CHAVE_DO_ASSET)
+        asset = Asset.objects.get(key=carta_convite.LOGO_CHAVE_DO_ASSET)
         elemento = next(
-            e for e in modelo.layout["elements"] if e["id"] == modelo_fr.ID_DO_LOGO
+            e for e in modelo.layout["elements"] if e["id"] == carta_convite.id_do_logo("fr")
         )
 
         assert elemento["properties"]["source"]["asset_id"] == asset.pk
@@ -348,8 +348,8 @@ class TestElementosDoFr:
         """
         from apps.doctemplates.models import DocumentTemplateAsset
 
-        DocumentTemplateAsset.objects.filter(asset__key=modelo_fr.LOGO_CHAVE_DO_ASSET).delete()
-        Asset.objects.filter(key=modelo_fr.LOGO_CHAVE_DO_ASSET).delete()
+        DocumentTemplateAsset.objects.filter(asset__key=carta_convite.LOGO_CHAVE_DO_ASSET).delete()
+        Asset.objects.filter(key=carta_convite.LOGO_CHAVE_DO_ASSET).delete()
 
         with pytest.raises(pdf.AssetAusenteError):
             pdf.render_template(modelo, DADOS)
@@ -416,7 +416,7 @@ class TestFidelidade:
 
     @pytest.fixture
     def medidas(self, gerado):
-        return self.medir(gerado[0]), self.medir(str(modelo_fr.CAMINHO_DO_PDF))
+        return self.medir(gerado[0]), self.medir(str(carta_convite.CAMINHO_DO_PDF))
 
     # As linhas de base do documento oficial, medidas na Etapa 3.3.
     BASES = [64.44, 78.06, 134.06, 159.06, 172.56, 186.06, 371.06, 384.06,
@@ -512,7 +512,7 @@ class TestComandoDePrevia:
     def test_compara_com_a_referencia(self, modelo, tmp_path):
         saida = self.rodar(
             SLUG, "--saida", str(tmp_path / "p.pdf"), "--exemplo",
-            "--comparar", str(modelo_fr.CAMINHO_DO_PDF),
+            "--comparar", str(carta_convite.CAMINHO_DO_PDF),
         )
 
         assert "diferença média por pixel" in saida
@@ -520,7 +520,7 @@ class TestComandoDePrevia:
     def test_grava_as_imagens_da_comparacao(self, modelo, tmp_path):
         self.rodar(
             SLUG, "--saida", str(tmp_path / "p.pdf"), "--exemplo",
-            "--comparar", str(modelo_fr.CAMINHO_DO_PDF),
+            "--comparar", str(carta_convite.CAMINHO_DO_PDF),
             "--imagens", str(tmp_path / "img"),
         )
 
@@ -534,7 +534,17 @@ class TestComandoDePrevia:
             self.rodar("nao-existe", "--saida", str(tmp_path / "p.pdf"))
 
     def test_modelo_sem_layout_falha_claramente(self, modelo, tmp_path):
+        """
+        Desde a Etapa 3.6 os quatro oficiais tem desenho, entao o modelo
+        sem layout aqui e um comum, criado para o caso.
+        """
         from django.core.management.base import CommandError
 
+        from apps.doctemplates.models import DocumentTemplate
+
+        DocumentTemplate.objects.create(
+            type=modelo.type, name="Sem desenho", slug="sem-desenho", language="pt",
+        )
+
         with pytest.raises(CommandError, match="não tem layout"):
-            self.rodar("carta-convite-nl", "--saida", str(tmp_path / "p.pdf"))
+            self.rodar("sem-desenho", "--saida", str(tmp_path / "p.pdf"))

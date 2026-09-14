@@ -6,14 +6,13 @@ backoffice, e sua ÚNICA fonte de dados é `DocumentTemplate`. Nenhum
 teste aqui deve depender de `LetterTemplate`/`TemplateVersion` --
 inclusive há um teste que confere isso na resposta HTTP real.
 
-A arquitetura antiga continua registrada (suas próprias rotas e testes
-não foram tocados); o que muda é que a navegação normal não leva mais a
-ela.
+A tela antiga de versionamento (`/backoffice/documentos/`) foi aposentada
+na Etapa 3.5.3: esta é a única biblioteca de modelos do produto.
 """
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 from apps.doctemplates.models import DocumentTemplate, DocumentType
 from apps.doctemplates.services import biblioteca
@@ -100,7 +99,6 @@ class TestAcessoEOrigemDosDados:
 
         assert set(resposta.context.keys()) >= {"modelos", "tipos", "idiomas", "filtros"}
         assert "templates" not in resposta.context  # nome usado pela tela antiga
-        assert "template_versions" not in resposta.context
         for objeto in resposta.context["modelos"]:
             assert isinstance(objeto, DocumentTemplate)
 
@@ -433,11 +431,11 @@ class TestNavegacao:
 
         assert reverse("backoffice:document_library") in html
 
-    def test_o_item_modelos_do_menu_nao_aponta_mais_para_a_tela_antiga(self, cliente, modelo):
-        """A tela antiga (`documents.html`) não é mais alcançada pelo menu."""
+    def test_o_menu_nao_aponta_para_a_tela_aposentada(self, cliente, modelo):
+        """`/backoffice/documentos/` não existe mais (Etapa 3.5.3)."""
         html = cliente.get(reverse("backoffice:document_library")).content.decode()
 
-        assert reverse("backoffice:documents") not in html
+        assert "/backoffice/documentos/" not in html
 
     def test_a_biblioteca_marca_modelos_como_item_ativo_do_menu(self, cliente, modelo):
         resposta = cliente.get(reverse("backoffice:document_library"))
@@ -451,31 +449,42 @@ class TestNavegacao:
 
 
 # ---------------------------------------------------------------------------
-# 8. A arquitetura antiga continua existindo, mas não é mais o caminho
+# 8. A tela antiga de versionamento foi aposentada
 # ---------------------------------------------------------------------------
 
 
-class TestArquiteturaAntigaPreservada:
-    def test_a_rota_antiga_continua_registrada(self, cliente, draft_version):
-        """As rotas/testes da 4.2C não foram tocados."""
-        resposta = cliente.get(reverse("backoffice:documents"))
+class TestTelaAntigaAposentada:
+    @pytest.mark.parametrize(
+        "nome",
+        [
+            "documents",
+            "document_editor",
+            "document_save",
+            "document_publish",
+            "document_import_official",
+            "document_new_version",
+        ],
+    )
+    def test_as_rotas_da_tela_antiga_nao_existem_mais(self, nome):
+        """
+        Etapa 3.5.3: `/backoffice/documentos/` e o editor visual da
+        4.2A/4.2C saíram do produto. Reverter por engano reintroduziria
+        uma segunda arquitetura de documentos.
+        """
+        with pytest.raises(NoReverseMatch):
+            reverse(f"backoffice:{nome}")
 
-        assert resposta.status_code == 200
+    def test_as_cartas_nao_sao_tocadas_pela_biblioteca(self, cliente, modelo, letter):
+        """
+        Substitui o antigo teste sobre `LetterTemplate`/
+        `TemplateVersion` (tabelas removidas): abrir a biblioteca e
+        uma leitura -- nao mexe em nenhuma carta, nem no vinculo dela
+        com o modelo.
+        """
+        from apps.letters.models import Letter
 
-    def test_a_view_antiga_ainda_le_templateversion(self, cliente, draft_version):
-        resposta = cliente.get(reverse("backoffice:documents"))
-
-        assert "templates" in resposta.context  # o nome de contexto da tela antiga
-
-    def test_letters_e_lettertemplate_nao_sao_tocados_pela_biblioteca(
-        self, cliente, modelo, draft_version
-    ):
-        from apps.doctemplates.models import LetterTemplate, TemplateVersion
-
-        antes_lt = list(LetterTemplate.objects.values())
-        antes_tv = list(TemplateVersion.objects.values())
+        antes = list(Letter.objects.values())
 
         cliente.get(reverse("backoffice:document_library"))
 
-        assert list(LetterTemplate.objects.values()) == antes_lt
-        assert list(TemplateVersion.objects.values()) == antes_tv
+        assert list(Letter.objects.values()) == antes
