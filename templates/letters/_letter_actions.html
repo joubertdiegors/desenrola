@@ -1,0 +1,61 @@
+{% load i18n %}{% comment %}
+As ações de UMA carta, num lugar só. Recebe `card` (LetterCard).
+
+Existe para o painel, o histórico e o detalhe oferecerem exatamente as
+mesmas ações para o mesmo estado -- três cópias divergiriam na primeira
+mudança.
+
+O que cada estado permite vem calculado de `apps.letters.lifecycle`
+(`card.can_download_pdf`, `card.can_edit`, `card.is_draft`): este
+include não decide nada, só desenha.
+
+Parâmetros opcionais:
+  compacto=True   só os ícones essenciais (usado nas listas)
+{% endcomment %}
+{% if card.is_draft %}
+  <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+{% else %}
+  {% if card.can_download_pdf %}
+    <a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>
+    {% if not compacto %}
+      {% comment %}
+      Os quatro secundários vão num grupo próprio: onde as ações são
+      empilhadas (a tela da carta), eles formam UMA linha que quebra, em
+      vez de seis botões de largura inteira, um embaixo do outro.
+      {% endcomment %}
+      <div class="letter-actions-extra">
+        {% comment %}
+        Baixar aponta para a rota de ANEXO, que manda
+        `Content-Disposition: attachment` -- é o servidor que decide baixar,
+        não um atributo `download` no link, que o navegador pode ignorar em
+        resposta de outra origem ou em iframe.
+        {% endcomment %}
+        <a class="btn btn-secondary" href="{% url 'letters:pdf_download' card.uuid %}"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Baixar PDF" %}</a>
+        <a class="btn btn-secondary js-print-pdf" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener" data-pdf-url="{% url 'letters:pdf' card.uuid %}"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</a>
+        {% comment %}
+        Compartilhar e WhatsApp são progressivos: o JavaScript (static/js/app.js)
+        decide o melhor caminho que o navegador oferece e, sem JavaScript,
+        os dois continuam levando ao PDF -- que é o que a pessoa quer
+        enviar de todo jeito.
+        {% endcomment %}
+        <a class="btn btn-secondary js-share-pdf" href="{% url 'letters:pdf_download' card.uuid %}"
+           data-pdf-url="{% url 'letters:pdf' card.uuid %}"
+           data-download-url="{% url 'letters:pdf_download' card.uuid %}"
+           data-filename="{{ card.reference }}.pdf"
+           data-title="{% translate 'Carta Convite' %}"
+           data-text="{% blocktranslate with nome=card.guest_name %}Carta Convite para {{ nome }}{% endblocktranslate %}"
+           data-aviso="{% translate 'PDF baixado — anexe para enviar' %}"><i class="ph ph-share-network" aria-hidden="true"></i><span class="js-rotulo">{% translate "Compartilhar" %}</span></a>
+        <a class="btn btn-secondary js-share-whatsapp" href="{% url 'letters:pdf_download' card.uuid %}"
+           data-pdf-url="{% url 'letters:pdf' card.uuid %}"
+           data-download-url="{% url 'letters:pdf_download' card.uuid %}"
+           data-filename="{{ card.reference }}.pdf"
+           data-title="{% translate 'Carta Convite' %}"
+           data-text="{% blocktranslate with nome=card.guest_name %}Carta Convite para {{ nome }}{% endblocktranslate %}"
+           data-aviso="{% translate 'PDF baixado — anexe na conversa' %}"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i><span class="js-rotulo">{% translate "WhatsApp" %}</span></a>
+      </div>
+    {% endif %}
+  {% endif %}
+  {% if card.can_edit %}
+    <a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>
+  {% endif %}
+{% endif %}

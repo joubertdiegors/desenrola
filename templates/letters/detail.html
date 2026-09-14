@@ -45,21 +45,12 @@ centrado, `done-*`), com dados reais e só as ações que existem de fato.
     </div>
 
     <div class="done-actions">
-      {% if card.can_download_pdf %}
-        {% comment %}
-        As duas ações levam ao MESMO PDF real -- não existe documento
-        alternativo. "Ver PDF" abre em outra aba (a página atual não se
-        perde); "Imprimir" tenta abrir direto a caixa de impressão e, se o
-        navegador não deixar, cai em abrir o PDF, onde a pessoa imprime.
-        {% endcomment %}
-        <a class="btn btn-primary" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>
-        <a class="btn btn-secondary js-print-pdf" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener" data-pdf-url="{% url 'letters:pdf' card.uuid %}"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</a>
-      {% elif card.is_draft %}
-        <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-      {% endif %}
-      {% if card.can_edit %}
-        <a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar carta" %}</a>
-      {% endif %}
+      {% comment %}
+      Todas as ações da carta vêm do mesmo include que o painel e o
+      histórico usam -- aqui na versão completa (`compacto` não é
+      passado), com baixar, imprimir, compartilhar e WhatsApp.
+      {% endcomment %}
+      {% include "letters/_letter_actions.html" with card=card %}
       <div class="done-actions-row">
         <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-house" aria-hidden="true"></i>{% translate "Dashboard" %}</a>
       </div>

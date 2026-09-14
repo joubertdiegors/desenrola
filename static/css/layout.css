@@ -460,6 +460,8 @@ body { display: flex; flex-direction: column; }
 .done-info-row .ph { color: var(--p); font-size: 18px; flex: none; }
 .done-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .done-actions .btn { min-height: 50px; }
+.letter-actions-extra { display: flex; flex-wrap: wrap; gap: 8px; }
+.letter-actions-extra .btn { flex: 1 1 140px; }
 .done-actions-row { display: flex; gap: 8px; justify-content: center; }
 .done-actions-row .btn { min-height: 40px; font-size: 14px; }
 .done-thanks { font-size: 13px; color: var(--navy); font-weight: 600; margin-top: 4px; }

@@ -396,15 +396,21 @@ class TestAcoesDoPdf:
         assert "js-print-pdf" in html
         assert f'data-pdf-url="{pdf_url}"' in html
 
-    def test_nao_ha_botao_de_whatsapp_nem_compartilhar(self, auth_client, carta_gerada):
-        """Ação que não existe não aparece."""
-        for url in (
-            reverse("letters:detail", args=[carta_gerada.uuid]),
-            reverse("core:dashboard"),
-        ):
-            html = auth_client.get(url).content.decode().lower()
-            assert "whatsapp" not in html
-            assert "compartilhar" not in html
+    def test_compartilhar_e_whatsapp_ficam_no_detalhe(self, auth_client, carta_gerada):
+        """
+        As ações de envio existem, mas só na tela da carta: nas LISTAS,
+        cinco botões por linha viram ruído -- lá ficam Ver PDF e Editar, e
+        o resto fica a um clique de distância.
+        """
+        detalhe = auth_client.get(
+            reverse("letters:detail", args=[carta_gerada.uuid])
+        ).content.decode()
+        painel = auth_client.get(reverse("core:dashboard")).content.decode()
+
+        assert "js-share-pdf" in detalhe
+        assert "js-share-whatsapp" in detalhe
+        assert "js-share-pdf" not in painel
+        assert "js-share-whatsapp" not in painel
 
 
 # ---------------------------------------------------------------------------

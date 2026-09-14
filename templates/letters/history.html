@@ -1,0 +1,108 @@
+{% extends "app_base.html" %}
+{% load i18n %}
+{% comment %}
+Minhas cartas -- o histórico COMPLETO da pessoa, paginado.
+
+Contexto: cards (a página atual), pagina (Paginator), total.
+
+O painel mostra só as mais recentes e aponta para cá; esta é a tela do
+arquivo inteiro. As duas usam os mesmos cartões (`build_cards`) e o
+mesmo bloco de ações (`letters/_letter_actions.html`), para o mesmo
+estado nunca oferecer coisas diferentes em telas diferentes.
+
+A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
+{% endcomment %}
+
+{% block title %}{% translate "Minhas cartas" %} · Desenrola{% endblock %}
+
+{% block content %}
+<div class="container">
+<div class="dash">
+  <div class="section-head">
+    <h1>{% translate "Minhas cartas" %}</h1>
+    <span class="count"><span class="d-only">{% blocktranslate count counter=total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ total }}</span></span>
+    <span class="push d-only"></span>
+    <a class="btn btn-primary d-only" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+  </div>
+
+  {% comment %}
+  No celular o botão não cabe no cabeçalho (título + contador já o
+  ocupam), então vem logo abaixo, de largura inteira. Sem ele, quem
+  abrisse o histórico pelo menu teria de voltar ao painel para começar
+  uma carta.
+  {% endcomment %}
+  {% if cards %}
+  <a class="btn btn-primary btn-block m-only" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+  {% endif %}
+
+  {% if not cards %}
+    <div class="card letters-empty">
+      <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
+      <h3>{% translate "Você ainda não tem cartas" %}</h3>
+      <p>{% translate "Quando gerar sua primeira Carta Convite, ela aparece aqui." %}</p>
+      <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    </div>
+  {% else %}
+
+  <div class="card table-wrap d-only letters-table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>{% translate "Criada em" %}</th>
+          <th>{% translate "Convidado" %}</th>
+          <th>{% translate "Período da viagem" %}</th>
+          <th>{% translate "Idioma" %}</th>
+          <th>{% translate "Status" %}</th>
+          <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        <tr>
+          <td class="cell-muted">{{ card.letter.created_at|date:"d/m/Y" }}</td>
+          <td class="cell-name">{{ card.guest_name|default:"—" }}</td>
+          <td class="cell-muted">{% if card.has_period %}{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td>{{ card.language_name }}</td>
+          <td>{% include "letters/_status_tag.html" with card=card %}</td>
+          <td class="cell-actions">
+            <div class="letter-actions">
+              {% include "letters/_letter_actions.html" with card=card compacto=True %}
+              <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="letters-cards m-only">
+    {% for card in cards %}
+    <div class="card letter-card">
+      <div class="letter-card-head">
+        <h3>{{ card.guest_name|default:"—" }}</h3>
+        {% include "letters/_status_tag.html" with card=card %}
+      </div>
+      <p>{{ card.letter.created_at|date:"d/m/Y" }} · {{ card.language_name }}</p>
+      {% if card.has_period %}<p>{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</p>{% endif %}
+      {% if card.is_expired %}<p class="letter-card-note">{% translate "Esta carta expirou." %}</p>{% endif %}
+      <div class="letter-card-actions">
+        {% include "letters/_letter_actions.html" with card=card compacto=True %}
+        <a class="btn btn-ghost" href="{% url 'letters:detail' card.uuid %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Detalhes" %}</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if pagina.has_other_pages %}
+  <nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
+    {% if pagina.has_previous %}<a class="btn btn-ghost" href="?page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
+    <span class="text-muted">{% blocktranslate with atual=pagina.number paginas=pagina.paginator.num_pages %}Página {{ atual }} de {{ paginas }}{% endblocktranslate %}</span>
+    {% if pagina.has_next %}<a class="btn btn-ghost" href="?page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
+  </nav>
+  {% endif %}
+
+  {% endif %}
+</div>
+</div>
+{% endblock %}

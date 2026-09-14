@@ -402,6 +402,137 @@
     event.preventDefault();
   });
 
+  // --------------------------------------------------------------------
+  // Compartilhar a carta
+  // --------------------------------------------------------------------
+  //
+  // O QUE SE COMPARTILHA E O ARQUIVO, NAO UM LINK
+  // O PDF fica atras de login: mandar a URL a alguem de fora nao serve de
+  // nada -- a pessoa cairia na tela de entrar. Entao o que sai daqui e
+  // sempre o ARQUIVO.
+  //
+  // TRES CAMINHOS, NESTA ORDEM
+  //   1. Web Share com arquivo (`navigator.canShare({files})`): abre a
+  //      folha do sistema e a pessoa escolhe WhatsApp, e-mail, o que for.
+  //      E o unico caminho que entrega o PDF de verdade.
+  //   2. Sem suporte a arquivo: baixa o PDF e o proprio botao avisa
+  //      que e para anexar a mao.
+  //   3. Sem JavaScript: o proprio <a> ja aponta para a rota de download.
+  //
+  // Nenhum deles inventa um link publico para um documento privado.
+
+  function baixarPeloLink(url) {
+    // Navega para a rota de anexo: e o SERVIDOR que manda baixar
+    // (Content-Disposition: attachment), entao isto nao depende do
+    // atributo `download`, que varios navegadores ignoram.
+    window.location.href = url;
+  }
+
+  function pdfComoArquivo(trigger) {
+    // Busca o PDF na MESMA origem, com a sessao -- o arquivo e privado.
+    return fetch(trigger.getAttribute("data-pdf-url"), { credentials: "same-origin" })
+      .then(function (resposta) {
+        if (!resposta.ok) { throw new Error("nao foi possivel obter o PDF"); }
+        return resposta.blob();
+      })
+      .then(function (blob) {
+        return new File([blob], trigger.getAttribute("data-filename") || "carta.pdf", {
+          type: "application/pdf"
+        });
+      });
+  }
+
+  function aceitaCompartilharPdf() {
+    // Decide ANTES de qualquer `await`. O motivo e o bloqueador de
+    // pop-up: `window.open` so e permitido enquanto o gesto do clique
+    // ainda vale, e ele nao sobrevive a uma ida ao servidor. Perguntando
+    // aqui, o caminho alternativo do WhatsApp roda ainda dentro do
+    // clique.
+    //
+    // A pergunta e feita com um PDF de mentira (quatro bytes, "%PDF"):
+    // `canShare` olha o tipo do arquivo, nao o conteudo -- e assim nao
+    // precisamos baixar o de verdade so para saber se da.
+    if (!navigator.share || !navigator.canShare || !window.File || !window.fetch) {
+      return false;
+    }
+    try {
+      var amostra = new File(
+        [new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46])], { type: "application/pdf" })],
+        "carta.pdf",
+        { type: "application/pdf" }
+      );
+      return !!navigator.canShare({ files: [amostra] });
+    } catch (erro) {
+      return false;
+    }
+  }
+
+  function avisarQueBaixou(trigger) {
+    // O caminho alternativo baixa o arquivo, e um download silencioso
+    // depois de clicar em "Compartilhar" nao explica nada. O proprio
+    // botao passa a dizer o que aconteceu, e volta ao normal depois.
+    var rotulo = trigger.querySelector(".js-rotulo");
+    var aviso = trigger.getAttribute("data-aviso");
+    if (!rotulo || !aviso) { return; }
+    var antes = rotulo.textContent;
+    rotulo.textContent = aviso;
+    window.setTimeout(function () { rotulo.textContent = antes; }, 6000);
+  }
+
+  function compartilhar(trigger, aoFalhar) {
+    var titulo = trigger.getAttribute("data-title") || "";
+    var texto = trigger.getAttribute("data-text") || "";
+
+    if (!aceitaCompartilharPdf()) {
+      aoFalhar();
+      return;
+    }
+
+    pdfComoArquivo(trigger).then(function (arquivo) {
+      navigator.share({ files: [arquivo], title: titulo, text: texto })["catch"](function (erro) {
+        // A pessoa fechou a folha de compartilhamento: nao e erro, e
+        // desistencia -- nao se faz nada. Qualquer outra falha cai no
+        // caminho alternativo.
+        if (erro && erro.name === "AbortError") { return; }
+        aoFalhar();
+      });
+    })["catch"](aoFalhar);
+  }
+
+  document.addEventListener("click", function (event) {
+    var trigger = event.target.closest(".js-share-pdf");
+    if (!trigger) { return; }
+    event.preventDefault();
+
+    compartilhar(trigger, function () {
+      avisarQueBaixou(trigger);
+      baixarPeloLink(trigger.getAttribute("data-download-url"));
+    });
+  });
+
+  // WhatsApp
+  // --------
+  // Um link `wa.me` so carrega TEXTO -- nao existe forma de anexar um
+  // arquivo por URL, em nenhum navegador. Entao:
+  //
+  //   * onde a folha de compartilhamento aceita arquivo, usamos ela (o
+  //     WhatsApp aparece la dentro e recebe o PDF de verdade);
+  //   * onde nao aceita, abrimos a conversa com a mensagem pronta E
+  //     baixamos o PDF, para a pessoa anexar. E o maximo que o
+  //     navegador permite.
+  document.addEventListener("click", function (event) {
+    var trigger = event.target.closest(".js-share-whatsapp");
+    if (!trigger) { return; }
+    event.preventDefault();
+
+    compartilhar(trigger, function () {
+      var texto = trigger.getAttribute("data-text") || "";
+      window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
+      avisarQueBaixou(trigger);
+      baixarPeloLink(trigger.getAttribute("data-download-url"));
+    });
+  });
+
   window.Desenrola = window.Desenrola || {};
   window.Desenrola.openDialog = openDialog;
   window.Desenrola.closeDialog = function (id) { closeDialog(document.getElementById(id)); };

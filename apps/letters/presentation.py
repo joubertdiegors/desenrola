@@ -187,17 +187,28 @@ def build_cards(letters) -> list[LetterCard]:
 
 def own_letters(user):
     """
-    As cartas DO usuario, da mais recentemente mexida para a mais antiga.
+    As cartas DO usuario, da mais recente para a mais antiga.
 
     Deliberadamente `filter(user=...)`, e nao `Letter.objects.visible_to()`:
     esta e a area pessoal, entao mesmo quem tem `letters.view_all_letters`
     ve aqui somente as proprias. Aquela permissao serve a uma tela de
     supervisao, que e outra coisa.
+
+    Ordenado por CRIACAO, nao por ultima alteracao: e a data que as
+    telas mostram, e uma lista ordenada por uma coluna invisivel
+    parece embaralhada. Reabrir uma carta antiga para corrigir um
+    dado nao a joga para o topo do historico -- ela continua sendo a
+    carta daquele dia.
+
+    O `-pk` desempata. Nao e enfeite: o historico e PAGINADO, e duas
+    cartas com o mesmo instante de criacao poderiam trocar de lugar
+    entre uma pagina e outra -- uma apareceria duas vezes e a outra
+    sumiria.
     """
     return (
         Letter.objects.filter(user=user)
         .select_related("document_template")
-        .order_by("-updated_at")
+        .order_by("-created_at", "-pk")
     )
 
 

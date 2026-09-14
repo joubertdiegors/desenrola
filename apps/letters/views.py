@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -485,9 +486,16 @@ def detail(request, letter_uuid):
 
 
 @login_required
-def letter_pdf(request, letter_uuid):
+def letter_pdf(request, letter_uuid, anexo=False):
     """
     Entrega o PDF da carta.
+
+    `anexo=True` (rota `letters:pdf_download`) manda
+    `Content-Disposition: attachment`, e o navegador BAIXA em vez de
+    exibir. Uma view so para os dois casos, de proposito: login,
+    propriedade, expiracao e arquivo ausente sao exatamente as mesmas
+    checagens -- duplicar a view duplicaria as guardas, e uma delas
+    acabaria ficando para tras.
 
     O arquivo e privado: nunca e servido por mapeamento estatico de midia
     (isso so existe em DEBUG e nao valida ninguem). A unica porta e esta
@@ -522,4 +530,44 @@ def letter_pdf(request, letter_uuid):
         arquivo,
         content_type="application/pdf",
         filename=f"{letter.reference}.pdf",
+        as_attachment=anexo,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Histórico: todas as cartas da pessoa
+# ---------------------------------------------------------------------------
+
+# Quantas cartas por página no histórico. O painel continua mostrando só
+# as `presentation.RECENT_LIMIT` mais recentes -- são telas com propósitos
+# diferentes: o painel é um resumo, o histórico é o arquivo.
+POR_PAGINA = 20
+
+
+@login_required
+def history(request):
+    """
+    Minhas cartas: TODAS as do usuário, da mais recente para a mais
+    antiga, paginadas.
+
+    Reusa `presentation.own_letters()` -- o mesmo filtro por dono que o
+    painel usa, e que deliberadamente NÃO é `visible_to()`: esta é a área
+    pessoal, então nem quem supervisiona vê aqui carta de outra pessoa.
+
+    Os estados e as ações de cada cartão vêm de `build_cards()`, iguais
+    aos do painel: um estado, um conjunto de ações, em toda a aplicação.
+    """
+    cartas = presentation.own_letters(request.user)
+    pagina = Paginator(cartas, POR_PAGINA).get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "letters/history.html",
+        {
+            "pagina": pagina,
+            "cards": presentation.build_cards(pagina.object_list),
+            "total": pagina.paginator.count,
+            "active_nav": "letters",
+            "mobile_nav": True,
+        },
     )

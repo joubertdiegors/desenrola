@@ -45,6 +45,14 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>
     <span class="count"><span class="d-only">{% blocktranslate count counter=letters_total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters_total }}</span></span>
+    {% comment %}
+    O painel é um resumo: mostra as mais recentes e manda para o
+    histórico quem tem mais do que cabe aqui.
+    {% endcomment %}
+    {% if letters_total > cards|length %}
+    <span class="push"></span>
+    <a class="btn btn-text" href="{% url 'letters:history' %}">{% translate "Ver todas" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    {% endif %}
   </div>
 
   {% if not cards %}
@@ -60,7 +68,7 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
     <table class="table">
       <thead>
         <tr>
-          <th>{% translate "Data" %}</th>
+          <th>{% translate "Criada em" %}</th>
           <th>{% translate "Convidado" %}</th>
           <th>{% translate "Período" %}</th>
           <th>{% translate "Idioma" %}</th>
@@ -71,7 +79,7 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
       <tbody>
         {% for card in cards %}
         <tr>
-          <td class="cell-muted">{{ card.updated_at|date:"d/m/Y" }}</td>
+          <td class="cell-muted">{{ card.letter.created_at|date:"d/m/Y" }}</td>
           <td class="cell-name">{{ card.guest_name|default:"—" }}</td>
           <td class="cell-muted">{% if card.has_period %}{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}{% else %}—{% endif %}</td>
           <td>{{ card.language_name }}</td>
@@ -83,11 +91,8 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
           {% endcomment %}
           <td class="cell-actions">
             <div class="letter-actions">
-              {% if card.is_draft %}
-                <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-              {% else %}
-                {% if card.can_download_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
-                {% if card.can_edit %}<a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>{% endif %}
+              {% include "letters/_letter_actions.html" with card=card compacto=True %}
+              {% if not card.is_draft %}
                 <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
               {% endif %}
             </div>
@@ -105,18 +110,15 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
         <h3>{{ card.guest_name|default:"—" }}</h3>
         {% include "letters/_status_tag.html" with card=card %}
       </div>
-      <p>{{ card.updated_at|date:"d/m/Y" }} · {{ card.language_name }}</p>
+      <p>{{ card.letter.created_at|date:"d/m/Y" }} · {{ card.language_name }}</p>
       {% if card.has_period %}<p>{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</p>{% endif %}
-      {% if card.is_draft %}
-        <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-      {% else %}
-        {% if card.is_expired %}<p class="letter-card-note">{% translate "Esta carta expirou." %}</p>{% endif %}
-        <div class="letter-card-actions">
-          {% if card.can_download_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
-          {% if card.can_edit %}<a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>{% endif %}
+      {% if card.is_expired %}<p class="letter-card-note">{% translate "Esta carta expirou." %}</p>{% endif %}
+      <div class="letter-card-actions">
+        {% include "letters/_letter_actions.html" with card=card compacto=True %}
+        {% if not card.is_draft %}
           <a class="btn btn-ghost" href="{% url 'letters:detail' card.uuid %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Detalhes" %}</a>
-        </div>
-      {% endif %}
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>

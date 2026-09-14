@@ -146,17 +146,28 @@ class TestListagem:
         assert contexto["letters_total"] == 7
         assert len(contexto["cards"]) == 5
 
-    def test_ordena_da_mais_recentemente_mexida_para_a_mais_antiga(self, auth_client, user):
+    def test_ordena_da_mais_nova_para_a_mais_antiga(self, auth_client, user):
         antiga = _criar_carta(user, data={"guest_name": "Antiga"})
         recente = _criar_carta(user, data={"guest_name": "Recente"})
 
-        # mexer na antiga a coloca na frente
-        antiga.data = {"guest_name": "Antiga"}
-        antiga.save()
+        cards = auth_client.get(DASHBOARD).context["cards"]
+
+        assert [c.uuid for c in cards] == [recente.uuid, antiga.uuid]
+
+    def test_mexer_numa_carta_antiga_NAO_a_traz_para_a_frente(self, auth_client, user):
+        """
+        A ordem e a da CRIACAO, que e a data mostrada ao lado. Ordenar por
+        ultima alteracao fazia a lista parecer embaralhada: a carta de
+        marco pulava para o topo por causa de uma correcao de hoje.
+        """
+        antiga = _criar_carta(user, data={"guest_name": "Antiga"})
+        recente = _criar_carta(user, data={"guest_name": "Recente"})
+
+        antiga.save()  # `auto_now` mexe em updated_at
 
         cards = auth_client.get(DASHBOARD).context["cards"]
 
-        assert [c.uuid for c in cards] == [antiga.uuid, recente.uuid]
+        assert [c.uuid for c in cards] == [recente.uuid, antiga.uuid]
 
     def test_estado_vazio_quando_nao_ha_cartas(self, auth_client):
         response = auth_client.get(DASHBOARD)
