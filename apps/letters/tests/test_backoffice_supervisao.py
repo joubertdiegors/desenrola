@@ -36,7 +36,7 @@ def _modelos_oficiais_prontos(modelos_oficiais_prontos):
 
 @pytest.fixture(autouse=True)
 def _nacionalidade(nacionalidade_factory):
-    nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+    nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
 
 CHEGADA = timezone.localdate() + datetime.timedelta(days=30)

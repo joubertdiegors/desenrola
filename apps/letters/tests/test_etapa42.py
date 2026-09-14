@@ -32,7 +32,7 @@ IDIOMAS_DO_SITE = ["pt", "fr", "nl", "en"]
 
 @pytest.fixture(autouse=True)
 def _nacionalidades(nacionalidade_factory):
-    nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+    nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
 
 @pytest.fixture(autouse=True)

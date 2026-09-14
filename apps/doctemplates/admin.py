@@ -15,22 +15,20 @@ class NationalityAdmin(admin.ModelAdmin):
     Letter.data, entao muda-lo quebraria a ligacao das cartas ja feitas.
     """
 
-    list_display = ("code", "name_pt", "guest_form", "host_form", "order", "is_active")
+    list_display = ("code", "name_pt", "name_fr", "name_nl", "name_en", "order", "is_active")
     list_filter = ("is_active",)
     list_editable = ("order", "is_active")
     search_fields = ("code", "name_pt", "name_fr", "name_nl", "name_en")
     ordering = ("order", "name_pt")
     fieldsets = (
         (None, {"fields": ("code", "is_active", "order")}),
-        (_("Nomes na interface"), {"fields": ("name_pt", "name_fr", "name_nl", "name_en")}),
         (
-            _("Formas usadas no documento"),
+            _("Nomes"),
             {
-                "fields": ("guest_form", "host_form"),
+                "fields": ("name_pt", "name_fr", "name_nl", "name_en"),
                 "description": _(
-                    "O documento oficial escreve a mesma nacionalidade de dois "
-                    "jeitos: “Nationalité : Brésilienne” (convidado) e "
-                    "“de nationalité belge” (anfitrião)."
+                    "O mesmo nome serve à tela e ao documento: a carta usa o "
+                    "nome do idioma dela. Idioma sem tradução cai no português."
                 ),
             },
         ),

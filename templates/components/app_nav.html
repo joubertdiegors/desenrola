@@ -1,6 +1,9 @@
 {% load i18n %}{% comment %}
 Barra superior da area logada (layout 2c). No celular so aparece quando
 mobile_nav e verdadeiro (dashboard, perfil): logotipo + avatar.
+
+Quem tem `core.access_backoffice` ganha aqui o atalho para a area
+administrativa -- no celular so o icone, no desktop icone e rotulo.
 {% endcomment %}
 <header class="app-header{% if not mobile_nav %} d-only{% endif %}">
   <nav class="nav-desktop app-nav container" aria-label="{% translate 'Navegação principal' %}">
@@ -9,6 +12,23 @@ mobile_nav e verdadeiro (dashboard, perfil): logotipo + avatar.
     <a class="nav-link d-only{% if active_nav == 'letters' %} is-current{% endif %}" href="{% url 'letters:history' %}"{% if active_nav == "letters" %} aria-current="page"{% endif %}>{% translate "Minhas cartas" %}</a>
     <a class="nav-link d-only{% if active_nav == 'profile' %} is-current{% endif %}" href="{% url 'accounts:profile' %}"{% if active_nav == "profile" %} aria-current="page"{% endif %}>{% translate "Perfil" %}</a>
     <span class="d-only push"></span>
+    {% comment %}
+    Atalho para a área administrativa, do lado da identidade de quem
+    está usando -- uma única porta, em todas as telas da área logada.
+
+    Só aparece para quem tem `core.access_backoffice`, e esconder o link
+    NÃO é o que protege: a proteção é o `backoffice_required` em cada
+    view de lá. Aqui é apenas não oferecer uma porta que bateria na cara
+    da pessoa. Superusuário passa por `perms` automaticamente, por como
+    `has_perm` funciona -- não há caso especial.
+
+    `btn-text` e não `btn-ghost`: é o único estilo de botão isento da
+    altura de 52px que o celular impõe aos demais (ver components.css),
+    e é o que mantém a barra com a altura que ela já tem.
+    {% endcomment %}
+    {% if perms.core.access_backoffice %}
+    <a class="btn btn-text nav-backoffice" href="{% url 'backoffice:overview' %}" aria-label="{% translate 'Backoffice' %}"><i class="ph ph-gear" aria-hidden="true"></i><span class="d-only">{% translate "Backoffice" %}</span></a>
+    {% endif %}
     <details class="dropdown user-menu d-only">
       <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar avatar-md">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">

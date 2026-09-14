@@ -47,51 +47,60 @@ ROTAS = [
 
 
 # ===========================================================================
-# O atalho no dashboard
+# O painel deixou de ter atalho proprio
 # ===========================================================================
 
 
-class TestAtalhoNoDashboard:
-    def test_quem_tem_a_permissao_ve_o_link(self, client, staff_user):
+class TestCartaoRemovidoDoPainel:
+    """
+    O painel tinha um cartão `dash-backoffice` no corpo da página. Ele
+    saiu: o acesso ao Backoffice passou a ser um só, na barra superior,
+    onde vale em toda a área logada em vez de só nesta tela.
+
+    Quem responde pela VISIBILIDADE do link agora é
+    `test_atalho_do_backoffice.py`. Aqui fica só a guarda de que o
+    cartão não volta -- dois caminhos para a mesma porta foi exatamente
+    o que se decidiu desfazer.
+    """
+
+    def test_o_cartao_nao_existe_mais(self, client, staff_user):
         client.force_login(staff_user)
 
         corpo = client.get(DASHBOARD).content.decode()
 
-        assert reverse("backoffice:overview") in corpo
-        assert "Backoffice" in corpo
+        assert "dash-backoffice" not in corpo
 
-    def test_usuario_comum_nao_ve_o_link(self, auth_client):
+    def test_o_painel_nao_calcula_mais_a_permissao(self, client, staff_user):
+        """
+        A barra se decide sozinha, por `perms` -- a view não precisa
+        passar chave nenhuma, e uma que ninguém lê é código morto.
+        """
+        client.force_login(staff_user)
+
+        assert "can_access_backoffice" not in client.get(DASHBOARD).context
+
+    def test_quem_administra_continua_alcancando_o_backoffice_daqui(
+        self, client, staff_user
+    ):
+        """
+        O cartão saiu, mas a barra desta mesma página leva para lá. Sem
+        isto, "remover o cartão" poderia ter deixado o painel sem
+        nenhuma saída para a administração.
+        """
+        client.force_login(staff_user)
+
+        corpo = client.get(DASHBOARD).content.decode()
+
+        assert "nav-backoffice" in corpo
+        assert reverse("backoffice:overview") in corpo
+
+    def test_usuario_comum_nao_ve_o_backoffice_em_lugar_nenhum_do_painel(
+        self, auth_client
+    ):
         corpo = auth_client.get(DASHBOARD).content.decode()
 
         assert reverse("backoffice:overview") not in corpo
         assert "Backoffice" not in corpo
-
-    def test_is_staff_sozinho_nao_faz_o_link_aparecer(self, client, staff_sem_backoffice):
-        """
-        A flag do Django Admin não é a chave desta porta -- a permissão é.
-        """
-        client.force_login(staff_sem_backoffice)
-
-        corpo = client.get(DASHBOARD).content.decode()
-
-        assert reverse("backoffice:overview") not in corpo
-
-    def test_superusuario_ve_o_link(self, client, django_user_model):
-        """`has_perm` devolve True para superusuário em qualquer permissão."""
-        chefe = django_user_model.objects.create_superuser(
-            email="chefe@desenrola.be", password="x", full_name="Chefe"
-        )
-        client.force_login(chefe)
-
-        corpo = client.get(DASHBOARD).content.decode()
-
-        assert reverse("backoffice:overview") in corpo
-
-    def test_o_contexto_diz_a_verdade(self, auth_client, client, staff_user):
-        assert auth_client.get(DASHBOARD).context["can_access_backoffice"] is False
-
-        client.force_login(staff_user)
-        assert client.get(DASHBOARD).context["can_access_backoffice"] is True
 
 
 # ===========================================================================

@@ -42,7 +42,7 @@ from apps.letters.models import (
     MissingDocumentSnapshotError,
 )
 from apps.letters.nationalities import display_name as nationality_display_name
-from apps.letters.nationalities import document_forms
+from apps.letters.nationalities import document_nationalities
 from apps.letters.rules import stay_duration_days
 from pdfengine.textnorm import normalize_for_document
 
@@ -480,8 +480,12 @@ def build_snapshot(letter, user):
         # anfitriao vem do perfil; aqui fica o texto que foi impresso --
         # e o que faz uma carta emitida continuar igual mesmo que a
         # nacionalidade seja renomeada ou desativada no cadastro depois.
-        "nationalities": document_forms(
-            letter.data, host_code=user.nationality and user.nationality.code
+        "nationalities": document_nationalities(
+            letter.data,
+            host_code=user.nationality and user.nationality.code,
+            # O idioma do DOCUMENTO, nao o da interface: e ele que
+            # escolhe a traducao da nacionalidade.
+            language=letter.language,
         ),
         "finalized_at": timezone.now().isoformat(),
     }

@@ -73,7 +73,7 @@ LAYOUT_MINIMO = {
 
 @pytest.fixture(autouse=True)
 def _nacionalidades(nacionalidade_factory):
-    nacionalidade_factory("brasileira", guest_form="Brésilienne")
+    nacionalidade_factory("brasileira", name_fr="Brésilienne")
 
 
 @pytest.fixture

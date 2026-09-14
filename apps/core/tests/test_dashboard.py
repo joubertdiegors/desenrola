@@ -38,7 +38,7 @@ def _nacionalidades_de_teste(nacionalidade_factory):
     """
     nacionalidade_factory("Brasileira")
 
-    nacionalidade_factory("Belga", host_form="belga")
+    nacionalidade_factory("Belga")
 
 
 DASHBOARD = reverse("core:dashboard")

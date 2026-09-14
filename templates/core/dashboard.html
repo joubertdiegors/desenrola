@@ -6,6 +6,10 @@ Dashboard (layout 2c desktop, 3b tablet, 4d celular).
 Dados reais: `cards` sao LetterCard (apps/letters/presentation.py) das
 cartas DO usuario, e `letters_total` e quantas ele tem ao todo. Botao que
 ainda nao tem acao nao aparece — nada de fingir funcionalidade.
+
+O atalho para o Backoffice NAO mora aqui: ele fica na barra superior
+(components/app_nav.html), onde vale em toda a area logada em vez de so
+nesta tela. Uma porta so.
 {% endcomment %}
 
 {% block title %}{% translate "Início" %} · Desenrola{% endblock %}
@@ -24,23 +28,6 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
     </div>
     <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Começar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
   </div>
-
-  {% comment %}
-  Atalho para a área administrativa. Só aparece para quem tem
-  `core.access_backoffice` -- e esconder o link NÃO é o que protege:
-  a proteção é o `backoffice_required` em cada view de lá. Aqui é
-  apenas não oferecer uma porta que bateria na cara da pessoa.
-  {% endcomment %}
-  {% if can_access_backoffice %}
-  <a class="card dash-backoffice" href="{% url 'backoffice:overview' %}">
-    <span class="dash-backoffice-icon"><i class="ph ph-gear" aria-hidden="true"></i></span>
-    <span class="dash-backoffice-text">
-      <strong>{% translate "Backoffice" %}</strong>
-      <small>{% translate "Administração do sistema" %}</small>
-    </span>
-    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
-  </a>
-  {% endif %}
 
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>

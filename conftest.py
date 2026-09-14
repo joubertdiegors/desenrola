@@ -25,7 +25,10 @@ def idioma_padrao():
 def nacionalidade_do_perfil(db):
     """
     A nacionalidade do perfil da usuaria de teste -- a mesma do anfitriao
-    do documento oficial ("de nationalité belge").
+    do documento oficial.
+
+    O documento escreve o nome no idioma DELE: uma carta em frances sai
+    com `name_fr`. Nao ha mais forma separada para o anfitriao.
     """
     from apps.doctemplates.models import Nationality
 
@@ -36,8 +39,6 @@ def nacionalidade_do_perfil(db):
             "name_fr": "Belge",
             "name_nl": "Belgische",
             "name_en": "Belgian",
-            "guest_form": "Belge",
-            "host_form": "belge",
         },
     )
     return nacionalidade
@@ -202,17 +203,15 @@ def nacionalidade_factory(db):
     """
     from apps.doctemplates.models import Nationality
 
-    def _criar(code, *, name_pt=None, guest_form=None, host_form=None):
+    def _criar(code, *, name_pt=None, name_fr=None, name_nl=None, name_en=None):
         nome = name_pt or code
         nacionalidade, _criada = Nationality.objects.get_or_create(
             code=code,
             defaults={
                 "name_pt": nome,
-                "name_fr": guest_form or nome,
-                "name_nl": nome,
-                "name_en": nome,
-                "guest_form": guest_form or nome,
-                "host_form": host_form or nome,
+                "name_fr": name_fr or nome,
+                "name_nl": name_nl or nome,
+                "name_en": name_en or nome,
             },
         )
         return nacionalidade

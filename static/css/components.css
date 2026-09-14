@@ -702,16 +702,12 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 }
 
 /* Campo de data: o input visivel (dd/mm/aaaa, com mascara) mais o
-   calendario nativo, aberto pelo botao do icone. O <input type="date">
-   fica sobreposto ao botao e invisivel -- e ele que o navegador ancora
-   ao abrir o calendario, entao nao pode ser display:none. */
-/* O <input type="date"> nativo fica INVISIVEL mas clicavel, exatamente
-   por cima do botao do calendario. Tocar ali abre o seletor nativo do
-   proprio navegador -- no celular e a unica forma que funciona em todos
-   eles, porque `showPicker()` nao existe no Safari do iOS e, mesmo onde
-   existe, alguns navegadores so o aceitam a partir de um toque no
-   proprio campo de data. Embaixo dele fica so o icone (um <span>
-   decorativo): quem recebe o foco do teclado e o proprio input. */
+   calendario nativo, aberto pelo botao do icone.
+
+   O <input type="date"> fica invisivel e EMBAIXO do botao. Ele nao pode
+   ser display:none: e nele que o navegador ancora o calendario e e ele
+   que guarda o valor em ISO enquanto o seletor esta aberto. Quem recebe
+   o clique e o foco do teclado e o botao (ver letters/_field.html). */
 .date-input .date-input-picker {
   position: absolute;
   right: 6px;
@@ -725,29 +721,44 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
   background: transparent;
   opacity: 0;
   cursor: pointer;
-  z-index: 2;
+  z-index: 1;
   /* iOS ignora width/height em input[type=date] sem isto */
   -webkit-appearance: none;
   appearance: none;
 }
+/* O indicador nativo do Chromium cobre o input INTEIRO.
+
+   Sem isto ele ocupa so uma fracao do canto direito -- e, no Chrome e no
+   Edge, e o UNICO ponto que abre o seletor (clicar no resto do input de
+   data nao abre nada). Era a causa de o calendario "as vezes nao abrir".
+   Hoje o caminho normal e o botao, mas a area continua coerente para
+   quem chegar direto ao input. */
+.date-input .date-input-picker::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+/* O botao cobre a mesma area do input de data, e fica POR CIMA: e ele
+   quem recebe o clique e chama showPicker(). */
 .date-input .date-input-open {
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   background: none;
   border: 0;
-  padding: 6px;
+  padding: 0;
   line-height: 1;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  z-index: 1;
-}
-/* O foco do teclado cai no <input type="date"> (que e o controle de
-   verdade, mas e invisivel); o realce aparece no icone, que e o que se ve. */
-.date-input .date-input-picker:focus-visible + .date-input-open {
-  outline: 2px solid var(--p);
-  outline-offset: 1px;
+  z-index: 2;
 }
 .date-input .date-input-open:hover { background: var(--p10); }
 .date-input .date-input-open:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }

@@ -120,6 +120,11 @@ def dashboard(request):
     Lista as mais recentes (`presentation.RECENT_LIMIT`), mas conta o
     total -- o numero ao lado do titulo e quantas cartas a pessoa tem, nao
     quantas couberam na lista.
+
+    Nao passa nada sobre o Backoffice: o atalho para la mora na barra
+    superior e se decide sozinho, por `perms.core.access_backoffice`
+    (o processador de contexto de autenticacao ja o entrega a todo
+    template). Uma porta so, e sem uma chave por view.
     """
     letters = presentation.own_letters(request.user)
     return render(
@@ -128,11 +133,6 @@ def dashboard(request):
         {
             "cards": presentation.build_cards(letters[: presentation.RECENT_LIMIT]),
             "letters_total": letters.count(),
-            # O atalho para o Backoffice so existe para quem tem a
-            # permissao. Nao e seguranca -- isso e o
-            # `backoffice_required` -- e sim nao oferecer uma porta
-            # que bateria na cara da pessoa.
-            "can_access_backoffice": request.user.has_perm(BACKOFFICE_PERM),
             "active_nav": "home",
             "mobile_nav": True,
         },

@@ -194,37 +194,71 @@
     if (masked !== input.value) { input.value = masked; }
   });
 
-  // O <input type="date"> esta por cima do icone, invisivel e clicavel:
-  // tocar nele ja abre o calendario nativo, sem JavaScript nenhum -- e o
-  // que faz funcionar no celular, onde `showPicker()` nao existe (Safari
-  // do iOS) ou so e aceito a partir de um toque no proprio campo de data.
+  // Abrir o calendario nativo
+  // -------------------------
+  // Quem recebe o clique e o BOTAO do icone, nao o <input type="date">.
   //
-  // Aqui so sincronizamos: ao tocar, o seletor comeca na data que ja
-  // estiver digitada. `pointerdown` vem ANTES do navegador abrir o
-  // calendario, entao o valor chega a tempo.
-  document.addEventListener("pointerdown", function (event) {
-    var picker = event.target.closest(".date-input-picker");
-    if (!picker) { return; }
-    var input = picker.closest(".date-input").querySelector("[data-date-input]");
+  // O motivo: clicar num input de data NAO abre o seletor no Chrome nem
+  // no Edge -- la so o `::-webkit-calendar-picker-indicator` abre, e ele
+  // ocupa uma fracao do canto direito. Era por isso que o clique no
+  // icone quase sempre nao fazia nada.
+  //
+  // O <input type="date"> continua existindo, logo abaixo do botao: e
+  // nele que o navegador ancora o calendario e e ele que guarda o valor
+  // em ISO. Nao pode ser `display:none`.
+
+  function prepararPicker(picker) {
+    // O seletor comeca na data que ja estiver digitada, e com a data
+    // minima do campo -- o calendario nativo desabilita os dias
+    // anteriores sozinho. A regra de verdade continua no servidor.
+    var caixa = picker.closest(".date-input");
+    var input = caixa && caixa.querySelector("[data-date-input]");
     if (!input) { return; }
     picker.value = toIso(input.value) || "";
-    // Data minima (ex.: chegada nao pode ser no passado): o calendario
-    // nativo desabilita os dias anteriores sozinho.
     var min = input.getAttribute("data-date-min");
     if (min) { picker.min = min; }
+  }
+
+  document.addEventListener("click", function (event) {
+    var botao = event.target.closest && event.target.closest(".date-input-open");
+    if (!botao) { return; }
+    var caixa = botao.closest(".date-input");
+    var picker = caixa && caixa.querySelector(".date-input-picker");
+    if (!picker) { return; }
+
+    prepararPicker(picker);
+
+    if (typeof picker.showPicker === "function") {
+      // Estamos DENTRO do clique, entao a ativacao do usuario que o
+      // `showPicker()` exige existe. Ainda assim ele pode recusar (num
+      // iframe sem permissao, por exemplo) -- dai cai no caminho de
+      // baixo, em vez de estourar.
+      try {
+        picker.showPicker();
+        return;
+      } catch (err) { /* segue para o caminho alternativo */ }
+    }
+
+    // Sem `showPicker()` (Safari do iOS ate a 15, navegadores antigos):
+    // levar o foco ao proprio campo de data e o que abre a roda do
+    // sistema. Continua sendo o navegador quem decide se abre.
+    try {
+      picker.focus();
+      picker.click();
+    } catch (err) { /* o navegador decide */ }
   });
 
-  // Teclado: Enter/Espaco no seletor tambem abre o calendario onde o
-  // navegador oferecer `showPicker()`.
-  document.addEventListener("keydown", function (event) {
+  // Toque direto no <input type="date">: onde o botao for contornado, o
+  // seletor ainda precisa comecar na data certa. `pointerdown` vem ANTES
+  // de o navegador abrir o calendario, entao o valor chega a tempo.
+  //
+  // A guarda `event.target.closest &&` nao e enfeite: `pointerdown`
+  // dispara com alvos que nem sempre sao Element, e sem ela uma excecao
+  // derrubaria o resto do tratamento.
+  document.addEventListener("pointerdown", function (event) {
     var picker = event.target.closest && event.target.closest(".date-input-picker");
-    if (!picker || (event.key !== "Enter" && event.key !== " ")) { return; }
-    var input = picker.closest(".date-input").querySelector("[data-date-input]");
-    if (input) { picker.value = toIso(input.value) || ""; }
-    if (typeof picker.showPicker === "function") {
-      event.preventDefault();
-      try { picker.showPicker(); } catch (err) { /* o navegador decide */ }
-    }
+    if (!picker) { return; }
+    prepararPicker(picker);
   });
 
   document.addEventListener("change", function (event) {

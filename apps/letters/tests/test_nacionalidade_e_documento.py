@@ -52,8 +52,6 @@ def brasileira(db):
         name_fr="Brésilienne",
         name_nl="Braziliaanse",
         name_en="Brazilian",
-        guest_form="Brésilienne",
-        host_form="brésilienne",
     )
 
 
@@ -66,8 +64,6 @@ def belga(db):
         name_fr="Belge",
         name_nl="Belgische",
         name_en="Belgian",
-        guest_form="Belge",
-        host_form="belge",
     )
 
 
@@ -83,7 +79,7 @@ class TestModeloNationality:
         assert brasileira.order == 1
         assert brasileira.name_pt and brasileira.name_fr
         assert brasileira.name_nl and brasileira.name_en
-        assert brasileira.guest_form and brasileira.host_form
+        assert brasileira.display_name("fr") == "Brésilienne"
 
     def test_o_codigo_e_unico(self, brasileira):
         from django.db import IntegrityError
@@ -95,8 +91,6 @@ class TestModeloNationality:
                 name_fr="Autre",
                 name_nl="Andere",
                 name_en="Other",
-                guest_form="X",
-                host_form="x",
             )
 
     def test_o_nome_sai_no_idioma_pedido(self, brasileira):
@@ -254,12 +248,17 @@ class TestArmazenaOCodigo:
         assert draft.data["guest_nationality"] == "BR"
         assert "Brésilienne" not in str(draft.data)
 
-    def test_o_snapshot_congela_a_forma_do_documento(self, brasileira, belga):
-        formas = nationalities.document_forms(
-            {"guest_nationality": "BR", "host_nationality": "BE"}
+    def test_o_snapshot_congela_o_texto_do_documento(self, brasileira, belga):
+        # O idioma do DOCUMENTO escolhe a tradução -- é o que
+        # `build_snapshot` passa, a partir de `letter.language`.
+        nacionalidades = nationalities.document_nationalities(
+            {"guest_nationality": "BR", "host_nationality": "BE"}, language="fr"
         )
 
-        assert formas == {"guest_nationality": "Brésilienne", "host_nationality": "belge"}
+        assert nacionalidades == {
+            "guest_nationality": "Brésilienne",
+            "host_nationality": "Belge",
+        }
 
     def test_renomear_no_cadastro_nao_muda_a_carta_ja_emitida(
         self, auth_client, user, draft, brasileira, belga
@@ -268,9 +267,9 @@ class TestArmazenaOCodigo:
         O texto que foi para o documento está congelado no snapshot -- o
         cadastro pode mudar depois à vontade.
         """
-        congelado = nationalities.document_forms({"guest_nationality": "BR"})
+        congelado = nationalities.document_nationalities({"guest_nationality": "BR"}, language="fr")
 
-        brasileira.guest_form = "Outra Coisa Totalmente"
+        brasileira.name_fr = "Outra Coisa Totalmente"
         brasileira.save()
 
         assert congelado["guest_nationality"] == "Brésilienne"
@@ -278,7 +277,7 @@ class TestArmazenaOCodigo:
     def test_desativar_a_nacionalidade_nao_quebra_a_carta_emitida(
         self, brasileira
     ):
-        congelado = nationalities.document_forms({"guest_nationality": "BR"})
+        congelado = nationalities.document_nationalities({"guest_nationality": "BR"}, language="fr")
         brasileira.is_active = False
         brasileira.save()
 
@@ -312,9 +311,11 @@ class TestArmazenaOCodigo:
     def test_carta_antiga_com_texto_livre_continua_funcionando(self):
         """Cartas anteriores ao cadastro guardaram o próprio texto: ele
         passa adiante como está, sem virar erro."""
-        formas = nationalities.document_forms({"guest_nationality": "Brésilienne"})
+        nacionalidades = nationalities.document_nationalities(
+            {"guest_nationality": "Brésilienne"}
+        )
 
-        assert formas["guest_nationality"] == "Brésilienne"
+        assert nacionalidades["guest_nationality"] == "Brésilienne"
 
 
 # ---------------------------------------------------------------------------
@@ -450,7 +451,7 @@ class TestRegressaoDoPdfOficial:
 
         contexto = services.build_document_context(draft)
 
-        assert contexto["anfitriao.nacionalidade"] == "belge"
+        assert contexto["anfitriao.nacionalidade"] == "Belge"
         assert contexto["anfitriao.documento_identidade"] == "00000000"
 # ---------------------------------------------------------------------------
 # Campos de data

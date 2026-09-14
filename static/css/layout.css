@@ -221,6 +221,10 @@ body { display: flex; flex-direction: column; }
    -------------------------------------------------------------------------- */
 
 .app-nav { padding: 16px 48px; }
+/* O atalho do Backoffice nao encolhe: no celular a barra tem logotipo,
+   este botao e o avatar, e deixar o botao espremer mudaria a area de
+   toque em vez de deixar o logotipo ceder. */
+.app-nav .nav-backoffice { flex: none; }
 .user-menu > summary { gap: 8px; font-size: 14px; font-weight: 600; color: var(--navy); }
 .user-menu .ph-caret-down { color: var(--mu); }
 
@@ -498,11 +502,6 @@ body { display: flex; flex-direction: column; }
 
 /* Atalho do Backoffice no dashboard: so aparece para quem tem a
    permissao. Mesma caixa das outras do painel (.card), em linha. */
-.dash-backoffice { display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 22px; text-decoration: none; color: inherit; }
-.dash-backoffice:hover { border-color: var(--p); }
-.dash-backoffice-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--p10); color: var(--p); font-size: 20px; flex: none; }
-.dash-backoffice-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.dash-backoffice-text small { color: var(--mu); font-size: 12.5px; }
 /* Aviso curto dentro do cartao de carta no celular (ex.: expirada). */
 .letter-card-note { color: var(--error-dark); font-size: 13px; margin: 4px 0 8px; }
 

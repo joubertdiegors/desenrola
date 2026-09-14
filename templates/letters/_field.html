@@ -27,13 +27,35 @@ original ja aprovado.
   ao digitar) e o botão ao lado abre o CALENDÁRIO NATIVO do navegador --
   o mesmo que aparece no celular. Os dois escrevem no mesmo campo.
 
+  TRÊS ELEMENTOS, CADA UM COM UM PAPEL
+  ------------------------------------
+    1. o campo visível (`{{ row.bound }}`) -- é o que se digita e o que
+       é enviado ao servidor, sempre em dd/mm/aaaa;
+    2. o `<input type="date">` -- invisível, é onde o navegador ANCORA o
+       calendário e onde o valor vive em ISO enquanto ele está aberto.
+       Não pode ser `display:none`, e por isso fica só transparente;
+    3. o botão -- é quem recebe o clique e chama `showPicker()`.
+
+  O BOTÃO É UM `<button>`, E ISSO IMPORTA
+  --------------------------------------
+  Era um `<span>` decorativo, e o `<input type="date">` ficava por cima
+  dele para receber o toque. Só que clicar num input de data NÃO abre o
+  seletor no Chrome nem no Edge -- lá só o `::-webkit-calendar-picker
+  -indicator` abre, e ele ocupa uma fração do canto direito. Clicar no
+  ícone quase sempre não fazia nada.
+
+  Agora o botão fica por cima, recebe o clique e o foco do teclado
+  (Enter e Espaço já disparam `click` num `<button>`), e o input de data
+  sai do tab order -- dois controles para a mesma coisa seriam uma
+  parada de teclado a mais sem ganho nenhum.
+
   Sem JavaScript continua funcionando: digita-se a data e o servidor
   valida, que é onde a regra de verdade mora.
   {% endcomment %}
   <div class="input-wrap date-input">
     {{ row.bound }}
-    <input type="date" class="date-input-picker" aria-label="{% translate 'Escolher no calendário' %}">
-    <span class="input-icon is-accent date-input-open" aria-hidden="true"><i class="ph ph-calendar-blank"></i></span>
+    <input type="date" class="date-input-picker" tabindex="-1" aria-hidden="true">
+    <button type="button" class="input-icon is-accent date-input-open" aria-label="{% translate 'Escolher no calendário' %}"><i class="ph ph-calendar-blank" aria-hidden="true"></i></button>
   </div>
   {% else %}
   {{ row.bound }}

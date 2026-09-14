@@ -42,7 +42,7 @@ MARCAS_DE_SELETOR = ("site-nav-lang", "lang-dropdown", "auth-lang", "lang-choice
 
 @pytest.fixture(autouse=True)
 def _nacionalidade(nacionalidade_factory):
-    nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+    nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
 
 @pytest.fixture

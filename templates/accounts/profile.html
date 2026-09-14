@@ -102,11 +102,16 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
             {% comment %}
             Mesmo campo de data do assistente: digita-se dd/mm/aaaa (com
             máscara) e o botão abre o calendário nativo do navegador.
+
+            A marcação é a mesma de `letters/_field.html`, inclusive o
+            motivo de o botão ser um `<button>` e não um `<span>`: clicar
+            num `input[type=date]` não abre o seletor no Chrome nem no
+            Edge. As duas cópias precisam mudar juntas.
             {% endcomment %}
             <div class="input-wrap date-input">
               {{ profile_form.birth_date }}
-              <input type="date" class="date-input-picker" aria-label="{% translate 'Escolher no calendário' %}">
-              <span class="input-icon is-accent date-input-open" aria-hidden="true"><i class="ph ph-calendar-blank"></i></span>
+              <input type="date" class="date-input-picker" tabindex="-1" aria-hidden="true">
+              <button type="button" class="input-icon is-accent date-input-open" aria-label="{% translate 'Escolher no calendário' %}"><i class="ph ph-calendar-blank" aria-hidden="true"></i></button>
             </div>
             <div class="field-hint">{% translate "Usada na sua Carta Convite." %}</div>
             {% include "components/field_errors.html" with errors=profile_form.birth_date.errors %}

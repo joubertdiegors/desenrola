@@ -57,7 +57,7 @@ def _br(data):
 
 @pytest.fixture(autouse=True)
 def _nacionalidade_do_convidado(nacionalidade_factory):
-    nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+    nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
 
 @pytest.fixture
@@ -101,20 +101,25 @@ class TestCalendarioNativo:
 
         assert '<input type="date" class="date-input-picker"' in html
 
-    def test_o_seletor_e_tocavel_e_alcancavel_pelo_teclado(self, auth_client, draft):
+    def test_quem_abre_o_calendario_e_o_botao(self, auth_client, draft):
         """
-        No celular o que abre o calendário é o toque no próprio
-        `input[type=date]` -- `showPicker()` não existe no Safari do iOS.
-        Então ele não pode estar escondido de quem toca nem de quem
-        navega por teclado.
+        O controle de abrir é o BOTÃO, e não o `input[type=date]`.
+
+        Clicar num input de data não abre o seletor no Chrome nem no
+        Edge -- lá só o `::-webkit-calendar-picker-indicator` abre, e ele
+        ocupa uma fração do canto direito. O input continua existindo
+        (é onde o navegador ancora o calendário), mas fora do caminho do
+        teclado: dois controles para a mesma coisa seriam uma parada de
+        tabulação a mais sem ganho nenhum.
         """
         html = auth_client.get(_step_url(draft, 1)).content.decode()
         inicio = html.index("date-input-picker")
-        trecho = html[inicio : html.index("date-input-open", inicio)]
+        picker = html[inicio : html.index("date-input-open", inicio)]
+        botao = html[html.index("date-input-open") - 120 : html.index("date-input-open") + 200]
 
-        assert 'tabindex="-1"' not in trecho
-        assert "aria-hidden" not in trecho
-        assert "aria-label" in trecho
+        assert 'tabindex="-1"' in picker
+        assert '<button type="button"' in botao
+        assert "aria-label" in botao
 
     def test_o_campo_digitavel_continua_ao_lado(self, auth_client, draft):
         """Calendário e digitação convivem -- um não substitui o outro."""
@@ -259,8 +264,6 @@ class TestDadosDoAnfitriaoNoPerfil:
             name_fr="Inactive",
             name_nl="Inactief",
             name_en="Inactive",
-            guest_form="Inactive",
-            host_form="inactive",
             is_active=False,
         )
 
@@ -302,7 +305,10 @@ class TestDadosDoAnfitriaoNoPerfil:
         draft.refresh_from_db()
 
         assert draft.snapshot["host"]["birth_date"] == "1985-03-14"
-        assert draft.snapshot["nationalities"]["host_nationality"] == "belge"
+        # `name_fr` da nacionalidade do perfil: o documento em frances
+        # escreve o nome em frances. Nao ha mais forma propria do
+        # anfitriao.
+        assert draft.snapshot["nationalities"]["host_nationality"] == "Belge"
 
     def test_mudar_o_perfil_depois_nao_altera_a_carta_emitida(self, auth_client, draft, user):
         """
@@ -323,8 +329,6 @@ class TestDadosDoAnfitriaoNoPerfil:
             name_fr="Française",
             name_nl="Franse",
             name_en="French",
-            guest_form="Française",
-            host_form="française",
         )
         user.nationality = outra
         user.birth_date = datetime.date(1990, 1, 1)
@@ -334,7 +338,10 @@ class TestDadosDoAnfitriaoNoPerfil:
         draft.refresh_from_db()
 
         assert draft.snapshot["host"]["birth_date"] == "1985-03-14"
-        assert draft.snapshot["nationalities"]["host_nationality"] == "belge"
+        # `name_fr` da nacionalidade do perfil: o documento em frances
+        # escreve o nome em frances. Nao ha mais forma propria do
+        # anfitriao.
+        assert draft.snapshot["nationalities"]["host_nationality"] == "Belge"
         assert conteudo_do(draft.pdf_file.read()) == conteudo_antes
 
     def test_a_carta_gerada_imprime_os_dados_do_perfil(self, auth_client, draft):
@@ -349,7 +356,9 @@ class TestDadosDoAnfitriaoNoPerfil:
             texto = " ".join(PdfReader(_io.BytesIO(fh.read())).pages[0].extract_text().split())
 
         assert "14/03/1985" in texto
-        assert "titulaire de la carte d’identité belge" in texto
+        # `Belge` com maiúscula: a nacionalidade do anfitrião passou a
+        # sair de `name_fr`, e não mais de uma forma própria em minúscula.
+        assert "titulaire de la carte d’identité Belge" in texto
         assert "00000000" in texto
 
 

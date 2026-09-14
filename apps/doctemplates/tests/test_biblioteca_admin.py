@@ -640,7 +640,7 @@ class TestModelosOficiais:
 class TestRegressao:
     @pytest.fixture
     def _nacionalidade(self, nacionalidade_factory):
-        nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+        nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
     def test_modelo_inativo_sai_das_opcoes_de_carta_nova(
         self, modelos_oficiais_prontos, _nacionalidade

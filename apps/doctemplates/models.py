@@ -41,15 +41,18 @@ class Nationality(TimeStampedModel):
     renomear "Brésilienne" no cadastro nao reescreve o passado: o texto
     que foi para a carta ja esta congelado no snapshot dela.
 
-    As duas formas gramaticais existem porque o documento oficial escreve
-    a mesma nacionalidade de dois jeitos:
+    UMA TRADUCAO POR IDIOMA, E SO ISSO
+    ----------------------------------
+    A nacionalidade e um nome em quatro idiomas. O documento escreve o
+    nome no idioma DELE:
 
-        "de nationalité belge"          -> `host_form`
-        "Nationalité : Brésilienne"     -> `guest_form`
+        carta em frances   -> `name_fr`
+        carta em portugues -> `name_pt`
 
-    LIMITE CONHECIDO: hoje essas duas formas sao as do documento oficial,
-    que so existe em frances. Quando outro idioma ganhar documento
-    proprio, elas precisarao virar uma forma por idioma.
+    Nao ha forma por papel (convidado/anfitriao) nem por genero. A mesma
+    traducao serve a tela e ao documento, e quem a escolhe e
+    `display_name()` -- um lugar so, para a tela e para o papel nao
+    poderem discordar.
     """
 
     code = models.CharField(
@@ -75,17 +78,6 @@ class Nationality(TimeStampedModel):
     name_nl = models.CharField(_("nome (nl)"), max_length=120)
     name_en = models.CharField(_("nome (en)"), max_length=120)
 
-    guest_form = models.CharField(
-        _("forma no documento — convidado"),
-        max_length=120,
-        help_text=_('Como sai na tabela do documento. Ex.: "Brésilienne".'),
-    )
-    host_form = models.CharField(
-        _("forma no documento — anfitrião"),
-        max_length=120,
-        help_text=_('Como sai no texto do documento. Ex.: "belge".'),
-    )
-
     objects = NationalityQuerySet.as_manager()
 
     class Meta:
@@ -97,7 +89,14 @@ class Nationality(TimeStampedModel):
         return self.name_pt or self.code
 
     def display_name(self, language=None):
-        """O nome no idioma pedido, caindo no portugues se faltar."""
+        """
+        O nome no idioma pedido -- para a tela E para o documento.
+
+        Idioma sem traducao cai no portugues; sem nenhum nome, no codigo.
+        Nunca devolve vazio para uma nacionalidade que existe: um
+        documento oficial com o campo em branco seria pior do que um com
+        o codigo.
+        """
         return getattr(self, f"name_{language}", "") or self.name_pt or self.code
 
 

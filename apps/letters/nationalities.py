@@ -6,7 +6,11 @@ texto. Isso e o que permite renomear "Brésilienne" no cadastro sem
 reescrever o passado, e o que faz trocar o idioma da carta nao invalidar
 o preenchimento.
 
-O texto so aparece em dois momentos, e cada um tem a sua fonte:
+UMA NACIONALIDADE E UM NOME EM QUATRO IDIOMAS. Nao ha forma por papel
+(convidado/anfitriao) nem por genero: a carta usa o nome do idioma dela,
+e o mesmo nome aparece na tela.
+
+O texto so aparece em dois momentos, e cada um tem a mesma fonte:
 
   - na TELA, resolvido na hora, no idioma da carta;
   - no DOCUMENTO, congelado no snapshot no fechamento -- dali em diante a
@@ -22,16 +26,10 @@ from django.db.models.signals import post_delete, post_save
 
 from apps.doctemplates.models import Nationality
 
-# As duas formas gramaticais que o documento oficial usa para a mesma
-# nacionalidade -- ver o docstring de `Nationality`.
-GUEST_FORM = "guest_form"
-HOST_FORM = "host_form"
-
-# Qual forma cada campo da carta usa.
-FORM_BY_FIELD = {
-    "guest_nationality": GUEST_FORM,
-    "host_nationality": HOST_FORM,
-}
+# Os campos de nacionalidade que o documento imprime. Os dois sao
+# resolvidos do MESMO jeito -- pela traducao no idioma da carta. Nao ha
+# forma por papel nem por genero.
+CAMPOS_DO_DOCUMENTO = ("guest_nationality", "host_nationality")
 
 
 # A lista e a mesma para todo mundo e muda raramente, mas e consultada
@@ -70,27 +68,40 @@ def nationality_choices(language=None):
     return _choices_cache[language]
 
 
-def _resolve(value, attribute):
+def display_name(value, language=None):
+    """
+    O nome da nacionalidade guardada em `value`, no idioma pedido.
+
+    **E a unica resolucao de nacionalidade do sistema** -- a mesma para a
+    tela e para o documento. Nao ha versao "do convidado" nem "do
+    anfitriao": a nacionalidade e um nome, e o nome e o mesmo.
+
+    Fallback: idioma pedido -> portugues -> codigo (ver
+    `Nationality.display_name`). Codigo que nao esta no cadastro e
+    devolvido como esta: e o texto que a propria carta guardou, antes de
+    a lista existir.
+    """
     if not value:
         return ""
     item = Nationality.objects.filter(code=value).first()
     if item is None:
-        # Nao e um codigo do cadastro: e o texto que a propria carta
-        # guardou (cartas anteriores a existencia da lista).
         return str(value)
-    return getattr(item, attribute) or item.name_pt or item.code
+    return item.display_name(language)
 
 
-def document_forms(data, host_code=None):
+def document_nationalities(data, host_code=None, language=None):
     """
-    As formas que VAO PARA O DOCUMENTO, prontas para congelar no snapshot:
-    `{"guest_nationality": "Brésilienne", "host_nationality": "belge"}`.
+    As nacionalidades que VAO PARA O DOCUMENTO, prontas para congelar no
+    snapshot: `{"guest_nationality": "Brésilienne", "host_nationality":
+    "Belge"}`.
 
     A do convidado sai de `data` (o assistente pergunta); a do anfitriao
     vem de `host_code`, o codigo da nacionalidade do PERFIL -- o
     assistente nao pergunta mais isso. Cartas anteriores a essa mudanca
     guardaram `host_nationality` em `data`, e e dali que sai quando
     `host_code` nao vem.
+
+    `language` e o idioma do DOCUMENTO: e ele que escolhe a traducao.
 
     Resolvido uma vez, no fechamento. Depois disso a carta nao consulta
     mais o cadastro -- e o que mantem o documento igual ao que foi
@@ -99,12 +110,4 @@ def document_forms(data, host_code=None):
     valores = dict(data or {})
     if host_code:
         valores["host_nationality"] = host_code
-    return {
-        campo: _resolve(valores.get(campo), atributo)
-        for campo, atributo in FORM_BY_FIELD.items()
-    }
-
-
-def display_name(value, language=None):
-    """O nome da nacionalidade para mostrar na tela, no idioma pedido."""
-    return _resolve(value, f"name_{language}") if value else ""
+    return {campo: display_name(valores.get(campo), language) for campo in CAMPOS_DO_DOCUMENTO}

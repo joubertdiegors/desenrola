@@ -435,7 +435,7 @@ def _step_url(carta, step):
 class TestIntegracaoComAFinalizacaoReal:
     @pytest.fixture(autouse=True)
     def _nacionalidade(self, nacionalidade_factory, modelos_oficiais_prontos):
-        nacionalidade_factory("Brasileira", guest_form="Brésilienne")
+        nacionalidade_factory("Brasileira", name_fr="Brésilienne")
 
     def test_a_finalizacao_real_captura_o_snapshot(self, auth_client, user):
         """
