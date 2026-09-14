@@ -37,10 +37,8 @@ travado ou oficial aceita mudar é `DocumentTemplate.save()`; como se
 duplica é `services.duplicacao`. Esta camada só apresenta e chama.
 """
 
-from functools import wraps
-
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -48,7 +46,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from apps.core.views import backoffice_required
+from apps.core.views import exige_permissao
 
 from .models import DocumentTemplate, DocumentTemplateLockedError, DocumentType
 from .services.duplicacao import duplicar_modelo
@@ -59,30 +57,6 @@ VER_PERM = "doctemplates.view_documenttemplate"
 ADMINISTRAR_PERM = "doctemplates.change_documenttemplate"
 
 POR_PAGINA = 25
-
-
-def exige_permissao(permissao):
-    """
-    Decorador: entrar no Backoffice E ter `permissao`; senão, 403.
-
-    Público de propósito: `editor_views` também o usa -- o editor é a
-    outra metade desta seção, e as duas portas são a mesma decisão.
-
-    A porta é no SERVIDOR. Esconder o botão não protege nada -- a URL
-    continua sendo digitável, e é o que alguém tentaria.
-    """
-
-    def decorador(view):
-        @backoffice_required
-        @wraps(view)
-        def wrapper(request, *args, **kwargs):
-            if not request.user.has_perm(permissao):
-                raise PermissionDenied
-            return view(request, *args, **kwargs)
-
-        return wrapper
-
-    return decorador
 
 
 def _contexto_do_backoffice(titulo):

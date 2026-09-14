@@ -33,6 +33,14 @@ lateral; no celular vai dentro do dropdown do botao de menu
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'templates' %}is-current{% endif %}" href="{% url 'backoffice:document_library' %}"{% if active == "templates" %} aria-current="page"{% endif %}><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Modelos" %}</a>
   {% endif %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letter_policy' %}is-current{% endif %}" href="{% url 'backoffice:letter_policy' %}"{% if active == "letter_policy" %} aria-current="page"{% endif %}><i class="ph ph-clock-countdown" aria-hidden="true"></i>{% translate "Política das cartas" %}</a>
+  {% comment %}
+  "E-mail" exige `core.view_emailsettings` -- a mesma permissão que a
+  tela cobra no servidor. Quem não a tem não vê o item; quem digitar a
+  URL leva 403.
+  {% endcomment %}
+  {% if perms.core.view_emailsettings %}
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'email_settings' %}is-current{% endif %}" href="{% url 'backoffice:email_settings' %}"{% if active == "email_settings" %} aria-current="page"{% endif %}><i class="ph ph-envelope-simple" aria-hidden="true"></i>{% translate "E-mail" %}</a>
+  {% endif %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'content' %}is-current{% endif %}" href="{% url 'backoffice:content' %}#conteudo"{% if active == "content" %} aria-current="page"{% endif %}><i class="ph ph-article" aria-hidden="true"></i>{% translate "Conteúdo do site" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'partners' %}is-current{% endif %}" href="{% url 'backoffice:partners' %}"{% if active == "partners" %} aria-current="page"{% endif %}><i class="ph ph-handshake" aria-hidden="true"></i>{% translate "Parceiros" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %}" href="{% url 'backoffice:languages' %}#idiomas"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>

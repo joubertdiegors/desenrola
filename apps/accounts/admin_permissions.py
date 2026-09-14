@@ -126,6 +126,29 @@ CATALOGO = (
             ),
         ),
     ),
+    GrupoDePermissoes(
+        titulo=_("Sistema"),
+        permissoes=(
+            PermissaoAdministrativa(
+                chave="core.view_emailsettings",
+                rotulo=_("Ver a configuração de e-mail"),
+                descricao=_(
+                    "Abre a tela de envio de e-mail e vê o servidor, a porta e o "
+                    "remetente cadastrados. A senha nunca é exibida."
+                ),
+                aplicada_em="core.views.backoffice_email_settings",
+            ),
+            PermissaoAdministrativa(
+                chave="core.change_emailsettings",
+                rotulo=_("Configurar o envio de e-mail"),
+                descricao=_(
+                    "Altera o servidor SMTP e a senha, dispara mensagens de teste e "
+                    "liga ou desliga o envio real do sistema."
+                ),
+                aplicada_em="core.views.backoffice_email_settings / _test / _activation",
+            ),
+        ),
+    ),
 )
 
 

@@ -56,6 +56,21 @@ urlpatterns = [
     ),
     # Politica do ciclo de vida das cartas (editabilidade e expiracao).
     path("cartas/politica/", views.backoffice_letter_policy, name="letter_policy"),
+    # Configuracao de envio de e-mail (SMTP). Tres rotas separadas de
+    # proposito: salvar os dados, ligar/desligar o envio e disparar um
+    # teste sao tres decisoes diferentes, e o teste nao pode ser um
+    # efeito colateral de salvar.
+    path("email/", views.backoffice_email_settings, name="email_settings"),
+    path(
+        "email/teste/",
+        views.backoffice_email_settings_test,
+        name="email_settings_test",
+    ),
+    path(
+        "email/situacao/",
+        views.backoffice_email_settings_activation,
+        name="email_settings_activation",
+    ),
     path("templates/", views.backoffice_templates, name="templates"),
     # Biblioteca dos modelos: a tela que o menu "Modelos" abre.
     path("modelos/", doc_library_views.document_library, name="document_library"),

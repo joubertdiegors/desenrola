@@ -152,12 +152,27 @@ PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
 # E-mail
 # ---------------------------------------------------------------------------
 #
-# Usado hoje pela recuperacao de senha. O backend fica por ambiente: em
-# desenvolvimento os e-mails vao para o console (ver dev.py); em producao
-# o SMTP entra pela variavel EMAIL_URL (ver prod.py e .env.example).
+# Usado hoje pela recuperacao de senha.
+#
+# O backend do projeto e o `ConfiguredEmailBackend`: a cada envio ele
+# olha `core.EmailSettings` (cadastrado no Backoffice) e, havendo
+# configuracao ATIVA, fala SMTP com ela. Sem configuracao ativa, entrega
+# ao EMAIL_FALLBACK_BACKEND do ambiente -- console em desenvolvimento,
+# EMAIL_URL em producao. Assim o codigo que envia continua sendo
+# `send_mail()` de sempre, e o interruptor da tela significa alguma
+# coisa de fato.
+
+EMAIL_BACKEND = "apps.core.mail.ConfiguredEmailBackend"
+EMAIL_FALLBACK_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Desenrola <no-reply@desenrola.be>")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Chave que cifra a senha SMTP guardada no banco (apps.core.crypto).
+# Vazia, a chave e derivada da SECRET_KEY. Definir uma propria permite
+# rodar SECRET_KEY sem tornar a senha guardada ilegivel -- e vice-versa.
+# NUNCA versionada: mora no .env, como a SECRET_KEY.
+EMAIL_SECRET_KEY = env("EMAIL_SECRET_KEY", default="")
 
 
 # ---------------------------------------------------------------------------

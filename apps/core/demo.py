@@ -151,5 +151,9 @@ BACKOFFICE_SECTIONS = {
         "icon": "ph-floppy-disk",
         "action": _("Salvar"),
     },
+    # Tela real: sem `action`, o cabeçalho do celular não renderiza
+    # botão nenhum (ver backoffice/base.html) -- os botões desta tela
+    # ficam no corpo, onde fazem alguma coisa.
+    "email_settings": {"title": _("Configuração de e-mail"), "icon": "", "action": ""},
     "system": {"title": _("Sistema"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
 }

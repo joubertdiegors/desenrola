@@ -29,12 +29,23 @@ if "postgresql" not in DATABASES["default"]["ENGINE"]:
 # ---------------------------------------------------------------------------
 # E-mail (recuperacao de senha)
 # ---------------------------------------------------------------------------
-# EMAIL_URL no formato do django-environ, ex.:
+# A configuracao de verdade vive no BANCO, cadastrada pelo Backoffice
+# (core.EmailSettings): e o que permite trocar de provedor ou renovar uma
+# senha de aplicativo sem deploy.
+#
+# EMAIL_URL continua existindo como RESERVA -- para onde as mensagens vao
+# enquanto nao houver configuracao ativa na tela. Formato do
+# django-environ, ex.:
 #   smtp+tls://usuario:senha@smtp.exemplo.com:587
 # Sem a variavel, os e-mails sao apenas escritos no log do servidor: o
-# fluxo funciona, mas nenhuma mensagem chega ao usuario ate o SMTP existir.
+# fluxo funciona, mas nenhuma mensagem chega ao usuario.
 
-globals().update(env.email_url("EMAIL_URL", default="consolemail://"))
+_reserva = env.email_url("EMAIL_URL", default="consolemail://")
+EMAIL_FALLBACK_BACKEND = _reserva.pop("EMAIL_BACKEND")
+globals().update(_reserva)
+
+# Depois do update: o backend do projeto e sempre o que consulta o banco.
+EMAIL_BACKEND = "apps.core.mail.ConfiguredEmailBackend"
 
 
 # ---------------------------------------------------------------------------

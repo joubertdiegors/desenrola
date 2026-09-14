@@ -13,16 +13,17 @@ from functools import wraps
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
 from apps.letters import lifecycle, presentation
 
-from . import demo
-from .forms import LetterPolicyForm
+from . import demo, mail
+from .forms import EmailSettingsForm, EmailTestForm, LetterPolicyForm
 
 # A permissao que abre a porta do Backoffice. Uma constante, e nao a
 # string solta em cada view/template, para o dia em que alguem precisar
@@ -32,6 +33,16 @@ BACKOFFICE_PERM = "core.access_backoffice"
 # Permissao para MUDAR a politica das cartas. Entrar no Backoffice e uma
 # coisa; alterar uma regra que vale para todo mundo e outra.
 LETTER_POLICY_PERM = "letters.change_letterpolicy"
+
+# Configuracao de e-mail: ver e alterar sao permissoes diferentes. Quem
+# altera mexe em credencial de um servidor externo -- e o degrau mais
+# alto desta area, e nao vem junto com "entrar no Backoffice".
+#
+# (Os comentarios desta metade do arquivo seguem sem acento, como o
+# resto do cabecalho; as docstrings das telas novas, acentuadas, como as
+# das telas mais recentes logo abaixo.)
+EMAIL_VIEW_PERM = "core.view_emailsettings"
+EMAIL_CHANGE_PERM = "core.change_emailsettings"
 
 
 def backoffice_required(view):
@@ -55,6 +66,32 @@ def backoffice_required(view):
         return view(request, *args, **kwargs)
 
     return wrapper
+
+
+def exige_permissao(permissao):
+    """
+    Decorador: entrar no Backoffice E ter `permissao`; senao, 403.
+
+    Mora aqui, junto de `backoffice_required`, porque a decisao e a
+    mesma em toda a area administrativa -- `doctemplates.library_views`
+    e as telas de e-mail usam este mesmo decorador, e uma segunda copia
+    acabaria divergindo.
+
+    A porta e no SERVIDOR. Esconder o botao nao protege nada -- a URL
+    continua sendo digitavel, e e o que alguem tentaria.
+    """
+
+    def decorador(view):
+        @backoffice_required
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.has_perm(permissao):
+                raise PermissionDenied
+            return view(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorador
 
 
 def home(request):
@@ -236,3 +273,142 @@ def backoffice_letter_policy(request):
     context = _backoffice_context("letter_policy")
     context.update({"form": form, "pode_editar": pode_editar})
     return render(request, "backoffice/letter_policy.html", context)
+
+
+# ---------------------------------------------------------------------------
+# Configuracao de envio de e-mail
+# ---------------------------------------------------------------------------
+
+
+def _contexto_do_email(request, config, form=None):
+    """A casca da tela de e-mail, montada num lugar so -- as tres views
+    terminam nela (duas por redirect, uma renderizando)."""
+    context = _backoffice_context("email_settings")
+    context.update(
+        {
+            "form": form if form is not None else EmailSettingsForm(instance=config),
+            "teste": EmailTestForm(),
+            "config": config,
+            "pode_editar": request.user.has_perm(EMAIL_CHANGE_PERM),
+        }
+    )
+    return context
+
+
+@exige_permissao(EMAIL_VIEW_PERM)
+def backoffice_email_settings(request):
+    """
+    Como o sistema manda e-mail: servidor, porta, segurança, usuário,
+    senha e remetente.
+
+    VER exige `core.view_emailsettings`; SALVAR exige, além disso,
+    `core.change_emailsettings` -- consultar para onde o sistema aponta
+    é uma coisa, mexer na credencial de um servidor externo é outra. A
+    checagem do POST é aqui, no servidor, não no botão.
+
+    A SENHA NÃO SAI DAQUI. O formulário tem um campo de escrita que
+    volta sempre em branco; o que a tela mostra é apenas SE existe uma
+    senha guardada. Não há caminho que a devolva.
+
+    Salvar NÃO liga o envio: ativar e desativar tem botão próprio, para
+    dar para cadastrar, testar e só então passar a valer.
+    """
+    config = mail.configuracao()
+
+    if request.method == "POST":
+        if not request.user.has_perm(EMAIL_CHANGE_PERM):
+            raise PermissionDenied
+        form = EmailSettingsForm(request.POST, instance=config)
+        if form.is_valid():
+            configuracao = form.save(commit=False)
+            configuracao.updated_by = request.user
+            configuracao.save()
+            messages.success(request, _("Configuração de e-mail salva."))
+            return redirect(reverse("backoffice:email_settings"))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+        # Config RECARREGADA para a tela: o formulario ja aplicou a senha
+        # digitada (ou a remocao) na instancia dele, e nada disso foi
+        # gravado. Mostrar aquele objeto diria "senha apagada" sobre uma
+        # senha que continua no banco.
+        return render(
+            request,
+            "backoffice/email_settings.html",
+            _contexto_do_email(request, mail.configuracao(), form),
+        )
+
+    return render(request, "backoffice/email_settings.html", _contexto_do_email(request, config))
+
+
+@exige_permissao(EMAIL_CHANGE_PERM)
+@require_POST
+def backoffice_email_settings_test(request):
+    """
+    Manda uma mensagem de teste para o endereço que o administrador
+    digitar.
+
+    Exige a permissão de ALTERAR, e não a de ver: o teste abre uma
+    conexão com a credencial guardada e gasta o servidor de e-mail de
+    verdade -- não é uma leitura.
+
+    Usa o que está salvo, ativo ou não. Testar antes de ligar é a ordem
+    certa de fazer as coisas.
+
+    O resultado nunca revela credencial: o erro vem traduzido por
+    `mail._motivo`, que troca a exceção por uma frase.
+    """
+    config = mail.configuracao()
+    form = EmailTestForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(request, _("Informe um endereço de e-mail válido para o teste."))
+        return redirect(reverse("backoffice:email_settings"))
+
+    if not config.host:
+        messages.error(request, _("Cadastre o servidor SMTP antes de enviar um teste."))
+        return redirect(reverse("backoffice:email_settings"))
+
+    destino = form.cleaned_data["destino"]
+    ok, motivo = mail.enviar_teste(config, destino)
+    if ok:
+        messages.success(
+            request,
+            _("Mensagem de teste enviada para %(destino)s.") % {"destino": destino},
+        )
+    else:
+        messages.error(request, motivo)
+    return redirect(reverse("backoffice:email_settings"))
+
+
+@exige_permissao(EMAIL_CHANGE_PERM)
+@require_POST
+def backoffice_email_settings_activation(request):
+    """
+    Liga e desliga o envio real.
+
+    Desligado, as mensagens do sistema seguem para o destino de reserva
+    do ambiente (console em desenvolvimento, `EMAIL_URL` em produção) --
+    o fluxo continua funcionando, nada estoura.
+
+    Ligar passa pelo `full_clean()` do modelo: uma configuração ativa
+    sem servidor ou sem remetente falharia em toda mensagem, inclusive
+    na recuperação de senha de quem está trancado para fora.
+    """
+    config = mail.configuracao()
+    config.is_active = request.POST.get("ativo") == "1"
+
+    try:
+        config.full_clean()
+    except ValidationError:
+        messages.error(
+            request,
+            _("Cadastre o servidor SMTP e o remetente antes de ativar o envio."),
+        )
+        return redirect(reverse("backoffice:email_settings"))
+
+    config.updated_by = request.user
+    config.save()
+    if config.is_active:
+        messages.success(request, _("Envio de e-mail ativado."))
+    else:
+        messages.success(request, _("Envio de e-mail desativado."))
+    return redirect(reverse("backoffice:email_settings"))

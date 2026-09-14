@@ -7,9 +7,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]", "testserver"]
 
-# Em desenvolvimento os e-mails (ex.: recuperacao de senha) sao impressos no
-# console. O envio real sera configurado em fase posterior.
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Em desenvolvimento os e-mails (ex.: recuperacao de senha) sao impressos
+# no console -- a menos que haja uma configuracao SMTP ATIVA no
+# Backoffice, que o ConfiguredEmailBackend usa em qualquer ambiente.
+# Aqui so se define para onde vai o que NAO tem configuracao.
+EMAIL_FALLBACK_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # O django-debug-toolbar e opcional: so entra se DEBUG_TOOLBAR=True no .env,
 # para nao interferir na execucao dos testes.

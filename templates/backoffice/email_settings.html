@@ -1,0 +1,205 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Configuração de e-mail.
+
+Como o sistema manda mensagens (hoje: a recuperação de senha). Os
+valores vão para `core.EmailSettings`; quem abre a conexão é
+`apps.core.mail` -- este template não decide nada, só apresenta.
+
+A SENHA NÃO APARECE AQUI, E NÃO É DESCUIDO
+------------------------------------------
+Não existe variável com a senha neste template. O campo é de ESCRITA
+(`PasswordInput` com `render_value=False`), volta em branco toda vez, e
+branco significa "mantenha a que está guardada". O que a tela mostra é
+apenas SE existe uma senha -- `config.tem_senha`, um booleano.
+
+TRÊS FORMULÁRIOS, NÃO UM
+------------------------
+Salvar os dados, ligar/desligar o envio e disparar um teste são três
+decisões diferentes, com permissões e consequências diferentes. Um
+formulário só faria um teste virar efeito colateral de salvar. (E
+formulário dentro de formulário não é HTML válido.)
+
+Contexto: form (EmailSettingsForm), teste (EmailTestForm),
+config (EmailSettings), pode_editar (bool).
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Configuração de e-mail" %}</h1>
+    <p class="text-muted">{% translate "Por onde o sistema envia as mensagens aos usuários." %}</p>
+  </div>
+</div>
+<p class="m-only text-muted">{% translate "Por onde o sistema envia as mensagens aos usuários." %}</p>
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar esta configuração, mas não tem permissão para alterá-la." %}</span></div>
+{% endif %}
+
+{# --------------------------------------------------------------------- #}
+{# Situação: ligado ou desligado, e quem mexeu por último                #}
+{# --------------------------------------------------------------------- #}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Situação do envio" %}</h3>
+    {% if config.is_active %}
+      <span class="tag tag-success">{% translate "Ativo" %}</span>
+    {% else %}
+      <span class="tag tag-neutral">{% translate "Desativado" %}</span>
+    {% endif %}
+  </div>
+
+  <p class="text-muted">
+    {% if config.is_active %}
+      {% translate "As mensagens do sistema saem pelo servidor cadastrado abaixo." %}
+    {% else %}
+      {% translate "As mensagens seguem para o destino de reserva do ambiente e não chegam a ninguém. Nada quebra: o fluxo continua funcionando." %}
+    {% endif %}
+  </p>
+
+  {% if config.updated_by %}
+    <p class="field-hint">{% blocktranslate with quem=config.updated_by.full_name|default:config.updated_by.email quando=config.updated_at|date:"d/m/Y H:i" %}Última alteração por {{ quem }} em {{ quando }}.{% endblocktranslate %}</p>
+  {% endif %}
+
+  {% if pode_editar %}
+  <form method="post" action="{% url 'backoffice:email_settings_activation' %}" class="bo-actions"
+        onsubmit="return confirm('{% if config.is_active %}{% translate "Desativar o envio? As mensagens deixam de chegar aos usuários." %}{% else %}{% translate "Ativar o envio? O sistema passa a mandar e-mail de verdade." %}{% endif %}');">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="{% if config.is_active %}0{% else %}1{% endif %}">
+    {% if config.is_active %}
+      <button type="submit" class="btn btn-ghost"><i class="ph ph-prohibit" aria-hidden="true"></i>{% translate "Desativar envio" %}</button>
+    {% else %}
+      <button type="submit" class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Ativar envio" %}</button>
+    {% endif %}
+  </form>
+  {% endif %}
+</div>
+
+{% if config.senha_ilegivel %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Há uma senha guardada, mas ela não pode mais ser lida — a chave do ambiente mudou. Cadastre a senha de novo abaixo." %}</span></div>
+{% endif %}
+
+{# --------------------------------------------------------------------- #}
+{# Os dados do servidor                                                   #}
+{# --------------------------------------------------------------------- #}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Servidor" %}</h3>
+      <span class="note d-only">{% translate "Onde o sistema se conecta para enviar" %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+        {{ form.host }}
+        {% for erro in form.host.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
+        {{ form.port }}
+        {% for erro in form.port.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.security.id_for_label }}">{{ form.security.label }}</label>
+        {{ form.security }}
+        {% for erro in form.security.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {{ form.username }}
+        <span class="field-hint">{{ form.username.help_text }}</span>
+        {% for erro in form.username.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Senha" %}</h3>
+      {% if config.tem_senha %}
+        <span class="tag tag-neutral">{% translate "Cadastrada" %}</span>
+      {% else %}
+        <span class="tag tag-neutral">{% translate "Não cadastrada" %}</span>
+      {% endif %}
+    </div>
+    {% comment %}
+    Aqui não há `value`: a senha guardada nunca volta ao navegador. O
+    que se diz é só se ela existe.
+    {% endcomment %}
+    <div class="field">
+      <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+      {{ form.password }}
+      <span class="field-hint">
+        {% if config.tem_senha %}
+          {% translate "Deixe em branco para manter a senha já cadastrada. A senha guardada nunca é exibida." %}
+        {% else %}
+          {% translate "Em provedores como o Gmail, use uma senha de aplicativo — não a senha da conta." %}
+        {% endif %}
+      </span>
+      {% for erro in form.password.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% if config.tem_senha %}
+    <label class="notice notice-check">
+      {{ form.remover_senha }}
+      <span>{{ form.remover_senha.label }}</span>
+    </label>
+    {% endif %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Remetente" %}</h3>
+      <span class="note d-only">{% translate "O que o destinatário vê no campo De:" %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.from_email.id_for_label }}">{{ form.from_email.label }}</label>
+        {{ form.from_email }}
+        <span class="field-hint">{{ form.from_email.help_text }}</span>
+        {% for erro in form.from_email.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.from_name.id_for_label }}">{{ form.from_name.label }}</label>
+        {{ form.from_name }}
+        <span class="field-hint">{{ form.from_name.help_text }}</span>
+        {% for erro in form.from_name.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar configuração" %}</button>
+  </div>
+  {% endif %}
+</form>
+
+{# --------------------------------------------------------------------- #}
+{# O teste de envio                                                       #}
+{# --------------------------------------------------------------------- #}
+{% if pode_editar %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Enviar um teste" %}</h3>
+  </div>
+  <p class="text-muted">{% translate "Usa o que está salvo agora, mesmo com o envio desativado — testar antes de ligar é a ordem certa. O resultado aparece aqui em cima e nunca mostra a senha." %}</p>
+  <form method="post" action="{% url 'backoffice:email_settings_test' %}" class="bo-actions">
+    {% csrf_token %}
+    <div class="field">
+      <label for="{{ teste.destino.id_for_label }}">{{ teste.destino.label }}</label>
+      {{ teste.destino }}
+      {% for erro in teste.destino.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>{% translate "Enviar teste" %}</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

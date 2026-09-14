@@ -659,6 +659,13 @@ body { display: flex; flex-direction: column; }
 }
 .bo-card { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .bo-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+/* Linha de botoes de uma tela administrativa. Quebra em vez de
+   espremer: no celular dois botoes lado a lado nao cabem. */
+.bo-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+/* Campo dentro da linha de acoes (o destino do e-mail de teste):
+   ocupa o espaco que sobra e, abaixo de ~220px de folga, joga o
+   botao para a linha de baixo em vez de espremer os dois. */
+.bo-actions .field { flex: 1 1 220px; }
 /* Linha de acao de um formulario do backoffice (ex.: Politica das
    cartas). O .bo-head ja serve quando o botao fica no cabecalho; esta
    e para quando ele fecha o formulario, embaixo. */

@@ -6,6 +6,12 @@ django-environ==0.14.0
 psycopg[binary]==3.3.5
 Pillow==12.3.0
 
+# Cifra a senha SMTP que o Backoffice guarda no banco (apps/core/crypto.py).
+# Nao e para senha de usuario -- essa continua com o hash do Django. E para
+# um segredo que o sistema precisa REAPRESENTAR ao servidor de e-mail, e
+# portanto tem de conseguir ler de volta.
+cryptography==46.0.4
+
 # PDF - a engine sera implementada em fase posterior.
 # pypdf: ler/fundir/achatar o PDF oficial
 # reportlab: gerar a camada de overlay com os dados variaveis
