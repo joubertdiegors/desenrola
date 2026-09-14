@@ -46,7 +46,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from apps.content.models import Asset
-from apps.core.views import backoffice_required
+from apps.doctemplates.library_views import ADMINISTRAR_PERM, VER_PERM, exige_permissao
 
 from . import datasources, elements, layout_schema
 from .models import DocumentTemplate, DocumentTemplateLockedError
@@ -75,7 +75,11 @@ def _pode_editar(modelo):
     return not modelo.is_system and not modelo.is_locked
 
 
-def _motivo_da_leitura(modelo):
+def _motivo_da_leitura(modelo, user=None):
+    if user is not None and not user.has_perm(ADMINISTRAR_PERM):
+        return _(
+            "Você pode consultar este modelo, mas não tem permissão para alterá-lo."
+        )
     if modelo.is_locked:
         return _(
             "Este modelo está travado. Para alterá-lo, destrave-o na administração "
@@ -93,13 +97,23 @@ def _lote_de_ids(quantos=IDS_POR_LOTE):
     return [servico_de_layout.novo_id() for _ in range(quantos)]
 
 
-@backoffice_required
+@exige_permissao(VER_PERM)
 def template_editor(request, pk):
-    """A tela do editor."""
+    """
+    A tela do editor.
+
+    VER exige `doctemplates.view_documenttemplate`; SALVAR exige
+    `change_documenttemplate` (ver `template_editor_save`). Quem so
+    pode ver abre em leitura -- a mesma tela, sem a possibilidade de
+    gravar, em vez de um 403 que esconderia o documento de quem tem
+    direito de consulta.
+    """
     modelo = get_object_or_404(
         DocumentTemplate.objects.select_related("type", "created_by"), pk=pk
     )
-    editavel = _pode_editar(modelo)
+    # Duas condicoes: o MODELO aceita edicao, e a PESSOA pode
+    # administrar. Faltando qualquer uma, a tela abre em leitura.
+    editavel = _pode_editar(modelo) and request.user.has_perm(ADMINISTRAR_PERM)
 
     return render(
         request,
@@ -111,8 +125,10 @@ def template_editor(request, pk):
             "bo_action_label": _("Salvar"),
             "modelo": modelo,
             "editavel": editavel,
-            "motivo_da_leitura": _motivo_da_leitura(modelo),
-            "voltar_url": reverse("admin:doctemplates_documenttemplate_changelist"),
+            "motivo_da_leitura": _motivo_da_leitura(modelo, request.user),
+            # Volta para a BIBLIOTECA, nao para o Django Admin: o
+            # caminho do produto e biblioteca -> editor -> biblioteca.
+            "voltar_url": reverse("backoffice:document_detail", args=[modelo.pk]),
             # Estado inicial. Vai pelo filtro |json_script, que serializa E
             # escapa -- nunca interpolado dentro de <script>, o que seria
             # injecao. Por isso sao OBJETOS, nao strings ja serializadas.
@@ -140,7 +156,7 @@ def template_editor(request, pk):
     )
 
 
-@backoffice_required
+@exige_permissao(ADMINISTRAR_PERM)
 @require_POST
 def template_editor_save(request, pk):
     """
@@ -197,7 +213,7 @@ def template_editor_save(request, pk):
     )
 
 
-@backoffice_required
+@exige_permissao(ADMINISTRAR_PERM)
 @require_POST
 def template_editor_ids(request, pk):
     """Outro lote de ids, para uma sessao que esgotou o primeiro."""

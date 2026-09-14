@@ -25,15 +25,21 @@ DASHBOARD = reverse("core:dashboard")
 # Uma lista, e não uma amostra: a proteção tem de valer em TODAS --
 # basta uma esquecida.
 #
-# `backoffice:letters` fica de fora porque exige uma segunda permissão
-# (ver TestSupervisaoDeCartasExigeMais, abaixo, e a suíte completa em
-# apps/letters/tests/test_backoffice_supervisao.py).
+# Ficam de fora as que exigem uma SEGUNDA permissão, cada uma com suíte
+# própria:
+#
+#   backoffice:letters           -> letters.view_all_letters
+#                                   (TestSupervisaoDeCartasExigeMais, abaixo)
+#   backoffice:users             -> accounts.manage_users
+#                                   (accounts/tests/test_backoffice_usuarios.py)
+#   backoffice:document_library  -> doctemplates.view_documenttemplate
+#                                   (doctemplates/tests/test_biblioteca_admin.py)
+#
+# `backoffice:permissions` saiu do projeto: permissão agora se administra
+# por pessoa, no detalhe de cada usuário.
 ROTAS = [
     "backoffice:overview",
-    "backoffice:users",
-    "backoffice:permissions",
     "backoffice:templates",
-    "backoffice:document_library",
     "backoffice:letter_policy",
     "backoffice:partners",
     "backoffice:appearance",

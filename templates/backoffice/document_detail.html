@@ -1,0 +1,142 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · um modelo: identidade, estrutura, origem e ações.
+
+Contexto: modelo, estrutura (resumo do layout), assets, copias, cartas,
+pode_administrar, editavel, motivo_da_leitura.
+
+O resumo do layout vem pronto da view -- este template não percorre JSON.
+
+AÇÕES: editar (ou ver, quando o modelo não aceita edição), duplicar e
+ativar/desativar. Não há exclusão: o modelo pode ter cartas apontando
+para ele, e desativar resolve o caso real sem perder histórico.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <div>
+    <h1 class="d-only">{{ modelo.name }}</h1>
+    <p class="text-muted">{{ modelo.slug }}</p>
+  </div>
+  <span class="push"></span>
+  {% if modelo.is_system %}<span class="tag tag-primary">{% translate "Oficial" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Personalizado" %}</span>{% endif %}
+  {% if modelo.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
+  <a class="btn btn-ghost" href="{% url 'backoffice:document_library' %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Biblioteca" %}</a>
+</div>
+
+{% if not modelo.is_active %}
+<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Modelo desativado: não é usado em cartas novas. As cartas já emitidas continuam intactas." %}</span></div>
+{% endif %}
+
+<div class="bo-panel">
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Identidade" %}</h3></div>
+    <dl class="bo-dados">
+      <dt>{% translate "Nome" %}</dt><dd>{{ modelo.name }}</dd>
+      <dt>{% translate "Identificador" %}</dt><dd>{{ modelo.slug }}</dd>
+      <dt>{% translate "Tipo de documento" %}</dt><dd>{{ modelo.type.name }}</dd>
+      <dt>{% translate "Idioma" %}</dt><dd>{{ modelo.get_language_display }}</dd>
+      <dt>{% translate "Descrição" %}</dt><dd>{{ modelo.description|default:"—" }}</dd>
+      <dt>{% translate "Natureza" %}</dt><dd>{% if modelo.is_system %}{% translate "Oficial do sistema" %}{% else %}{% translate "Personalizado" %}{% endif %}</dd>
+      <dt>{% translate "Edição" %}</dt><dd>{% if modelo.is_locked %}{% translate "Bloqueado" %}{% else %}{% translate "Editável" %}{% endif %}</dd>
+      <dt>{% translate "Criado por" %}</dt><dd>{% if modelo.created_by %}{{ modelo.created_by.full_name|default:modelo.created_by.email }}{% else %}{% translate "Sistema" %}{% endif %}</dd>
+      <dt>{% translate "Criado em" %}</dt><dd>{{ modelo.created_at|date:"d/m/Y · H:i" }}</dd>
+      <dt>{% translate "Atualizado em" %}</dt><dd>{{ modelo.updated_at|date:"d/m/Y · H:i" }}</dd>
+      <dt>{% translate "Cartas emitidas" %}</dt><dd>{{ cartas }}</dd>
+    </dl>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Estrutura" %}</h3></div>
+    <dl class="bo-dados">
+      <dt>{% translate "Elementos no layout" %}</dt><dd>{{ estrutura.elementos }}</dd>
+      <dt>{% translate "Campos do formulário" %}</dt><dd>{{ estrutura.campos_do_formulario }}</dd>
+      <dt>{% translate "Tipos de elemento" %}</dt>
+      <dd>{% for tipo, quantos in estrutura.tipos %}{{ tipo }} ({{ quantos }}){% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</dd>
+      <dt>{% translate "Campos dinâmicos usados" %}</dt>
+      <dd>{% for campo in estrutura.campos %}<code>{{ campo }}</code>{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</dd>
+    </dl>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Imagens usadas" %}</h3></div>
+    {% if assets %}
+    <dl class="bo-dados">
+      {% for asset in assets %}
+      <dt>{{ asset.get_kind_display|default:asset.kind }}</dt>
+      <dd>{{ asset.key|default:asset.alt_text|default:asset.pk }}</dd>
+      {% endfor %}
+    </dl>
+    <p class="field-hint">{% translate "Uma imagem usada por um modelo não pode ser apagada enquanto ele a referenciar." %}</p>
+    {% else %}
+    <p class="text-muted">{% translate "Este modelo não usa imagens." %}</p>
+    {% endif %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Origem" %}</h3></div>
+    {% if modelo.duplicated_from %}
+      <dl class="bo-dados">
+        <dt>{% translate "Duplicado de" %}</dt>
+        <dd><a href="{% url 'backoffice:document_detail' modelo.duplicated_from.pk %}">{{ modelo.duplicated_from.name }}</a></dd>
+      </dl>
+    {% else %}
+      <p class="text-muted">{% translate "Este modelo não foi duplicado de nenhum outro." %}</p>
+    {% endif %}
+    {% if copias %}
+      <h4 class="bo-secao">{% translate "Cópias feitas a partir dele" %}</h4>
+      <dl class="bo-dados">
+        {% for copia in copias %}
+        <dt>{{ copia.get_language_display }}</dt>
+        <dd><a href="{% url 'backoffice:document_detail' copia.pk %}">{{ copia.name }}</a></dd>
+        {% endfor %}
+      </dl>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head"><h3>{% translate "Ações" %}</h3></div>
+
+  {% if motivo_da_leitura %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{{ motivo_da_leitura }}</span></div>
+  {% endif %}
+
+  <div class="bo-acoes-modelo">
+    <a class="btn {% if editavel %}btn-primary{% else %}btn-secondary{% endif %}" href="{% url 'backoffice:template_editor' modelo.pk %}">
+      <i class="ph {% if editavel %}ph-pencil-simple{% else %}ph-eye{% endif %}" aria-hidden="true"></i>
+      {% if editavel %}{% translate "Editar no editor" %}{% else %}{% translate "Ver no editor" %}{% endif %}
+    </a>
+
+    {% if pode_administrar %}
+    {% comment %}
+    Duplicar é o caminho de criação do produto: oficial -> cópia -> editar.
+    O nome vai no POST; o serviço deriva um slug livre a partir dele.
+    {% endcomment %}
+    <form method="post" action="{% url 'backoffice:document_library_duplicate' modelo.pk %}" class="bo-form-inline">
+      {% csrf_token %}
+      <input class="input" type="text" name="name" required maxlength="150"
+             value="{% blocktranslate with nome=modelo.name %}Cópia de {{ nome }}{% endblocktranslate %}"
+             aria-label="{% translate 'Nome da cópia' %}">
+      <button type="submit" class="btn btn-secondary"><i class="ph ph-copy" aria-hidden="true"></i>{% translate "Duplicar" %}</button>
+    </form>
+
+    <form method="post" action="{% url 'backoffice:document_library_activation' modelo.pk %}"
+          onsubmit="return confirm('{% if modelo.is_active %}{% translate "Desativar este modelo? Ele deixa de ser usado em cartas novas." %}{% else %}{% translate "Ativar este modelo?" %}{% endif %}');">
+      {% csrf_token %}
+      <input type="hidden" name="ativo" value="{% if modelo.is_active %}0{% else %}1{% endif %}">
+      {% if modelo.is_active %}
+        <button type="submit" class="btn btn-ghost"><i class="ph ph-prohibit" aria-hidden="true"></i>{% translate "Desativar" %}</button>
+      {% else %}
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Ativar" %}</button>
+      {% endif %}
+    </form>
+    {% endif %}
+  </div>
+
+  {% if not pode_administrar %}
+  <p class="field-hint">{% translate "Você pode consultar esta biblioteca, mas não tem permissão para administrar modelos." %}</p>
+  {% endif %}
+</div>
+{% endblock %}

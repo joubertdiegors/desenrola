@@ -5,10 +5,33 @@ lateral; no celular vai dentro do dropdown do botao de menu
 {% endcomment %}
 <nav class="{% if not in_dropdown %}side-menu{% endif %}" aria-label="{% translate 'Administração' %}">
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'overview' %}is-current{% endif %}" href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page"{% endif %}><i class="ph ph-squares-four" aria-hidden="true"></i>{% translate "Visão geral" %}</a>
+  {% comment %}
+  "Usuários" só para quem tem `accounts.manage_users` -- esconder o item
+  não é a proteção (essa é o `gerencia_de_usuarios` no servidor), é não
+  oferecer uma porta que bateria na cara da pessoa.
+
+  O antigo item "Permissões" saiu: permissão agora se administra POR
+  PESSOA, dentro do detalhe de cada usuário. Não havia tela geral de
+  permissões para onde apontar.
+  {% endcomment %}
+  {% if perms.accounts.manage_users %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'users' %}is-current{% endif %}" href="{% url 'backoffice:users' %}"{% if active == "users" %} aria-current="page"{% endif %}><i class="ph ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'permissions' %}is-current{% endif %}" href="{% url 'backoffice:permissions' %}#permissoes"{% if active == "permissions" %} aria-current="page"{% endif %}><i class="ph ph-shield-check" aria-hidden="true"></i>{% translate "Permissões" %}</a>
+  {% endif %}
+  {% comment %}
+  "Cartas" exige `letters.view_all_letters`, a mesma permissão que a
+  supervisão cobra no servidor -- oferecer o link a quem levaria um
+  403 seria uma promessa quebrada.
+  {% endcomment %}
+  {% if perms.letters.view_all_letters %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letters' %}is-current{% endif %}" href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page"{% endif %}><i class="ph ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
+  {% endif %}
+  {% comment %}
+  "Modelos" exige `doctemplates.view_documenttemplate` -- a mesma
+  permissão que a biblioteca cobra no servidor.
+  {% endcomment %}
+  {% if perms.doctemplates.view_documenttemplate %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'templates' %}is-current{% endif %}" href="{% url 'backoffice:document_library' %}"{% if active == "templates" %} aria-current="page"{% endif %}><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Modelos" %}</a>
+  {% endif %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letter_policy' %}is-current{% endif %}" href="{% url 'backoffice:letter_policy' %}"{% if active == "letter_policy" %} aria-current="page"{% endif %}><i class="ph ph-clock-countdown" aria-hidden="true"></i>{% translate "Política das cartas" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'content' %}is-current{% endif %}" href="{% url 'backoffice:content' %}#conteudo"{% if active == "content" %} aria-current="page"{% endif %}><i class="ph ph-article" aria-hidden="true"></i>{% translate "Conteúdo do site" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'partners' %}is-current{% endif %}" href="{% url 'backoffice:partners' %}"{% if active == "partners" %} aria-current="page"{% endif %}><i class="ph ph-handshake" aria-hidden="true"></i>{% translate "Parceiros" %}</a>

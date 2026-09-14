@@ -614,6 +614,42 @@ body { display: flex; flex-direction: column; }
 
 .bo-paginacao { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
 
+/* --------------------------------------------------------------------------
+   Visao geral e gerenciador de usuarios
+
+   Reusa .card, .table, .tag e .field. Aqui so o que nao existia: a grade
+   de numeros, os atalhos da visao geral e a lista de permissoes.
+   -------------------------------------------------------------------------- */
+
+.bo-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.bo-atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.bo-atalho { display: flex; align-items: center; gap: 14px; padding: 16px 18px; text-decoration: none; color: inherit; }
+.bo-atalho:hover { border-color: var(--p); }
+.bo-atalho-icone { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--p10); color: var(--p); font-size: 20px; flex: none; }
+.bo-atalho-texto { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bo-atalho-texto small { color: var(--mu); font-size: 12.5px; }
+
+.bo-filtros-busca { flex: 2 1 220px; }
+
+/* Uma permissao por linha: caixa a esquerda, rotulo e explicacao a
+   direita. Travada, fica esmaecida -- e o `disabled` do input ja impede
+   o clique. */
+.bo-permissoes { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.bo-permissao { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 10px; cursor: pointer; }
+.bo-permissao:hover { border-color: var(--p); }
+.bo-permissao.is-travada { opacity: .6; cursor: default; }
+.bo-permissao.is-travada:hover { border-color: var(--bd); }
+.bo-permissao input { margin-top: 3px; flex: none; }
+.bo-permissao-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bo-permissao-texto small { color: var(--mu); font-size: 12.5px; }
+.bo-permissao-aviso { color: var(--warning-dark); }
+
+/* Acoes do detalhe de um modelo: botoes e o formulario de duplicar lado a
+   lado, quebrando no celular. */
+.bo-acoes-modelo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bo-form-inline { display: flex; gap: 8px; flex: 1 1 320px; min-width: 0; }
+.bo-form-inline .input { min-height: 38px; padding: 0 10px; font-size: 13px; flex: 1; min-width: 0; }
+
 @media (max-width: 767px) {
   .bo-dados { grid-template-columns: 1fr; gap: 2px 0; }
   .bo-dados dd { margin-bottom: 10px; }

@@ -1,56 +1,52 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administracao · Usuarios e permissoes (layout 2j). Contexto: stats,
-stats_mobile, users, permissions.
+Administração · Usuários -- lendo o banco de verdade.
+
+Contexto: pessoas (cada uma com `pessoa`, `acessa_backoffice`,
+`ve_todas_as_cartas`, `cartas`), pagina, querystring, total, filtros.
+
+As permissões de CADA LINHA vêm resolvidas da view. `{% if perms... %}`
+não serve aqui: no template, `perms` é sempre de quem está logado --
+usá-lo numa linha mostraria a resposta errada, a do operador.
+
+SOMENTE LEITURA NESTA TELA: alterar é no detalhe, por POST.
+Nada sensível: nem senha, nem documento, nem endereço.
 {% endcomment %}
 
 {% block bo_main %}
-<div class="bo-stats d-only">
-  {% for stat in stats %}
-  <div class="card stat-card">
-    <span class="stat-card-label">{{ stat.label }}</span>
-    <div class="stat-card-value">{{ stat.value }}</div>
-    <span class="stat-card-note{% if stat.tone %} text-{{ stat.tone }}{% endif %}">{{ stat.note }}</span>
-  </div>
-  {% endfor %}
-</div>
-<div class="bo-stats-2 m-only">
-  {% for stat in stats_mobile %}
-  <div class="card stat-card">
-    <span class="stat-card-label">{{ stat.label }}</span>
-    <div class="stat-card-value">{{ stat.value }}</div>
-  </div>
-  {% endfor %}
-</div>
-
 <div class="bo-head">
   <h1 class="d-only">{% translate "Usuários" %}</h1>
-  <span class="count d-only">1.284</span>
-  <div class="search-field push d-only">
-    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-    <input class="input bo-search" type="search" placeholder="{% translate 'Buscar por nome ou e-mail' %}" aria-label="{% translate 'Buscar por nome ou e-mail' %}">
-  </div>
-  <div class="search-field m-only">
-    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-    <input class="input" type="search" placeholder="{% translate 'Buscar usuário' %}" aria-label="{% translate 'Buscar usuário' %}">
-  </div>
-  <select class="input bo-filter d-only" aria-label="{% translate 'Função' %}">
-    <option>{% translate "Todas as funções" %}</option>
-    <option>{% translate "Administrador" %}</option>
-    <option>{% translate "Gerente" %}</option>
-    <option>{% translate "Operador" %}</option>
-    <option>{% translate "Usuário" %}</option>
-  </select>
-  <button type="button" class="btn btn-primary d-only"><i class="ph-bold ph-plus" aria-hidden="true"></i>{% translate "Convidar usuário" %}</button>
+  <span class="count d-only">{{ total }}</span>
 </div>
 
-<div class="filter-chips m-only" role="group" aria-label="{% translate 'Filtrar por função' %}">
-  <span class="tag tag-primary tag-lg">{% translate "Todos" %}</span>
-  <span class="tag tag-neutral tag-lg">{% translate "Administradores" %}</span>
-  <span class="tag tag-neutral tag-lg">{% translate "Gerentes" %}</span>
-  <span class="tag tag-neutral tag-lg">{% translate "Operadores" %}</span>
-</div>
+<form class="card bo-filtros" method="get">
+  <div class="field bo-filtros-busca">
+    <label for="f-busca">{% translate "Buscar" %}</label>
+    <input class="input" id="f-busca" type="search" name="q" value="{{ filtros.q }}"
+           placeholder="{% translate 'Nome ou e-mail' %}">
+  </div>
+  <div class="field">
+    <label for="f-status">{% translate "Situação" %}</label>
+    <select class="input" id="f-status" name="status">
+      <option value="">{% translate "Todas" %}</option>
+      <option value="ativos"{% if filtros.status == "ativos" %} selected{% endif %}>{% translate "Ativos" %}</option>
+      <option value="inativos"{% if filtros.status == "inativos" %} selected{% endif %}>{% translate "Inativos" %}</option>
+    </select>
+  </div>
+  <div class="bo-filtros-acoes">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>{% translate "Buscar" %}</button>
+    <a class="btn btn-ghost" href="{% url 'backoffice:users' %}">{% translate "Limpar" %}</a>
+  </div>
+</form>
+
+{% if not pessoas %}
+  <div class="card letters-empty">
+    <span class="letters-empty-icon"><i class="ph ph-user-circle-dashed" aria-hidden="true"></i></span>
+    <h3>{% translate "Nenhum usuário encontrado" %}</h3>
+    <p>{% translate "Ajuste a busca para ver outras pessoas." %}</p>
+  </div>
+{% else %}
 
 <div class="card table-wrap d-only">
   <table class="table">
@@ -58,23 +54,27 @@ stats_mobile, users, permissions.
       <tr>
         <th>{% translate "Nome" %}</th>
         <th>{% translate "E-mail" %}</th>
-        <th>{% translate "Função" %}</th>
+        <th>{% translate "Cadastro" %}</th>
         <th>{% translate "Cartas" %}</th>
-        <th>{% translate "Último acesso" %}</th>
-        <th>{% translate "Ativo" %}</th>
-        <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
+        <th>{% translate "Backoffice" %}</th>
+        <th>{% translate "Vê todas as cartas" %}</th>
+        <th>{% translate "Situação" %}</th>
+        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
       </tr>
     </thead>
     <tbody>
-      {% for u in users %}
-      <tr{% if not u.active %} class="is-inactive"{% endif %}>
-        <td class="cell-name">{{ u.name }}</td>
-        <td class="cell-muted">{{ u.email }}</td>
-        <td><span class="tag {% if u.role == 'admin' %}tag-primary{% elif u.role == 'user' %}tag-neutral{% else %}tag-outline{% endif %}">{{ u.role_label }}</span></td>
-        <td>{% if u.letters is None %}—{% else %}{{ u.letters }}{% endif %}</td>
-        <td class="cell-muted">{{ u.last_access }}</td>
-        <td>{% include "components/switch.html" with size="sm" checked=u.active label=u.name %}</td>
-        <td class="right"><button type="button" class="btn btn-text btn-icon-sm" aria-label="{% translate 'Mais ações' %}"><i class="ph ph-dots-three" aria-hidden="true"></i></button></td>
+      {% for linha in pessoas %}
+      <tr{% if not linha.pessoa.is_active %} class="is-inactive"{% endif %}>
+        <td class="cell-name">{{ linha.pessoa.full_name|default:"—" }}</td>
+        <td class="cell-muted">{{ linha.pessoa.email }}</td>
+        <td class="cell-muted">{{ linha.pessoa.date_joined|date:"d/m/Y" }}</td>
+        <td>{{ linha.cartas }}</td>
+        <td>{% if linha.acessa_backoffice %}<span class="tag tag-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Sim" %}</span>{% else %}<span class="cell-muted">—</span>{% endif %}</td>
+        <td>{% if linha.ve_todas_as_cartas %}<span class="tag tag-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Sim" %}</span>{% else %}<span class="cell-muted">—</span>{% endif %}</td>
+        <td>{% if linha.pessoa.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}</td>
+        <td class="cell-actions">
+          <a class="btn btn-ghost btn-icon-sm" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}" aria-label="{% translate 'Ver usuário' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -82,45 +82,25 @@ stats_mobile, users, permissions.
 </div>
 
 <div class="list m-only">
-  {% for u in users %}
-  <div class="list-item{% if not u.active %} is-inactive{% endif %}">
-    <span class="avatar avatar-md avatar-neutral">{{ u.initials }}</span>
+  {% for linha in pessoas %}
+  <a class="list-item{% if not linha.pessoa.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}">
+    <span class="avatar avatar-md avatar-neutral">{{ linha.pessoa.get_initials }}</span>
     <div class="list-body">
-      <div class="list-title">{{ u.name }}</div>
-      <div class="list-sub list-sub-row"><span class="tag tag-xs {% if u.role == 'admin' %}tag-primary{% elif u.role == 'user' %}tag-neutral{% else %}tag-outline{% endif %}">{{ u.role_label }}</span>{{ u.mobile_note }}</div>
+      <div class="list-title">{{ linha.pessoa.full_name|default:linha.pessoa.email }}</div>
+      <div class="list-sub">{{ linha.pessoa.email }}</div>
     </div>
-    {% include "components/switch.html" with checked=u.active label=u.name %}
-  </div>
+    {% if linha.pessoa.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
+  </a>
   {% endfor %}
 </div>
 
-<div class="card" id="permissoes">
-  <div class="bo-sub-head">
-    <h2>{% translate "Níveis de acesso" %}</h2>
-    <span class="note">{% translate "Permissões ilustrativas — a definir" %}</span>
-  </div>
-  <div class="table-wrap">
-    <table class="table table-sm table-nowrap">
-      <thead>
-        <tr>
-          <th>{% translate "Permissão" %}</th>
-          <th class="center">{% translate "Administrador" %}</th>
-          <th class="center">{% translate "Gerente" %}</th>
-          <th class="center">{% translate "Operador" %}</th>
-          <th class="center">{% translate "Usuário" %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in permissions %}
-        <tr>
-          <td>{{ p.label }}</td>
-          {% for ok in p.levels %}
-          <td class="{% if ok %}cell-check{% else %}cell-none{% endif %}"><i class="ph-bold {% if ok %}ph-check{% else %}ph-minus{% endif %}" aria-hidden="true"></i><span class="visually-hidden">{% if ok %}{% translate "Sim" %}{% else %}{% translate "Não" %}{% endif %}</span></td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+{% if pagina.has_other_pages %}
+<nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
+  {% if pagina.has_previous %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
+  <span class="text-muted">{% blocktranslate with atual=pagina.number total=pagina.paginator.num_pages %}Página {{ atual }} de {{ total }}{% endblocktranslate %}</span>
+  {% if pagina.has_next %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
+</nav>
+{% endif %}
+
+{% endif %}
 {% endblock %}

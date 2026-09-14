@@ -11,6 +11,7 @@ ficticios (apps.core.demo) ate as proximas etapas do backend.
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
@@ -127,18 +128,42 @@ def _backoffice_context(active):
 
 
 @backoffice_required
-def backoffice_users(request, active="users"):
-    """Usuarios e permissoes (layout 2j). Tambem responde por visao geral."""
-    context = _backoffice_context(active)
+def backoffice_overview(request):
+    """
+    A porta de entrada do Backoffice: alguns números reais e os
+    atalhos que ESTA pessoa pode abrir.
+
+    Deliberadamente pequena. Um painel administrativo de verdade
+    (gráficos, séries, alertas) é etapa própria; o que esta tela não
+    pode é continuar mostrando estatísticas inventadas, que era o que
+    fazia até aqui.
+
+    Exige só `core.access_backoffice`: é para cá que o atalho do
+    painel aponta, e quem administra modelos ou cartas precisa entrar
+    sem ter `accounts.manage_users`. Cada atalho, esse sim, aparece
+    conforme a permissão de quem olha.
+    """
+    from apps.doctemplates.models import DocumentTemplate
+    from apps.letters.models import Letter
+
+    User = get_user_model()
+    context = _backoffice_context("overview")
     context.update(
         {
-            "stats": demo.STATS,
-            "stats_mobile": demo.STATS_MOBILE,
-            "users": demo.ADMIN_USERS,
-            "permissions": demo.PERMISSIONS,
+            "numeros": [
+                {
+                    "rotulo": _("Usuários ativos"),
+                    "valor": User.objects.filter(is_active=True).count(),
+                },
+                {"rotulo": _("Cartas"), "valor": Letter.objects.count()},
+                {
+                    "rotulo": _("Modelos oficiais"),
+                    "valor": DocumentTemplate.objects.filter(is_system=True).count(),
+                },
+            ],
         }
     )
-    return render(request, "backoffice/users.html", context)
+    return render(request, "backoffice/overview.html", context)
 
 
 @backoffice_required

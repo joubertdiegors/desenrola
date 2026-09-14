@@ -40,18 +40,18 @@ def modelo(tipo):
 
 
 @pytest.fixture
-def staff(db, permissao_backoffice):
+def staff(db, permissao_backoffice, permissoes_de_modelos):
     """
     Quem administra: `is_staff` E `core.access_backoffice`.
 
-    A permissao e o que abre a area administrativa desde a etapa do
-    ciclo de vida; a flag sozinha nao abre mais (ver
-    `core.views.backoffice_required`).
+    Tres permissoes: entrar no Backoffice e as duas da biblioteca de
+    modelos (ver e administrar). A flag `is_staff` sozinha nao abre nada
+    desde a etapa do ciclo de vida.
     """
     usuario = get_user_model().objects.create_user(
         email="biblioteca@desenrola.be", password=SENHA, full_name="Admin", is_staff=True
     )
-    usuario.user_permissions.add(permissao_backoffice)
+    usuario.user_permissions.add(permissao_backoffice, *permissoes_de_modelos)
     return get_user_model().objects.get(pk=usuario.pk)
 
 
@@ -186,11 +186,22 @@ class TestModelosOficiais:
 
 
 class TestAcaoEditar:
-    def test_o_link_editar_aponta_para_o_editor_da_etapa_3_2(self, cliente, modelo):
+    def test_o_link_editar_sai_do_detalhe(self, cliente, modelo):
+        """
+        A listagem leva ao DETALHE; é de lá que se abre o editor. Uma
+        linha de tabela com quatro ações vira ruído -- o detalhe é
+        onde a pessoa decide o que fazer com o modelo.
+        """
+        html = cliente.get(
+            reverse("backoffice:document_detail", args=[modelo.pk])
+        ).content.decode()
+
+        assert reverse("backoffice:template_editor", args=[modelo.pk]) in html
+
+    def test_a_listagem_leva_ao_detalhe(self, cliente, modelo):
         html = cliente.get(reverse("backoffice:document_library")).content.decode()
 
-        url_esperada = reverse("backoffice:template_editor", args=[modelo.pk])
-        assert url_esperada in html
+        assert reverse("backoffice:document_detail", args=[modelo.pk]) in html
 
     def test_o_link_nao_aponta_para_o_editor_antigo(self, cliente, modelo):
         html = cliente.get(reverse("backoffice:document_library")).content.decode()
@@ -198,14 +209,25 @@ class TestAcaoEditar:
         assert "/documentos/" not in html
 
     def test_modelo_editavel_mostra_rotulo_editar(self, cliente, modelo):
-        html = cliente.get(reverse("backoffice:document_library")).content.decode()
+        html = cliente.get(
+            reverse("backoffice:document_detail", args=[modelo.pk])
+        ).content.decode()
 
-        assert "Editar" in html
+        assert "Editar no editor" in html
 
     def test_modelo_oficial_mostra_rotulo_ver(self, cliente, oficiais):
-        html = cliente.get(reverse("backoffice:document_library")).content.decode()
+        """
+        Um oficial não é editado pelo editor (regra de
+        `editor_views._pode_editar`): a ação oferecida é VER, e a tela
+        explica o porquê.
+        """
+        fr = oficiais["fr"]
+        html = cliente.get(
+            reverse("backoffice:document_detail", args=[fr.pk])
+        ).content.decode()
 
-        assert "Ver" in html
+        assert "Ver no editor" in html
+        assert "modelo oficial do sistema" in html
 
     def test_seguindo_o_link_o_editor_abre_de_verdade(self, cliente, modelo):
         resposta = cliente.get(
@@ -307,77 +329,46 @@ class TestAcaoDuplicar:
 # ---------------------------------------------------------------------------
 
 
-class TestAcaoExcluir:
-    def test_modelo_comum_pode_ser_excluido(self, cliente, modelo):
-        resposta = _excluir(cliente, modelo)
+class TestNaoExisteExclusao:
+    """
+    A biblioteca não apaga modelo nenhum -- foi uma decisão desta etapa.
 
-        assert resposta.status_code == 302
-        assert not DocumentTemplate.objects.filter(pk=modelo.pk).exists()
+    Um modelo pode ter cartas apontando para ele
+    (`Letter.document_template`, PROTECT) e, mesmo sem nenhuma, sumir com
+    o registro é irreversível onde desativar resolve: o modelo sai das
+    opções de carta nova e todo o histórico continua reproduzível.
 
-    def test_modelo_oficial_nunca_e_excluido(self, cliente, oficiais):
-        origem = oficiais["fr"]
+    Antes existia exclusão de modelo comum e destravado. A capacidade foi
+    retirada, e esta classe é o que impede que volte por descuido.
+    """
 
-        resposta = _excluir(cliente, origem)
+    def test_a_rota_de_excluir_nao_existe(self):
+        from django.urls import NoReverseMatch
 
-        assert resposta.status_code == 302
-        assert DocumentTemplate.objects.filter(pk=origem.pk).exists()
+        with pytest.raises(NoReverseMatch):
+            reverse("backoffice:document_library_delete", args=[1])
 
-    def test_modelo_travado_nao_e_excluido(self, cliente, tipo):
-        travado = DocumentTemplate.objects.create(
-            type=tipo, name="Travado", slug="travado-excl", language="pt", is_locked=True
-        )
-
-        resposta = _excluir(cliente, travado)
-
-        assert resposta.status_code == 302
-        assert DocumentTemplate.objects.filter(pk=travado.pk).exists()
-
-    def test_excluir_nao_usa_queryset_delete_para_contornar_a_guarda(
-        self, cliente, oficiais
-    ):
-        """
-        Prova indireta: se a view usasse `queryset.delete()`, a guarda de
-        `DocumentTemplate.delete()` não rodaria e o oficial sumiria.
-        """
-        origem = oficiais["pt"]
-
-        _excluir(cliente, origem)
-
-        assert DocumentTemplate.objects.filter(pk=origem.pk, is_system=True).exists()
-
-    def test_excluir_exige_post(self, cliente, modelo):
-        assert cliente.get(
-            reverse("backoffice:document_library_delete", args=[modelo.pk])
-        ).status_code == 405
-
-    def test_usuario_comum_nao_exclui(self, client, user, modelo):
-        client.force_login(user)
-
-        assert _excluir(client, modelo).status_code == 403
-
-    def test_botao_excluir_nao_aparece_para_oficial(self, cliente, oficiais):
+    def test_a_biblioteca_nao_oferece_exclusao(self, cliente, modelo):
         html = cliente.get(reverse("backoffice:document_library")).content.decode()
-        url_excluir = reverse(
-            "backoffice:document_library_delete", args=[oficiais["fr"].pk]
-        )
 
-        assert url_excluir not in html
+        assert "Excluir" not in html
 
-    def test_botao_excluir_nao_aparece_para_travado(self, cliente, tipo):
-        travado = DocumentTemplate.objects.create(
-            type=tipo, name="Travado", slug="travado-html", language="pt", is_locked=True
-        )
+    def test_o_detalhe_nao_oferece_exclusao(self, cliente, modelo):
+        html = cliente.get(
+            reverse("backoffice:document_detail", args=[modelo.pk])
+        ).content.decode()
 
-        html = cliente.get(reverse("backoffice:document_library")).content.decode()
-        url_excluir = reverse("backoffice:document_library_delete", args=[travado.pk])
+        assert "Excluir" not in html
 
-        assert url_excluir not in html
+    def test_nenhuma_view_da_biblioteca_apaga(self):
+        """A view não chama `.delete()` em lugar nenhum."""
+        import inspect
 
-    def test_botao_excluir_aparece_para_modelo_comum(self, cliente, modelo):
-        html = cliente.get(reverse("backoffice:document_library")).content.decode()
-        url_excluir = reverse("backoffice:document_library_delete", args=[modelo.pk])
+        from apps.doctemplates import library_views
 
-        assert url_excluir in html
+        codigo = inspect.getsource(library_views)
+
+        assert ".delete()" not in codigo
 
 
 # ---------------------------------------------------------------------------

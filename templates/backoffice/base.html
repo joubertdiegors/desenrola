@@ -23,7 +23,12 @@ fonte, e nenhuma view pode esquecer de preenche-la.
       <div class="dropdown-menu is-left">{% include "backoffice/menu.html" with in_dropdown=True %}</div>
     </details>
     <span class="bo-mobile-title-group"><span class="bo-mobile-title">{{ bo_title }}</span><span class="tag tag-primary">{% translate "Admin" %}</span></span>
-    <button type="button" class="btn btn-primary btn-icon-sm" aria-label="{{ bo_action_label }}"><i class="ph {{ bo_action_icon }}" aria-hidden="true"></i></button>
+    {% comment %}
+    O botão de ação só existe nas telas que ainda são ilustrativas.
+    As telas reais não definem `bo_action_label`, e aqui nada é
+    renderizado: botão que não faz nada é pior do que botão nenhum.
+    {% endcomment %}
+    {% if bo_action_label %}<button type="button" class="btn btn-primary btn-icon-sm" aria-label="{{ bo_action_label }}"><i class="ph {{ bo_action_icon }}" aria-hidden="true"></i></button>{% else %}<span></span>{% endif %}
   </nav>
 </header>
 {% endblock %}
@@ -45,10 +50,20 @@ fonte, e nenhuma view pode esquecer de preenche-la.
 {% endblock %}
 
 {% block footer %}
-<nav class="tabbar tabbar-4 m-only" aria-label="{% translate 'Administração' %}">
+{% comment %}
+Barra inferior do celular. Cada destino aparece só para quem pode
+abri-lo -- um link que responde 403 é uma promessa quebrada. A largura
+das colunas se ajusta ao número de itens (`tabbar-auto`), justamente
+porque ele varia com a permissão de quem olha.
+{% endcomment %}
+<nav class="tabbar tabbar-auto m-only" aria-label="{% translate 'Administração' %}">
   <a href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'overview' %}ph-fill{% else %}ph{% endif %} ph-squares-four" aria-hidden="true"></i>{% translate "Geral" %}</a>
-  <a href="{% url 'backoffice:users' %}"{% if active == "users" or active == "permissions" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'users' or active == 'permissions' %}ph-fill{% else %}ph{% endif %} ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
+  {% if perms.accounts.manage_users %}
+  <a href="{% url 'backoffice:users' %}"{% if active == "users" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'users' %}ph-fill{% else %}ph{% endif %} ph-users" aria-hidden="true"></i>{% translate "Usuários" %}</a>
+  {% endif %}
+  {% if perms.letters.view_all_letters %}
   <a href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'letters' %}ph-fill{% else %}ph{% endif %} ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
+  {% endif %}
   <a href="{% url 'backoffice:appearance' %}"{% if active == "templates" or active == "content" or active == "partners" or active == "languages" or active == "appearance" or active == "system" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'appearance' %}ph-fill{% else %}ph{% endif %} ph-dots-three-outline" aria-hidden="true"></i>{% translate "Mais" %}</a>
 </nav>
 {% endblock %}

@@ -541,6 +541,9 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
   color: var(--mu);
 }
 .tabbar-4 { grid-template-columns: repeat(4, 1fr); }
+/* Quantos destinos aparecem depende da permissao de quem olha (ver
+   backoffice/base.html), entao as colunas se distribuem sozinhas. */
+.tabbar-auto { grid-auto-flow: column; grid-auto-columns: 1fr; grid-template-columns: none; }
 .tabbar a {
   display: flex;
   flex-direction: column;

@@ -564,26 +564,49 @@ class TestAutorizacaoCentralizada:
 
         assert lifecycle.can_user_download_pdf(supervisor, rascunho) is False
 
-    def test_a_permissao_de_supervisao_tem_um_dono_unico(self):
+    def test_nenhuma_view_decide_pela_string_da_permissao(self):
         """
-        A string da permissão vive em `lifecycle.SUPERVISION_PERM`, e as
-        views perguntam por `lifecycle.supervisiona()` -- não há segunda
-        cópia espalhada por aí.
+        Quem DECIDE pergunta a `lifecycle.supervisiona()`; a string
+        `"letters.view_all_letters"` só aparece onde ela é um DADO.
+
+        Três lugares são legítimos, e cada um por um motivo diferente:
+
+          * `lifecycle.py`   -- a constante, o dono da string;
+          * `models.py`      -- `visible_to()`, a mesma regra aplicada no
+                                banco (um queryset não chama serviço);
+          * `admin_permissions.py` -- o catálogo do Backoffice, que
+                                LISTA permissões como dado, sem decidir
+                                nada com elas.
+
+        Qualquer quarto lugar é uma segunda decisão escondida, e é isto
+        que este teste existe para pegar: a lista abaixo é explícita de
+        propósito -- um arquivo novo faz o teste falhar e obriga alguém a
+        justificar, em vez de o número subir em silêncio.
         """
         import pathlib
         import re
 
+        # Por CAMINHO, não por nome de arquivo: "models.py" existe em
+        # todo app, e liberar pelo basename deixaria a guarda cega para
+        # uma cópia em qualquer outro models.py do projeto.
+        permitidos = {
+            "apps/letters/lifecycle.py": "a constante SUPERVISION_PERM",
+            "apps/letters/models.py": "o queryset visible_to()",
+            "apps/accounts/admin_permissions.py": "o catálogo (dado, não decisão)",
+        }
+
         raiz = pathlib.Path(__file__).resolve().parents[3]
-        soltas = []
+        intrusos = []
         for arquivo in raiz.rglob("*.py"):
             if any(p in (".venv", "__pycache__", "tests", "migrations") for p in arquivo.parts):
+                continue
+            if arquivo.relative_to(raiz).as_posix() in permitidos:
                 continue
             for numero, linha in enumerate(
                 arquivo.read_text(encoding="utf-8", errors="replace").splitlines(), 1
             ):
                 if re.search(r'["\']letters\.view_all_letters["\']', linha):
-                    soltas.append(f"{arquivo.name}:{numero}")
+                    caminho = arquivo.relative_to(raiz).as_posix()
+                    intrusos.append(f"{caminho}:{numero}: {linha.strip()[:70]}")
 
-        # Só duas: a constante em lifecycle.py e o queryset visible_to()
-        # em models.py, que é a mesma regra aplicada no banco.
-        assert len(soltas) == 2, soltas
+        assert not intrusos, intrusos

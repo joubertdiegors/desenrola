@@ -1,0 +1,74 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Visão geral -- a porta de entrada do Backoffice.
+
+Contexto: numeros (rótulo + valor, todos vindos do banco).
+
+Deliberadamente pequena. Um painel administrativo de verdade (séries,
+gráficos, alertas) é etapa própria; o que esta tela não podia continuar
+sendo é uma vitrine de estatísticas inventadas, que era o que ela mostrava
+antes do gerenciador de usuários.
+
+Os atalhos aparecem conforme a permissão de quem olha -- e nenhum deles
+leva a uma tela que a pessoa não possa abrir.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <h1 class="d-only">{% translate "Visão geral" %}</h1>
+</div>
+
+<div class="bo-numeros">
+  {% for numero in numeros %}
+  <div class="card stat-card">
+    <span class="stat-card-label">{{ numero.rotulo }}</span>
+    <div class="stat-card-value">{{ numero.valor }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="bo-atalhos">
+  {% if perms.letters.view_all_letters %}
+  <a class="card bo-atalho" href="{% url 'backoffice:letters' %}">
+    <span class="bo-atalho-icone"><i class="ph ph-files" aria-hidden="true"></i></span>
+    <span class="bo-atalho-texto">
+      <strong>{% translate "Cartas" %}</strong>
+      <small>{% translate "Supervisão de todas as cartas do sistema" %}</small>
+    </span>
+    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
+  {% if perms.accounts.manage_users %}
+  <a class="card bo-atalho" href="{% url 'backoffice:users' %}">
+    <span class="bo-atalho-icone"><i class="ph ph-users" aria-hidden="true"></i></span>
+    <span class="bo-atalho-texto">
+      <strong>{% translate "Usuários" %}</strong>
+      <small>{% translate "Pessoas cadastradas e o que cada uma pode fazer" %}</small>
+    </span>
+    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
+  {% if perms.doctemplates.view_documenttemplate %}
+  <a class="card bo-atalho" href="{% url 'backoffice:document_library' %}">
+    <span class="bo-atalho-icone"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+    <span class="bo-atalho-texto">
+      <strong>{% translate "Modelos" %}</strong>
+      <small>{% translate "Biblioteca dos documentos oficiais" %}</small>
+    </span>
+    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
+  <a class="card bo-atalho" href="{% url 'backoffice:letter_policy' %}">
+    <span class="bo-atalho-icone"><i class="ph ph-clock-countdown" aria-hidden="true"></i></span>
+    <span class="bo-atalho-texto">
+      <strong>{% translate "Política das cartas" %}</strong>
+      <small>{% translate "Prazos de edição e de expiração" %}</small>
+    </span>
+    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+  </a>
+</div>
+{% endblock %}

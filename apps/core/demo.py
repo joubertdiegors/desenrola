@@ -54,84 +54,9 @@ PARTNERS = [
 # Area administrativa
 # ---------------------------------------------------------------------------
 
-ADMIN_USERS = [
-    {
-        "name": "Ana Martins",
-        "initials": "AM",
-        "email": "ana@desenrola.be",
-        "role": "admin",
-        "role_label": _("Administrador"),
-        "letters": None,
-        "last_access": _("Hoje"),
-        "mobile_note": _("Hoje"),
-        "active": True,
-    },
-    {
-        "name": "Pedro Lima",
-        "initials": "PL",
-        "email": "pedro@desenrola.be",
-        "role": "manager",
-        "role_label": _("Gerente"),
-        "letters": None,
-        "last_access": _("Ontem"),
-        "mobile_note": _("Ontem"),
-        "active": True,
-    },
-    {
-        "name": "Sofia Nkemelu",
-        "initials": "SN",
-        "email": "sofia@desenrola.be",
-        "role": "operator",
-        "role_label": _("Operador"),
-        "letters": None,
-        "last_access": _("Seg"),
-        "mobile_note": _("Seg"),
-        "active": True,
-    },
-    {
-        "name": "Ricardo Costa",
-        "initials": "RC",
-        "email": "ricardo.costa@exemplo.be",
-        "role": "user",
-        "role_label": _("Usuário"),
-        "letters": 3,
-        "last_access": _("Hoje"),
-        "mobile_note": _("3 cartas"),
-        "active": True,
-    },
-    {
-        "name": "Luísa Ferreira",
-        "initials": "LF",
-        "email": "luisa.f@exemplo.com",
-        "role": "user",
-        "role_label": _("Usuário"),
-        "letters": 0,
-        "last_access": "03/05/2026",
-        "mobile_note": _("Inativa"),
-        "active": False,
-    },
-]
 
 # (administrador, gerente, operador, usuario)
-PERMISSIONS = [
-    {"label": _("Gerar cartas próprias"), "levels": (True, True, True, True)},
-    {"label": _("Visualizar cartas de todos"), "levels": (True, True, True, False)},
-    {"label": _("Ativar / desativar usuários"), "levels": (True, True, False, False)},
-    {"label": _("Editar conteúdo, parceiros e idiomas"), "levels": (True, True, False, False)},
-    {"label": _("Aparência, permissões e sistema"), "levels": (True, False, False, False)},
-]
 
-STATS = [
-    {"label": _("Usuários"), "value": "1.284", "note": _("+38 esta semana"), "tone": "success"},
-    {"label": _("Cartas geradas"), "value": LANDING_STAT, "note": _("214 este mês"), "tone": ""},
-    {"label": _("Parceiros ativos"), "value": "4", "note": _("2 aguardando imagem"), "tone": ""},
-    {"label": _("Idiomas"), "value": "4", "note": _("NL · 3 textos pendentes"), "tone": "warning"},
-]
-
-STATS_MOBILE = [
-    {"label": _("Usuários"), "value": "1.284"},
-    {"label": _("Cartas · mês"), "value": "214"},
-]
 
 LANGUAGES = [
     {
@@ -211,9 +136,10 @@ ADMIN_PARTNERS = [
 
 # Titulo e acao da barra do celular por secao do admin
 BACKOFFICE_SECTIONS = {
-    "overview": {"title": _("Visão geral"), "icon": "ph-plus", "action": _("Convidar usuário")},
-    "users": {"title": _("Usuários"), "icon": "ph-plus", "action": _("Convidar usuário")},
-    "permissions": {"title": _("Permissões"), "icon": "ph-plus", "action": _("Convidar usuário")},
+    # A visao geral e real desde a etapa do gerenciador de usuarios, e
+    # nao tem acao propria: sem `action`, o cabecalho movel nao
+    # renderiza botao nenhum.
+    "overview": {"title": _("Visão geral"), "icon": "", "action": ""},
     "letters": {"title": _("Cartas"), "icon": "ph-magnifying-glass", "action": _("Buscar")},
     "templates": {"title": _("Modelos"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     "content": {"title": _("Conteúdo"), "icon": "ph-upload-simple", "action": _("Novo modelo")},

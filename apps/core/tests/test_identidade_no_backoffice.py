@@ -54,18 +54,32 @@ TELAS_SEM_FICCAO = [
 
 
 @pytest.fixture
-def administradora(db, permissao_backoffice, django_user_model):
+def administradora(db, permissao_backoffice, permissoes_de_modelos, django_user_model):
     """
     Quem administra, com nome PRÓPRIO -- nada parecido com o dado
     fictício que esta etapa removeu (ver o cabeçalho do arquivo).
+
+    Recebe também as permissões da biblioteca de modelos: entre as telas
+    conferidas aqui está `backoffice:document_library`, que desde a etapa
+    da biblioteca exige uma permissão própria.
     """
     pessoa = django_user_model.objects.create_user(
         email="beatriz@desenrola.be",
         password="senha-de-teste-123",
         full_name="Beatriz Nunes",
     )
-    pessoa.user_permissions.add(permissao_backoffice)
+    pessoa.user_permissions.add(permissao_backoffice, *permissoes_de_modelos)
     return django_user_model.objects.get(pk=pessoa.pk)
+
+
+@pytest.fixture
+def permissao_gerenciar(db):
+    """A permissao que abre o gerenciador de usuarios."""
+    from django.contrib.auth.models import Permission
+
+    return Permission.objects.get(
+        content_type__app_label="accounts", codename="manage_users"
+    )
 
 
 @pytest.fixture
@@ -197,13 +211,19 @@ class TestNadaDeIdentidadeFicticia:
 
         assert not achados, achados
 
-    def test_a_tela_de_usuarios_continua_ilustrativa(self, cliente_admin):
+    def test_a_tela_de_usuarios_virou_real(self, client, administradora, permissao_gerenciar):
         """
-        Guarda de escopo: a lista fictícia de usuários NÃO foi tocada
-        nesta etapa. Se ela virar real um dia, este teste falha e avisa
-        que os de cima precisam ser revistos.
+        Esta era a guarda de escopo da etapa da identidade: enquanto a
+        lista de usuários fosse fictícia, ela cobrava que "Ana Martins"
+        aparecesse ali. A etapa do gerenciador de usuários tornou a
+        tela real -- o teste disparou, como projetado, e passou a
+        cobrar o contrário: nenhum nome inventado, e a identidade de
+        quem está logado.
         """
-        corpo = cliente_admin.get(reverse("backoffice:users")).content.decode()
+        administradora.user_permissions.add(permissao_gerenciar)
+        client.force_login(administradora)
 
-        assert "Ana Martins" in corpo  # ainda vem de demo.ADMIN_USERS
-        assert "Beatriz Nunes" in bloco_de_identidade(corpo)  # a identidade é real
+        corpo = client.get(reverse("backoffice:users")).content.decode()
+
+        assert "Ana Martins" not in corpo
+        assert "Beatriz Nunes" in bloco_de_identidade(corpo)

@@ -9,13 +9,13 @@ from django.urls import reverse
 
 # As telas que abrem com `core.access_backoffice` e mais nada.
 #
-# `backoffice:letters` NAO entra aqui: a supervisao de cartas exige uma
-# segunda permissao (`letters.view_all_letters`), e tem suite propria em
-# apps/letters/tests/test_backoffice_supervisao.py.
+# Ficam de fora as que exigem uma SEGUNDA permissao, cada uma com suite
+# propria: `backoffice:letters` (`letters.view_all_letters`, em
+# apps/letters/tests/test_backoffice_supervisao.py) e `backoffice:users`
+# (`accounts.manage_users`, em
+# apps/accounts/tests/test_backoffice_usuarios.py).
 BACKOFFICE = [
     "backoffice:overview",
-    "backoffice:users",
-    "backoffice:permissions",
     "backoffice:templates",
     "backoffice:content",
     "backoffice:languages",

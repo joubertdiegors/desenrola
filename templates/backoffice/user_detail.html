@@ -1,0 +1,124 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · uma pessoa: dados, situação e permissões.
+
+Contexto: alvo (User), grupos (catálogo já resolvido: cada item com
+`permissao`, `marcada`, `editavel`), pode_mexer, e_voce_mesmo, cartas,
+ultimas_cartas.
+
+O QUE ESTA TELA NÃO FAZ
+Não troca senha (é assunto do dono da conta) e não apaga ninguém
+(destruiria o histórico de cartas). Desativar resolve o caso real.
+
+As caixas que o operador não pode conceder vêm `disabled` -- mas a
+proteção de verdade é o servidor: o formulário é montado lá com as
+permissões que ele possui, e um POST forjado com as outras não encontra
+campo para elas.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <div>
+    <h1 class="d-only">{{ alvo.full_name|default:alvo.email }}</h1>
+    <p class="text-muted">{{ alvo.email }}</p>
+  </div>
+  <span class="push"></span>
+  {% if alvo.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
+  <a class="btn btn-ghost" href="{% url 'backoffice:users' %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+
+<div class="bo-panel">
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Dados" %}</h3></div>
+    <dl class="bo-dados">
+      <dt>{% translate "Nome completo" %}</dt><dd>{{ alvo.full_name|default:"—" }}</dd>
+      <dt>{% translate "E-mail" %}</dt><dd>{{ alvo.email }}</dd>
+      <dt>{% translate "Telefone" %}</dt><dd>{{ alvo.phone|default:"—" }}</dd>
+      <dt>{% translate "Cadastrado em" %}</dt><dd>{{ alvo.date_joined|date:"d/m/Y · H:i" }}</dd>
+      <dt>{% translate "Último acesso" %}</dt><dd>{% if alvo.last_login %}{{ alvo.last_login|date:"d/m/Y · H:i" }}{% else %}{% translate "Nunca acessou" %}{% endif %}</dd>
+      <dt>{% translate "Cartas" %}</dt><dd>{{ cartas }}</dd>
+    </dl>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Situação" %}</h3></div>
+    {% if alvo.is_active %}
+      <p class="text-muted">{% translate "Esta pessoa consegue entrar no site normalmente." %}</p>
+    {% else %}
+      <p class="text-muted">{% translate "Esta pessoa não consegue mais entrar. As cartas e o histórico dela continuam intactos." %}</p>
+    {% endif %}
+
+    {% if not pode_mexer %}
+      <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Só um superusuário pode alterar outro superusuário." %}</span></div>
+    {% elif e_voce_mesmo %}
+      <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você não pode desativar a sua própria conta." %}</span></div>
+    {% else %}
+      <form method="post" action="{% url 'backoffice:user_activation' alvo.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="ativo" value="{% if alvo.is_active %}0{% else %}1{% endif %}">
+        {% if alvo.is_active %}
+          <button type="submit" class="btn btn-secondary"><i class="ph ph-prohibit" aria-hidden="true"></i>{% translate "Desativar usuário" %}</button>
+        {% else %}
+          <button type="submit" class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Ativar usuário" %}</button>
+        {% endif %}
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<form class="card bo-card" method="post" action="{% url 'backoffice:user_permissions' alvo.pk %}">
+  {% csrf_token %}
+  <div class="bo-card-head">
+    <h3>{% translate "Permissões administrativas" %}</h3>
+    <span class="note d-only">{% translate "Só o que o produto verifica de verdade" %}</span>
+  </div>
+
+  {% if alvo.is_superuser %}
+    <div class="notice"><i class="ph-fill ph-shield-check" aria-hidden="true"></i><span>{% translate "Superusuário: tem todas as permissões do sistema, independentemente das caixas abaixo." %}</span></div>
+  {% endif %}
+
+  {% for grupo in grupos %}
+  <h4 class="bo-secao">{{ grupo.titulo }}</h4>
+  <div class="bo-permissoes">
+    {% for item in grupo.itens %}
+    <label class="bo-permissao{% if not item.editavel or not pode_mexer %} is-travada{% endif %}">
+      <input type="checkbox" name="permissoes" value="{{ item.permissao.chave }}"
+             {% if item.marcada %}checked{% endif %}
+             {% if not item.editavel or not pode_mexer %}disabled{% endif %}>
+      <span class="bo-permissao-texto">
+        <strong>{{ item.permissao.rotulo }}</strong>
+        <small>{{ item.permissao.descricao }}</small>
+        {% if not item.editavel %}<small class="bo-permissao-aviso">{% translate "Você não possui esta permissão e por isso não pode concedê-la." %}</small>{% endif %}
+      </span>
+    </label>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if e_voce_mesmo %}
+    <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você não pode retirar de si mesmo o acesso ao Backoffice nem o gerenciamento de usuários — isso o trancaria para fora." %}</span></div>
+  {% endif %}
+
+  {% if pode_mexer %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar permissões" %}</button>
+  </div>
+  {% endif %}
+</form>
+
+{% if ultimas_cartas %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Últimas cartas" %}</h3>
+    {% if perms.letters.view_all_letters %}<a class="note d-only" href="{% url 'backoffice:letters' %}?user={{ alvo.pk }}">{% translate "Ver todas" %}</a>{% endif %}
+  </div>
+  <dl class="bo-dados">
+    {% for carta in ultimas_cartas %}
+    <dt>{{ carta.created_at|date:"d/m/Y" }}</dt>
+    <dd>{% if perms.letters.view_all_letters %}<a href="{% url 'backoffice:letter_detail' carta.uuid %}">{{ carta.reference }}</a>{% else %}{{ carta.reference }}{% endif %}</dd>
+    {% endfor %}
+  </dl>
+</div>
+{% endif %}
+{% endblock %}

@@ -90,6 +90,22 @@ def permissao_backoffice(db):
 
 
 @pytest.fixture
+def permissoes_de_modelos(db):
+    """As duas permissoes da biblioteca de modelos: ver e administrar.
+
+    Sao as que o Django cria sozinho para `DocumentTemplate` -- nao houve
+    necessidade de inventar uma `manage_templates`."""
+    from django.contrib.auth.models import Permission
+
+    return list(
+        Permission.objects.filter(
+            content_type__app_label="doctemplates",
+            codename__in=("view_documenttemplate", "change_documenttemplate"),
+        )
+    )
+
+
+@pytest.fixture
 def staff_user(db, permissao_backoffice):
     """
     Uma administradora de verdade: `is_staff` E a permissao de entrar
