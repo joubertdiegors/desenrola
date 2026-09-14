@@ -243,6 +243,27 @@ def get_owned_draft(user, letter_uuid):
     return Letter.objects.filter(uuid=letter_uuid, user=user, status=Letter.Status.DRAFT).first()
 
 
+def get_owned_editable_letter(user, letter_uuid):
+    """
+    A Letter de `user` que pode ser EDITADA agora: o rascunho, ou uma
+    carta ja finalizada enquanto a politica administrativa permitir
+    (`lifecycle.is_letter_editable`).
+
+    `None` em qualquer outro caso -- carta de outra pessoa, carta
+    inexistente, ou carta finalizada fora do prazo -- para a view
+    responder sempre o mesmo, sem revelar qual dos casos ocorreu.
+
+    E o portao do assistente no SERVIDOR: nao adianta esconder o botao
+    "Editar" na tela se a URL da etapa continuar abrindo.
+    """
+    from apps.letters import lifecycle
+
+    letter = Letter.objects.filter(uuid=letter_uuid, user=user).first()
+    if letter is None:
+        return None
+    return letter if lifecycle.is_letter_editable(letter) else None
+
+
 # ---------------------------------------------------------------------------
 # Campos e formulario por etapa
 # ---------------------------------------------------------------------------

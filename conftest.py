@@ -80,11 +80,48 @@ def other_user(db):
 
 
 @pytest.fixture
-def staff_user(db):
-    return get_user_model().objects.create_user(
+def permissao_backoffice(db):
+    """A permissao que abre o Backoffice, `core.access_backoffice`."""
+    from django.contrib.auth.models import Permission
+
+    return Permission.objects.get(
+        content_type__app_label="core", codename="access_backoffice"
+    )
+
+
+@pytest.fixture
+def staff_user(db, permissao_backoffice):
+    """
+    Uma administradora de verdade: `is_staff` E a permissao de entrar
+    no Backoffice.
+
+    As duas coisas, porque desde a etapa do ciclo de vida quem abre a
+    porta e a PERMISSAO -- `is_staff` sozinho nao abre mais nada (ver
+    `core.views.backoffice_required`). Para o caso oposto, use
+    `staff_sem_backoffice`.
+    """
+    usuario = get_user_model().objects.create_user(
         email="ana@desenrola.be",
         password=SENHA,
         full_name="Ana Martins",
+        is_staff=True,
+    )
+    usuario.user_permissions.add(permissao_backoffice)
+    return get_user_model().objects.get(pk=usuario.pk)
+
+
+@pytest.fixture
+def staff_sem_backoffice(db):
+    """
+    Alguem com `is_staff` mas SEM `core.access_backoffice`.
+
+    Existe para provar que a flag sozinha nao abre a area
+    administrativa -- era assim antes, e deixou de ser.
+    """
+    return get_user_model().objects.create_user(
+        email="bruno@desenrola.be",
+        password=SENHA,
+        full_name="Bruno Alves",
         is_staff=True,
     )
 

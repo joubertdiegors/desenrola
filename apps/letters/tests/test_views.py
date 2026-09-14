@@ -77,19 +77,24 @@ class TestDetalhe:
 
         assert response.status_code == 404
 
-    def test_permissao_de_ver_todas_nao_abre_o_detalhe_alheio(
+    def test_permissao_de_ver_todas_abre_o_detalhe_alheio(
         self, client, other_user, letter, permissao_ver_todas
     ):
         """
-        `letters.view_all_letters` é supervisão, e a tela de supervisão
-        não existe ainda -- aqui continua valendo só a propriedade.
+        REVISTO na etapa do ciclo de vida. Antes, `letters.view_all_
+        letters` não abria carta alheia, porque "a tela de supervisão
+        não existe ainda". A etapa do ciclo de vida precisou disso:
+        uma carta EXPIRADA sai das mãos do usuário comum, mas quem
+        responde por ela tem de continuar alcançando o registro.
+
+        Quem NÃO tem a permissão continua barrado -- é o teste acima.
         """
         other_user.user_permissions.add(permissao_ver_todas)
         client.force_login(other_user)
 
         response = client.get(reverse("letters:detail", args=[letter.uuid]))
 
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_uuid_inexistente_da_404(self, auth_client):
         response = auth_client.get(reverse("letters:detail", args=[uuid_lib.uuid4()]))
@@ -139,15 +144,19 @@ class TestPdfPrivado:
 
         assert response.status_code == 404
 
-    def test_permissao_de_ver_todas_nao_baixa_pdf_alheio(
+    def test_permissao_de_ver_todas_baixa_pdf_alheio(
         self, client, other_user, letter_gerada, permissao_ver_todas
     ):
+        """
+        Mesma reversão do detalhe: supervisão alcança o documento,
+        inclusive de uma carta expirada. Sem a permissão, 404.
+        """
         other_user.user_permissions.add(permissao_ver_todas)
         client.force_login(other_user)
 
         response = client.get(reverse("letters:pdf", args=[letter_gerada.uuid]))
 
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_carta_sem_pdf_da_404(self, auth_client, letter):
         assert not letter.pdf_file

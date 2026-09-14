@@ -7,11 +7,15 @@ O dashboard tem suite propria em test_dashboard.py.
 import pytest
 from django.urls import reverse
 
+# As telas que abrem com `core.access_backoffice` e mais nada.
+#
+# `backoffice:letters` NAO entra aqui: a supervisao de cartas exige uma
+# segunda permissao (`letters.view_all_letters`), e tem suite propria em
+# apps/letters/tests/test_backoffice_supervisao.py.
 BACKOFFICE = [
     "backoffice:overview",
     "backoffice:users",
     "backoffice:permissions",
-    "backoffice:letters",
     "backoffice:templates",
     "backoffice:content",
     "backoffice:languages",

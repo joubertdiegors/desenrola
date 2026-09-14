@@ -35,8 +35,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from apps.core import demo
-from apps.core.views import staff_required
+from apps.core.views import backoffice_required
 
 from .models import DocumentTemplate, DocumentTemplateLockedError, DocumentType
 from .services.duplicacao import duplicar_modelo
@@ -47,7 +46,7 @@ def _pode_excluir(modelo):
     return not modelo.is_system and not modelo.is_locked
 
 
-@staff_required
+@backoffice_required
 def document_library(request):
     """A listagem. Filtros simples por querystring: tipo, idioma, ativo, system."""
     modelos = DocumentTemplate.objects.select_related("type", "duplicated_from")
@@ -78,7 +77,6 @@ def document_library(request):
             "bo_title": _("Modelos"),
             "bo_action_icon": "ph-files",
             "bo_action_label": _("Biblioteca"),
-            "admin_user": demo.ADMIN,
             "modelos": modelos,
             "tipos": DocumentType.objects.order_by("order", "name"),
             "idiomas": DocumentTemplate._meta.get_field("language").choices,
@@ -92,7 +90,7 @@ def document_library(request):
     )
 
 
-@staff_required
+@backoffice_required
 @require_POST
 def document_library_duplicate(request, pk):
     """
@@ -121,7 +119,7 @@ def document_library_duplicate(request, pk):
     return redirect("backoffice:template_editor", pk=copia.pk)
 
 
-@staff_required
+@backoffice_required
 @require_POST
 def document_library_delete(request, pk):
     """

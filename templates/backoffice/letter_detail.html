@@ -1,0 +1,93 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · uma carta, vista por quem supervisiona.
+
+Contexto: card (LetterCard), carta (Letter), dono, politica,
+pode_baixar_pdf, revisao (as seções do assistente, com rótulos
+resolvidos).
+
+SOMENTE LEITURA. Não há nenhuma ação que altere a carta -- ter permissão
+de ver não é ter permissão de mexer.
+
+Os prazos vêm calculados (`card.editable_until`, `card.expires_at`); este
+template não conta dia nenhum.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head">
+  <div>
+    <h1 class="d-only">{{ card.reference }}</h1>
+    <p class="text-muted">{{ dono.full_name|default:dono.email }}</p>
+  </div>
+  <span class="push"></span>
+  {% include "letters/_status_tag.html" with card=card %}
+  <a class="btn btn-ghost" href="{% url 'backoffice:letters' %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+
+<div class="bo-panel">
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "A carta" %}</h3></div>
+    <dl class="bo-dados">
+      <dt>{% translate "Referência" %}</dt><dd>{{ card.reference }}</dd>
+      <dt>{% translate "Usuário" %}</dt><dd>{{ dono.full_name|default:"—" }}<br><span class="text-muted">{{ dono.email }}</span></dd>
+      <dt>{% translate "Idioma do documento" %}</dt><dd>{{ card.language_name }}</dd>
+      <dt>{% translate "Modelo" %}</dt><dd>{{ carta.document_template.name }}<br><span class="text-muted">{{ carta.document_template.type.name }}</span></dd>
+      <dt>{% translate "Estado" %}</dt><dd>{% include "letters/_status_tag.html" with card=card %}</dd>
+    </dl>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Datas" %}</h3></div>
+    <dl class="bo-dados">
+      <dt>{% translate "Criada em" %}</dt><dd>{{ carta.created_at|date:"d/m/Y · H:i" }}</dd>
+      <dt>{% translate "Finalizada em" %}</dt><dd>{% if carta.finalized_at %}{{ carta.finalized_at|date:"d/m/Y · H:i" }}{% else %}—{% endif %}</dd>
+      <dt>{% translate "PDF gerado em" %}</dt><dd>{% if carta.generated_at %}{{ carta.generated_at|date:"d/m/Y · H:i" }}{% else %}—{% endif %}</dd>
+      <dt>{% translate "Período da viagem" %}</dt><dd>{% if card.has_period %}{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
+    </dl>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Ciclo de vida" %}</h3>
+      <a class="note d-only" href="{% url 'backoffice:letter_policy' %}">{% translate "Política das cartas" %}</a>
+    </div>
+    <dl class="bo-dados">
+      <dt>{% translate "Política de edição" %}</dt>
+      <dd>{{ politica.get_editability_display }}{% if politica.editability_amount %} · {{ politica.editability_amount }}{% endif %}</dd>
+      <dt>{% translate "Editável até" %}</dt>
+      <dd>{% if card.editable_until %}{{ card.editable_until|date:"d/m/Y · H:i" }}{% else %}—{% endif %}</dd>
+      <dt>{% translate "Política de expiração" %}</dt>
+      <dd>{{ politica.get_expiration_display }}{% if politica.expiration_amount %} · {{ politica.expiration_amount }}{% endif %}</dd>
+      <dt>{% translate "Válida até" %}</dt>
+      <dd>{% if card.expires_at %}{{ card.expires_at|date:"d/m/Y · H:i" }}{% else %}{% translate "Não expira" %}{% endif %}</dd>
+    </dl>
+    {% if card.is_expired %}
+    <div class="notice"><i class="ph-fill ph-clock-countdown" aria-hidden="true"></i><span>{% translate "Esta carta expirou para o usuário. A supervisão continua alcançando o documento." %}</span></div>
+    {% endif %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head"><h3>{% translate "Documento" %}</h3></div>
+    {% if pode_baixar_pdf %}
+      <a class="btn btn-primary" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Abrir PDF" %}</a>
+    {% else %}
+      <p class="text-muted">{% translate "Esta carta ainda não tem PDF gerado." %}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if revisao %}
+<div class="card bo-card">
+  <div class="bo-card-head"><h3>{% translate "Dados preenchidos" %}</h3></div>
+  {% for secao in revisao %}
+  <h4 class="bo-secao">{{ secao.title }}</h4>
+  <dl class="bo-dados">
+    {% for item in secao.items %}
+    <dt>{{ item.label }}</dt><dd>{{ item.value|default:"—" }}</dd>
+    {% endfor %}
+  </dl>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

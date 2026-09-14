@@ -16,7 +16,7 @@ decide como mostrar a ausencia.
 import datetime
 from dataclasses import dataclass
 
-from apps.letters import services
+from apps.letters import lifecycle, services
 from apps.letters.models import Letter
 
 # Quantas cartas o dashboard lista. O contador continua sendo o total.
@@ -40,10 +40,12 @@ def source_data(letter):
     """
     De onde vem o que a tela mostra: o snapshot congelado, se a carta ja
     foi fechada; senao, os dados do rascunho.
+
+    A regra em si mora em `lifecycle.dados_da_carta` -- as politicas de
+    prazo precisam da MESMA resposta que a tela, e duas copias da
+    escolha acabariam divergindo.
     """
-    if letter.snapshot:
-        return letter.snapshot.get("data") or {}
-    return letter.data or {}
+    return lifecycle.dados_da_carta(letter)
 
 
 def resume_step(letter):
@@ -65,8 +67,17 @@ def resume_step(letter):
 
 @dataclass(frozen=True)
 class LetterCard:
-    """Uma carta pronta para exibir. Guarda a Letter para o template
-    chegar aos campos que ja sao diretos (uuid, reference, status...)."""
+    """
+    Uma carta pronta para exibir. Guarda a Letter para o template
+    chegar aos campos que ja sao diretos (uuid, reference, status...).
+
+    O CICLO DE VIDA VEM CALCULADO
+    -----------------------------
+    `state`, `is_editable`, `is_expired` e os prazos sao resolvidos
+    aqui, uma vez, por `apps.letters.lifecycle`. O template so escolhe
+    o que mostrar -- nenhuma regra de prazo e recalculada em `{% if %}`,
+    que e como a tela passaria a discordar do servidor.
+    """
 
     letter: Letter
     guest_name: str
@@ -75,6 +86,10 @@ class LetterCard:
     language_name: str
     resume_step: int | None
     has_pdf: bool
+    state: str
+    is_editable: bool
+    editable_until: datetime.datetime | None
+    expires_at: datetime.datetime | None
 
     # --- atalhos usados pelos templates -----------------------------------
     @property
@@ -103,23 +118,50 @@ class LetterCard:
 
     @property
     def is_draft(self):
-        return self.letter.status == Letter.Status.DRAFT
+        return self.state == lifecycle.RASCUNHO
+
+    @property
+    def is_final(self):
+        """Finalizada e ainda valida -- nao expirada."""
+        return self.state == lifecycle.FINALIZADA
+
+    @property
+    def is_expired(self):
+        return self.state == lifecycle.EXPIRADA
+
+    @property
+    def is_cancelled(self):
+        return self.state == lifecycle.CANCELADA
 
     @property
     def is_generated(self):
         return self.letter.status == Letter.Status.GENERATED
 
     @property
-    def is_cancelled(self):
-        return self.letter.status == Letter.Status.CANCELLED
+    def can_download_pdf(self):
+        """O dono consegue abrir o PDF agora? Expirada, nao."""
+        return self.has_pdf and not self.is_expired
+
+    @property
+    def can_edit(self):
+        """Mostra o botao de editar? So numa carta JA finalizada -- o
+        rascunho tem o seu proprio botao, "Continuar"."""
+        return self.is_editable and not self.is_draft
 
     @property
     def has_period(self):
         return bool(self.arrival and self.departure)
 
 
-def build_card(letter) -> LetterCard:
-    """Monta o cartao de uma Letter."""
+def build_card(letter, *, config=None) -> LetterCard:
+    """
+    Monta o cartao de uma Letter.
+
+    `config` e a politica ja carregada: passe-a ao montar uma LISTA de
+    cartoes, para o dashboard nao reler o mesmo registro uma vez por
+    carta. Sozinha, a funcao busca por conta propria.
+    """
+    config = config or lifecycle.policy()
     dados = source_data(letter)
     idioma = services.LANGUAGE_META.get(letter.language) or {}
     return LetterCard(
@@ -130,7 +172,17 @@ def build_card(letter) -> LetterCard:
         language_name=idioma.get("name") or letter.get_language_display(),
         resume_step=resume_step(letter),
         has_pdf=bool(letter.pdf_file),
+        state=lifecycle.letter_state(letter, config=config),
+        is_editable=lifecycle.is_letter_editable(letter, config=config),
+        editable_until=lifecycle.letter_editable_until(letter, config=config),
+        expires_at=lifecycle.letter_expires_at(letter, config=config),
     )
+
+
+def build_cards(letters) -> list[LetterCard]:
+    """Varios cartoes lendo a politica UMA vez."""
+    config = lifecycle.policy()
+    return [build_card(letter, config=config) for letter in letters]
 
 
 def own_letters(user):
@@ -151,4 +203,4 @@ def own_letters(user):
 
 def recent_cards(user, limit=RECENT_LIMIT):
     """Os `limit` cartoes mais recentes do usuario."""
-    return [build_card(letter) for letter in own_letters(user)[:limit]]
+    return build_cards(own_letters(user)[:limit])

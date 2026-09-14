@@ -494,6 +494,16 @@ body { display: flex; flex-direction: column; }
    Perfil
    -------------------------------------------------------------------------- */
 
+/* Atalho do Backoffice no dashboard: so aparece para quem tem a
+   permissao. Mesma caixa das outras do painel (.card), em linha. */
+.dash-backoffice { display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 22px; text-decoration: none; color: inherit; }
+.dash-backoffice:hover { border-color: var(--p); }
+.dash-backoffice-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--p10); color: var(--p); font-size: 20px; flex: none; }
+.dash-backoffice-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.dash-backoffice-text small { color: var(--mu); font-size: 12.5px; }
+/* Aviso curto dentro do cartao de carta no celular (ex.: expirada). */
+.letter-card-note { color: var(--error-dark); font-size: 13px; margin: 4px 0 8px; }
+
 .profile { display: grid; grid-template-columns: 260px 1fr; gap: 40px; padding: 36px 48px 60px; max-width: 1100px; }
 /* `align-self: start` (e nao o `stretch` padrao do grid) da ao item a
    altura do proprio conteudo -- sem isso o sticky nao teria folga para
@@ -580,8 +590,41 @@ body { display: flex; flex-direction: column; }
 
 .bo-grid { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-content: start; }
 .bo-panel { display: flex; flex-direction: column; gap: 18px; }
+
+/* --------------------------------------------------------------------------
+   Supervisao de cartas (backoffice > Cartas)
+
+   Reusa os tokens de sempre (.card, .table, .tag, .field). Aqui so o que
+   nao existia: a barra de filtros, as listas de dados do detalhe e a
+   paginacao.
+   -------------------------------------------------------------------------- */
+
+.bo-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px 18px; margin-bottom: 16px; }
+.bo-filtros .field { flex: 1 1 150px; min-width: 0; }
+.bo-filtros .input { min-height: 38px; padding: 0 10px; font-size: 13px; }
+.bo-filtros-acoes { display: flex; gap: 8px; margin-left: auto; }
+
+/* Pares rotulo/valor do detalhe: duas colunas no desktop, empilhado no
+   celular (a media query de .bo-* ja existe mais abaixo). */
+.bo-dados { display: grid; grid-template-columns: minmax(140px, 200px) 1fr; gap: 8px 18px; margin: 0; }
+.bo-dados dt { color: var(--mu); font-size: 13px; }
+.bo-dados dd { margin: 0; font-size: 14px; }
+.bo-secao { margin: 18px 0 8px; font-size: 14px; color: var(--navy); }
+.bo-secao:first-of-type { margin-top: 0; }
+
+.bo-paginacao { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
+
+@media (max-width: 767px) {
+  .bo-dados { grid-template-columns: 1fr; gap: 2px 0; }
+  .bo-dados dd { margin-bottom: 10px; }
+  .bo-filtros-acoes { margin-left: 0; width: 100%; }
+}
 .bo-card { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .bo-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+/* Linha de acao de um formulario do backoffice (ex.: Politica das
+   cartas). O .bo-head ja serve quando o botao fica no cabecalho; esta
+   e para quando ele fecha o formulario, embaixo. */
+.bo-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .bo-card-head h3 { font-size: 16px; }
 .bo-card-head .note { font-size: 12px; color: var(--mu); }
 

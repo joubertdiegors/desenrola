@@ -234,8 +234,12 @@ class TestEstados:
         "status,rotulo",
         [
             (Letter.Status.DRAFT, "Rascunho"),
-            (Letter.Status.COMPLETED, "Concluída"),
-            (Letter.Status.GENERATED, "Gerada"),
+            # "Concluída" e "Gerada" são detalhes INTERNOS do fluxo (a
+            # carta foi registrada; o PDF foi gerado). Desde a etapa do
+            # ciclo de vida a tela fala a língua do produto, que tem
+            # três estados -- e os dois aparecem como "Finalizada".
+            (Letter.Status.COMPLETED, "Finalizada"),
+            (Letter.Status.GENERATED, "Finalizada"),
             (Letter.Status.CANCELLED, "Cancelada"),
         ],
     )
@@ -245,6 +249,26 @@ class TestEstados:
         corpo = auth_client.get(DASHBOARD).content.decode()
 
         assert rotulo in corpo
+
+    def test_a_carta_expirada_aparece_como_expirada(self, auth_client, user):
+        """
+        O `status` no banco continua "gerada"; o que a pessoa lê é o
+        ESTADO -- e uma carta fora do prazo de validade está expirada.
+        """
+        from apps.letters import lifecycle
+        from apps.letters.models import LetterPolicy
+
+        config = lifecycle.policy()
+        config.expiration = LetterPolicy.Expiration.NA_DATA_DA_VIAGEM
+        config.save()
+        carta = _criar_carta(user, status=Letter.Status.GENERATED, data=DADOS_COMPLETOS)
+        # Viagem no passado -> já expirou.
+        carta.snapshot = {"data": {**DADOS_COMPLETOS, "stay_arrival": "2020-01-10"}}
+        carta.save(update_fields=["snapshot", "updated_at"])
+
+        corpo = auth_client.get(DASHBOARD).content.decode()
+
+        assert "Expirada" in corpo
 
     def test_cada_status_tem_etiqueta_visualmente_distinta(self, auth_client, user):
         classes = {}

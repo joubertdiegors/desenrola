@@ -65,10 +65,19 @@ def modelo(tipo):
 
 
 @pytest.fixture
-def staff(db):
-    return get_user_model().objects.create_user(
+def staff(db, permissao_backoffice):
+    """
+    Quem administra: `is_staff` E `core.access_backoffice`.
+
+    A permissao e o que abre a area administrativa desde a etapa do
+    ciclo de vida; a flag sozinha nao abre mais (ver
+    `core.views.backoffice_required`).
+    """
+    usuario = get_user_model().objects.create_user(
         email="editor@desenrola.be", password=SENHA, full_name="Editor", is_staff=True
     )
+    usuario.user_permissions.add(permissao_backoffice)
+    return get_user_model().objects.get(pk=usuario.pk)
 
 
 @pytest.fixture

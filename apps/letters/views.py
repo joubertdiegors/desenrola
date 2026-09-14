@@ -25,7 +25,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.letters import presentation, services
+from apps.letters import lifecycle, presentation, services
 from apps.letters.models import DefaultDocumentTemplateMissingError, Letter, LetterRenderError
 from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_days
 
@@ -67,6 +67,15 @@ STEP_META = {
 
 DOCUMENT_UNAVAILABLE = _(
     "O documento oficial da Carta Convite ainda não está disponível neste idioma."
+)
+
+# As tres respostas do ciclo de vida (Etapa do ciclo de vida). Texto de
+# produto, sem detalhe tecnico: a pessoa precisa saber o que pode fazer,
+# nao por que o servidor recusou.
+LETTER_NOT_EDITABLE = _("Esta carta não pode mais ser editada.")
+LETTER_EXPIRED = _("Esta carta expirou e não pode mais ser aberta.")
+LANGUAGE_LOCKED = _(
+    "O idioma não pode mais ser alterado: o documento desta carta já foi emitido."
 )
 
 
@@ -174,13 +183,25 @@ def wizard_step(request, letter_uuid, step):
     supervisão (ver Letter.objects.visible_to()), nunca de edicao aqui.
     Uma URL de outro usuario, mesmo com UUID correto, sempre 404 (nunca
     revela se a carta existe).
+
+    PRAZO DE EDICAO, NO SERVIDOR
+    ----------------------------
+    Rascunho edita sempre; carta finalizada, so enquanto a politica
+    administrativa permitir (`lifecycle.is_letter_editable`). Fora do
+    prazo a URL da etapa NAO abre -- esconder o botao no dashboard
+    nunca foi protecao. A pessoa e devolvida ao detalhe da carta com
+    um aviso, em vez de um 404 seco: a carta existe e e dela.
     """
     if step < 1 or step > services.LAST_STEP:
         raise Http404("Etapa inválida.")
 
-    letter = services.get_owned_draft(request.user, letter_uuid)
+    letter = services.get_owned_editable_letter(request.user, letter_uuid)
     if letter is None:
-        raise Http404("Carta não encontrada.")
+        propria = _get_own_letter(request.user, letter_uuid)
+        if propria is None:
+            raise Http404("Carta não encontrada.")
+        messages.error(request, LETTER_NOT_EDITABLE)
+        return redirect("letters:detail", letter_uuid=propria.uuid)
 
     # Voltar e livre; avancar so ate onde os dados sustentam. Isto e o
     # servidor decidindo -- digitar a URL da etapa 5 com a 2 incompleta
@@ -294,6 +315,27 @@ def _stay_duration_days(letter, form):
 
 
 def _handle_language_step(request, letter):
+    # O idioma escolhe o `DocumentTemplate`, e o modelo estrutural fica
+    # congelado na carta assim que ela e finalizada -- `Letter.save()`
+    # recusa troca-lo depois disso. Numa carta reaberta para edicao,
+    # portanto, o idioma NAO muda: seria pedir ao modelo algo que ele
+    # (corretamente) recusa. Os dados mudam; o documento e o mesmo.
+    if letter.document_snapshot_hash:
+        if request.method == "POST":
+            messages.error(request, LANGUAGE_LOCKED)
+            return redirect(
+                "letters:step", letter_uuid=letter.uuid, step=services.REVIEW_STEP
+            )
+        context = _steps_context(letter, services.LANGUAGE_STEP)
+        context["language_options"] = [
+            {"code": code, "available": code == letter.language,
+             **services.LANGUAGE_META[code]}
+            for code, _label in settings.LANGUAGES
+        ]
+        context["selected_language"] = letter.language
+        context["language_locked"] = True
+        return render(request, "letters/wizard.html", context)
+
     if request.method == "POST":
         if services.change_language(letter, request.POST.get("language")):
             return redirect("letters:step", letter_uuid=letter.uuid, step=services.REVIEW_STEP)
@@ -343,16 +385,20 @@ def _finalize(request, letter):
 
     letter.snapshot = services.build_snapshot(letter, request.user)
     letter.status = Letter.Status.COMPLETED
-    letter.save(update_fields=["snapshot", "status", "updated_at"])
+    campos = ["snapshot", "status", "updated_at"]
+    # O marco zero dos prazos do ciclo de vida, gravado UMA vez. Uma
+    # carta reaberta e finalizada de novo mantem o instante original --
+    # senao bastaria reeditar para esticar o proprio prazo.
+    if letter.finalized_at is None:
+        letter.finalized_at = timezone.now()
+        campos.append("finalized_at")
+    letter.save(update_fields=campos)
 
-    # Integracao com a nova arquitetura de modelos (Etapa 3.5.1). Nenhuma
-    # tela escolhe um DocumentTemplate para a carta ainda, entao isto e
-    # inerte hoje para toda carta chegando pelo assistente normal -- mas
-    # se algum caminho futuro (ou um teste) ja tiver associado um
-    # `document_template` ao rascunho, e AQUI, no mesmo instante da
-    # finalizacao, que o snapshot estrutural e congelado -- nunca depois,
-    # para nao correr atras de um modelo que ja pode ter mudado.
-    if letter.document_template_id and not letter.document_snapshot_hash:
+    # O modelo estrutural e congelado AQUI, no mesmo instante da
+    # finalizacao -- nunca depois, para nao correr atras de um modelo
+    # que ja pode ter mudado. Numa carta reaberta o hash ja existe e
+    # este passo e pulado: o documento continua sendo o mesmo.
+    if not letter.document_snapshot_hash:
         services.capture_document_template_snapshot(letter, letter.document_template)
 
     # A carta ja fica registrada (COMPLETED) aconteca o que acontecer com
@@ -388,10 +434,6 @@ def _get_own_letter(user, letter_uuid):
     None em qualquer outro caso -- carta de outra pessoa ou inexistente --
     para a view responder sempre o mesmo 404, sem revelar qual dos dois
     aconteceu (nenhuma enumeracao de UUID de terceiros).
-
-    So o dono, de proposito: `letters.view_all_letters` e permissao de
-    supervisao (ver `Letter.objects.visible_to()`), e a tela de supervisao
-    nao existe ainda. Quando existir, sera ela a usar aquele filtro.
     """
     return (
         Letter.objects.filter(uuid=letter_uuid, user=user)
@@ -400,10 +442,34 @@ def _get_own_letter(user, letter_uuid):
     )
 
 
+def _get_visible_letter(user, letter_uuid):
+    """
+    A Letter que `user` pode VER: a propria sempre; qualquer uma, se
+    tiver `letters.view_all_letters` (supervisao).
+
+    E a mesma regra de `Letter.objects.visible_to()`, usada aqui para
+    que quem supervisiona alcance tambem uma carta EXPIRADA -- a
+    expiracao tira o documento do usuario comum, nao do registro nem
+    de quem responde por ele.
+    """
+    return (
+        Letter.objects.visible_to(user)
+        .filter(uuid=letter_uuid)
+        .select_related("document_template")
+        .first()
+    )
+
+
 @login_required
 def detail(request, letter_uuid):
-    """A carta em si: dados reais e a acao que faz sentido no seu estado."""
-    letter = _get_own_letter(request.user, letter_uuid)
+    """
+    A carta em si: dados reais e a acao que faz sentido no seu estado.
+
+    Uma carta EXPIRADA continua abrindo aqui -- e o registro dela, e a
+    pessoa precisa poder ver que expirou. O que a expiracao tira e o
+    documento (ver `letter_pdf`), nao a pagina.
+    """
+    letter = _get_visible_letter(request.user, letter_uuid)
     if letter is None:
         raise Http404("Carta não encontrada.")
 
@@ -425,12 +491,25 @@ def letter_pdf(request, letter_uuid):
 
     O arquivo e privado: nunca e servido por mapeamento estatico de midia
     (isso so existe em DEBUG e nao valida ninguem). A unica porta e esta
-    view, que exige login, exige ser o dono e exige que o PDF exista --
-    qualquer outro caso e 404, sempre igual.
+    view, que exige login, exige poder ver a carta e exige que o PDF
+    exista -- qualquer outro caso e 404, sempre igual.
+
+    EXPIRACAO
+    ---------
+    Quem decide e `lifecycle.can_user_download_pdf()`, que junta a
+    regra de prazo com a autorizacao de quem pede -- a mesma funcao
+    que a supervisao consulta para saber se mostra o botao. Carta
+    expirada nao entrega uma segunda copia ao usuario comum (e o que
+    a politica existe para impedir), mas continua alcancavel por quem
+    supervisiona: o registro nao deixa de existir por ter expirado.
     """
-    letter = _get_own_letter(request.user, letter_uuid)
+    letter = _get_visible_letter(request.user, letter_uuid)
     if letter is None or not letter.pdf_file:
         raise Http404("Carta não encontrada.")
+
+    if not lifecycle.can_user_download_pdf(request.user, letter):
+        messages.error(request, LETTER_EXPIRED)
+        return redirect("letters:detail", letter_uuid=letter.uuid)
 
     try:
         arquivo = letter.pdf_file.open("rb")

@@ -46,8 +46,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from apps.content.models import Asset
-from apps.core import demo
-from apps.core.views import staff_required
+from apps.core.views import backoffice_required
 
 from . import datasources, elements, layout_schema
 from .models import DocumentTemplate, DocumentTemplateLockedError
@@ -94,7 +93,7 @@ def _lote_de_ids(quantos=IDS_POR_LOTE):
     return [servico_de_layout.novo_id() for _ in range(quantos)]
 
 
-@staff_required
+@backoffice_required
 def template_editor(request, pk):
     """A tela do editor."""
     modelo = get_object_or_404(
@@ -110,7 +109,6 @@ def template_editor(request, pk):
             "bo_title": modelo.name,
             "bo_action_icon": "ph-floppy-disk",
             "bo_action_label": _("Salvar"),
-            "admin_user": demo.ADMIN,
             "modelo": modelo,
             "editavel": editavel,
             "motivo_da_leitura": _motivo_da_leitura(modelo),
@@ -142,7 +140,7 @@ def template_editor(request, pk):
     )
 
 
-@staff_required
+@backoffice_required
 @require_POST
 def template_editor_save(request, pk):
     """
@@ -199,7 +197,7 @@ def template_editor_save(request, pk):
     )
 
 
-@staff_required
+@backoffice_required
 @require_POST
 def template_editor_ids(request, pk):
     """Outro lote de ids, para uma sessao que esgotou o primeiro."""

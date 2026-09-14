@@ -15,6 +15,7 @@ Letter e o registro de uma Carta Convite gerada por um usuario. Guarda:
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -119,6 +120,15 @@ class Letter(TimeStampedModel):
     document_snapshot_hash = models.CharField(
         _("hash do snapshot estrutural"), max_length=64, blank=True
     )
+
+    # Quando a carta foi finalizada pela PRIMEIRA vez. E o marco zero das
+    # politicas de ciclo de vida (apps.letters.lifecycle) -- por isso nao
+    # se move: reeditar e finalizar de novo NAO reinicia o prazo, senao
+    # bastaria reeditar uma vez para ter prazo infinito.
+    #
+    # Nao confundir com `snapshot["finalized_at"]`, que e a data impressa
+    # no documento e acompanha cada nova versao dele.
+    finalized_at = models.DateTimeField(_("finalizada em"), null=True, blank=True)
 
     generated_at = models.DateTimeField(_("gerada em"), null=True, blank=True)
 
@@ -277,3 +287,130 @@ class LetterAsset(models.Model):
 
     def __str__(self):
         return f"{self.letter_id} -> asset #{self.asset_id}"
+
+
+# ===========================================================================
+# Politica administrativa do ciclo de vida
+# ===========================================================================
+
+
+class LetterPolicy(TimeStampedModel):
+    """
+    As duas regras de negocio do ciclo de vida da carta, configuradas no
+    Backoffice -- um unico registro (singleton), no mesmo padrao de
+    `content.SiteSettings`.
+
+    EDITABILIDADE e EXPIRACAO sao INDEPENDENTES: uma carta pode expirar
+    sem nunca ter sido editavel, ou continuar editavel depois de expirar
+    (configuracao possivel, ainda que incomum). Cada pergunta tem a sua
+    politica e a sua quantidade.
+
+    NO BANCO, NAO NO CODIGO
+    -----------------------
+    Sao decisoes de negocio que mudam sem deploy. O calculo fica em
+    `apps.letters.lifecycle`; aqui so moram os VALORES.
+
+    ESCOPO
+    ------
+    Hoje a politica e GLOBAL: um registro vale para todas as cartas.
+    Quando for preciso variar por tipo/modelo de documento, o caminho e
+    acrescentar uma FK opcional para `DocumentTemplate` com
+    `unique` e resolver "o do modelo, senao o global" em
+    `lifecycle.policy_for()` -- as duas unicas mudancas necessarias.
+    Nao ha coluna especulativa aqui enquanto nao houver essa tela.
+
+    PADRAO = O COMPORTAMENTO DE HOJE
+    --------------------------------
+    `NAO_EDITAVEL` + `NUNCA`: e exatamente o que o sistema fazia antes
+    desta etapa. Instalar a novidade nao muda nada para ninguem ate um
+    administrador escolher outra coisa.
+    """
+
+    SINGLETON_ID = 1
+
+    class Editability(models.TextChoices):
+        NAO_EDITAVEL = "nao_editavel", _("Não pode ser editada")
+        POR_HORAS = "por_horas", _("Por algumas horas após finalizar")
+        POR_DIAS = "por_dias", _("Por alguns dias após finalizar")
+        ATE_DATA_VIAGEM = "ate_data_viagem", _("Até a data da viagem")
+        ATE_X_DIAS_APOS_CRIACAO = "ate_x_dias_apos_criacao", _("Até X dias após a criação")
+
+    class Expiration(models.TextChoices):
+        NUNCA = "nunca", _("Nunca expira")
+        NA_DATA_DA_VIAGEM = "na_data_da_viagem", _("Na data da viagem")
+        X_DIAS_ANTES_DA_VIAGEM = "x_dias_antes_da_viagem", _("X dias antes da viagem")
+        X_DIAS_DEPOIS_DA_VIAGEM = "x_dias_depois_da_viagem", _("X dias depois da viagem")
+        X_DIAS_APOS_CRIACAO = "x_dias_apos_criacao", _("X dias após a criação")
+
+    # As politicas que precisam de um numero para significar alguma coisa.
+    EDITABILIDADE_COM_QUANTIDADE = frozenset(
+        {
+            Editability.POR_HORAS,
+            Editability.POR_DIAS,
+            Editability.ATE_X_DIAS_APOS_CRIACAO,
+        }
+    )
+    EXPIRACAO_COM_QUANTIDADE = frozenset(
+        {
+            Expiration.X_DIAS_ANTES_DA_VIAGEM,
+            Expiration.X_DIAS_DEPOIS_DA_VIAGEM,
+            Expiration.X_DIAS_APOS_CRIACAO,
+        }
+    )
+
+    editability = models.CharField(
+        _("edição após finalizar"),
+        max_length=32,
+        choices=Editability.choices,
+        default=Editability.NAO_EDITAVEL,
+    )
+    editability_amount = models.PositiveIntegerField(
+        _("quantidade (edição)"),
+        default=0,
+        help_text=_("Horas ou dias, conforme a política escolhida."),
+    )
+
+    expiration = models.CharField(
+        _("expiração"),
+        max_length=32,
+        choices=Expiration.choices,
+        default=Expiration.NUNCA,
+    )
+    expiration_amount = models.PositiveIntegerField(
+        _("quantidade (expiração)"),
+        default=0,
+        help_text=_("Dias, conforme a política escolhida."),
+    )
+
+    class Meta:
+        verbose_name = _("política das cartas")
+        verbose_name_plural = _("política das cartas")
+
+    def __str__(self):
+        return str(_("Política das cartas"))
+
+    def clean(self):
+        super().clean()
+        erros = {}
+        if self.editability in self.EDITABILIDADE_COM_QUANTIDADE and not self.editability_amount:
+            erros["editability_amount"] = _(
+                "Informe um número maior que zero para esta política de edição."
+            )
+        if self.expiration in self.EXPIRACAO_COM_QUANTIDADE and not self.expiration_amount:
+            erros["expiration_amount"] = _(
+                "Informe um número maior que zero para esta política de expiração."
+            )
+        if erros:
+            raise ValidationError(erros)
+
+    def save(self, *args, **kwargs):
+        # Singleton: sempre o mesmo id, para nunca haver duas politicas
+        # "vigentes" ao mesmo tempo (mesma decisao de SiteSettings).
+        #
+        # A forma certa de obter o registro e `lifecycle.policy()`:
+        # carregar, alterar, salvar. Construir um SEGUNDO objeto e
+        # salva-lo nao cria linha nova nem sobrescreve em silencio --
+        # falha alto (IntegrityError), porque o UPDATE resultante
+        # levaria `created_at` nulo para a linha existente.
+        self.pk = self.SINGLETON_ID
+        super().save(*args, **kwargs)

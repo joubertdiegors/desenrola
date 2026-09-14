@@ -203,6 +203,16 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
     {# ------------------------------------------------------------------ #}
     {# 5 · Idioma — as 4 opções de settings.LANGUAGES.                    #}
     {# ------------------------------------------------------------------ #}
+    {% if language_locked %}
+    {% comment %}
+    Carta já emitida: o modelo estrutural do documento está congelado
+    nela, e trocar o idioma trocaria o modelo -- o que `Letter.save()`
+    recusa, com razão. Numa reedição os DADOS mudam; o documento é o
+    mesmo. O servidor recusa do mesmo jeito (ver
+    `views._handle_language_step`); isto aqui só explica.
+    {% endcomment %}
+    <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% translate "O idioma não pode mais ser alterado: o documento desta carta já foi emitido." %}</span></div>
+    {% endif %}
     <form method="post" novalidate>
       {% csrf_token %}
       <div class="wizard-card wizard-stack">
@@ -221,7 +231,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=4 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
-        <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
+        {% if language_locked %}<a class="btn btn-primary" href="{% url 'letters:step' letter_uuid=letter.uuid step=6 %}">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% else %}<button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>{% endif %}
       </div>
     </form>
 

@@ -49,69 +49,10 @@ PARTNERS = [
 # Cartas (dashboard e backoffice)
 # ---------------------------------------------------------------------------
 
-ALL_LETTERS = [
-    {
-        "id": 1,
-        "date": "01/03/2025",
-        "host": "Claire Dubois",
-        "guest": "Maria Santos da Silva",
-        "language": _("Português"),
-        "status": "generated",
-        "status_label": _("Gerada"),
-        "generated_at": "01/03/2025 · 10:24",
-        "filename": "Carta-Convite-Maria-Santos.pdf",
-    },
-    {
-        "id": 2,
-        "date": "21/08/2026",
-        "host": "Claire Dubois",
-        "guest": "João Pedro Alves",
-        "language": "Français",
-        "status": "generated",
-        "status_label": _("Gerada"),
-        "generated_at": "21/08/2026 · 10:05",
-        "filename": "Carta-Convite-Joao-Pedro.pdf",
-    },
-    {
-        "id": 3,
-        "date": "02/07/2026",
-        "host": "Claire Dubois",
-        "guest": "Ana Beatriz Rocha",
-        "language": "English",
-        "status": "draft",
-        "status_label": _("Rascunho · etapa 4"),
-        "generated_at": "",
-        "filename": "Carta-Convite-Ana-Beatriz.pdf",
-    },
-    {
-        "id": 4,
-        "date": "12/08/2026",
-        "host": "Rafael Costa",
-        "guest": "Beatriz Costa",
-        "language": "Français",
-        "status": "generated",
-        "status_label": _("Gerada"),
-        "generated_at": "12/08/2026 · 18:20",
-        "filename": "Carta-Convite-Beatriz-Costa.pdf",
-    },
-    {
-        "id": 5,
-        "date": "30/07/2026",
-        "host": "Sofia Nkemelu",
-        "guest": "Amara Nkemelu",
-        "language": _("Português"),
-        "status": "generated",
-        "generated_at": "30/07/2026 · 09:41",
-        "status_label": _("Gerada"),
-        "filename": "Carta-Convite-Amara-Nkemelu.pdf",
-    },
-]
 
 # ---------------------------------------------------------------------------
 # Area administrativa
 # ---------------------------------------------------------------------------
-
-ADMIN = {"name": "Ana Martins", "initials": "AM", "role": _("Administradora")}
 
 ADMIN_USERS = [
     {
@@ -279,5 +220,10 @@ BACKOFFICE_SECTIONS = {
     "partners": {"title": _("Parceiros"), "icon": "ph-plus", "action": _("Novo parceiro")},
     "languages": {"title": _("Idiomas"), "icon": "ph-plus", "action": _("Adicionar idioma")},
     "appearance": {"title": _("Aparência"), "icon": "ph-check", "action": _("Publicar")},
+    "letter_policy": {
+        "title": _("Política das cartas"),
+        "icon": "ph-floppy-disk",
+        "action": _("Salvar"),
+    },
     "system": {"title": _("Sistema"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
 }

@@ -4,7 +4,13 @@
 Casca da area administrativa (representacao visual; nao substitui o Django
 Admin). Desktop (2i, 2j): menu lateral de 240px. Celular (4m): barra com
 menu, titulo e acao, mais barra inferior de 4 destinos.
-Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
+Contexto: active, bo_title, bo_action_icon, bo_action_label.
+
+A identidade do rodape do menu vem de `user` (o processador de
+contexto `django.contrib.auth.context_processors.auth`), nao de um
+dicionario passado por cada view: as telas administrativas exigem
+login, entao a pessoa autenticada e sempre quem esta ali. Uma so
+fonte, e nenhuma view pode esquecer de preenche-la.
 {% endcomment %}
 
 {% block title %}{{ bo_title }} · {% translate "Admin" %} · Desenrola{% endblock %}
@@ -28,8 +34,8 @@ Contexto: active, bo_title, bo_action_icon, bo_action_label, admin_user.
     <a class="logo bo-brand" href="{% url 'backoffice:overview' %}">{% include "components/logo.html" %}</a>
     {% include "backoffice/menu.html" %}
     <div class="bo-aside-user">
-      <span class="avatar avatar-sm avatar-neutral">{{ admin_user.initials }}</span>
-      <span>{{ admin_user.name }}<small>{{ admin_user.role }}</small></span>
+      <span class="avatar avatar-sm avatar-neutral">{{ user.get_initials }}</span>
+      <span>{{ user.full_name|default:user.email }}<small>{{ user.email }}</small></span>
     </div>
   </aside>
   <div class="bo-main {% block bo_main_class %}{% endblock %}">

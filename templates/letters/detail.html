@@ -11,7 +11,10 @@ centrado, `done-*`), com dados reais e só as ações que existem de fato.
 <div class="container">
 <div class="done-wrap">
   <div class="card done-card">
-    {% if card.is_generated %}
+    {% if card.is_expired %}
+      <h1>{% translate "Carta expirada" %}</h1>
+      <p class="text-muted">{% translate "Esta carta expirou e o documento não pode mais ser aberto." %}</p>
+    {% elif card.is_generated %}
       <span class="done-icon"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
       <h1>{% translate "Sua Carta Convite está pronta!" %}</h1>
       <p class="text-muted">{% translate "Confira o documento antes de utilizá-lo." %}</p>
@@ -33,10 +36,16 @@ centrado, `done-*`), com dados reais e só as ações que existem de fato.
       {% if card.has_period %}<span class="done-info-row"><i class="ph ph-calendar-blank" aria-hidden="true"></i><strong>{% translate "Período:" %}</strong> {{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</span>{% endif %}
       <span class="done-info-row"><i class="ph ph-globe" aria-hidden="true"></i><strong>{% translate "Idioma:" %}</strong> {{ card.language_name }}</span>
       {% if card.generated_at %}<span class="done-info-row"><i class="ph ph-clock" aria-hidden="true"></i><strong>{% translate "Gerado em:" %}</strong> {{ card.generated_at|date:"d/m/Y · H:i" }}</span>{% endif %}
+      {% comment %}
+      Os prazos, quando existem. Vêm calculados de
+      `apps.letters.lifecycle` -- este template não conta dia nenhum.
+      {% endcomment %}
+      {% if card.can_edit and card.editable_until %}<span class="done-info-row"><i class="ph ph-pencil-simple" aria-hidden="true"></i><strong>{% translate "Editável até:" %}</strong> {{ card.editable_until|date:"d/m/Y · H:i" }}</span>{% endif %}
+      {% if card.expires_at and not card.is_draft %}<span class="done-info-row"><i class="ph ph-clock-countdown" aria-hidden="true"></i><strong>{% if card.is_expired %}{% translate "Expirou em:" %}{% else %}{% translate "Válida até:" %}{% endif %}</strong> {{ card.expires_at|date:"d/m/Y · H:i" }}</span>{% endif %}
     </div>
 
     <div class="done-actions">
-      {% if card.has_pdf %}
+      {% if card.can_download_pdf %}
         {% comment %}
         As duas ações levam ao MESMO PDF real -- não existe documento
         alternativo. "Ver PDF" abre em outra aba (a página atual não se
@@ -47,6 +56,9 @@ centrado, `done-*`), com dados reais e só as ações que existem de fato.
         <a class="btn btn-secondary js-print-pdf" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener" data-pdf-url="{% url 'letters:pdf' card.uuid %}"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</a>
       {% elif card.is_draft %}
         <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      {% endif %}
+      {% if card.can_edit %}
+        <a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar carta" %}</a>
       {% endif %}
       <div class="done-actions-row">
         <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-house" aria-hidden="true"></i>{% translate "Dashboard" %}</a>

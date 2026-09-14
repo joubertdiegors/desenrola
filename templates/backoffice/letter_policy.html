@@ -1,0 +1,79 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Política das cartas.
+
+Duas regras independentes, configuradas por quem administra:
+
+  EDIÇÃO    por quanto tempo uma carta finalizada ainda aceita mudança;
+  EXPIRAÇÃO quando a carta deixa de valer para o usuário.
+
+Os valores vão para `letters.LetterPolicy`. Quem faz a conta com eles é
+`apps.letters.lifecycle` -- este template não decide nada, só apresenta.
+
+Contexto: form (LetterPolicyForm), pode_editar (bool).
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Política das cartas" %}</h1>
+    <p class="text-muted">{% translate "Vale para todas as Cartas Convite do sistema." %}</p>
+  </div>
+</div>
+<p class="m-only text-muted">{% translate "Vale para todas as Cartas Convite do sistema." %}</p>
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar esta política, mas não tem permissão para alterá-la." %}</span></div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Edição depois de finalizar" %}</h3>
+      <span class="note d-only">{% translate "Enquanto valer, a pessoa pode corrigir a própria carta" %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.editability.id_for_label }}">{{ form.editability.label }}</label>
+        {{ form.editability }}
+        {% for erro in form.editability.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.editability_amount.id_for_label }}">{{ form.editability_amount.label }}</label>
+        {{ form.editability_amount }}
+        <span class="field-hint">{{ form.editability_amount.help_text }}</span>
+        {% for erro in form.editability_amount.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Expiração" %}</h3>
+      <span class="note d-only">{% translate "Depois disso a pessoa não abre mais o documento" %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.expiration.id_for_label }}">{{ form.expiration.label }}</label>
+        {{ form.expiration }}
+        {% for erro in form.expiration.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.expiration_amount.id_for_label }}">{{ form.expiration_amount.label }}</label>
+        {{ form.expiration_amount }}
+        <span class="field-hint">{{ form.expiration_amount.help_text }}</span>
+        {% for erro in form.expiration_amount.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar política" %}</button>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

@@ -1,51 +1,104 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administracao · Cartas. Sem layout proprio na v2: reusa o cabecalho e a
-tabela de cartas do dashboard, com a coluna do anfitriao. Contexto: letters.
+Administração · Cartas -- supervisão REAL, lendo o banco.
 
-Esta tela ainda e ilustrativa (dados de apps/core/demo.py). O link
-"Visualizar" apontava para a conclusao ficticia, que deixou de existir; o
-detalhe real (letters:detail) e do dono da carta, nao serve aqui. Entao a
-acao foi retirada em vez de apontar para o lugar errado -- a supervisao
-de verdade e uma etapa propria, com `Letter.objects.visible_to()`.
+Contexto: cards (LetterCard da página atual), pagina (Paginator),
+total, estados, idiomas, usuarios, filtros, politica.
+
+O estado de cada carta já vem calculado em `card.state`
+(apps/letters/lifecycle.py). Este template NÃO recalcula prazo nenhum --
+só escolhe o que mostrar. A etiqueta é a mesma do dashboard do usuário
+(`letters/_status_tag.html`): um estado, um rótulo, em toda a aplicação.
+
+SOMENTE LEITURA: a única ação é abrir o detalhe. Ver não é editar.
 {% endcomment %}
 
 {% block bo_main %}
 <div class="bo-head">
   <h1 class="d-only">{% translate "Cartas" %}</h1>
-  <span class="count d-only">{{ letters|length }}</span>
-  <div class="search-field push d-only">
-    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-    <input class="input" type="search" placeholder="{% translate 'Buscar por convidado ou anfitrião' %}" aria-label="{% translate 'Buscar por convidado ou anfitrião' %}">
-  </div>
-  <div class="search-field m-only">
-    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-    <input class="input" type="search" placeholder="{% translate 'Buscar carta' %}" aria-label="{% translate 'Buscar carta' %}">
-  </div>
+  <span class="count d-only">{{ total }}</span>
 </div>
+
+<form class="card bo-filtros" method="get">
+  <div class="field">
+    <label for="f-estado">{% translate "Estado" %}</label>
+    <select class="input" id="f-estado" name="state">
+      <option value="">{% translate "Todos" %}</option>
+      {% for valor, rotulo in estados %}
+      <option value="{{ valor }}"{% if filtros.state == valor %} selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-idioma">{% translate "Idioma" %}</label>
+    <select class="input" id="f-idioma" name="language">
+      <option value="">{% translate "Todos" %}</option>
+      {% for codigo, rotulo in idiomas %}
+      <option value="{{ codigo }}"{% if filtros.language == codigo %} selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-usuario">{% translate "Usuário" %}</label>
+    <select class="input" id="f-usuario" name="user">
+      <option value="">{% translate "Todos" %}</option>
+      {% for pessoa in usuarios %}
+      <option value="{{ pessoa.pk }}"{% if filtros.user == pessoa.pk|stringformat:"s" %} selected{% endif %}>{{ pessoa.full_name|default:pessoa.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-de">{% translate "Viagem de" %}</label>
+    <input class="input" id="f-de" type="date" name="from" value="{{ filtros.from }}">
+  </div>
+  <div class="field">
+    <label for="f-ate">{% translate "até" %}</label>
+    <input class="input" id="f-ate" type="date" name="to" value="{{ filtros.to }}">
+  </div>
+  <div class="bo-filtros-acoes">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-funnel" aria-hidden="true"></i>{% translate "Filtrar" %}</button>
+    <a class="btn btn-ghost" href="{% url 'backoffice:letters' %}">{% translate "Limpar" %}</a>
+  </div>
+</form>
+
+{% if not cards %}
+  <div class="card letters-empty">
+    <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
+    <h3>{% translate "Nenhuma carta encontrada" %}</h3>
+    <p>{% translate "Ajuste os filtros para ver outras cartas." %}</p>
+  </div>
+{% else %}
 
 <div class="card table-wrap d-only">
   <table class="table">
     <thead>
       <tr>
-        <th>{% translate "Data" %}</th>
-        <th>{% translate "Anfitrião" %}</th>
+        <th>{% translate "Referência" %}</th>
+        <th>{% translate "Usuário" %}</th>
         <th>{% translate "Convidado" %}</th>
         <th>{% translate "Idioma" %}</th>
-        <th>{% translate "Status" %}</th>
-        <th><span class="visually-hidden">{% translate "Ações" %}</span></th>
+        <th>{% translate "Criada" %}</th>
+        <th>{% translate "Finalizada" %}</th>
+        <th>{% translate "Viagem" %}</th>
+        <th>{% translate "Estado" %}</th>
+        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
       </tr>
     </thead>
     <tbody>
-      {% for letter in letters %}
+      {% for card in cards %}
       <tr>
-        <td class="cell-muted">{{ letter.date }}</td>
-        <td>{{ letter.host }}</td>
-        <td>{{ letter.guest }}</td>
-        <td>{{ letter.language }}</td>
-        <td><span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span></td>
-        <td class="right"></td>
+        <td class="cell-muted">{{ card.reference }}</td>
+        <td class="cell-name">{{ card.letter.user.full_name|default:card.letter.user.email }}</td>
+        <td>{{ card.guest_name|default:"—" }}</td>
+        <td>{{ card.language_name }}</td>
+        <td class="cell-muted">{{ card.letter.created_at|date:"d/m/Y" }}</td>
+        <td class="cell-muted">{% if card.letter.finalized_at %}{{ card.letter.finalized_at|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td class="cell-muted">{% if card.arrival %}{{ card.arrival|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td>{% include "letters/_status_tag.html" with card=card %}</td>
+        <td class="cell-actions">
+          <a class="btn btn-ghost btn-icon-sm" href="{% url 'backoffice:letter_detail' card.uuid %}" aria-label="{% translate 'Ver carta' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -53,14 +106,24 @@ de verdade e uma etapa propria, com `Letter.objects.visible_to()`.
 </div>
 
 <div class="list m-only">
-  {% for letter in letters %}
-  <div class="list-item">
+  {% for card in cards %}
+  <a class="list-item" href="{% url 'backoffice:letter_detail' card.uuid %}">
     <div class="list-body">
-      <div class="list-title">{{ letter.guest }}</div>
-      <div class="list-sub">{{ letter.date }} · {{ letter.host }}</div>
+      <div class="list-title">{{ card.guest_name|default:card.reference }}</div>
+      <div class="list-sub">{{ card.letter.user.full_name|default:card.letter.user.email }} · {{ card.letter.created_at|date:"d/m/Y" }}</div>
     </div>
-    <span class="tag {% if letter.status == 'generated' %}tag-success{% else %}tag-neutral{% endif %}">{{ letter.status_label }}</span>
-  </div>
+    {% include "letters/_status_tag.html" with card=card %}
+  </a>
   {% endfor %}
 </div>
+
+{% if pagina.has_other_pages %}
+<nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
+  {% if pagina.has_previous %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
+  <span class="text-muted">{% blocktranslate with atual=pagina.number total=pagina.paginator.num_pages %}Página {{ atual }} de {{ total }}{% endblocktranslate %}</span>
+  {% if pagina.has_next %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
+</nav>
+{% endif %}
+
+{% endif %}
 {% endblock %}

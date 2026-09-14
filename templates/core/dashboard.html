@@ -25,6 +25,23 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
     <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Começar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
   </div>
 
+  {% comment %}
+  Atalho para a área administrativa. Só aparece para quem tem
+  `core.access_backoffice` -- e esconder o link NÃO é o que protege:
+  a proteção é o `backoffice_required` em cada view de lá. Aqui é
+  apenas não oferecer uma porta que bateria na cara da pessoa.
+  {% endcomment %}
+  {% if can_access_backoffice %}
+  <a class="card dash-backoffice" href="{% url 'backoffice:overview' %}">
+    <span class="dash-backoffice-icon"><i class="ph ph-gear" aria-hidden="true"></i></span>
+    <span class="dash-backoffice-text">
+      <strong>{% translate "Backoffice" %}</strong>
+      <small>{% translate "Administração do sistema" %}</small>
+    </span>
+    <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>
     <span class="count"><span class="d-only">{% blocktranslate count counter=letters_total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters_total }}</span></span>
@@ -69,7 +86,8 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
               {% if card.is_draft %}
                 <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
               {% else %}
-                {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+                {% if card.can_download_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+                {% if card.can_edit %}<a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>{% endif %}
                 <a class="btn btn-ghost btn-icon-sm" href="{% url 'letters:detail' card.uuid %}" aria-label="{% translate 'Ver detalhes' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
               {% endif %}
             </div>
@@ -92,8 +110,10 @@ ainda nao tem acao nao aparece — nada de fingir funcionalidade.
       {% if card.is_draft %}
         <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
       {% else %}
+        {% if card.is_expired %}<p class="letter-card-note">{% translate "Esta carta expirou." %}</p>{% endif %}
         <div class="letter-card-actions">
-          {% if card.has_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+          {% if card.can_download_pdf %}<a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>{% endif %}
+          {% if card.can_edit %}<a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>{% endif %}
           <a class="btn btn-ghost" href="{% url 'letters:detail' card.uuid %}"><i class="ph ph-eye" aria-hidden="true"></i>{% translate "Detalhes" %}</a>
         </div>
       {% endif %}

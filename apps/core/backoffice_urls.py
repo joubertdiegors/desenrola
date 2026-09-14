@@ -16,6 +16,7 @@ from django.urls import path
 
 from apps.doctemplates import editor_views as doc_editor_views
 from apps.doctemplates import library_views as doc_library_views
+from apps.letters import backoffice_views as letters_backoffice
 
 from . import views
 
@@ -25,7 +26,16 @@ urlpatterns = [
     path("", views.backoffice_users, {"active": "overview"}, name="overview"),
     path("users/", views.backoffice_users, name="users"),
     path("permissions/", views.backoffice_users, {"active": "permissions"}, name="permissions"),
-    path("letters/", views.backoffice_letters, name="letters"),
+    # Supervisao de cartas: le o banco de verdade. As views ficam em
+    # apps.letters (junto do modelo que leem); so a rota mora aqui.
+    path("letters/", letters_backoffice.backoffice_letters, name="letters"),
+    path(
+        "letters/<uuid:letter_uuid>/",
+        letters_backoffice.backoffice_letter_detail,
+        name="letter_detail",
+    ),
+    # Politica do ciclo de vida das cartas (editabilidade e expiracao).
+    path("cartas/politica/", views.backoffice_letter_policy, name="letter_policy"),
     path("templates/", views.backoffice_templates, name="templates"),
     # Biblioteca dos modelos: a tela que o menu "Modelos" abre.
     path("modelos/", doc_library_views.document_library, name="document_library"),
