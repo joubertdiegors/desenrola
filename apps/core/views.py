@@ -2,10 +2,20 @@
 Views do app core.
 
 As areas do usuario exigem login; a area administrativa exige a
-permissao `core.access_backoffice`. O dashboard e a supervisao de
-cartas (esta em `apps.letters.backoffice_views`) leem o banco; a
-landing e as demais telas administrativas continuam com dados
-ficticios (apps.core.demo) ate as proximas etapas do backend.
+permissao `core.access_backoffice`, e cada tela que GRAVA cobra, alem
+dela, a permissao do que esta sendo mudado.
+
+TODAS as telas daqui leem o banco. A landing vem de `content` (Etapas B
+a D); Aparencia, Idiomas, Sistema e Parceiros mostram configuracao real
+(Etapas C, E, F e I). Nao ha mais dado ficticio em view nenhuma -- o que
+resta em `apps.core.demo` e so o titulo de cada secao no cabecalho do
+celular.
+
+SOMENTE LEITURA E UMA DECISAO, NAO UMA FALTA
+--------------------------------------------
+Aparencia e Parceiros mostram o estado e apontam para a administracao do
+Django, onde o formulario completo ja existe. Um segundo formulario aqui
+seria dois lugares para mudar a mesma coisa.
 """
 
 from functools import wraps
@@ -259,25 +269,29 @@ def backoffice_overview(request):
 
 
 @backoffice_required
-def backoffice_templates(request, active="templates"):
-    """
-    Modelos -- a unica tela que ainda e ilustrativa.
-
-    Ja NAO serve mais Conteudo (Etapa D), Idiomas (Etapa E) nem
-    Sistema (Etapa F): as tres viraram telas reais, com view propria.
-    Os cartoes delas sairam daqui junto com o que inventavam --
-    percentuais de traducao, horario de backup, retencao de dados e
-    um registro de atividade que nao existe.
-    """
-    context = _backoffice_context(active)
-    return render(request, "backoffice/templates.html", context)
-
-
-@backoffice_required
 def backoffice_partners(request):
-    """Parceiros (novo menu na v2; sem layout de tela detalhado)."""
+    """
+    Parceiros: os que a Home mostra, e em que estado cada um esta.
+
+    SOMENTE LEITURA, pela mesma razao da tela de Aparencia: quem
+    cadastra parceiro e a administracao do Django, que ja tem o
+    formulario completo (nome, descricao, imagem, endereco, ordem).
+    Um segundo formulario aqui seria dois lugares para a mesma
+    coisa.
+
+    Ate a Etapa I esta tela mostrava `demo.ADMIN_PARTNERS` -- quatro
+    parceiros escritos no codigo, que nao estavam no banco e que a
+    Home nunca mostrou -- com tres botoes que nao faziam nada.
+    """
     context = _backoffice_context("partners")
-    context["partners"] = demo.ADMIN_PARTNERS
+    context.update(
+        {
+            # `select_related`: a lista mostra se ha imagem, e sem
+            # isto cada linha custaria uma consulta a mais.
+            "parceiros": Partner.objects.select_related("logo"),
+            "url_do_admin": reverse("admin:content_partner_changelist"),
+        }
+    )
     return render(request, "backoffice/partners.html", context)
 
 

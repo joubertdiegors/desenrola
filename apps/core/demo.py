@@ -1,16 +1,24 @@
 """
-Dados ficticios da fase de apresentacao visual.
+O titulo e a acao de cada secao do backoffice, para o cabecalho do
+celular.
 
-Alimentam as telas que ainda nao tem uma fonte real: a Home/Landing e o
-backoffice. Nomes, datas e numeros vem dos layouts de referencia
-(desenrola-v2-2-desktop.html, desenrola-v2-3-tablet.html e
-desenrola-v2-4-mobile.html). Este modulo sera removido conforme cada
-parte ganhar uma implementacao real.
+O QUE SOBROU AQUI, E O QUE O NOME DO MODULO AINDA CONTA
+-------------------------------------------------------
+Este modulo nasceu com os dados ficticios da fase de apresentacao
+visual, copiados dos layouts de referencia. Nao ha mais nenhum: o
+assistente e o PDF leem o banco desde as Fases 3 e 4; o dashboard, desde
+a Fase 5; e o bloco CMS (Etapas A a I) levou o resto -- `LANGUAGES` saiu
+na Etapa E, `LANDING_STAT` e `PARTNERS` na Etapa B, `ADMIN_PARTNERS` na
+Etapa I.
 
-Ja NAO passam por aqui: o assistente de Carta Convite (dados reais desde
-a Fase 3), a geracao do PDF (Fase 4) e o dashboard do usuario, que desde
-a Fase 5 le as cartas do banco (apps/letters/presentation.py). O que
-resta e a landing e a listagem ilustrativa do backoffice.
+O que resta e `BACKOFFICE_SECTIONS`, que NAO e dado ficticio: e a
+configuracao de qual titulo o cabecalho do celular mostra em cada tela.
+Continua neste arquivo porque move-lo seria renomear modulo sem mudar
+comportamento -- o nome `demo` e o que envelheceu, nao o conteudo.
+
+`action` vazio significa "esta tela e real": `backoffice/base.html` so
+desenha o botao do cabecalho movel quando ha rotulo, justamente para nao
+existir botao que nao faz nada.
 """
 
 from django.utils.translation import gettext_lazy as _
@@ -28,30 +36,6 @@ from django.utils.translation import gettext_lazy as _
 # (administrador, gerente, operador, usuario)
 
 
-# Parceiros administrados (mesmos 4 da landing, com estado de publicacao)
-ADMIN_PARTNERS = [
-    {
-        "name": "JD-Print",
-        "description": _("Impressões 3D sob medida para suas ideias."),
-        "status": "published",
-    },
-    {
-        "name": "Confiar Viagens",
-        "description": _("Sua próxima viagem começa aqui."),
-        "status": "published",
-    },
-    {
-        "name": _("Nome do parceiro"),
-        "description": _("Descrição curta do serviço."),
-        "status": "pending_image",
-    },
-    {
-        "name": _("Nome do parceiro"),
-        "description": _("Descrição curta do serviço."),
-        "status": "pending_image",
-    },
-]
-
 # Titulo e acao da barra do celular por secao do admin
 BACKOFFICE_SECTIONS = {
     # A visao geral e real desde a etapa do gerenciador de usuarios, e
@@ -59,9 +43,12 @@ BACKOFFICE_SECTIONS = {
     # renderiza botao nenhum.
     "overview": {"title": _("Visão geral"), "icon": "", "action": ""},
     "letters": {"title": _("Cartas"), "icon": "ph-magnifying-glass", "action": _("Buscar")},
-    "templates": {"title": _("Modelos"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     "content": {"title": _("Conteúdo"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
-    "partners": {"title": _("Parceiros"), "icon": "ph-plus", "action": _("Novo parceiro")},
+    # Tela real desde a Etapa I: sem `action`, o cabecalho do celular
+    # nao renderiza botao nenhum (ver backoffice/base.html). O "Novo
+    # parceiro" que havia aqui nao cadastrava nada -- quem cadastra e a
+    # administracao do Django.
+    "partners": {"title": _("Parceiros"), "icon": "", "action": ""},
     # Tela real desde a Etapa E: sem `action`, o cabecalho do celular
     # nao renderiza botao nenhum. Nao havia idioma para "adicionar" --
     # os quatro oficiais sao fixos; o que se administra e quais deles

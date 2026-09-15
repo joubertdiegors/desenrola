@@ -19,7 +19,6 @@ from django.urls import reverse
 # daqui quando deixou de ser um marcador e virou a tela de conteudo.
 BACKOFFICE = [
     "backoffice:overview",
-    "backoffice:templates",
     "backoffice:languages",
     "backoffice:partners",
     "backoffice:appearance",

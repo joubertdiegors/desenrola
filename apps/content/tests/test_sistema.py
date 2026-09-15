@@ -510,13 +510,19 @@ class TestTela:
         for inventado in ("Backup", "Retenção de dados", "registro de atividade"):
             assert inventado not in corpo
 
-    def test_a_tela_ilustrativa_nao_mostra_mais_sistema(self, client, staff_user):
-        client.force_login(staff_user)
+    def test_a_tela_ilustrativa_deixou_de_existir(self):
+        """
+        Até a Etapa H o cartão de Sistema tinha saído de uma tela que
+        ainda existia. Na Etapa I a tela inteira saiu: era rota órfã --
+        fora de todo menu -- servindo uma maquete que duplicava esta.
 
-        corpo = client.get(reverse("backoffice:templates")).content.decode()
+        A pergunta passou a ser sobre a ROTA, que é afirmação mais forte
+        do que "aquele cartão não aparece mais".
+        """
+        from django.urls import NoReverseMatch
 
-        assert 'id="sistema"' not in corpo
-        assert "Backup 03:00" not in corpo
+        with pytest.raises(NoReverseMatch):
+            reverse("backoffice:templates")
 
 
 # ===========================================================================

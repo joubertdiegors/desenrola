@@ -1,9 +1,10 @@
 """
-Rotas da area administrativa (representacao visual).
+Rotas da area administrativa (nao substitui o Django Admin em /admin/).
 
-"Usuarios" e "Cartas" leem o banco de verdade; as demais telas ainda
-sao ilustrativas e apontam para a secao correspondente (heranca da v1),
-mantendo o item ativo correto no menu.
+Todas as telas leem o banco. A rota "templates/", que servia uma maqueta
+com um editor de conteudo falso e um cartao de modelos inventado, foi
+retirada na Etapa I: ela nao estava em menu nenhum e duplicava duas
+telas reais -- "conteudo/" (Etapa D) e "modelos/" (a biblioteca).
 
 A rota "permissions/" foi retirada: permissao agora se administra POR
 PESSOA, em usuarios/<id>/permissoes/ -- nao havia tela geral de
@@ -72,7 +73,6 @@ urlpatterns = [
         views.backoffice_email_settings_activation,
         name="email_settings_activation",
     ),
-    path("templates/", views.backoffice_templates, name="templates"),
     # Biblioteca dos modelos: a tela que o menu "Modelos" abre.
     path("modelos/", doc_library_views.document_library, name="document_library"),
     path(

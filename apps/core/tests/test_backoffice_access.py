@@ -39,7 +39,6 @@ DASHBOARD = reverse("core:dashboard")
 # por pessoa, no detalhe de cada usuário.
 ROTAS = [
     "backoffice:overview",
-    "backoffice:templates",
     "backoffice:letter_policy",
     "backoffice:partners",
     "backoffice:appearance",

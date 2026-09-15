@@ -695,10 +695,13 @@ class TestBackofficeAoRedor:
 
         assert not hasattr(demo, "LANGUAGES")
 
-    def test_a_tela_ilustrativa_nao_mostra_mais_idiomas(self, client, staff_user):
-        client.force_login(staff_user)
+    def test_a_tela_ilustrativa_deixou_de_existir(self):
+        """
+        Até a Etapa H o cartão de Idiomas tinha saído de uma tela que
+        ainda existia. Na Etapa I a tela inteira saiu: era rota órfã,
+        fora de todo menu.
+        """
+        from django.urls import NoReverseMatch
 
-        corpo = client.get(reverse("backoffice:templates")).content.decode()
-
-        assert 'id="idiomas"' not in corpo
-        assert "fallback em francês" not in corpo
+        with pytest.raises(NoReverseMatch):
+            reverse("backoffice:templates")

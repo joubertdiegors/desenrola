@@ -36,7 +36,6 @@ pytestmark = pytest.mark.django_db
 # mostram conteúdo ilustrativo.
 TELAS = [
     "backoffice:overview",
-    "backoffice:templates",
     "backoffice:document_library",
     "backoffice:letter_policy",
     "backoffice:appearance",
