@@ -33,7 +33,12 @@ def test_healthz_responde_ok(client):
     assert response.content == b"ok"
 
 
+@pytest.mark.django_db
 def test_home_publica(client):
+    """
+    O texto vem do CMS (`content.Page` "home"), semeado pela migration
+    `content.0004` -- por isso agora esta view toca o banco.
+    """
     response = client.get(reverse("core:home"))
 
     assert response.status_code == 200
@@ -69,20 +74,34 @@ def test_backoffice_nao_conflita_com_django_admin():
     assert reverse("admin:index") == "/pt/admin/"
 
 
-def test_landing_mostra_a_secao_de_parceiros(client):
-    response = client.get(reverse("core:home"))
+@pytest.mark.django_db
+def test_landing_sem_parceiros_nao_mostra_a_secao(client):
+    """
+    Os parceiros deixaram de ser quatro nomes fixos no codigo e viraram
+    cadastro (`content.Partner`). Sem nenhum cadastrado, a secao inteira
+    sai do ar -- titulo e grade vazios seriam uma promessa nao cumprida.
 
-    html = response.content.decode()
-    assert "Nossos parceiros" in html
-    assert "JD-Print" in html
+    O caso com parceiros esta em apps/content/tests/test_home.py.
+    """
+    html = client.get(reverse("core:home")).content.decode()
+
+    assert "Nossos parceiros" not in html
+    assert 'id="parceiros"' not in html
 
 
-def test_backoffice_aparencia_lista_as_cores(client, staff_user):
+@pytest.mark.django_db
+def test_backoffice_aparencia_mostra_as_cores_publicadas(client, staff_user):
+    """
+    A tela deixou de oferecer botoes que so mudavam o `localStorage` de
+    quem clicava. Agora mostra o que esta publicado, e aponta para onde
+    se edita. A cobertura completa esta em
+    apps/content/tests/test_aparencia.py.
+    """
     client.force_login(staff_user)
 
     response = client.get(reverse("backoffice:appearance"))
 
     html = response.content.decode()
     assert response.status_code == 200
-    assert 'data-theme-primary="t-roxo"' in html
-    assert 'data-theme-success="s-teal"' in html
+    assert "#1a5fd6" in html
+    assert "data-theme-primary" not in html

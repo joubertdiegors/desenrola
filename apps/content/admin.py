@@ -10,6 +10,7 @@ from .models import (
     Page,
     PageSection,
     PageSectionTranslation,
+    Partner,
     SiteSettings,
 )
 
@@ -141,6 +142,42 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return not SiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Partner)
+class PartnerAdmin(admin.ModelAdmin):
+    """
+    Gestao dos parceiros da Home.
+
+    SEM EXCLUSAO, de proposito: desativar tira o parceiro da Home na
+    hora e mantem o registro de que houve acordo. E a mesma decisao ja
+    tomada em modelos e usuarios -- e aqui nem existe a permissao
+    `delete_partner` (ver `Partner.Meta`), entao o bloqueio nao depende
+    so desta tela.
+    """
+
+    list_display = ("name", "order", "is_active", "logo", "url", "updated_at")
+    list_editable = ("order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name", "description")
+    ordering = ("order", "pk")
+    autocomplete_fields = ("logo",)
+    fieldsets = (
+        (None, {"fields": ("name", "description")}),
+        (
+            _("Como aparece na Home"),
+            {
+                "fields": ("logo", "url", "order", "is_active"),
+                "description": _(
+                    "Sem logomarca, o cartao aparece sem imagem. Sem endereco, "
+                    "ele nao e clicavel. So parceiros ativos aparecem."
+                ),
+            },
+        ),
+    )
 
     def has_delete_permission(self, request, obj=None):
         return False

@@ -448,18 +448,50 @@ class TestSemDadosFicticios:
 
 
 class TestConsultas:
-    def test_listar_mais_cartas_nao_multiplica_as_consultas(
-        self, auth_client, user, django_assert_max_num_queries
-    ):
+    def _consultas(self, auth_client):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        auth_client.get(DASHBOARD)  # aquece sessao/usuario
+        with CaptureQueriesContext(connection) as capturadas:
+            auth_client.get(DASHBOARD)
+        return len(capturadas)
+
+    def test_listar_mais_cartas_nao_multiplica_as_consultas(self, auth_client, user):
         """
         O cartao precisa do field_schema da versao do modelo (para saber
         em que etapa o rascunho parou). Sem `select_related` isso viraria
         uma consulta por carta -- este teste trava esse regresso.
+
+        Compara DUAS medicoes em vez de afirmar um numero: o total muda
+        quando o produto ganha uma leitura nova (a configuracao do site,
+        por exemplo), e um numero fixo obriga a mexer no teste a cada
+        etapa sem provar mais nada. O que importa e que o total NAO
+        cresca com a quantidade de cartas.
+        """
+        for i in range(presentation.RECENT_LIMIT):
+            _criar_carta(user, data={"guest_name": f"Convidado {i}"})
+        com_o_limite = self._consultas(auth_client)
+
+        for i in range(presentation.RECENT_LIMIT * 2):
+            _criar_carta(user, data={"guest_name": f"Extra {i}"})
+        com_o_triplo = self._consultas(auth_client)
+
+        assert com_o_limite == com_o_triplo
+
+    def test_o_dashboard_cabe_em_poucas_consultas(
+        self, auth_client, user, django_assert_max_num_queries
+    ):
+        """
+        Um teto, para uma leitura nova entrar de propósito e nao por
+        descuido: sessao, usuario, politica das cartas, as cartas, as
+        nacionalidades, a contagem, a configuracao do site e as
+        permissoes.
         """
         for i in range(presentation.RECENT_LIMIT):
             _criar_carta(user, data={"guest_name": f"Convidado {i}"})
 
         auth_client.get(DASHBOARD)  # aquece sessao/usuario
 
-        with django_assert_max_num_queries(8):
+        with django_assert_max_num_queries(9):
             auth_client.get(DASHBOARD)

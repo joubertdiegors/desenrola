@@ -6,10 +6,11 @@
    valores abaixo sao copia literal daquele arquivo. Nao ajustar sem
    atualizar a referencia.
 
-   Tema: claro, unico (a v2 nao define modo escuro). A cor principal e a
-   cor de sucesso sao parametrizaveis pelo backoffice (Aparencia) atraves
-   das classes .t-* / .s-* abaixo, aplicadas em <html> por static/js/theme.js
-   — mesmo mecanismo do arquivo de referencia.
+   Tema: claro, unico (a v2 nao define modo escuro). A cor principal
+   (--p) e a cor de sucesso (--s) sao configuraveis em
+   content.SiteSettings e injetadas pelo servidor em templates/base.html,
+   DEPOIS deste arquivo. Os valores do :root abaixo sao o padrao; todo o
+   resto deriva das duas por `color-mix`.
    ========================================================================== */
 
 :root {
@@ -46,18 +47,13 @@
   --shadow-lg: 0 20px 50px rgba(15, 44, 102, 0.16);
 }
 
-/* Temas de cor principal (backoffice · Aparencia) */
-.t-azul { --p: #1a5fd6; }
-.t-roxo { --p: #6b3fd6; }
-.t-verde { --p: #0e8a58; }
-.t-laranja { --p: #d9641b; }
-.t-grafite { --p: #2f3e55; }
+/* AS CORES CONFIGURAVEIS (--p e --s) VEM DO SERVIDOR.
+   `templates/base.html` injeta as duas a partir de content.SiteSettings,
+   depois destes arquivos, e tudo o mais deriva delas por `color-mix`.
 
-/* Temas de cor de sucesso (backoffice · Aparencia) */
-.s-verde { --s: #17a34a; }
-.s-azul { --s: #1a5fd6; }
-.s-ambar { --s: #c98a12; }
-.s-teal { --s: #0f8f8a; }
+   Aqui ficavam classes de tema (`.t-roxo`, `.s-teal`) aplicadas ao
+   <html> por um script que lia localStorage: a escolha do administrador
+   nao saia do navegador dele. */
 
 
 /* --------------------------------------------------------------------------

@@ -1,80 +1,112 @@
 {% extends "base.html" %}
-{% load i18n %}
-{% comment %}Landing (layouts 2a desktop, 3a tablet, 4a celular).{% endcomment %}
+{% load i18n humanize %}
+{% comment %}
+Landing (layouts 2a desktop, 3a tablet, 4a celular).
 
-{% block title %}Desenrola · {% translate "Gere sua Carta Convite em poucos minutos" %}{% endblock %}
+O CONTEÚDO VEM DO CMS
+---------------------
+Os textos saem de `content.Page`/`PageSection` (chave "home"), entregues
+pela view em `secoes`, indexados pela chave da seção: `secoes.hero`,
+`secoes.trust`, `secoes.partners`, `secoes.how`, `secoes.cta`. A
+ESTRUTURA -- grade, cartões, ícones de moldura, âncoras -- continua aqui,
+porque é desenho, não conteúdo.
+
+Seção ausente ou sem tradução vira dicionário vazio: o texto sai em
+branco, a página não quebra. Um banco recém-migrado já vem com as cinco
+seções (migration `content.0004`).
+
+Contexto: secoes, parceiros (Partner ativos), cartas_emitidas (int).
+{% endcomment %}
+
+{% block title %}{{ site_config.name }} · {{ secoes.hero.title }}{% endblock %}
 
 {% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
-{% url 'accounts:login' as login_url %}
 <section class="hero container">
   <div>
     <div class="tint stat-badge">
       <i class="ph-fill ph-users" aria-hidden="true"></i>
       <div class="stat-badge-row">
-        <span class="stat-badge-value">{{ landing_stat }}</span>
-        <span class="stat-badge-label">{% blocktranslate trimmed %}pessoas já utilizaram<br>nossa ferramenta{% endblocktranslate %}</span>
+        {% comment %}
+        O número conta CARTAS EMITIDAS (apps.letters.statistics), não
+        pessoas -- e o rótulo ao lado, que vem do CMS, diz isso.
+
+        `intcomma` põe o separador de milhar da locale: 999 continua
+        "999", 1000 vira "1.000". A separação é de APRESENTAÇÃO -- o
+        contexto recebe o número inteiro.
+        {% endcomment %}
+        <span class="stat-badge-value">{{ cartas_emitidas|intcomma }}</span>
+        <span class="stat-badge-label">{{ secoes.hero.badge_label|linebreaksbr }}</span>
       </div>
-      <span class="stat-badge-live d-only"><i class="ph-fill ph-circle" aria-hidden="true"></i>{% translate "Atualizado em tempo real" %}</span>
+      <span class="stat-badge-live d-only"><i class="ph-fill ph-circle" aria-hidden="true"></i>{{ secoes.hero.badge_note }}</span>
     </div>
-    <h1>{% translate "Gere sua Carta Convite em poucos minutos" %}</h1>
-    <p class="hero-lead">{% translate "Preencha os dados, escolha o idioma e receba seu documento em PDF, pronto para imprimir, assinar e utilizar." %}</p>
+    <h1>{{ secoes.hero.title }}</h1>
+    <p class="hero-lead">{{ secoes.hero.lead }}</p>
     <div class="hero-actions">
-      <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-      <span class="hero-alt d-only">{% blocktranslate trimmed %}Já tem uma conta? <a href="{{ login_url }}">Fazer login</a>{% endblocktranslate %}</span>
+      <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      <span class="hero-alt d-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></span>
     </div>
-    <p class="hero-alt m-only">{% blocktranslate trimmed %}Já tem uma conta? <a href="{{ login_url }}">Fazer login</a>{% endblocktranslate %}</p>
+    <p class="hero-alt m-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></p>
   </div>
   <div class="hero-art" aria-hidden="true">
-    <div class="img-slot"><i class="ph ph-image" aria-hidden="true"></i><span>{% translate "Foto: cidade belga (Bruxelas / Antuérpia / Gante)" %}</span></div>
+    <div class="img-slot"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
   </div>
 </section>
 
 <section class="trust-bar container">
   <div class="card trust-bar-grid">
-    <span class="trust-item"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Seus dados seguros" %}</span>
-    <span class="trust-item"><i class="ph ph-lightning" aria-hidden="true"></i>{% translate "Processo rápido" %}</span>
-    <span class="trust-item"><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Documento profissional" %}</span>
-  </div>
-</section>
-
-<section class="section container" id="parceiros">
-  <h2>{% translate "Nossos parceiros" %}</h2>
-  <p class="section-lead">{% translate "Serviços que também facilitam a sua vida na Europa." %}</p>
-  <div class="partners-grid">
-    {% for partner in partners %}
-    <a class="card partner-card" href="#">
-      <div class="img-slot partner-image"><i class="ph ph-image" aria-hidden="true"></i><span>{% translate "Imagem do parceiro" %}</span></div>
-      <div>
-        <h3>{{ partner.name }}</h3>
-        <p>{{ partner.description }}</p>
-      </div>
-      <span class="btn btn-primary">{% translate "Conheça" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>
-    </a>
+    {% for card in secoes.trust.cards %}
+    <span class="trust-item"><i class="ph {{ card.icon }}" aria-hidden="true"></i>{{ card.title }}</span>
     {% endfor %}
   </div>
 </section>
 
+{% comment %}
+Sem parceiro cadastrado a seção inteira sai do ar -- título e grade
+vazios seriam uma promessa não cumprida. O item "Parceiros" do menu
+some junto (ver components/site_nav.html), senão a âncora levaria a
+lugar nenhum.
+{% endcomment %}
+{% if parceiros %}
+<section class="section container" id="parceiros">
+  <h2>{{ secoes.partners.title }}</h2>
+  <p class="section-lead">{{ secoes.partners.lead }}</p>
+  <div class="partners-grid">
+    {% for parceiro in parceiros %}
+    {% comment %}
+    Sem endereço, a âncora fica sem `href`: continua sendo o mesmo
+    cartão, mas não é clicável nem recebe foco. Um `href="#"` que não
+    leva a lugar nenhum seria pior.
+    {% endcomment %}
+    <a class="card partner-card"{% if parceiro.url %} href="{{ parceiro.url }}" target="_blank" rel="noopener"{% endif %}>
+      {% if parceiro.logo %}
+        <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+      {% else %}
+        <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+      {% endif %}
+      <div>
+        <h3>{{ parceiro.name }}</h3>
+        {% if parceiro.description %}<p>{{ parceiro.description }}</p>{% endif %}
+      </div>
+      {% if parceiro.url %}<span class="btn btn-primary">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="section container" id="como-funciona">
-  <h2>{% translate "Como funciona?" %}</h2>
-  <p class="section-lead">{% translate "Veja como é simples gerar sua Carta Convite." %}</p>
+  <h2>{{ secoes.how.title }}</h2>
+  <p class="section-lead">{{ secoes.how.lead }}</p>
   <div class="how-grid">
+    {% for card in secoes.how.cards %}
     <div class="card how-card">
-      <span class="tint how-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-      <h3>{% translate "1. Preencha" %}</h3>
-      <p class="text-muted">{% translate "Informe os dados do convidado e da viagem. Os seus, de anfitrião, já vêm da conta." %}</p>
+      <span class="tint how-card-icon"><i class="ph {{ card.icon }}" aria-hidden="true"></i></span>
+      <h3>{{ card.title }}</h3>
+      <p class="text-muted">{{ card.text }}</p>
     </div>
-    <div class="card how-card">
-      <span class="tint how-card-icon"><i class="ph ph-globe" aria-hidden="true"></i></span>
-      <h3>{% translate "2. Escolha" %}</h3>
-      <p class="text-muted">{% translate "Selecione o idioma da sua carta (francês, inglês ou português)." %}</p>
-    </div>
-    <div class="card how-card">
-      <span class="tint how-card-icon"><i class="ph ph-download-simple" aria-hidden="true"></i></span>
-      <h3>{% translate "3. Receba" %}</h3>
-      <p class="text-muted">{% translate "Baixe o PDF na hora, pronto para imprimir e assinar." %}</p>
-    </div>
+    {% endfor %}
   </div>
 </section>
 
@@ -82,10 +114,10 @@
   <div class="cta-banner">
     <i class="ph cta-banner-icon ph-airplane-tilt" aria-hidden="true"></i>
     <div>
-      <h2>{% translate "Facilite a visita de quem você gosta." %}</h2>
-      <p>{% translate "Documentação simples, prática e sem complicação." %}</p>
+      <h2>{{ secoes.cta.title }}</h2>
+      <p>{{ secoes.cta.text }}</p>
     </div>
-    <a class="btn" href="{% url 'accounts:signup' %}">{% translate "Começar agora" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    <a class="btn" href="{% url 'accounts:signup' %}">{{ secoes.cta.button }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
     <i class="ph cta-banner-deco ph-globe-hemisphere-west" aria-hidden="true"></i>
   </div>
 </section>

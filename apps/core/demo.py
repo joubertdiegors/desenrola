@@ -16,36 +16,6 @@ resta e a landing e a listagem ilustrativa do backoffice.
 from django.utils.translation import gettext_lazy as _
 
 # ---------------------------------------------------------------------------
-# Landing
-# ---------------------------------------------------------------------------
-
-LANDING_STAT = "12.458"
-
-PARTNERS = [
-    {
-        "slot": "pt1",
-        "name": "JD-Print",
-        "description": _("Impressões 3D sob medida para suas ideias."),
-    },
-    {
-        "slot": "pt2",
-        "name": "Confiar Viagens",
-        "description": _("Sua próxima viagem começa aqui."),
-    },
-    {
-        "slot": "pt3",
-        "name": _("Nome do parceiro"),
-        "description": _("Descrição curta do serviço, em uma linha."),
-    },
-    {
-        "slot": "pt4",
-        "name": _("Nome do parceiro"),
-        "description": _("Descrição curta do serviço, em uma linha."),
-    },
-]
-
-
-# ---------------------------------------------------------------------------
 # Cartas (dashboard e backoffice)
 # ---------------------------------------------------------------------------
 
@@ -93,23 +63,6 @@ LANGUAGES = [
     },
 ]
 
-# Cores prontas para a Aparencia do backoffice. "cls" e a classe aplicada
-# no <html> (static/css/base.css); "swatch" e a classe puramente visual do
-# botao (mesma cor, sem depender de estilo inline).
-THEME_PRIMARY_SWATCHES = [
-    {"cls": "", "swatch": "swatch-azul", "name": _("Azul")},
-    {"cls": "t-roxo", "swatch": "swatch-roxo", "name": _("Roxo")},
-    {"cls": "t-verde", "swatch": "swatch-verde", "name": _("Verde")},
-    {"cls": "t-laranja", "swatch": "swatch-laranja", "name": _("Laranja")},
-    {"cls": "t-grafite", "swatch": "swatch-grafite", "name": _("Grafite")},
-]
-THEME_SUCCESS_SWATCHES = [
-    {"cls": "", "swatch": "swatch-s-verde", "name": _("Verde")},
-    {"cls": "s-teal", "swatch": "swatch-s-teal", "name": _("Teal")},
-    {"cls": "s-azul", "swatch": "swatch-s-azul", "name": _("Azul")},
-    {"cls": "s-ambar", "swatch": "swatch-s-ambar", "name": _("Âmbar")},
-]
-
 # Parceiros administrados (mesmos 4 da landing, com estado de publicacao)
 ADMIN_PARTNERS = [
     {
@@ -145,7 +98,10 @@ BACKOFFICE_SECTIONS = {
     "content": {"title": _("Conteúdo"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     "partners": {"title": _("Parceiros"), "icon": "ph-plus", "action": _("Novo parceiro")},
     "languages": {"title": _("Idiomas"), "icon": "ph-plus", "action": _("Adicionar idioma")},
-    "appearance": {"title": _("Aparência"), "icon": "ph-check", "action": _("Publicar")},
+    # Tela de leitura: sem `action`, o cabecalho do celular nao renderiza
+    # botao nenhum (ver backoffice/base.html). O "Publicar" que havia aqui
+    # nao publicava nada.
+    "appearance": {"title": _("Aparência"), "icon": "", "action": ""},
     "letter_policy": {
         "title": _("Política das cartas"),
         "icon": "ph-floppy-disk",

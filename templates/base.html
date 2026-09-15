@@ -4,20 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#1a5fd6">
-  <title>{% block title %}Desenrola{% endblock %}</title>
+  {# A cor da barra do navegador acompanha a cor principal do site. #}
+  <meta name="theme-color" content="{{ site_config.primary_color }}">
+  {# Nome, favicon e cores vem de content.SiteSettings (processador `site`). #}
+  <title>{% block title %}{{ site_config.name }}{% endblock %}</title>
+  {% if site_config.favicon %}
+  {# Sem `type`: o arquivo pode ser PNG, SVG ou ICO, e o navegador sabe. #}
+  <link rel="icon" href="{{ site_config.favicon.file.url }}">
+  {% else %}
   <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
-
-  {# Cor do tema (backoffice > Aparencia) antes do primeiro paint, para nao piscar. #}
-  <script>
-    (function () {
-      try {
-        var t = JSON.parse(localStorage.getItem("desenrola.theme") || "{}");
-        if (t.p) { document.documentElement.classList.add(t.p); }
-        if (t.s) { document.documentElement.classList.add(t.s); }
-      } catch (e) {}
-    })();
-  </script>
+  {% endif %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +25,24 @@
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/components.css' %}">
   <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+
+  {% comment %}
+  AS DUAS CORES CONFIGURAVEIS, VINDAS DO SERVIDOR.
+
+  Depois dos arquivos de estilo de proposito: `base.css` declara as
+  mesmas variaveis em `:root`, e com a mesma especificidade quem vem
+  por ultimo vence. Tudo o mais deriva daqui -- `--navy`, `--p10`,
+  `--p20` e todos os componentes saem de `--p` e `--s` por `color-mix`,
+  entao nao ha uma segunda lista de cores para manter.
+
+  Vem do servidor, ja renderizado: nao ha script, nao ha leitura de
+  localStorage e nao ha piscada entre o primeiro paint e a cor certa.
+
+  Os valores passam por `HEX_COLOR_VALIDATOR` no processador de
+  contexto -- aqui dentro de um `<style>` o escape do template nao
+  protegeria (um `}` fecharia a regra).
+  {% endcomment %}
+  <style>:root{--p:{{ site_config.primary_color }};--s:{{ site_config.success_color }};}</style>
   {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -43,7 +57,6 @@
 
   {% block footer %}{% endblock %}
 
-  <script src="{% static 'js/theme.js' %}"></script>
   <script src="{% static 'js/app.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>

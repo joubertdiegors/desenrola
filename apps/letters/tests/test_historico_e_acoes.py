@@ -258,8 +258,14 @@ class TestDataDeCriacao:
 
         corpo = auth_client.get(DASHBOARD).content.decode()
 
-        assert carta.created_at.strftime("%d/%m/%Y") in corpo
-        assert carta.updated_at.strftime("%d/%m/%Y") not in corpo
+        # `timezone.localtime`: o template mostra a data no fuso do
+        # projeto (Europe/Brussels) e `created_at` esta em UTC. Comparar
+        # com o UTC cru só funciona parte do dia -- entre 22h e meia-noite
+        # UTC as duas datas divergem, e o teste falhava conforme a hora
+        # em que a suíte rodasse.
+        local = timezone.localtime(carta.created_at)
+        assert local.strftime("%d/%m/%Y") in corpo
+        assert timezone.localtime(carta.updated_at).strftime("%d/%m/%Y") not in corpo
 
     def test_o_historico_mostra_a_data_de_criacao(self, auth_client, user):
         carta = finalizar(auth_client, user)
@@ -270,7 +276,8 @@ class TestDataDeCriacao:
 
         corpo = auth_client.get(HISTORICO).content.decode()
 
-        assert carta.created_at.strftime("%d/%m/%Y") in corpo
+        # A data exibida e a LOCAL -- ver o teste do painel, acima.
+        assert timezone.localtime(carta.created_at).strftime("%d/%m/%Y") in corpo
 
     def test_o_rotulo_da_coluna_diz_criada_em(self, auth_client, user):
         criar_rascunho(auth_client, user)

@@ -13,7 +13,8 @@ login, entao a pessoa autenticada e sempre quem esta ali. Uma so
 fonte, e nenhuma view pode esquecer de preenche-la.
 {% endcomment %}
 
-{% block title %}{{ bo_title }} · {% translate "Admin" %} · Desenrola{% endblock %}
+{% comment %}O nome do site vem de content.SiteSettings (processador `site`).{% endcomment %}
+{% block title %}{{ bo_title }} · {% translate "Admin" %} · {{ site_config.name }}{% endblock %}
 
 {% block header %}
 <header class="m-only">

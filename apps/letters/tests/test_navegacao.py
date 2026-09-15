@@ -85,11 +85,14 @@ def _fill_until(client, letter, step):
 
 
 class TestHomeELogout:
+    @pytest.mark.django_db  # a Home le o conteudo do CMS desde a Etapa B
     def test_anonimo_continua_na_home(self, client):
         response = client.get(reverse("core:home"))
 
         assert response.status_code == 200
-        assert "landing_stat" in response.context
+        # `landing_stat` era o numero fixo do `demo`. Agora a Home recebe
+        # a contagem real das cartas emitidas (apps.letters.statistics).
+        assert response.context["cartas_emitidas"] == 0
 
     def test_autenticado_na_home_vai_para_o_dashboard(self, auth_client):
         response = auth_client.get(reverse("core:home"))

@@ -8,6 +8,7 @@ que a interface faz com os prefixos de outro idioma esta em
 apps/core/tests/test_etapa41.py.
 """
 
+import pytest
 from django.conf import settings
 from django.urls import reverse
 from django.utils import translation
@@ -28,6 +29,7 @@ def test_url_recebe_prefixo_do_idioma():
             assert reverse("core:home") == f"/{codigo}/"
 
 
+@pytest.mark.django_db  # a Home le o conteudo do CMS desde a Etapa B
 def test_prefixo_de_outro_idioma_continua_atendido(client):
     """
     Nenhum prefixo pode dar 404: links antigos e indexados tem de

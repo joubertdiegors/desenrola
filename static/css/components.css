@@ -36,6 +36,12 @@
 .logo-kicker { font-size: 12px; font-weight: 600; color: var(--p); }
 .logo-name { font-size: 17px; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
 
+/* Logomarca enviada pelo administrador. A altura acompanha a da marca
+   desenhada, para a barra nao mudar de tamanho conforme ha ou nao
+   imagem cadastrada; a largura segue a proporcao do arquivo. */
+.logo-img { display: block; height: 38px; width: auto; max-width: 220px; object-fit: contain; }
+.logo-img-sm { height: 34px; max-width: 190px; }
+
 /* Tamanho reduzido (barras de navegacao) */
 .logo-sm .logo-icon { width: 34px; height: 34px; font-size: 20px; border-radius: 8px; }
 .logo-sm .logo-kicker { font-size: 11px; }
@@ -667,30 +673,22 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 
 
 /* --------------------------------------------------------------------------
-   Cor swatches (backoffice · Aparencia)
+   Amostra de cor (backoffice · Aparencia)
    -------------------------------------------------------------------------- */
 
-.swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  cursor: pointer;
-  flex: none;
-  padding: 0;
+/* Quadradinho ao lado do hexadecimal, na tela de leitura. A cor vem do
+   banco, entao e a unica que fica em `style=` -- um valor por registro
+   nao cabe em folha de estilo. `HEX_COLOR_VALIDATOR` no processador de
+   contexto garante que so `#rrggbb` chega ate aqui. */
+.cor-amostra {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  vertical-align: -3px;
+  margin-right: 6px;
 }
-.swatch.is-on { outline: 3px solid var(--p20); box-shadow: 0 0 0 2px #fff inset; }
-
-/* Cores fixas dos swatches (independentes do tema aplicado no momento) */
-.swatch-azul { background: #1a5fd6; }
-.swatch-roxo { background: #6b3fd6; }
-.swatch-verde { background: #0e8a58; }
-.swatch-laranja { background: #d9641b; }
-.swatch-grafite { background: #2f3e55; }
-.swatch-s-verde { background: #17a34a; }
-.swatch-s-teal { background: #0f8f8a; }
-.swatch-s-azul { background: #1a5fd6; }
-.swatch-s-ambar { background: #c98a12; }
 
 
 /* --------------------------------------------------------------------------

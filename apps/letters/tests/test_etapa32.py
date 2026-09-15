@@ -94,8 +94,14 @@ class TestNavbarDaHome:
 
         assert 'class="nav-desktop site-nav container"' in html
 
-    def test_todo_o_conteudo_fica_dentro_do_mesmo_container(self, client):
+    def test_todo_o_conteudo_fica_dentro_do_mesmo_container(self, client, db):
         """Logo, links e botões participam do mesmo alinhamento."""
+        # "Parceiros" só entra no menu quando há parceiro cadastrado (a
+        # âncora some junto com a seção) -- ver apps/content/tests/test_home.py.
+        from apps.content.models import Partner
+
+        Partner.objects.create(name="Parceiro de teste")
+
         html = client.get(reverse("core:home")).content.decode()
         barra = html[html.index('class="nav-desktop site-nav container"') :]
         barra = barra[: barra.index("</nav>")]

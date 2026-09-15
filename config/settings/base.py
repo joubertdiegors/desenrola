@@ -43,6 +43,10 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 DJANGO_APPS = [
     "django.contrib.admin",
+    # So pelo `intcomma`, que formata o contador da Home no separador de
+    # milhar da locale ("12.458" em portugues). Vem com o Django -- nao
+    # acrescenta dependencia nenhuma.
+    "django.contrib.humanize",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -105,6 +109,10 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.i18n",
+                # As configuracoes globais do site (content.SiteSettings)
+                # em todo template, sem cada view ter de lembrar de
+                # passa-las. Preguicoso: so consulta se o template usar.
+                "apps.content.context_processors.site",
             ],
         },
     },

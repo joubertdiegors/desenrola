@@ -179,32 +179,39 @@ class TestAsset:
 
 
 @pytest.fixture
-def home_page():
-    return Page.objects.create(key="home", name="Página inicial")
+def pagina():
+    """
+    Uma página qualquer, para testar o MODELO.
+
+    Não usa a chave "home": essa é a Home de verdade, semeada pela
+    migration `content.0004`, e criar outra com o mesmo identificador
+    esbarraria na restrição de unicidade.
+    """
+    return Page.objects.create(key="pagina-de-teste", name="Página de teste")
 
 
 class TestPage:
-    def test_criacao(self, home_page):
-        assert home_page.key == "home"
-        assert home_page.is_active is True
+    def test_criacao(self, pagina):
+        assert pagina.key == "pagina-de-teste"
+        assert pagina.is_active is True
 
-    def test_identificador_e_unico(self, home_page):
+    def test_identificador_e_unico(self, pagina):
         with pytest.raises(IntegrityError), transaction.atomic():
-            Page.objects.create(key="home", name="Outra Home")
+            Page.objects.create(key="pagina-de-teste", name="Outra")
 
-    def test_pode_ficar_inativa(self, home_page):
-        home_page.is_active = False
-        home_page.save()
-        home_page.refresh_from_db()
-        assert home_page.is_active is False
+    def test_pode_ficar_inativa(self, pagina):
+        pagina.is_active = False
+        pagina.save()
+        pagina.refresh_from_db()
+        assert pagina.is_active is False
 
 
 class TestPageSection:
-    def test_criacao(self, home_page):
-        section = PageSection.objects.create(page=home_page, kind=PageSection.Kind.HERO, order=1)
+    def test_criacao(self, pagina):
+        section = PageSection.objects.create(page=pagina, kind=PageSection.Kind.HERO, order=1)
 
-        assert section.page == home_page
-        assert section in home_page.sections.all()
+        assert section.page == pagina
+        assert section in pagina.sections.all()
 
     def test_tipos_disponiveis(self):
         assert set(PageSection.Kind.values) == {
@@ -219,29 +226,29 @@ class TestPageSection:
             "contact",
         }
 
-    def test_secoes_sao_ordenadas_pelo_campo_order(self, home_page):
-        terceira = PageSection.objects.create(page=home_page, kind=PageSection.Kind.FAQ, order=30)
-        primeira = PageSection.objects.create(page=home_page, kind=PageSection.Kind.HERO, order=10)
+    def test_secoes_sao_ordenadas_pelo_campo_order(self, pagina):
+        terceira = PageSection.objects.create(page=pagina, kind=PageSection.Kind.FAQ, order=30)
+        primeira = PageSection.objects.create(page=pagina, kind=PageSection.Kind.HERO, order=10)
         segunda = PageSection.objects.create(
-            page=home_page, kind=PageSection.Kind.FEATURES, order=20
+            page=pagina, kind=PageSection.Kind.FEATURES, order=20
         )
 
-        assert list(home_page.sections.all()) == [primeira, segunda, terceira]
+        assert list(pagina.sections.all()) == [primeira, segunda, terceira]
 
-    def test_reordenar_e_so_mudar_o_campo_order(self, home_page):
-        primeira = PageSection.objects.create(page=home_page, kind=PageSection.Kind.HERO, order=10)
+    def test_reordenar_e_so_mudar_o_campo_order(self, pagina):
+        primeira = PageSection.objects.create(page=pagina, kind=PageSection.Kind.HERO, order=10)
         segunda = PageSection.objects.create(
-            page=home_page, kind=PageSection.Kind.FEATURES, order=20
+            page=pagina, kind=PageSection.Kind.FEATURES, order=20
         )
 
         primeira.order, segunda.order = segunda.order, primeira.order
         primeira.save()
         segunda.save()
 
-        assert list(home_page.sections.values_list("pk", flat=True)) == [segunda.pk, primeira.pk]
+        assert list(pagina.sections.values_list("pk", flat=True)) == [segunda.pk, primeira.pk]
 
-    def test_pode_desativar_uma_secao_sem_remover(self, home_page):
-        section = PageSection.objects.create(page=home_page, kind=PageSection.Kind.BANNER)
+    def test_pode_desativar_uma_secao_sem_remover(self, pagina):
+        section = PageSection.objects.create(page=pagina, kind=PageSection.Kind.BANNER)
 
         section.is_active = False
         section.save()
@@ -250,19 +257,19 @@ class TestPageSection:
         assert section.is_active is False
         assert PageSection.objects.filter(pk=section.pk).exists()
 
-    def test_excluir_pagina_remove_as_secoes(self, home_page):
-        section = PageSection.objects.create(page=home_page, kind=PageSection.Kind.HERO)
+    def test_excluir_pagina_remove_as_secoes(self, pagina):
+        section = PageSection.objects.create(page=pagina, kind=PageSection.Kind.HERO)
         section_id = section.pk
 
-        home_page.delete()
+        pagina.delete()
 
         assert not PageSection.objects.filter(pk=section_id).exists()
 
 
 class TestPageSectionTranslation:
     @pytest.fixture
-    def hero_section(self, home_page):
-        return PageSection.objects.create(page=home_page, kind=PageSection.Kind.HERO, order=1)
+    def hero_section(self, pagina):
+        return PageSection.objects.create(page=pagina, kind=PageSection.Kind.HERO, order=1)
 
     def test_criacao(self, hero_section):
         translation = PageSectionTranslation.objects.create(

@@ -1,61 +1,59 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administracao · Aparencia (layouts 2i desktop e 4m celular). Escolha da
-cor principal e da cor de sucesso do site, com pre-visualizacao ao vivo:
-como as duas rodam em variaveis CSS no <html>, a troca por
-static/js/theme.js atualiza esta mesma pagina na hora.
-Contexto: primary_swatches, success_swatches.
+Administração · Aparência.
+
+ESTA TELA SÓ MOSTRA; QUEM EDITA É O DJANGO ADMIN
+------------------------------------------------
+Até esta etapa ela oferecia botões de cor que gravavam a escolha no
+`localStorage` do navegador de quem estava mexendo -- ou seja, mudavam a
+aparência para uma pessoa só, e nada era publicado. Os botões saíram.
+
+As cores agora vêm de `content.SiteSettings` e valem para todo visitante
+(ver `templates/base.html`). A tela de edição própria do Backoffice é
+etapa posterior; enquanto isso, o cadastro é pelo Django Admin, e este
+aviso diz exatamente isso em vez de fingir o contrário.
+
+Contexto: `site_config` (processador de contexto do app content).
 {% endcomment %}
 
-{% block bo_main_class %}bo-grid{% endblock %}
-
 {% block bo_main %}
-<div class="bo-head span-2 d-only">
-  <div><h1>{% translate "Aparência" %}</h1><p class="text-muted bo-appearance-note">{% translate "Defina as cores do site. Títulos, tintas claras e estados são derivados automaticamente da cor principal." %}</p></div>
-  <button type="button" class="btn btn-ghost push">{% translate "Restaurar padrão" %}</button>
-  <button type="button" class="btn btn-primary">{% translate "Publicar tema" %}</button>
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Aparência" %}</h1>
+    <p class="text-muted bo-appearance-note">{% translate "As cores do site. Títulos, tintas claras e estados são derivados automaticamente da cor principal." %}</p>
+  </div>
 </div>
-<p class="m-only text-muted">{% translate "Defina as cores do site. Títulos, tintas e estados são derivados da cor principal." %}</p>
+<p class="m-only text-muted">{% translate "As cores do site, derivadas da cor principal." %}</p>
 
-<div class="bo-panel">
-  <div class="card bo-card">
-    <div class="bo-card-head">
-      <h3>{% translate "Cor principal" %}</h3>
-      <span class="note d-only">{% translate "Botões, links, stepper, ícones" %}</span>
-    </div>
-    <div class="bo-appearance-swatches">
-      {% for swatch in primary_swatches %}
-      <button type="button" class="swatch {{ swatch.swatch }}{% if forloop.first %} is-on{% endif %}" data-theme-primary="{{ swatch.cls }}" aria-label="{{ swatch.name }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"></button>
-      {% endfor %}
-    </div>
-    <div class="notice notice-success notice-sm"><i class="ph-fill ph-check-circle" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Contraste do texto branco sobre a cor principal: <strong>5,6:1</strong> — aprovado (mín. 4,5:1).{% endblocktranslate %}</span></div>
-  </div>
+<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Esta tela mostra o que está publicado. Para alterar, use <a href="{{ url_do_admin }}">a configuração do site</a> na administração do Django.{% endblocktranslate %}</span></div>
 
-  <div class="card bo-card">
-    <div class="bo-card-head">
-      <h3>{% translate "Cor de sucesso" %}</h3>
-      <span class="note d-only">{% translate "Botão “Gerar PDF”, WhatsApp, confirmações" %}</span>
-    </div>
-    <div class="bo-appearance-swatches">
-      {% for swatch in success_swatches %}
-      <button type="button" class="swatch {{ swatch.swatch }}{% if forloop.first %} is-on{% endif %}" data-theme-success="{{ swatch.cls }}" aria-label="{{ swatch.name }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"></button>
-      {% endfor %}
-    </div>
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Cores publicadas" %}</h3>
+    <span class="note d-only">{% translate "Valem para todos os visitantes" %}</span>
   </div>
-
-  <div class="card bo-card d-only form-grid">
-    <div class="field"><label>{% translate "Fundo da página" %}</label><div class="input is-readonly"><span>#f4f7fc</span></div></div>
-    <div class="field"><label>{% translate "Cor de erro" %}</label><div class="input is-readonly"><span>#d64545</span></div></div>
-    <div class="field"><label>{% translate "Raio dos cantos" %}</label><div class="input is-readonly">{% translate "Médio (10–14px)" %}</div></div>
-    <div class="field"><label>{% translate "Logotipo" %}</label><div class="input is-readonly text-accent"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Enviar SVG / PNG" %}</div></div>
-  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Cor principal" %}</dt>
+    <dd><span class="cor-amostra" style="background:{{ site_config.primary_color }}"></span> <code>{{ site_config.primary_color }}</code></dd>
+    <dt>{% translate "Cor de sucesso" %}</dt>
+    <dd><span class="cor-amostra" style="background:{{ site_config.success_color }}"></span> <code>{{ site_config.success_color }}</code></dd>
+    <dt>{% translate "Logomarca" %}</dt>
+    <dd>{% if site_config.logo %}{% translate "Imagem cadastrada" %}{% else %}{% translate "Marca padrão (nenhuma imagem cadastrada)" %}{% endif %}</dd>
+    <dt>{% translate "Favicon" %}</dt>
+    <dd>{% if site_config.favicon %}{% translate "Imagem cadastrada" %}{% else %}{% translate "Ícone padrão" %}{% endif %}</dd>
+  </dl>
 </div>
 
 <div class="card bo-preview">
-  <div class="bo-preview-head">{% translate "Pré-visualização ao vivo" %}</div>
+  <div class="bo-preview-head">{% translate "Como fica no site" %}</div>
   <div class="bo-preview-body">
-    <a href="#">{% include "components/logo.html" with small=True %}</a>
+    {% comment %}
+    A prévia usa os mesmos componentes e as mesmas variáveis CSS do
+    site -- então mostra as cores publicadas de verdade, não uma
+    amostra à parte que pudesse discordar delas.
+    {% endcomment %}
+    <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
     <div class="stepper" aria-hidden="true">
       <span class="step-dot is-done"><i class="ph-bold ph-check"></i></span><span class="step-line is-done"></span>
       <span class="step-dot is-current">2</span><span class="step-line"></span>

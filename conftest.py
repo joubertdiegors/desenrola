@@ -10,6 +10,24 @@ SENHA = "senha-forte-123"
 
 
 @pytest.fixture(autouse=True)
+def cache_limpo():
+    """
+    Cada teste comeca e termina com o cache vazio.
+
+    O contador da Home (`apps.letters.statistics`) guarda o numero por
+    dez minutos, e o cache em memoria SOBREVIVE de um teste para o
+    outro. Sem isto, um teste que abrisse a Home deixaria o numero dele
+    guardado para o proximo -- e a suite passaria a depender da ordem
+    em que roda.
+    """
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture(autouse=True)
 def idioma_padrao():
     """
     O LocaleMiddleware ativa o idioma da URL na thread e o cliente de teste

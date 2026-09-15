@@ -99,6 +99,9 @@ body { display: flex; flex-direction: column; }
 .partner-card { padding: 12px; display: flex; flex-direction: column; gap: 12px; text-decoration: none; color: inherit; }
 .partner-card:hover { color: inherit; }
 .partner-image { height: 120px; }
+/* Logomarca de verdade no lugar da moldura: cabe inteira na mesma
+   altura, sem distorcer, e nao ultrapassa a largura do cartao. */
+img.partner-image { width: 100%; object-fit: contain; }
 .partner-card h3 { font-size: 16px; }
 .partner-card p { font-size: 13px; color: var(--mu); margin-top: 2px; }
 .partner-card .btn { min-height: 40px; font-size: 14px; align-self: flex-start; padding: 0 16px; }
@@ -709,7 +712,6 @@ body { display: flex; flex-direction: column; }
 .seg-sm .seg-opt { padding: 5px 10px; font-size: 12px; }
 
 .bo-appearance-note { font-size: 14px; margin-top: 4px; }
-.bo-appearance-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .partner-admin-row { display: flex; gap: 14px; align-items: center; padding: 16px; }
 .partner-admin-row + .partner-admin-row { border-top: 1px solid var(--bd); }

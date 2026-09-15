@@ -25,6 +25,10 @@ separadas, para nao virar um CMS generico:
     sociais, logo/favicon. Textos traduziveis (rodape, textos legais)
     ficam no ContentBlock, nao aqui.
 
+  - Partner: os parceiros exibidos na Home. Entidade propria, e nao uma
+    secao de conteudo, porque cada um tem ordem, imagem, endereco e
+    situacao proprios — coisas que um bloco de texto nao guarda.
+
 Importante (secao 6 do pedido): isto e conteudo/configuracao EDITAVEL
 PELO ADMINISTRADOR, guardado no banco. E diferente da traducao de
 interface do Django (gettext, em locale/), que continua no codigo e
@@ -389,3 +393,78 @@ class SiteSettings(TimeStampedModel):
         """Devolve a configuracao vigente, criando com os padroes se necessario."""
         obj, _created = cls.objects.get_or_create(pk=cls.SINGLETON_ID)
         return obj
+
+
+class PartnerQuerySet(models.QuerySet):
+    def publicados(self):
+        """Os que aparecem na Home: ativos, na ordem definida."""
+        return self.filter(is_active=True).select_related("logo")
+
+
+class Partner(TimeStampedModel):
+    """
+    Um parceiro exibido na secao "Nossos parceiros" da Home.
+
+    NAO SE APAGA UM PARCEIRO
+    ------------------------
+    Desativar (`is_active=False`) e o caminho, e nao e preciosismo: o
+    parceiro some da Home na hora, mas o registro continua la para quem
+    precisar saber com quem ja houve acordo. `PartnerAdmin` nao oferece
+    exclusao, e a permissao `delete` nem chega a existir (ver `Meta`) --
+    mesma decisao ja tomada em modelos e usuarios.
+
+    A IMAGEM E UM `Asset`
+    ---------------------
+    Nao ha `ImageField` aqui. O logo aponta para `content.Asset`, que e
+    onde toda imagem administravel do projeto mora -- inclusive com a
+    protecao contra substituir arquivo do qual uma carta finalizada
+    dependa. `Asset.Kind.PARTNER` existe desde a primeira migration do
+    app, a espera deste momento.
+
+    Sem logo, a Home mostra o cartao sem imagem: um parceiro recem
+    cadastrado nao pode derrubar a pagina.
+    """
+
+    name = models.CharField(_("nome"), max_length=150)
+    description = models.TextField(
+        _("descrição"),
+        blank=True,
+        help_text=_("Uma linha sobre o serviço. Aparece abaixo do nome, na Home."),
+    )
+    logo = models.ForeignKey(
+        Asset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="partners",
+        verbose_name=_("logomarca"),
+        help_text=_("Imagem do parceiro. Sem ela, o cartão aparece sem imagem."),
+    )
+    url = models.URLField(
+        _("endereço"),
+        blank=True,
+        help_text=_("Para onde o cartão leva. Em branco, o cartão não é clicável."),
+    )
+    is_active = models.BooleanField(
+        _("ativo"),
+        default=True,
+        help_text=_("Só parceiros ativos aparecem na Home."),
+    )
+    order = models.PositiveIntegerField(
+        _("ordem"), default=0, help_text=_("Menor aparece primeiro.")
+    )
+
+    objects = PartnerQuerySet.as_manager()
+
+    class Meta:
+        # Sem `delete`: a exclusao nao faz parte do fluxo (ver o docstring).
+        # Uma permissao que nao controla nada e ruido no catalogo.
+        default_permissions = ("add", "change", "view")
+        verbose_name = _("parceiro")
+        verbose_name_plural = _("parceiros")
+        # `pk` desempata: dois parceiros com a mesma ordem trocariam de
+        # lugar entre uma visita e outra sem isto.
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return self.name

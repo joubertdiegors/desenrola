@@ -1,7 +1,18 @@
 {% comment %}
-Logotipo Desenrola v2: icone contornado na cor principal + nome em duas
-linhas (kicker "Desenrola" + nome do produto "Carta Convite").
+Logotipo do site.
+
+DUAS FORMAS, UMA FONTE
+----------------------
+Com logomarca cadastrada (`content.SiteSettings.logo`, entregue pelo
+processador de contexto `site`), sai a IMAGEM. Sem ela, sai a marca
+desenhada: icone na cor principal + nome em duas linhas. O desenho
+continua sendo a identidade padrao do produto, nao um espaco vazio a
+espera de upload.
+
+O "Desenrola" do kicker e o `site_config.name` -- o mesmo nome que titula as
+paginas. "Carta Convite" e o nome do produto e continua no codigo.
+
 Uso:
   {% include "components/logo.html" %}
   {% include "components/logo.html" with small=True %}   -> barras de navegacao
-{% endcomment %}<span class="logo{% if small %} logo-sm{% endif %}"><span class="logo-icon" aria-hidden="true"><i class="ph ph-file-text"></i></span><span class="logo-text"><span class="logo-kicker">Desenrola</span><span class="logo-name">Carta Convite</span></span></span>
+{% endcomment %}{% if site_config.logo %}<img class="logo-img{% if small %} logo-img-sm{% endif %}" src="{{ site_config.logo.file.url }}" alt="{{ site_config.logo.alt_text|default:site_config.name }}">{% else %}<span class="logo{% if small %} logo-sm{% endif %}"><span class="logo-icon" aria-hidden="true"><i class="ph ph-file-text"></i></span><span class="logo-text"><span class="logo-kicker">{{ site_config.name }}</span><span class="logo-name">Carta Convite</span></span></span>{% endif %}

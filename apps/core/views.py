@@ -20,7 +20,9 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from apps.letters import lifecycle, presentation
+from apps.content import services as content
+from apps.content.models import Partner
+from apps.letters import lifecycle, presentation, statistics
 
 from . import demo, mail
 from .forms import EmailSettingsForm, EmailTestForm, LetterPolicyForm
@@ -101,6 +103,17 @@ def home(request):
     Quem ja esta logado nao tem o que fazer na pagina de apresentacao:
     vai direto para a sua area. O logout traz de volta para ca
     (LOGOUT_REDIRECT_URL), e ai a sessao ja acabou -- entao nao ha laco.
+
+    TRES FONTES REAIS, NENHUMA INVENTADA
+    ------------------------------------
+      secoes          o texto, de `content.Page` (chave "home");
+      parceiros       os `content.Partner` ativos, com o logo ja carregado;
+      cartas_emitidas quantas Cartas Convite existem de fato.
+
+    Carregadas AQUI, e nao no processador de contexto global: sao dados
+    desta pagina. O processador guarda o que vale para o site inteiro
+    (`site.name`, logo, favicon) -- enche-lo com o que so a Home usa
+    faria toda pagina pagar por isto.
     """
     if request.user.is_authenticated:
         return redirect("core:dashboard")
@@ -108,7 +121,11 @@ def home(request):
     return render(
         request,
         "core/home.html",
-        {"landing_stat": demo.LANDING_STAT, "partners": demo.PARTNERS},
+        {
+            "secoes": content.secoes_da_pagina(content.CHAVE_DA_HOME),
+            "parceiros": Partner.objects.publicados(),
+            "cartas_emitidas": statistics.cartas_emitidas(),
+        },
     )
 
 
@@ -222,21 +239,22 @@ def backoffice_partners(request):
 @backoffice_required
 def backoffice_appearance(request):
     """
-    Aparencia (layouts 2i e 4m): cor principal e cor de sucesso do site.
+    Aparencia: mostra as cores publicadas -- e diz onde se edita.
 
-    A escolha e aplicada de verdade no navegador de quem está usando o
-    backoffice (mesmo mecanismo do seletor de tema em static/js/theme.js),
-    mas ainda nao e publicada num banco para valer para todos os
-    visitantes — isso depende de um modelo de configuracao, fora do
-    escopo desta etapa.
+    SOMENTE LEITURA, de proposito. Ate aqui esta tela oferecia botoes de
+    cor que gravavam a escolha no `localStorage` do navegador de quem
+    estava mexendo: mudavam a aparencia para uma pessoa so, e nada era
+    publicado. Os botoes sairam.
+
+    As cores agora vem de `content.SiteSettings` e valem para todo
+    visitante. A tela de edicao propria do Backoffice e etapa posterior;
+    ate la o cadastro e pelo Django Admin, e a tela diz isso.
+
+    Nao passa as cores no contexto: elas ja chegam a todo template pelo
+    processador de contexto do app content (`site.primary_color`).
     """
     context = _backoffice_context("appearance")
-    context.update(
-        {
-            "primary_swatches": demo.THEME_PRIMARY_SWATCHES,
-            "success_swatches": demo.THEME_SUCCESS_SWATCHES,
-        }
-    )
+    context["url_do_admin"] = reverse("admin:content_sitesettings_changelist")
     return render(request, "backoffice/appearance.html", context)
 
 

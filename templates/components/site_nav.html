@@ -14,7 +14,11 @@ No celular: logotipo + menu.
   <nav class="nav-desktop site-nav container" aria-label="{% translate 'Navegação principal' %}">
     <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
     <a class="nav-link" href="#como-funciona">{% translate "Como funciona" %}</a>
-    <a class="nav-link" href="#parceiros">{% translate "Parceiros" %}</a>
+    {% comment %}
+    A âncora só existe quando há parceiro cadastrado (ver core/home.html):
+    o item some junto, em vez de levar a lugar nenhum.
+    {% endcomment %}
+    {% if parceiros %}<a class="nav-link" href="#parceiros">{% translate "Parceiros" %}</a>{% endif %}
     <span class="push"></span>
     <a class="btn btn-text" href="{% url 'accounts:login' %}">{% translate "Fazer login" %}</a>
     <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}</a>
@@ -27,7 +31,7 @@ No celular: logotipo + menu.
       <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
         <a class="dropdown-item" href="#como-funciona">{% translate "Como funciona" %}</a>
-        <a class="dropdown-item" href="#parceiros">{% translate "Parceiros" %}</a>
+        {% if parceiros %}<a class="dropdown-item" href="#parceiros">{% translate "Parceiros" %}</a>{% endif %}
         <div class="dropdown-sep"></div>
         <a class="dropdown-item" href="{% url 'accounts:login' %}">{% translate "Fazer login" %}</a>
         <a class="dropdown-item" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}</a>
