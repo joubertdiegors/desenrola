@@ -337,12 +337,15 @@ class TestPermissoes:
     def test_esta_etapa_nao_criou_permissao_nenhuma(self):
         """
         O catálogo do Backoffice só lista o que o produto realmente
-        confere. Enquanto não houver tela de CMS lá, não há o que listar
-        -- e uma permissão à espera de uso seria exatamente o que o
-        catálogo existe para evitar.
+        confere, e o contexto global não confere nada: ele lê
+        `SiteSettings` para todo mundo, inclusive para quem nem entrou.
+
+        Depois desta etapa existe tela de CMS, e as permissões DELA
+        estão no catálogo -- por isso a pergunta aqui é sobre
+        `sitesettings`, que continua sem nenhuma.
         """
         from apps.accounts import admin_permissions
 
         chaves = {permissao.chave for permissao in admin_permissions.todas()}
 
-        assert not any(chave.startswith("content.") for chave in chaves)
+        assert not any("sitesettings" in chave for chave in chaves)

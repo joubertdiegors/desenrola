@@ -1,0 +1,103 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Conteúdo do site · uma seção.
+
+Um campo por texto que o template da Home lê -- a lista vem de
+`content.section_schema`. Não há campo de JSON: quem escreve a Home
+preenche "Título principal", não um objeto.
+
+O que NÃO está aqui é deliberado: ícone, ordem e quantidade de cartões
+são desenho, e desenho mora no template.
+
+Contexto: secao, form, idioma, idiomas, tem_traducao, pode_editar,
+url_da_lista.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{{ secao.key|default:secao.kind }}</h1>
+    <p class="text-muted">{{ secao.get_kind_display }} · {% translate "página inicial" %}</p>
+  </div>
+  <span class="push"></span>
+  <a class="btn btn-ghost" href="{{ url_da_lista }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+
+{% comment %}
+Qual idioma está sendo escrito -- trocar aqui abre a mesma seção no
+outro idioma, sem gravar o que estiver na tela.
+{% endcomment %}
+<div class="bo-card-head">
+  <span class="card-title">{% translate "Editando em" %}</span>
+  <nav class="seg seg-sm" aria-label="{% translate 'Idioma do conteúdo' %}">
+    {% for opcao in idiomas %}
+    <a class="seg-opt{% if opcao.atual %} is-on{% endif %}" href="?idioma={{ opcao.codigo }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.nome }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if not tem_traducao %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Esta seção ainda não tem texto neste idioma. Enquanto não tiver, a Home mostra o texto do idioma padrão." %}</span></div>
+{% endif %}
+
+{% if not secao.is_active %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Esta seção está oculta: o que você escrever aqui não aparece na Home até ela ser mostrada de novo." %}</span></div>
+{% endif %}
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este conteúdo, mas não tem permissão para alterá-lo." %}</span></div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="idioma" value="{{ idioma }}">
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Textos" %}</h3>
+    </div>
+    {% for campo in form.campos_soltos %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% empty %}
+    <p class="text-muted">{% translate "Esta seção não tem textos avulsos." %}</p>
+    {% endfor %}
+  </div>
+
+  {% for grupo in form.grupos_de_itens %}
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{{ grupo.rotulo }}</h3>
+      <span class="note d-only">{% translate "A quantidade e os ícones vêm do desenho da página" %}</span>
+    </div>
+    {% for item in grupo.itens %}
+    <div class="bo-item-da-lista">
+      {% for campo in item %}
+      <div class="field">
+        <label for="{{ campo.id_for_label }}">{% if forloop.first %}{{ forloop.parentloop.counter }}. {% endif %}{{ campo.label }}</label>
+        {{ campo }}
+        {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar conteúdo" %}</button>
+    <a class="btn btn-ghost" href="{{ url_da_lista }}">{% translate "Cancelar" %}</a>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

@@ -11,13 +11,15 @@ from django.urls import reverse
 #
 # Ficam de fora as que exigem uma SEGUNDA permissao, cada uma com suite
 # propria: `backoffice:letters` (`letters.view_all_letters`, em
-# apps/letters/tests/test_backoffice_supervisao.py) e `backoffice:users`
+# apps/letters/tests/test_backoffice_supervisao.py), `backoffice:users`
 # (`accounts.manage_users`, em
-# apps/accounts/tests/test_backoffice_usuarios.py).
+# apps/accounts/tests/test_backoffice_usuarios.py) e
+# `backoffice:content` (`content.view_pagesection`, em
+# apps/content/tests/test_conteudo_da_home.py) -- esta ultima saiu
+# daqui quando deixou de ser um marcador e virou a tela de conteudo.
 BACKOFFICE = [
     "backoffice:overview",
     "backoffice:templates",
-    "backoffice:content",
     "backoffice:languages",
     "backoffice:partners",
     "backoffice:appearance",

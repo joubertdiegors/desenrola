@@ -399,11 +399,18 @@ class TestTelaDeAparencia:
 
     def test_esta_etapa_nao_criou_permissao(self):
         """
-        Sem tela de edição própria não há o que conferir -- e o catálogo
-        só lista o que o produto realmente exige.
+        A tela de aparência não edita nada: quem edita é o Django Admin,
+        com as permissões que o Django já gera para `SiteSettings`. Nada
+        de aparência entrou no catálogo.
+
+        A pergunta é sobre `sitesettings`, e não "nada de `content.`":
+        a etapa do CMS da Home pôs `view_pagesection` e
+        `change_pagesection` no catálogo, e essas duas SÃO conferidas
+        por uma tela -- que é justamente a regra do catálogo (ver
+        `apps/content/tests/test_conteudo_da_home.py`).
         """
         from apps.accounts import admin_permissions
 
         chaves = {permissao.chave for permissao in admin_permissions.todas()}
 
-        assert not any(chave.startswith("content.") for chave in chaves)
+        assert not any("sitesettings" in chave for chave in chaves)

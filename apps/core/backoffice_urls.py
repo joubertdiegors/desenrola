@@ -18,6 +18,7 @@ biblioteca de modelos do produto. A tela antiga de versionamento
 from django.urls import path
 
 from apps.accounts import backoffice_views as accounts_backoffice
+from apps.content import backoffice_views as content_backoffice
 from apps.doctemplates import editor_views as doc_editor_views
 from apps.doctemplates import library_views as doc_library_views
 from apps.letters import backoffice_views as letters_backoffice
@@ -105,7 +106,20 @@ urlpatterns = [
         doc_editor_views.template_editor_ids,
         name="template_editor_ids",
     ),
-    path("content/", views.backoffice_templates, {"active": "content"}, name="content"),
+    # Conteudo do site: as secoes da Home, editadas por tipo. As views
+    # ficam em apps.content (junto dos modelos que leem); so a rota mora
+    # aqui.
+    path("conteudo/", content_backoffice.backoffice_content, name="content"),
+    path(
+        "conteudo/<int:pk>/",
+        content_backoffice.backoffice_content_section,
+        name="content_section",
+    ),
+    path(
+        "conteudo/<int:pk>/situacao/",
+        content_backoffice.backoffice_content_activation,
+        name="content_activation",
+    ),
     path("languages/", views.backoffice_templates, {"active": "languages"}, name="languages"),
     path("partners/", views.backoffice_partners, name="partners"),
     path("appearance/", views.backoffice_appearance, name="appearance"),

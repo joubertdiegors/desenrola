@@ -127,6 +127,28 @@ CATALOGO = (
         ),
     ),
     GrupoDePermissoes(
+        titulo=_("Conteúdo do site"),
+        permissoes=(
+            PermissaoAdministrativa(
+                chave="content.view_pagesection",
+                rotulo=_("Ver o conteúdo do site"),
+                descricao=_(
+                    "Abre a tela de conteúdo e lê os textos da página inicial, "
+                    "em qualquer idioma."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_content",
+            ),
+            PermissaoAdministrativa(
+                chave="content.change_pagesection",
+                rotulo=_("Editar o conteúdo do site"),
+                descricao=_(
+                    "Altera os textos da página inicial e mostra ou oculta seções."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_content_section / _activation",
+            ),
+        ),
+    ),
+    GrupoDePermissoes(
         titulo=_("Sistema"),
         permissoes=(
             PermissaoAdministrativa(
