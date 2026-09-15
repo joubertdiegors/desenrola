@@ -110,6 +110,8 @@ class TestSuperficieExposta:
         acrescentado a tela junto.
 
         Etapa A: nome, logo, favicon. Etapa C: as duas cores do tema.
+        Etapa F: contato e redes sociais, junto com a tela de Sistema
+        que os administra e o rodapé que os mostra.
         """
         nomes = {campo.name for campo in dataclasses.fields(GlobaisDoSite)}
 
@@ -119,24 +121,31 @@ class TestSuperficieExposta:
             "favicon",
             "primary_color",
             "success_color",
+            "contact",
+            "social",
         }
 
     def test_nao_e_o_modelo_inteiro(self, configuracao):
         """
         Passar o `SiteSettings` deixaria qualquer template chegar a
         qualquer coluna -- inclusive as que ainda não têm tela.
+
+        Contato e redes passaram a ser expostos na Etapa F, mas como
+        RETRATO (`contact`, `social`), não como as colunas do modelo: o
+        template alcança o que a tela de Sistema publica, e nada mais.
         """
         resultado = globais()
 
         assert not isinstance(resultado, SiteSettings)
-        # Contato e redes sociais continuam fora: são da Etapa F.
-        for adiado in (
+        for coluna in (
             "contact_email",
             "contact_phone",
             "contact_address",
             "social_links",
+            "site_name",
+            "theme_primary_color",
         ):
-            assert not hasattr(resultado, adiado)
+            assert not hasattr(resultado, coluna)
 
     def test_e_imutavel(self, configuracao):
         """Um template não reescreve a configuração do site."""
@@ -334,18 +343,24 @@ class TestPermissoes:
         assert resposta.status_code == 200
         assert resposta.context["site_config"].name == "Desenrola Bélgica"
 
-    def test_esta_etapa_nao_criou_permissao_nenhuma(self):
+    def test_a_ponte_nao_trouxe_permissao_propria(self):
         """
-        O catálogo do Backoffice só lista o que o produto realmente
-        confere, e o contexto global não confere nada: ele lê
-        `SiteSettings` para todo mundo, inclusive para quem nem entrou.
+        O contexto global não confere nada: ele lê `SiteSettings` para
+        todo mundo, inclusive para quem nem entrou -- por isso esta
+        ponte não pediu permissão nenhuma.
 
-        Depois desta etapa existe tela de CMS, e as permissões DELA
-        estão no catálogo -- por isso a pergunta aqui é sobre
-        `sitesettings`, que continua sem nenhuma.
+        `content.change_sitesettings` está no catálogo desde a Etapa F,
+        e não é dela: é a permissão que o Django já gerava para o
+        modelo e que a administração do Django já cobrava. Quem a
+        confere é a tela de Sistema (ver
+        `apps/content/tests/test_sistema.py`), não este processador.
         """
         from apps.accounts import admin_permissions
 
-        chaves = {permissao.chave for permissao in admin_permissions.todas()}
+        de_configuracao = {
+            permissao.chave
+            for permissao in admin_permissions.todas()
+            if "sitesettings" in permissao.chave
+        }
 
-        assert not any("sitesettings" in chave for chave in chaves)
+        assert de_configuracao == {"content.change_sitesettings"}

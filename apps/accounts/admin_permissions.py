@@ -162,6 +162,16 @@ CATALOGO = (
         titulo=_("Sistema"),
         permissoes=(
             PermissaoAdministrativa(
+                chave="content.change_sitesettings",
+                rotulo=_("Alterar as configurações do site"),
+                descricao=_(
+                    "Muda o nome do site, os dados de contato e as redes sociais "
+                    "que aparecem no rodapé. Não é uma permissão nova: é a mesma "
+                    "que a administração do Django já cobrava neste cadastro."
+                ),
+                aplicada_em="core.views.backoffice_system / django admin",
+            ),
+            PermissaoAdministrativa(
                 chave="core.view_emailsettings",
                 rotulo=_("Ver a configuração de e-mail"),
                 descricao=_(

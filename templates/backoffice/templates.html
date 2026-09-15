@@ -13,8 +13,11 @@ enquanto esta pagina inteira for uma maquete.
 
 O cartao "Idiomas" saiu na Etapa E, e com ele os percentuais de traducao
 que ele exibia ("97% · 3 pendentes", "3 textos em neerlandes usam o
-fallback em frances"). Nada disso era medido em lugar nenhum. A tela
-real e `backoffice/languages.html`.
+fallback em frances"). O cartao "Sistema" saiu na Etapa F, e com ele o
+horario de backup, a retencao de dados, "ultima carta ha 4 min" e um
+"registro de atividade" que nao existe. Nada disso era medido em lugar
+nenhum. As telas reais sao `backoffice/languages.html` e
+`backoffice/system.html`.
 
 Sem contexto proprio.
 {% endcomment %}
@@ -61,12 +64,4 @@ Sem contexto proprio.
   </div>
 </div>
 
-<div class="card sys-card span-2" id="sistema">
-  <span class="card-title">{% translate "Sistema" %}</span>
-  <span class="sys-item is-ok"><i class="ph-fill ph-circle" aria-hidden="true"></i>{% translate "Geração de PDF operacional" %}</span>
-  <span class="sys-item"><i class="ph ph-clock" aria-hidden="true"></i>{% translate "Última carta há 4 min" %}</span>
-  <span class="sys-item"><i class="ph ph-database" aria-hidden="true"></i>{% translate "Backup 03:00 · ok" %}</span>
-  <span class="sys-item"><i class="ph ph-shield-check" aria-hidden="true"></i>{% translate "Retenção de dados: 24 meses" %}</span>
-  <a href="#">{% translate "Ver registro de atividade" %}</a>
-</div>
 {% endblock %}

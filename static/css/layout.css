@@ -140,6 +140,22 @@ img.partner-image { width: 100%; object-fit: contain; }
 }
 .site-footer a { color: inherit; }
 .site-footer a:hover { color: var(--p); }
+/* Redes sociais: so icone, e so as que estao configuradas (o nome vai no
+   aria-label). Herdam a cor do rodape como os demais links. */
+.site-footer-social { display: inline-flex; font-size: 18px; line-height: 1; }
+/* Telefone e endereco, quando cadastrados. Linha propria abaixo do
+   rodape para nao disputar espaco com os links. */
+.site-footer-contato {
+  padding: 0 48px 24px;
+  background: #fff;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--mu);
+}
+.site-footer-contato span { display: inline-flex; align-items: flex-start; gap: 6px; }
 .footer-lang { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -189,6 +205,7 @@ img.partner-image { width: 100%; object-fit: contain; }
   .cta-banner-deco { font-size: 150px; bottom: -50px; }
 
   .site-footer { margin-top: auto; padding: 20px 20px 30px; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .site-footer-contato { padding: 0 20px 24px; flex-direction: column; gap: 8px; }
   .footer-lang { margin-left: 0; }
 }
 

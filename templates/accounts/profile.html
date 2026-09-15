@@ -10,7 +10,7 @@ Etapa 4.1) e o idioma da CARTA e escolhido na etapa 5 do assistente.
 Comunicacoes ainda sao ilustrativas (sem campo no modelo).
 {% endcomment %}
 
-{% block title %}{% translate "Perfil" %} · Desenrola{% endblock %}
+{% block title %}{% translate "Perfil" %} · {{ site_config.name }}{% endblock %}
 
 {% block mobile_header %}
 {% if section %}
@@ -63,7 +63,7 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       {% csrf_token %}
       <button type="submit" class="btn btn-ghost btn-block"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
     </form>
-    <p class="text-muted profile-foot">Desenrola v1.0 · <a href="#">{% translate "Privacidade" %}</a></p>
+    <p class="text-muted profile-foot">{{ site_config.name }} v1.0 · <a href="#">{% translate "Privacidade" %}</a></p>
   </div>
 
   <div class="profile-main">

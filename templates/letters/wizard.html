@@ -13,7 +13,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
 `selected_language` (5), `review_sections` e `review_language` (6).
 {% endcomment %}
 
-{% block title %}{{ step_info.title }} · Desenrola{% endblock %}
+{% block title %}{{ step_info.title }} · {{ site_config.name }}{% endblock %}
 
 {% block header %}
 <header class="d-only">

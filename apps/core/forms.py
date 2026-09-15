@@ -10,6 +10,7 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
+from apps.content.models import REDES_SOCIAIS, SiteSettings
 from apps.core.models import EmailSettings
 from apps.letters.models import DocumentLanguageSettings, LetterPolicy
 
@@ -55,6 +56,100 @@ class LetterPolicyForm(forms.ModelForm):
                 "Ignorado nas políticas que não usam número."
             ),
         }
+
+
+# Prefixo dos campos de rede social no formulário: `social__facebook`.
+# Separa o nome da rede do resto do formulário sem que uma rede chamada
+# "site_name" pudesse colidir com um campo de verdade.
+PREFIXO_DA_REDE = "social__"
+
+
+class SiteSettingsForm(forms.ModelForm):
+    """
+    As configurações globais e institucionais do site.
+
+    O QUE ESTE FORMULÁRIO NÃO TEM
+    -----------------------------
+    Cor, logo e favicon (são da Aparência), SMTP (é do E-mail) e idiomas
+    do documento (são dos Idiomas). Cada um tem a sua tela; repetir o
+    campo aqui criaria dois lugares para mudar a mesma coisa, e um dia
+    eles discordariam.
+
+    AS REDES SOCIAIS NÃO SÃO UM CAMPO DE JSON
+    -----------------------------------------
+    `SiteSettings.social_links` guarda `{"facebook": "https://..."}` --
+    um campo só, em vez de uma coluna por rede. Aqui ele vira UM CAMPO
+    POR REDE CONHECIDA (`REDES_SOCIAIS`), com rótulo e validação de URL.
+    Quem administra digita um endereço, não um objeto.
+
+    Rede deixada em branco SAI do dicionário em vez de virar `""`: o
+    formato guardado continua sendo "as redes que existem", e o rodapé
+    não precisa saber distinguir vazio de ausente.
+
+    ONDE MORA CADA VALIDAÇÃO
+    ------------------------
+    O esquema da URL (`http`/`https`, nunca `javascript:`) é conferido em
+    três lugares, de propósito: aqui, no `clean()` do modelo (que vale
+    para qualquer caminho de código) e no processador de contexto (que
+    protege a página mesmo com a linha já gravada torta). O valor termina
+    dentro de um `href`, onde o autoescape do template não protege.
+    """
+
+    class Meta:
+        model = SiteSettings
+        fields = ("site_name", "contact_email", "contact_phone", "contact_address")
+        widgets = {
+            "site_name": forms.TextInput(attrs={"class": "input"}),
+            "contact_email": forms.EmailInput(attrs={"class": "input"}),
+            "contact_phone": forms.TextInput(attrs={"class": "input"}),
+            "contact_address": forms.Textarea(attrs={"class": "input", "rows": 3}),
+        }
+        labels = {
+            "site_name": _("Nome do site"),
+            "contact_email": _("E-mail de contato"),
+            "contact_phone": _("Telefone"),
+            "contact_address": _("Endereço"),
+        }
+        help_texts = {
+            "site_name": _("Aparece no topo das páginas, no rodapé e no título das abas."),
+            "contact_email": _(
+                "Vira o link \"Contato\" no rodapé. Em branco, o link não aparece."
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        guardadas = getattr(self.instance, "social_links", None) or {}
+        for chave, nome, _icone in REDES_SOCIAIS:
+            self.fields[f"{PREFIXO_DA_REDE}{chave}"] = forms.URLField(
+                label=nome,
+                required=False,
+                assume_scheme="https",
+                initial=guardadas.get(chave, "") if isinstance(guardadas, dict) else "",
+                widget=forms.URLInput(
+                    attrs={"class": "input", "placeholder": "https://"}
+                ),
+            )
+
+    def campos_das_redes(self):
+        """Os campos de rede social, na ordem declarada -- para o template."""
+        return [self[f"{PREFIXO_DA_REDE}{chave}"] for chave, _nome, _icone in REDES_SOCIAIS]
+
+    def campos_de_contato(self):
+        return [self["contact_email"], self["contact_phone"], self["contact_address"]]
+
+    def _post_clean(self):
+        # As redes precisam estar na instância ANTES do `full_clean()` do
+        # modelo -- é o que permite o modelo cobrar as suas próprias
+        # regras contando o que acabou de ser digitado, em vez de conferir
+        # o que estava gravado antes.
+        redes = {}
+        for chave, _nome, _icone in REDES_SOCIAIS:
+            url = (self.cleaned_data.get(f"{PREFIXO_DA_REDE}{chave}") or "").strip()
+            if url:
+                redes[chave] = url
+        self.instance.social_links = redes
+        super()._post_clean()
 
 
 class DocumentLanguagesForm(forms.ModelForm):

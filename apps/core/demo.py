@@ -80,5 +80,8 @@ BACKOFFICE_SECTIONS = {
     # botão nenhum (ver backoffice/base.html) -- os botões desta tela
     # ficam no corpo, onde fazem alguma coisa.
     "email_settings": {"title": _("Configuração de e-mail"), "icon": "", "action": ""},
-    "system": {"title": _("Sistema"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
+    # Tela real desde a Etapa F: sem `action`, o cabecalho do celular
+    # nao renderiza botao nenhum. O "Novo modelo" que havia aqui era
+    # copia da tela de Modelos e nao fazia nada.
+    "system": {"title": _("Sistema"), "icon": "", "action": ""},
 }

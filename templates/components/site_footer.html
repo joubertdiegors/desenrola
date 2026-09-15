@@ -1,11 +1,43 @@
 {% load i18n %}{% comment %}
-Rodape da landing (layout 2a desktop, 4a celular): marca, links e idioma.
+Rodape da landing (layout 2a desktop, 4a celular): marca, contato, redes
+e links.
+
+O QUE VEM DO CMS
+----------------
+Nome, contato e redes sociais vem de `content.SiteSettings`, pelo
+processador de contexto (`site_config`). Cada um so aparece se estiver
+configurado: contato em branco nao vira um "Contato" que nao leva a
+lugar nenhum, e rede sem endereco nao vira icone morto.
+
+O ANO E DO SERVIDOR
+-------------------
+`{% templatetag openblock %} now "Y" {% templatetag closeblock %}`, e nao
+uma configuracao: o ano corrente nao e uma decisao editorial, e um campo
+para ele so criaria uma coisa a mais para alguem esquecer de atualizar.
+Ate esta etapa estava escrito "2026" no codigo, em dois lugares.
+
+TERMOS DE USO E PRIVACIDADE
+---------------------------
+Continuam apontando para `#`: nao ha pagina, rota nem texto por tras
+deles. Nao se inventa endereco -- a tela de Sistema do Backoffice diz,
+em voz alta, que nao ha links legais configurados. Criar os textos (em
+`content.ContentBlock`, que e onde o modelo os preve) e as paginas que
+os mostram e etapa propria.
 {% endcomment %}
 <footer class="site-footer">
   <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
-  <span class="d-only">© 2026</span>
+  <span class="d-only">&copy; {% now "Y" %}</span>
   <a href="#">{% translate "Termos de uso" %}</a>
   <a href="#">{% translate "Privacidade" %}</a>
-  <a href="#" class="d-only">{% translate "Contato" %}</a>
-  <span class="m-only">Desenrola © 2026</span>
+  {% if site_config.contact.email %}<a class="d-only" href="mailto:{{ site_config.contact.email }}">{% translate "Contato" %}</a>{% endif %}
+  {% for rede in site_config.social %}
+  <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
+  {% endfor %}
+  <span class="m-only">{{ site_config.name }} &copy; {% now "Y" %}</span>
 </footer>
+{% if site_config.contact.phone or site_config.contact.address %}
+<address class="site-footer-contato">
+  {% if site_config.contact.phone %}<span><i class="ph ph-phone" aria-hidden="true"></i>{{ site_config.contact.phone }}</span>{% endif %}
+  {% if site_config.contact.address %}<span><i class="ph ph-map-pin" aria-hidden="true"></i>{{ site_config.contact.address|linebreaksbr }}</span>{% endif %}
+</address>
+{% endif %}

@@ -125,5 +125,7 @@ urlpatterns = [
     path("idiomas/", views.backoffice_languages, name="languages"),
     path("partners/", views.backoffice_partners, name="partners"),
     path("appearance/", views.backoffice_appearance, name="appearance"),
-    path("system/", views.backoffice_templates, {"active": "system"}, name="system"),
+    # Configuracoes globais do site (nome, contato, redes). Deixou de
+    # ser o placeholder na Etapa F.
+    path("sistema/", views.backoffice_system, name="system"),
 ]

@@ -397,20 +397,31 @@ class TestTelaDeAparencia:
 
         assert client.get(reverse("backoffice:appearance")).status_code == 403
 
-    def test_esta_etapa_nao_criou_permissao(self):
+    def test_esta_tela_continua_sem_editar_nada(self):
         """
-        A tela de aparência não edita nada: quem edita é o Django Admin,
-        com as permissões que o Django já gera para `SiteSettings`. Nada
-        de aparência entrou no catálogo.
+        A tela de aparência não tem formulário nem rota de gravação:
+        quem edita cor, logo e favicon é o Django Admin.
 
-        A pergunta é sobre `sitesettings`, e não "nada de `content.`":
-        a etapa do CMS da Home pôs `view_pagesection` e
-        `change_pagesection` no catálogo, e essas duas SÃO conferidas
-        por uma tela -- que é justamente a regra do catálogo (ver
-        `apps/content/tests/test_conteudo_da_home.py`).
+        O catálogo ganhou `content.change_sitesettings` na Etapa F, mas
+        por causa da tela de SISTEMA -- que de fato a confere. Aparência
+        continua sem criar permissão própria, e é isso que se afirma
+        aqui: nenhuma permissão do catálogo aponta para esta view.
         """
         from apps.accounts import admin_permissions
 
-        chaves = {permissao.chave for permissao in admin_permissions.todas()}
+        apontam_para_aparencia = [
+            permissao.chave
+            for permissao in admin_permissions.todas()
+            if "appearance" in permissao.aplicada_em
+        ]
 
-        assert not any("sitesettings" in chave for chave in chaves)
+        assert apontam_para_aparencia == []
+
+    def test_esta_tela_nao_aceita_gravacao(self, client, staff_user):
+        """Somente leitura: um POST aqui não tem o que fazer."""
+        client.force_login(staff_user)
+
+        resposta = client.post(reverse("backoffice:appearance"), {"site_name": "Invadido"})
+
+        assert resposta.status_code == 200
+        assert SiteSettings.load().site_name != "Invadido"

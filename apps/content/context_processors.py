@@ -10,20 +10,29 @@ configuração chega aos templates, em vez de cada view lembrar de passá-la
 
 O QUE ELE EXPÕE, E POR QUE SÓ ISSO
 ----------------------------------
-A identidade global do site: nome, logo, favicon e as duas cores do
-tema. Nada mais, e não por preguiça: o que um template alcança é o que
-alguém pode publicar sem pensar. Contato, redes sociais e textos legais
-ficam de fora até a etapa que de fato os apresenta, e cada uma
-acrescenta o seu campo aqui, de propósito.
+A identidade global do site: nome, logo, favicon, as duas cores do
+tema e -- desde a etapa do Sistema -- contato e redes sociais. Nada
+mais, e não por preguiça: o que um template alcança é o que alguém pode
+publicar sem pensar. Cada campo entra junto com a tela que o apresenta,
+de propósito. Textos legais continuam de fora: não há tela nem página
+que os mostre.
 
-AS CORES SÃO VALIDADAS AQUI, DE NOVO
-------------------------------------
-`HEX_COLOR_VALIDATOR` já protege o formulário, mas validador de campo só
-roda em `full_clean()` -- um `save()` programático passa por cima. E
-estas duas cores são interpoladas dentro de um `<style>`, onde o escape
-do template NÃO protege: um `}` no valor fecharia a regra e o resto
-viraria CSS. Por isso o valor é conferido no caminho de saída, e o que
-não for `#rrggbb` cai no padrão do modelo em vez de chegar à página.
+O QUE VAI PARA DENTRO DE UM ATRIBUTO É VALIDADO AQUI, DE NOVO
+-------------------------------------------------------------
+`SiteSettings.clean()` já protege o formulário, mas `clean()` só roda em
+`full_clean()` -- um `save()` programático, um `update()` cru ou uma
+linha escrita por fora passam por cima. E dois destes valores não são
+texto na página: são ATRIBUTO.
+
+  * as cores entram num `<style>`, onde um `}` fecharia a regra e o
+    resto viraria CSS;
+  * as URLs das redes entram num `href`, onde `javascript:` é execução
+    de código no navegador de quem visita.
+
+O autoescape do template não protege nenhum dos dois casos. Por isso o
+valor é conferido no caminho de SAÍDA: cor que não for `#rrggbb` cai no
+padrão do modelo, e rede desconhecida ou URL que não seja http(s)
+simplesmente não chega à página.
 
 O objeto exposto NÃO é o `SiteSettings`: é um retrato imutável com
 esses campos. Passar o modelo inteiro deixaria qualquer template chegar a
@@ -52,7 +61,36 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.utils.functional import SimpleLazyObject
 
-from .models import HEX_COLOR_VALIDATOR, Asset, SiteSettings
+from .models import (
+    HEX_COLOR_VALIDATOR,
+    REDES_SOCIAIS,
+    URL_SOCIAL_VALIDATOR,
+    Asset,
+    SiteSettings,
+)
+
+
+@dataclass(frozen=True)
+class Contato:
+    """Como falar com o site. Vazio significa "não configurado"."""
+
+    email: str
+    phone: str
+    address: str
+
+    def __bool__(self):
+        """Há algum meio de contato? O rodapé pergunta isso."""
+        return bool(self.email or self.phone or self.address)
+
+
+@dataclass(frozen=True)
+class RedeSocial:
+    """Uma rede configurada, já com o rótulo e o ícone que a desenham."""
+
+    chave: str
+    nome: str
+    icone: str
+    url: str
 
 
 @dataclass(frozen=True)
@@ -69,6 +107,8 @@ class GlobaisDoSite:
     favicon: Asset | None
     primary_color: str
     success_color: str
+    contact: Contato
+    social: tuple
 
 
 def _cor(valor, campo):
@@ -86,6 +126,31 @@ def _cor(valor, campo):
     except ValidationError:
         return padrao
     return valor
+
+
+def _redes(valor):
+    """
+    As redes configuradas, na ordem declarada em `REDES_SOCIAIS`.
+
+    Fora ficam, em silêncio: rede que ninguém declarou (não há rótulo
+    nem ícone para ela), valor vazio (não configurada) e URL que não
+    seja http(s). Não levanta -- uma linha estranha no banco não pode
+    derrubar todas as páginas do site; ela simplesmente não é desenhada.
+    """
+    if not isinstance(valor, dict):
+        return ()
+
+    configuradas = []
+    for chave, nome, icone in REDES_SOCIAIS:
+        url = valor.get(chave)
+        if not isinstance(url, str) or not url:
+            continue
+        try:
+            URL_SOCIAL_VALIDATOR(url)
+        except ValidationError:
+            continue
+        configuradas.append(RedeSocial(chave=chave, nome=str(nome), icone=icone, url=url))
+    return tuple(configuradas)
 
 
 def globais():
@@ -113,6 +178,12 @@ def globais():
         favicon=registro.favicon,
         primary_color=_cor(registro.theme_primary_color, "theme_primary_color"),
         success_color=_cor(registro.theme_success_color, "theme_success_color"),
+        contact=Contato(
+            email=registro.contact_email or "",
+            phone=registro.contact_phone or "",
+            address=registro.contact_address or "",
+        ),
+        social=_redes(registro.social_links),
     )
 
 

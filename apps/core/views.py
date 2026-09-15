@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from apps.content import services as content
-from apps.content.models import Partner
+from apps.content.models import Partner, SiteSettings
 from apps.letters import lifecycle, presentation, statistics
 from apps.letters import services as letter_services
 
@@ -31,6 +31,7 @@ from .forms import (
     EmailSettingsForm,
     EmailTestForm,
     LetterPolicyForm,
+    SiteSettingsForm,
 )
 
 # A permissao que abre a porta do Backoffice. Uma constante, e nao a
@@ -46,6 +47,12 @@ LETTER_POLICY_PERM = "letters.change_letterpolicy"
 # Backoffice pode ver quais idiomas o produto oferece; mudar a oferta
 # e um degrau acima.
 DOCUMENT_LANGUAGES_PERM = "letters.change_documentlanguagesettings"
+
+# E para as configuracoes globais do site. A permissao NAO e nova: e a
+# que o Django gera para `content.SiteSettings` e que o Django Admin ja
+# cobrava neste mesmo modelo. Reutilizar em vez de inventar uma segunda
+# e o que evita duas respostas para "quem pode mudar isto".
+SITE_SETTINGS_PERM = "content.change_sitesettings"
 
 # Configuracao de e-mail: ver e alterar sao permissoes diferentes. Quem
 # altera mexe em credencial de um servidor externo -- e o degrau mais
@@ -234,12 +241,13 @@ def backoffice_overview(request):
 @backoffice_required
 def backoffice_templates(request, active="templates"):
     """
-    Modelos e Sistema -- as duas telas que ainda sao ilustrativas.
+    Modelos -- a unica tela que ainda e ilustrativa.
 
-    Ja NAO serve mais Conteudo (Etapa D) nem Idiomas (Etapa E): as
-    duas viraram telas reais, com view propria. O cartao de idiomas
-    que morava aqui saiu junto, com os percentuais de traducao que
-    ele inventava.
+    Ja NAO serve mais Conteudo (Etapa D), Idiomas (Etapa E) nem
+    Sistema (Etapa F): as tres viraram telas reais, com view propria.
+    Os cartoes delas sairam daqui junto com o que inventavam --
+    percentuais de traducao, horario de backup, retencao de dados e
+    um registro de atividade que nao existe.
     """
     context = _backoffice_context(active)
     return render(request, "backoffice/templates.html", context)
@@ -348,6 +356,59 @@ def backoffice_languages(request):
     context = _backoffice_context("languages")
     context.update({"form": form, "pode_editar": pode_editar})
     return render(request, "backoffice/languages.html", context)
+
+
+@backoffice_required
+def backoffice_system(request):
+    """
+    Sistema: as configurações globais e institucionais do site.
+
+    Nome, contato e redes sociais -- os campos de `content.SiteSettings`
+    que até aqui só o Django Admin alcançava, e que nenhuma página
+    mostrava.
+
+    O QUE ESTA TELA NÃO ADMINISTRA
+    ------------------------------
+    Cor, logo e favicon (Aparência), SMTP (E-mail) e idiomas do
+    documento (Idiomas). Cada um tem a sua tela; a de Sistema apenas
+    APONTA para elas. Repetir o campo aqui criaria dois lugares para
+    mudar a mesma coisa, e um dia eles discordariam.
+
+    Nada de infraestrutura: não há backup, retenção, manutenção nem
+    "registro de atividade". A tela que havia aqui exibia os quatro,
+    inventados.
+
+    Entrar exige `core.access_backoffice`; SALVAR exige, além disso,
+    `content.change_sitesettings` -- a permissão que o Django Admin já
+    cobrava para este mesmo modelo, e não uma nova inventada para esta
+    tela. A checagem é no POST, no servidor, não só no botão.
+    """
+    config = SiteSettings.load()
+    pode_editar = request.user.has_perm(SITE_SETTINGS_PERM)
+
+    if request.method == "POST":
+        if not pode_editar:
+            raise PermissionDenied
+        form = SiteSettingsForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Configurações do site atualizadas."))
+            return redirect(reverse("backoffice:system"))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = SiteSettingsForm(instance=config)
+
+    context = _backoffice_context("system")
+    context.update(
+        {
+            "form": form,
+            "pode_editar": pode_editar,
+            "url_da_aparencia": reverse("backoffice:appearance"),
+            "url_dos_idiomas": reverse("backoffice:languages"),
+            "url_do_email": reverse("backoffice:email_settings"),
+        }
+    )
+    return render(request, "backoffice/system.html", context)
 
 
 # ---------------------------------------------------------------------------

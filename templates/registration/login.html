@@ -6,7 +6,7 @@ Entrar (layout 2b desktop, 4b celular). Formulario da LoginView do Django
 credencial aparecem no aviso de erro, acima dos campos.
 {% endcomment %}
 
-{% block title %}{% translate "Entrar" %} · Desenrola{% endblock %}
+{% block title %}{% translate "Entrar" %} · {{ site_config.name }}{% endblock %}
 {% block main_class %}auth-page{% endblock %}
 
 {% block header %}

@@ -51,5 +51,9 @@ lateral; no celular vai dentro do dropdown do botao de menu
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'partners' %}is-current{% endif %}" href="{% url 'backoffice:partners' %}"{% if active == "partners" %} aria-current="page"{% endif %}><i class="ph ph-handshake" aria-hidden="true"></i>{% translate "Parceiros" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %}" href="{% url 'backoffice:languages' %}"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'appearance' %}is-current{% endif %}" href="{% url 'backoffice:appearance' %}"{% if active == "appearance" %} aria-current="page"{% endif %}><i class="ph ph-palette" aria-hidden="true"></i>{% translate "Aparência" %}</a>
-  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %}" href="{% url 'backoffice:system' %}#sistema"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-gear" aria-hidden="true"></i>{% translate "Sistema" %}</a>
+  {% comment %}
+  "Sistema" abre para quem entra no Backoffice; SALVAR exige
+  `content.change_sitesettings`, conferido no servidor.
+  {% endcomment %}
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %}" href="{% url 'backoffice:system' %}"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-gear" aria-hidden="true"></i>{% translate "Sistema" %}</a>
 </nav>

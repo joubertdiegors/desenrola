@@ -41,7 +41,7 @@ imagens) — so a estrutura de dados, como pedido nesta revisao.
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, URLValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -304,6 +304,37 @@ class PageSectionTranslation(TimeStampedModel):
             )
 
 
+# As redes sociais que o site sabe apresentar.
+#
+# UMA LISTA, E NAO UMA COLUNA POR REDE: `social_links` continua sendo um
+# unico campo. O que esta tupla acrescenta e o CONJUNTO CONHECIDO -- os
+# nomes que o rodape sabe rotular e desenhar. Uma chave fora daqui nao
+# tem rotulo nem icone: guardar uma seria guardar algo que nenhuma
+# pagina consegue mostrar, e um dado que nunca aparece e um erro
+# silencioso, nao um recurso.
+#
+# Acrescentar uma rede e acrescentar uma linha aqui (e o icone
+# correspondente no rodape). Nao ha nenhuma outra lista para manter em
+# dia.
+REDES_SOCIAIS = (
+    ("facebook", _("Facebook"), "ph-facebook-logo"),
+    ("instagram", _("Instagram"), "ph-instagram-logo"),
+)
+
+# So http e https. `javascript:` num href e execucao de codigo na pagina
+# de quem visita, e o autoescape do template NAO protege contra isso --
+# o valor esta dentro do atributo, nao no texto.
+URL_SOCIAL_VALIDATOR = URLValidator(schemes=["http", "https"])
+
+
+def nome_da_rede(chave):
+    """O rotulo da rede, ou `None` se ninguem a declarou."""
+    for declarada, nome, _icone in REDES_SOCIAIS:
+        if declarada == chave:
+            return nome
+    return None
+
+
 class SiteSettings(TimeStampedModel):
     """
     Configuracoes gerais do site — um unico registro (singleton).
@@ -338,8 +369,9 @@ class SiteSettings(TimeStampedModel):
         verbose_name=_("favicon"),
     )
 
-    # {"facebook": "https://...", "instagram": "https://...", ...} — lista
-    # de redes abertas, sem precisar de uma coluna por rede social.
+    # {"facebook": "https://...", "instagram": "https://..."} — um campo
+    # so, em vez de uma coluna por rede. As chaves aceitas sao as de
+    # `REDES_SOCIAIS`; o `clean()` confere isso e o esquema da URL.
     social_links = models.JSONField(_("redes sociais"), default=dict, blank=True)
 
     # Persistem de verdade a escolha de cor que o backoffice de Aparencia
@@ -368,6 +400,7 @@ class SiteSettings(TimeStampedModel):
         super().clean()
         if not isinstance(self.social_links, dict):
             raise ValidationError({"social_links": _("Redes sociais deve ser um objeto (JSON).")})
+
         for network, url in self.social_links.items():
             if not isinstance(network, str) or not isinstance(url, str):
                 raise ValidationError(
@@ -377,6 +410,36 @@ class SiteSettings(TimeStampedModel):
                         )
                     }
                 )
+            if nome_da_rede(network) is None:
+                raise ValidationError(
+                    {
+                        "social_links": _(
+                            "Rede social desconhecida: \"%(rede)s\". O site só sabe "
+                            "apresentar: %(conhecidas)s."
+                        )
+                        % {
+                            "rede": network,
+                            "conhecidas": ", ".join(
+                                str(nome) for _chave, nome, _icone in REDES_SOCIAIS
+                            ),
+                        }
+                    }
+                )
+            # Vazio significa "nao configurada" -- e um estado legitimo, e
+            # o rodape simplesmente nao desenha o link.
+            if not url:
+                continue
+            try:
+                URL_SOCIAL_VALIDATOR(url)
+            except ValidationError:
+                raise ValidationError(
+                    {
+                        "social_links": _(
+                            "O endereço de %(rede)s precisa ser uma URL http:// ou https://."
+                        )
+                        % {"rede": nome_da_rede(network)}
+                    }
+                ) from None
 
     def save(self, *args, **kwargs):
         # Singleton: sempre o mesmo id, para nunca existir mais de uma

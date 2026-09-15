@@ -1,0 +1,124 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Sistema.
+
+As configurações globais e institucionais do site: nome, contato e redes
+sociais. São os campos de `content.SiteSettings` que até a Etapa F só o
+Django Admin alcançava, e que nenhuma página mostrava.
+
+O QUE NÃO ESTÁ AQUI, E POR QUÊ
+------------------------------
+Cor, logo e favicon (Aparência), SMTP (E-mail) e idiomas do documento
+(Idiomas). Cada um tem a sua tela, e esta apenas APONTA para elas.
+Repetir o campo aqui criaria dois lugares para mudar a mesma coisa.
+
+Nada de infraestrutura. A tela ilustrativa que havia aqui mostrava
+"Backup 03:00 · ok", "Retenção de dados: 24 meses", "Última carta há
+4 min" e um "Ver registro de atividade" que não levava a lugar nenhum.
+Nada disso era medido, e nada disso é configuração de um CMS.
+
+Contexto: form (SiteSettingsForm), pode_editar, url_da_aparencia,
+url_dos_idiomas, url_do_email.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Sistema" %}</h1>
+    <p class="text-muted">{% translate "As configurações globais do site." %}</p>
+  </div>
+</div>
+<p class="m-only text-muted">{% translate "As configurações globais do site." %}</p>
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar estas configurações, mas não tem permissão para alterá-las." %}</span></div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Identidade" %}</h3>
+      <span class="note d-only">{% translate "Como o site se chama" %}</span>
+    </div>
+    <div class="field">
+      <label for="{{ form.site_name.id_for_label }}">{{ form.site_name.label }}</label>
+      {{ form.site_name }}
+      <span class="field-hint">{{ form.site_name.help_text }}</span>
+      {% for erro in form.site_name.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Contato" %}</h3>
+      <span class="note d-only">{% translate "Em branco, não aparece no rodapé" %}</span>
+    </div>
+    {% for campo in form.campos_de_contato %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Redes sociais" %}</h3>
+      <span class="note d-only">{% translate "Rede sem endereço não aparece no rodapé" %}</span>
+    </div>
+    {% for campo in form.campos_das_redes %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+    {% for erro in form.social_links.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+  </div>
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar configurações" %}</button>
+  </div>
+  {% endif %}
+</form>
+
+{% comment %}
+Ponteiros, não formulários: o que se edita em outra tela se edita LÁ.
+{% endcomment %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Configurado em outras telas" %}</h3>
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Aparência" %}</dt>
+    <dd><a href="{{ url_da_aparencia }}">{% translate "Cores, logomarca e favicon" %}</a></dd>
+    <dt>{% translate "Idiomas" %}</dt>
+    <dd><a href="{{ url_dos_idiomas }}">{% translate "Idiomas dos documentos e idioma padrão" %}</a></dd>
+    <dt>{% translate "E-mail" %}</dt>
+    <dd><a href="{{ url_do_email }}">{% translate "Servidor de envio e remetente" %}</a></dd>
+  </dl>
+</div>
+
+{% comment %}
+Links legais: o rodapé tem "Termos de uso" e "Privacidade" apontando
+para `#`. Não há página, rota nem texto por trás deles. Esta tela diz
+isso em vez de oferecer um campo de URL que só poderia ser preenchido
+com um endereço inventado.
+{% endcomment %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Links legais" %}</h3>
+  </div>
+  <p class="text-muted">{% translate "Não há links legais configurados. Os textos de Termos de uso e Privacidade ainda não existem no sistema, e por isso não há endereço para apontar." %}</p>
+</div>
+{% endblock %}
