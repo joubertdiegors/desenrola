@@ -61,8 +61,8 @@ def _importa_prod():
 def test_prod_recusa_banco_que_nao_seja_postgres(monkeypatch):
     """Producao nao pode subir gravando num SQLite esquecido."""
     monkeypatch.setenv("DATABASE_URL", "sqlite:///naodeveria.sqlite3")
-    monkeypatch.setenv("ALLOWED_HOSTS", "desenrola.be")
-    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "https://desenrola.be")
+    monkeypatch.setenv("ALLOWED_HOSTS", "exemplo.test")
+    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "https://exemplo.test")
 
     with pytest.raises(ImproperlyConfigured):
         _importa_prod()
@@ -70,13 +70,13 @@ def test_prod_recusa_banco_que_nao_seja_postgres(monkeypatch):
 
 def test_prod_aceita_postgres_e_endurece_https(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pwd@localhost:5432/desenrola")
-    monkeypatch.setenv("ALLOWED_HOSTS", "desenrola.be,www.desenrola.be")
-    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "https://desenrola.be")
+    monkeypatch.setenv("ALLOWED_HOSTS", "exemplo.test,www.exemplo.test")
+    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "https://exemplo.test")
 
     prod = _importa_prod()
 
     assert prod.DEBUG is False
-    assert prod.ALLOWED_HOSTS == ["desenrola.be", "www.desenrola.be"]
+    assert prod.ALLOWED_HOSTS == ["exemplo.test", "www.exemplo.test"]
     assert "postgresql" in prod.DATABASES["default"]["ENGINE"]
     assert prod.SESSION_COOKIE_SECURE is True
     assert prod.CSRF_COOKIE_SECURE is True

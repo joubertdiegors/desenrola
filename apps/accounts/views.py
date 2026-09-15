@@ -19,6 +19,8 @@ from django.utils.translation import gettext_lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 
+from apps.content.context_processors import globais
+
 from .forms import LoginForm, PasswordChangeForm, ProfileForm, SetPasswordForm, SignupForm
 
 # Secoes do perfil e o titulo usado no cabecalho do celular.
@@ -143,10 +145,50 @@ def profile(request):
 
 
 class PasswordResetView(auth_views.PasswordResetView):
+    """
+    Pedir uma nova senha.
+
+    O NOME DO SITE CHEGA AO E-MAIL POR AQUI, E NAO POR PROCESSADOR DE
+    CONTEXTO
+    ----------------------------------------------------------------
+    O corpo e o assunto sao renderizados por `render_to_string` DENTRO
+    de `PasswordResetForm.save()` -- sem request. Processador de
+    contexto so roda com request, entao `site_config` simplesmente nao
+    existe la: usa-lo deixaria o nome VAZIO no e-mail, em silencio.
+
+    A ponte certa e `extra_email_context`, que o proprio Django preve
+    para isto: a view TEM request, le o nome aqui e o entrega pronto no
+    contexto do template. E o mesmo caminho por onde `domain` e
+    `protocol` ja chegam.
+
+    O ENDERECO NAO PRECISA DE CONFIGURACAO NOVA
+    -------------------------------------------
+    `domain` e `protocol` sao calculados por `PasswordResetForm.save()`
+    a partir do request (`get_host()` e `is_secure()`) ANTES da
+    renderizacao. Em producao isso da o dominio real, porque
+    `ALLOWED_HOSTS` vem do ambiente, e da `https`, porque
+    `SECURE_PROXY_SSL_HEADER` esta configurado (ver `settings/prod.py`).
+    Uma constante `SITE_URL` seria uma segunda fonte de verdade para
+    algo que o Django ja deriva certo.
+    """
+
     template_name = "accounts/password_reset.html"
     email_template_name = "accounts/password_reset_email.txt"
     subject_template_name = "accounts/password_reset_subject.txt"
     success_url = reverse_lazy("accounts:password_reset_done")
+
+    def form_valid(self, form):
+        # No `form_valid`, e nao como atributo de classe: um atributo
+        # seria avaliado no import, quando ainda nao ha banco para ler.
+        #
+        # `globais()` e nao `SiteSettings.load()`: aquele LE sem criar
+        # linha. Pedir uma senha nova nao e motivo para escrever no
+        # banco de configuracao.
+        self.extra_email_context = {
+            **(self.extra_email_context or {}),
+            "nome_do_site": globais().name,
+        }
+        return super().form_valid(form)
 
 
 class PasswordResetDoneView(auth_views.PasswordResetDoneView):
