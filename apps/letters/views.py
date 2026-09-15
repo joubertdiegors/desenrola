@@ -121,14 +121,14 @@ def start(request):
     Gerar Carta Convite: apresenta a etapa 1 (GET) e cria o rascunho no
     envio (POST).
 
-    O idioma inicial e sempre `services.IDIOMA_PADRAO_DA_CARTA` — uma
-    decisao de produto, nao o idioma da interface (que e so portugues
-    desde a Etapa 4.1). Ele decide qual documento oficial sera usado e
-    pode ser trocado na etapa 5. Se aquele idioma ainda nao tem documento
-    publicado, o fluxo para aqui com um aviso claro — nunca usa o
-    documento de outro idioma no lugar.
+    O idioma inicial vem da CONFIGURACAO (`DocumentLanguageSettings`,
+    editavel no Backoffice) — uma decisao administrativa, nao o idioma da
+    interface (que e so portugues desde a Etapa 4.1). Ele decide qual
+    documento oficial sera usado e pode ser trocado na etapa 5. Se aquele
+    idioma ainda nao tem documento publicado, o fluxo para aqui com um
+    aviso claro — nunca usa o documento de outro idioma no lugar.
     """
-    language = services.IDIOMA_PADRAO_DA_CARTA
+    language = services.idioma_padrao_da_carta()
     try:
         document_template = services.official_document_template(language)
     except DefaultDocumentTemplateMissingError:
@@ -328,11 +328,7 @@ def _handle_language_step(request, letter):
                 "letters:step", letter_uuid=letter.uuid, step=services.REVIEW_STEP
             )
         context = _steps_context(letter, services.LANGUAGE_STEP)
-        context["language_options"] = [
-            {"code": code, "available": code == letter.language,
-             **services.LANGUAGE_META[code]}
-            for code, _label in settings.LANGUAGES
-        ]
+        context["language_options"] = _opcoes_de_idioma(letter, set())
         context["selected_language"] = letter.language
         context["language_locked"] = True
         return render(request, "letters/wizard.html", context)
@@ -342,14 +338,46 @@ def _handle_language_step(request, letter):
             return redirect("letters:step", letter_uuid=letter.uuid, step=services.REVIEW_STEP)
         messages.error(request, DOCUMENT_UNAVAILABLE)
 
-    available = set(services.available_languages())
+    # A configuracao e lida UMA vez e desce para as duas funcoes: sem
+    # isto, cada uma abriria o seu proprio SELECT do mesmo registro.
+    config = services.configuracao_de_idiomas()
     context = _steps_context(letter, services.LANGUAGE_STEP)
-    context["language_options"] = [
-        {"code": code, "available": code in available, **services.LANGUAGE_META[code]}
-        for code, _label in settings.LANGUAGES
-    ]
+    context["language_options"] = _opcoes_de_idioma(
+        letter, set(services.available_languages(config)), config
+    )
     context["selected_language"] = letter.language
     return render(request, "letters/wizard.html", context)
+
+
+def _opcoes_de_idioma(letter, prontos, config=None):
+    """
+    Os idiomas que a etapa 5 mostra, na ordem oficial.
+
+    QUAIS APARECEM: os que o administrador escolheu oferecer
+    (`DocumentLanguageSettings`), MAIS sempre o da propria carta.
+
+    O da carta entra mesmo que tenha saido da oferta. Uma carta ja
+    escrita continua sendo o que e: a pessoa precisa ver o idioma dela e
+    poder segui-lo ate a revisao. Tirar um idioma da oferta vale para
+    carta NOVA -- nao reescreve nem tranca o que ja existe (ver
+    `services.change_language`, que sempre aceita manter o idioma atual).
+
+    QUAIS PODEM SER ESCOLHIDOS: `prontos` -- os que, alem de oferecidos,
+    ja tem documento oficial capaz de gerar o PDF. O idioma da propria
+    carta conta como escolhivel sempre; do contrario, com o modelo dela
+    em manutencao, TODAS as opcoes ficariam desabilitadas e o formulario
+    (que exige uma escolha) nao teria como ser enviado.
+    """
+    mostrar = set(services.offered_languages(config)) | {letter.language}
+    return [
+        {
+            "code": code,
+            "available": code in prontos or code == letter.language,
+            **services.LANGUAGE_META[code],
+        }
+        for code, _label in settings.LANGUAGES
+        if code in mostrar
+    ]
 
 
 def _handle_review_step(request, letter):

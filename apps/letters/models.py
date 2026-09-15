@@ -414,3 +414,170 @@ class LetterPolicy(TimeStampedModel):
         # levaria `created_at` nulo para a linha existente.
         self.pk = self.SINGLETON_ID
         super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Idiomas do documento
+# ---------------------------------------------------------------------------
+#
+# ATENCAO: "idioma" aqui e o idioma da CARTA, nunca o da interface. A
+# interface e so portuguesa desde a Etapa 4.1 e continua sendo (ver
+# `apps.core.middleware.InterfaceEmPortuguesMiddleware`). Sao duas
+# decisoes separadas, e uma nunca deve virar padrao da outra.
+
+
+def idiomas_oficiais():
+    """
+    Os codigos de idioma que uma Carta Convite pode ter.
+
+    Vem de `settings.LANGUAGES` -- a lista-mae, que tambem alimenta
+    `Letter.language`, `DocumentTemplate.language` e os quatro modelos
+    oficiais de `doctemplates.services.biblioteca.MODELOS_OFICIAIS`.
+    Nao ha segunda lista: acrescentar um idioma ao produto e acrescentar
+    la, e nao aqui.
+
+    E funcao (e nao constante) porque e o `default` de um campo: precisa
+    ser avaliada no momento em que uma linha nasce, nao no import.
+    """
+    return [code for code, _label in settings.LANGUAGES]
+
+
+# O idioma em que uma carta nova nasce quando ninguem configurou nada.
+#
+# E uma DECISAO DE PRODUTO explicita, nao um reflexo do idioma da
+# interface: ate a Etapa 4.1 o rascunho nascia no idioma em que a pessoa
+# navegava, o que deixou de fazer sentido quando a interface passou a ser
+# so portuguesa. A pessoa continua trocando o idioma do documento na
+# etapa 5.
+#
+# A partir da Etapa E isto e o PADRAO DE FABRICA, nao mais a palavra
+# final: quem decide e `DocumentLanguageSettings`, e este valor e com o
+# que ela nasce. Continua sendo a resposta quando nao ha configuracao
+# alguma -- instalacao nova, ou banco em estado inesperado.
+IDIOMA_PADRAO_DA_CARTA = "en"
+
+
+class DocumentLanguageSettings(TimeStampedModel):
+    """
+    Quais idiomas uma carta NOVA pode ter, e em qual ela nasce -- um
+    unico registro (singleton), no mesmo padrao de `LetterPolicy` e
+    `content.SiteSettings`.
+
+    O QUE ESTA CONFIGURACAO DECIDE, E O QUE NAO DECIDE
+    --------------------------------------------------
+    Decide apenas o que o assistente OFERECE. Nao apaga modelo oficial,
+    nao altera carta existente e nao mexe em nada ja gerado: tirar um
+    idioma daqui e parar de oferece-lo daqui para a frente, nada mais.
+    Uma carta ja escrita naquele idioma continua abrindo, continua
+    gerando PDF e continua com o mesmo documento oficial vinculado --
+    `Letter.document_template` e uma FK resolvida uma vez, na criacao,
+    e nunca reconsultada por idioma.
+
+    POR QUE SINGLETON, E NAO UMA LINHA POR IDIOMA
+    ---------------------------------------------
+    As duas regras desta configuracao sao sobre o CONJUNTO, nao sobre um
+    idioma isolado: "tem de sobrar pelo menos um" e "o padrao tem de
+    estar entre os disponiveis". Uma tabela com quatro linhas nao
+    consegue afirmar nenhuma das duas no `clean()` de uma linha -- cada
+    uma so enxerga a si mesma, e a regra teria de viver so no
+    formulario. Aqui as duas moram no `clean()` do registro, e valem
+    para qualquer caminho de codigo, como em `LetterPolicy.clean()`.
+
+    O JSON NAO E LIVRE
+    ------------------
+    `available_document_languages` e uma lista de codigos de um conjunto
+    FECHADO de quatro, conferida inteira no `clean()`: nada de desconhecido,
+    nada repetido, nunca vazia. Nao e conteudo arbitrario -- e um
+    conjunto de enum, guardado na unica forma que o Django oferece para
+    conjuntos sem inventar uma tabela de apoio.
+    """
+
+    SINGLETON_ID = 1
+
+    available_document_languages = models.JSONField(
+        _("idiomas disponíveis"),
+        default=idiomas_oficiais,
+        help_text=_("Os idiomas que o assistente oferece para uma carta nova."),
+    )
+    default_letter_language = models.CharField(
+        _("idioma padrão de novas cartas"),
+        max_length=8,
+        choices=settings.LANGUAGES,
+        default=IDIOMA_PADRAO_DA_CARTA,
+        help_text=_("Precisa estar entre os idiomas disponíveis."),
+    )
+
+    class Meta:
+        verbose_name = _("idiomas do documento")
+        verbose_name_plural = _("idiomas do documento")
+        # So a permissao que o produto de fato confere. Ver esta
+        # configuracao exige apenas `core.access_backoffice` -- uma regra
+        # que vale para todo mundo pode ser lida por quem administra;
+        # altera-la e outra coisa (mesma decisao de
+        # `backoffice_letter_policy`). `view`, `add` e `delete` seriam
+        # tres permissoes que nada confere.
+        default_permissions = ("change",)
+
+    def __str__(self):
+        return str(_("Idiomas do documento"))
+
+    def clean(self):
+        super().clean()
+        oficiais = idiomas_oficiais()
+        codigos = self.available_document_languages
+
+        if not isinstance(codigos, list) or not all(isinstance(c, str) for c in codigos):
+            raise ValidationError(
+                {
+                    "available_document_languages": _(
+                        "Os idiomas disponíveis devem ser uma lista de códigos."
+                    )
+                }
+            )
+
+        desconhecidos = [c for c in codigos if c not in oficiais]
+        if desconhecidos:
+            raise ValidationError(
+                {
+                    "available_document_languages": _(
+                        "Idioma desconhecido: %(codigos)s."
+                    )
+                    % {"codigos": ", ".join(sorted(desconhecidos))}
+                }
+            )
+
+        if len(set(codigos)) != len(codigos):
+            raise ValidationError(
+                {
+                    "available_document_languages": _(
+                        "Há idioma repetido na lista de disponíveis."
+                    )
+                }
+            )
+
+        if not codigos:
+            raise ValidationError(
+                {
+                    "available_document_languages": _(
+                        "Pelo menos um idioma precisa ficar disponível: sem nenhum, "
+                        "não seria possível gerar carta nova."
+                    )
+                }
+            )
+
+        if self.default_letter_language not in codigos:
+            raise ValidationError(
+                {
+                    "default_letter_language": _(
+                        "O idioma padrão precisa estar entre os idiomas disponíveis."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        # Singleton: sempre o mesmo id, pela mesma razao de `LetterPolicy`
+        # e `content.SiteSettings` -- nunca duas configuracoes "vigentes".
+        # A forma certa de obter o registro e
+        # `apps.letters.services.configuracao_de_idiomas()`.
+        self.pk = self.SINGLETON_ID
+        super().save(*args, **kwargs)

@@ -120,7 +120,9 @@ urlpatterns = [
         content_backoffice.backoffice_content_activation,
         name="content_activation",
     ),
-    path("languages/", views.backoffice_templates, {"active": "languages"}, name="languages"),
+    # Idiomas dos DOCUMENTOS (nao os da interface, que e so
+    # portuguesa). Deixou de ser o placeholder na Etapa E.
+    path("idiomas/", views.backoffice_languages, name="languages"),
     path("partners/", views.backoffice_partners, name="partners"),
     path("appearance/", views.backoffice_appearance, name="appearance"),
     path("system/", views.backoffice_templates, {"active": "system"}, name="system"),

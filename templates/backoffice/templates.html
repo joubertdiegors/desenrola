@@ -1,10 +1,22 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administracao · Modelos, conteudo e idiomas. Sem layout proprio na v2 (os
-arquivos de referencia nao detalham esta tela); estrutura herdada da v1,
-restilizada com os tokens da v2. No celular os cards empilham numa coluna.
-Contexto: languages.
+Administracao · Modelos e Sistema -- o que resta de ilustrativo.
+
+Sem layout proprio na v2 (os arquivos de referencia nao detalham esta
+tela); estrutura herdada da v1, restilizada com os tokens da v2. No
+celular os cards empilham numa coluna.
+
+O cartao "Conteudo do site" continua aqui como ILUSTRACAO: a tela real
+e `backoffice/content.html` (Etapa D), e este bloco so sobrevive
+enquanto esta pagina inteira for uma maquete.
+
+O cartao "Idiomas" saiu na Etapa E, e com ele os percentuais de traducao
+que ele exibia ("97% · 3 pendentes", "3 textos em neerlandes usam o
+fallback em frances"). Nada disso era medido em lugar nenhum. A tela
+real e `backoffice/languages.html`.
+
+Sem contexto proprio.
 {% endcomment %}
 
 {% block bo_main_class %}bo-grid{% endblock %}
@@ -47,38 +59,6 @@ Contexto: languages.
     <button type="button" class="btn btn-ghost">{% translate "Salvar rascunho" %}</button>
     <span class="when">{% translate "Publicado há 3 dias" %}</span>
   </div>
-</div>
-
-<div class="card bo-card" id="idiomas">
-  <div class="bo-card-head">
-    <span class="card-title">{% translate "Idiomas" %}</span>
-    <button type="button" class="btn btn-ghost"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Adicionar" %}</button>
-  </div>
-  <div class="table-wrap">
-    <table class="table table-sm">
-      <thead>
-        <tr>
-          <th>{% translate "Idioma" %}</th>
-          <th>{% translate "Interface" %}</th>
-          <th>{% translate "Carta" %}</th>
-          <th>{% translate "Padrão" %}</th>
-          <th><span class="visually-hidden">{% translate "Ativo" %}</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for lang in languages %}
-        <tr>
-          <td>{{ lang.name }}</td>
-          <td><span class="text-{{ lang.interface_tone }}">{{ lang.interface }}</span></td>
-          <td>{% if lang.letter_tone == "muted" %}<span class="text-muted">{{ lang.letter }}</span>{% else %}<span class="text-success">{{ lang.letter }}</span>{% endif %}</td>
-          <td>{% if lang.default %}<i class="ph-fill ph-check-circle text-accent" aria-hidden="true"></i><span class="visually-hidden">{% translate "Padrão" %}</span>{% endif %}</td>
-          <td class="right">{% include "components/switch.html" with size="sm" checked=True label=lang.name %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="notice notice-warning" role="status"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "3 textos em neerlandês usam o fallback em francês." %} <a href="#">{% translate "Revisar agora" %}</a></span></div>
 </div>
 
 <div class="card sys-card span-2" id="sistema">

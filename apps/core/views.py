@@ -23,9 +23,15 @@ from django.views.decorators.http import require_POST
 from apps.content import services as content
 from apps.content.models import Partner
 from apps.letters import lifecycle, presentation, statistics
+from apps.letters import services as letter_services
 
 from . import demo, mail
-from .forms import EmailSettingsForm, EmailTestForm, LetterPolicyForm
+from .forms import (
+    DocumentLanguagesForm,
+    EmailSettingsForm,
+    EmailTestForm,
+    LetterPolicyForm,
+)
 
 # A permissao que abre a porta do Backoffice. Uma constante, e nao a
 # string solta em cada view/template, para o dia em que alguem precisar
@@ -35,6 +41,11 @@ BACKOFFICE_PERM = "core.access_backoffice"
 # Permissao para MUDAR a politica das cartas. Entrar no Backoffice e uma
 # coisa; alterar uma regra que vale para todo mundo e outra.
 LETTER_POLICY_PERM = "letters.change_letterpolicy"
+
+# Mesma ideia para os idiomas do DOCUMENTO: qualquer pessoa do
+# Backoffice pode ver quais idiomas o produto oferece; mudar a oferta
+# e um degrau acima.
+DOCUMENT_LANGUAGES_PERM = "letters.change_documentlanguagesettings"
 
 # Configuracao de e-mail: ver e alterar sao permissoes diferentes. Quem
 # altera mexe em credencial de um servidor externo -- e o degrau mais
@@ -222,9 +233,15 @@ def backoffice_overview(request):
 
 @backoffice_required
 def backoffice_templates(request, active="templates"):
-    """Modelos, conteudo e idiomas (sem layout proprio na v2; mantido da v1)."""
+    """
+    Modelos e Sistema -- as duas telas que ainda sao ilustrativas.
+
+    Ja NAO serve mais Conteudo (Etapa D) nem Idiomas (Etapa E): as
+    duas viraram telas reais, com view propria. O cartao de idiomas
+    que morava aqui saiu junto, com os percentuais de traducao que
+    ele inventava.
+    """
     context = _backoffice_context(active)
-    context["languages"] = demo.LANGUAGES
     return render(request, "backoffice/templates.html", context)
 
 
@@ -291,6 +308,46 @@ def backoffice_letter_policy(request):
     context = _backoffice_context("letter_policy")
     context.update({"form": form, "pode_editar": pode_editar})
     return render(request, "backoffice/letter_policy.html", context)
+
+
+@backoffice_required
+def backoffice_languages(request):
+    """
+    Idiomas dos documentos: quais o assistente oferece para uma carta
+    nova, e em qual ela nasce.
+
+    NÃO É O IDIOMA DA INTERFACE. A interface é só portuguesa desde a
+    Etapa 4.1 e continua sendo -- esta tela não a toca, e diz isso em
+    voz alta, porque os dois conceitos são fáceis de confundir.
+
+    Entrar aqui exige `core.access_backoffice`; SALVAR exige, além
+    disso, `letters.change_documentlanguagesettings` -- ver uma regra que
+    vale para todo mundo é uma coisa, mudá-la é outra (mesma decisão de
+    `backoffice_letter_policy`). A checagem é no POST, no servidor, não
+    só no botão.
+
+    Desativar um idioma não apaga nada: nem carta, nem modelo oficial,
+    nem histórico. Quem faz a conta com esses valores é
+    `apps.letters.services`; esta view não decide idioma nenhum.
+    """
+    config = letter_services.configuracao_de_idiomas()
+    pode_editar = request.user.has_perm(DOCUMENT_LANGUAGES_PERM)
+
+    if request.method == "POST":
+        if not pode_editar:
+            raise PermissionDenied
+        form = DocumentLanguagesForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Idiomas dos documentos atualizados."))
+            return redirect(reverse("backoffice:languages"))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = DocumentLanguagesForm(instance=config)
+
+    context = _backoffice_context("languages")
+    context.update({"form": form, "pode_editar": pode_editar})
+    return render(request, "backoffice/languages.html", context)
 
 
 # ---------------------------------------------------------------------------

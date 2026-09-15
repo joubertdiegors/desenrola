@@ -28,41 +28,6 @@ from django.utils.translation import gettext_lazy as _
 # (administrador, gerente, operador, usuario)
 
 
-LANGUAGES = [
-    {
-        "name": "Português",
-        "interface": "100%",
-        "interface_tone": "success",
-        "letter": "—",
-        "letter_tone": "muted",
-        "default": True,
-    },
-    {
-        "name": "Français",
-        "interface": "100%",
-        "interface_tone": "success",
-        "letter": _("Oficial"),
-        "letter_tone": "success",
-        "default": False,
-    },
-    {
-        "name": "Nederlands",
-        "interface": _("97% · 3 pendentes"),
-        "interface_tone": "warning",
-        "letter": _("Oficial"),
-        "letter_tone": "success",
-        "default": False,
-    },
-    {
-        "name": "English",
-        "interface": "100%",
-        "interface_tone": "success",
-        "letter": _("Tradução livre"),
-        "letter_tone": "muted",
-        "default": False,
-    },
-]
-
 # Parceiros administrados (mesmos 4 da landing, com estado de publicacao)
 ADMIN_PARTNERS = [
     {
@@ -97,7 +62,11 @@ BACKOFFICE_SECTIONS = {
     "templates": {"title": _("Modelos"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     "content": {"title": _("Conteúdo"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     "partners": {"title": _("Parceiros"), "icon": "ph-plus", "action": _("Novo parceiro")},
-    "languages": {"title": _("Idiomas"), "icon": "ph-plus", "action": _("Adicionar idioma")},
+    # Tela real desde a Etapa E: sem `action`, o cabecalho do celular
+    # nao renderiza botao nenhum. Nao havia idioma para "adicionar" --
+    # os quatro oficiais sao fixos; o que se administra e quais deles
+    # sao oferecidos.
+    "languages": {"title": _("Idiomas"), "icon": "", "action": ""},
     # Tela de leitura: sem `action`, o cabecalho do celular nao renderiza
     # botao nenhum (ver backoffice/base.html). O "Publicar" que havia aqui
     # nao publicava nada.

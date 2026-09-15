@@ -1,0 +1,91 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Idiomas dos documentos.
+
+Duas decisões, e só duas:
+
+  DISPONÍVEIS  em que idiomas o assistente deixa criar uma carta nova;
+  PADRÃO       em qual delas a carta nasce.
+
+O QUE ESTA TELA NÃO É
+---------------------
+Não é o idioma da INTERFACE -- essa é sempre português, e esta tela não
+a toca. O aviso no topo diz isso em voz alta, porque os dois conceitos
+são fáceis de confundir.
+
+Não há percentual de tradução, nem barra de completude, nem "3 textos
+usando o fallback". A tela que havia aqui antes mostrava tudo isso,
+inventado. Ou o idioma é oferecido, ou não é.
+
+Não se acrescenta nem se remove idioma: os quatro oficiais vêm de
+`settings.LANGUAGES` e de `doctemplates.services.biblioteca`, e mudá-los
+é mudar o produto, não uma configuração.
+
+Os valores vão para `letters.DocumentLanguageSettings`. Quem faz a conta
+com eles é `apps.letters.services` -- este template não decide nada.
+
+Contexto: form (DocumentLanguagesForm), pode_editar (bool).
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Idiomas dos documentos" %}</h1>
+    <p class="text-muted">{% translate "Em que idiomas é possível gerar uma Carta Convite nova." %}</p>
+  </div>
+</div>
+<p class="m-only text-muted">{% translate "Em que idiomas é possível gerar uma Carta Convite nova." %}</p>
+
+<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Estas configurações controlam os idiomas disponíveis para novas cartas. O idioma da interface do site permanece em português." %}</span></div>
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar esta configuração, mas não tem permissão para alterá-la." %}</span></div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{{ form.available_document_languages.label }}</h3>
+      <span class="note d-only">{% translate "Os quatro idiomas oficiais do produto" %}</span>
+    </div>
+    {% comment %}
+    As mesmas classes da tela de permissoes por usuario: e a mesma coisa
+    -- uma lista de caixas que se marcam. Nao ha por que um segundo
+    estilo para o mesmo componente.
+    {% endcomment %}
+    <div class="bo-permissoes">
+      {% for opcao in form.available_document_languages %}
+      <label class="bo-permissao">{{ opcao.tag }}<span class="bo-permissao-texto"><strong>{{ opcao.choice_label }}</strong></span></label>
+      {% endfor %}
+    </div>
+    <span class="field-hint">{{ form.available_document_languages.help_text }}</span>
+    {% for erro in form.available_document_languages.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Idioma padrão" %}</h3>
+      <span class="note d-only">{% translate "Em que idioma uma carta nova começa" %}</span>
+    </div>
+    <div class="field">
+      <label for="{{ form.default_letter_language.id_for_label }}">{{ form.default_letter_language.label }}</label>
+      {{ form.default_letter_language }}
+      <span class="field-hint">{{ form.default_letter_language.help_text }}</span>
+      {% for erro in form.default_letter_language.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+  </div>
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar idiomas" %}</button>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

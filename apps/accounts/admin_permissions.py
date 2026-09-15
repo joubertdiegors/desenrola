@@ -124,6 +124,16 @@ CATALOGO = (
                 ),
                 aplicada_em="core.views.backoffice_letter_policy",
             ),
+            PermissaoAdministrativa(
+                chave="letters.change_documentlanguagesettings",
+                rotulo=_("Alterar os idiomas dos documentos"),
+                descricao=_(
+                    "Escolhe em que idiomas é possível gerar uma carta nova e em "
+                    "qual ela nasce. Não afeta o idioma da interface, que é sempre "
+                    "português."
+                ),
+                aplicada_em="core.views.backoffice_languages",
+            ),
         ),
     ),
     GrupoDePermissoes(

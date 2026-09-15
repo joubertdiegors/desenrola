@@ -33,7 +33,9 @@ from apps.doctemplates.services import pdf as document_pdf
 from apps.doctemplates.services import snapshot as document_snapshot
 from apps.letters.forms import build_dynamic_form, deserialize_initial, serialize_cleaned_data
 from apps.letters.models import (
+    IDIOMA_PADRAO_DA_CARTA,
     DefaultDocumentTemplateMissingError,
+    DocumentLanguageSettings,
     DocumentSnapshotAssetMissingError,
     DocumentSnapshotImmutableError,
     Letter,
@@ -74,23 +76,82 @@ def valid_language_codes():
     return {code for code, _label in settings.LANGUAGES}
 
 
-# Idioma em que toda Carta Convite nova comeca (Fase 5, Etapa 4.2).
-#
-# E uma DECISAO DE PRODUTO explicita, nao um reflexo do idioma da
-# interface: ate a Etapa 4.1 o rascunho nascia no idioma em que a pessoa
-# navegava, o que deixou de fazer sentido quando a interface passou a ser
-# so portuguesa. A pessoa continua trocando o idioma do documento na
-# etapa 5.
+# `IDIOMA_PADRAO_DA_CARTA` (importado de `.models`) deixou de ser a
+# palavra final na Etapa E: agora e o PADRAO DE FABRICA com que
+# `DocumentLanguageSettings` nasce, e a resposta quando nao ha
+# configuracao alguma. Quem decide e a tela.
 #
 # NAO confundir com `settings.LANGUAGE_CODE` (o idioma da INTERFACE, que
 # e "pt") nem usar um como padrao do outro -- sao decisoes separadas.
-IDIOMA_PADRAO_DA_CARTA = "en"
 
 
-def available_languages():
+def configuracao_de_idiomas():
     """
-    Os idiomas cujo modelo oficial ja consegue gerar o documento --
-    a lista que a etapa 5 oferece.
+    A configuracao vigente dos idiomas do documento (singleton).
+
+    Cria com os padroes na primeira leitura, para uma instalacao nova
+    nunca ficar sem resposta -- mesmo padrao de `lifecycle.policy()`. A
+    migration `letters.0006` ja semeia a linha, entao na pratica isto e
+    um SELECT.
+    """
+    objeto, _criado = DocumentLanguageSettings.objects.get_or_create(
+        pk=DocumentLanguageSettings.SINGLETON_ID
+    )
+    return objeto
+
+
+def offered_languages(config=None):
+    """
+    Os idiomas que o administrador escolheu OFERECER, na ordem oficial.
+
+    Nao pergunta se o documento daquele idioma esta pronto -- essa e a
+    outra metade, e mora em `available_languages()`. Aqui e so a
+    escolha administrativa.
+
+    NUNCA devolve vazio. `DocumentLanguageSettings.clean()` ja impede
+    gravar a lista vazia, mas um banco em estado inesperado (uma linha
+    escrita por fora, um `update()` cru) nao pode deixar o produto sem
+    poder gerar carta nenhuma: sem nada configurado, vale o padrao de
+    fabrica.
+
+    `config` evita reler o singleton quando quem chama ja o tem.
+    """
+    config = config or configuracao_de_idiomas()
+    escolhidos = config.available_document_languages
+    if not isinstance(escolhidos, list):
+        escolhidos = []
+    escolhidos = set(escolhidos)
+
+    oferecidos = [code for code, _label in settings.LANGUAGES if code in escolhidos]
+    return oferecidos or [IDIOMA_PADRAO_DA_CARTA]
+
+
+def idioma_padrao_da_carta(config=None):
+    """
+    O idioma em que uma carta nova nasce.
+
+    Da configuracao, com uma rede: um padrao que saiu dos oferecidos
+    (estado que a tela impede, mas que um `update()` cru produziria) cai
+    no primeiro oferecido em vez de criar uma carta num idioma que o
+    produto nao oferece mais.
+    """
+    config = config or configuracao_de_idiomas()
+    oferecidos = offered_languages(config)
+    padrao = config.default_letter_language
+    return padrao if padrao in oferecidos else oferecidos[0]
+
+
+def available_languages(config=None):
+    """
+    Os idiomas que a etapa 5 pode oferecer AGORA: os que o administrador
+    escolheu oferecer E cujo modelo oficial ja consegue gerar o
+    documento.
+
+    Sao duas perguntas diferentes, e as duas precisam ser "sim":
+
+      * OFERECER e decisao administrativa (`offered_languages`);
+      * PODER GERAR e estado da biblioteca -- um modelo oficial ausente,
+        inativo ou ainda sem desenho nao gera PDF.
 
     LISTAR nao e USAR: um idioma cujo modelo oficial esteja ausente
     ou inativo sai da lista, em vez de derrubar a pagina inteira por
@@ -99,7 +160,7 @@ def available_languages():
     e `change_language` levantam se alguem tentar USAR aquele idioma.
     """
     disponiveis = []
-    for code, _label in settings.LANGUAGES:
+    for code in offered_languages(config):
         try:
             modelo = official_document_template(code)
         except DefaultDocumentTemplateMissingError:
@@ -217,9 +278,24 @@ def change_language(letter, language):
 
     Os dados preenchidos ficam intactos: os quatro modelos oficiais tem
     exatamente as mesmas chaves de campo. Devolve False (sem gravar nada)
-    se o idioma nao existir ou ainda nao tiver documento pronto.
+    se o idioma nao existir, nao estiver sendo oferecido ou ainda nao
+    tiver documento pronto.
+
+    MANTER O QUE JA SE TEM SEMPRE FUNCIONA
+    --------------------------------------
+    Reenviar o idioma que a carta ja tem e um sucesso sem escrita. E o
+    que impede uma carta de ficar presa quando o administrador para de
+    oferecer o idioma dela: a pessoa continua podendo seguir para a
+    revisao com a carta como esta. Tirar um idioma da oferta vale para
+    carta NOVA -- nao desfaz o que ja foi escrito.
     """
+    if language == letter.language:
+        return True
+
     if language not in valid_language_codes():
+        return False
+
+    if language not in offered_languages():
         return False
 
     modelo = official_document_template(language)
