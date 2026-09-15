@@ -82,6 +82,12 @@
 .btn-success { background: var(--s); color: #fff; border-color: var(--s); }
 .btn-success:hover { background: color-mix(in srgb, var(--s) 86%, black); color: #fff; }
 
+/* A unica acao sem volta do produto (remover parceiro). A cor nao e
+   enfeite: e o que separa `Remover definitivamente` do botao ao lado,
+   que so desativa. */
+.btn-danger { background: var(--error); color: #fff; border-color: var(--error); }
+.btn-danger:hover { background: var(--error-dark); color: #fff; }
+
 .btn-ghost { background: #fff; color: var(--navy); border-color: var(--bd); }
 .btn-ghost:hover { background: #f6f8fc; color: var(--navy); }
 

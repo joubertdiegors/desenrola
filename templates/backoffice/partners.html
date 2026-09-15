@@ -3,19 +3,28 @@
 {% comment %}
 Administração · Parceiros.
 
-ESTA TELA SÓ MOSTRA; QUEM CADASTRA É O DJANGO ADMIN
----------------------------------------------------
-Mesma decisão da tela de Aparência. O formulário completo do parceiro
-(nome, descrição, imagem, endereço, ordem, situação) já existe na
-administração do Django; um segundo aqui seria dois lugares para mudar a
-mesma coisa.
+O CADASTRO INTEIRO MORA AQUI
+----------------------------
+Até a Etapa 11 esta tela só mostrava, e mandava quem quisesse cadastrar
+para a administração do Django. Um produto não deve depender do Admin do
+Django para uma tela que é do produto -- e quem administra parceiros não
+tem por que conhecer duas interfaces.
 
-Até a Etapa I esta tela mostrava `demo.ADMIN_PARTNERS`: quatro parceiros
-escritos no código, que não estavam no banco e que a Home nunca mostrou,
-com botões de "Novo", "Editar" e "Remover" que não faziam nada. Agora
-mostra o que a Home de fato mostra.
+DESATIVAR É O CAMINHO; APAGAR É PARA O ERRO
+-------------------------------------------
+"Desativar" tira o parceiro da Home na hora e mantém o registro.
+"Remover" existe para quem foi cadastrado errado, e passa por uma tela
+de confirmação própria.
 
-Contexto: parceiros (content.Partner), url_do_admin.
+NENHUM BOTÃO INERTE
+-------------------
+Quem está no topo não recebe "subir", quem está no fim não recebe
+"descer", e quem não tem permissão não vê a ação que o servidor
+recusaria. É a mesma regra que tirou daqui os três botões falsos da
+Etapa I.
+
+Contexto: linhas (parceiro, primeiro, ultimo), total, pode_criar,
+pode_editar, pode_excluir.
 {% endcomment %}
 
 {% block bo_main %}
@@ -24,10 +33,14 @@ Contexto: parceiros (content.Partner), url_do_admin.
     <h1>{% translate "Parceiros" %}</h1>
     <p class="text-muted">{% translate "Os que aparecem na página inicial." %}</p>
   </div>
+  {% if pode_criar %}
+  <a class="btn btn-primary" href="{% url 'backoffice:partner_new' %}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</a>
+  {% endif %}
 </div>
 <p class="m-only text-muted">{% translate "Os que aparecem na página inicial." %}</p>
-
-<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Esta tela mostra o que está cadastrado. Para acrescentar, alterar ou remover, use <a href="{{ url_do_admin }}">os parceiros</a> na administração do Django.{% endblocktranslate %}</span></div>
+{% if pode_criar %}
+<p class="m-only"><a class="btn btn-primary" href="{% url 'backoffice:partner_new' %}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</a></p>
+{% endif %}
 
 <div class="card table-wrap">
   <table class="table">
@@ -37,18 +50,65 @@ Contexto: parceiros (content.Partner), url_do_admin.
         <th>{% translate "Imagem" %}</th>
         <th>{% translate "Endereço" %}</th>
         <th>{% translate "Na Home" %}</th>
+        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
       </tr>
     </thead>
     <tbody>
-      {% for parceiro in parceiros %}
+      {% for linha in linhas %}
       <tr>
-        <td class="cell-name">{{ parceiro.name }}<br><span class="cell-muted">{{ parceiro.description|default:"—" }}</span></td>
-        <td>{% if parceiro.logo %}<span class="tag tag-success">{% translate "Cadastrada" %}</span>{% else %}<span class="tag tag-warning">{% translate "Sem imagem" %}</span>{% endif %}</td>
-        <td class="cell-muted">{{ parceiro.url|default:"—" }}</td>
-        <td>{% if parceiro.is_active %}<span class="tag tag-neutral">{% translate "Aparece" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}</td>
+        <td class="cell-name">{{ linha.parceiro.name }}<br><span class="cell-muted">{{ linha.parceiro.description|default:"—" }}</span></td>
+        <td>
+          {% if linha.parceiro.logo %}
+            <img class="bo-parceiro-logo" src="{{ linha.parceiro.logo.file.url }}" alt="{{ linha.parceiro.logo.alt_text|default:linha.parceiro.name }}">
+          {% else %}
+            <span class="tag tag-warning">{% translate "Sem imagem" %}</span>
+          {% endif %}
+        </td>
+        <td class="cell-muted">{{ linha.parceiro.url|default:"—" }}</td>
+        <td>{% if linha.parceiro.is_active %}<span class="tag tag-success">{% translate "Aparece" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}</td>
+        <td>
+          <div class="bo-parceiro-acoes">
+            {% if pode_editar %}
+              {% comment %}
+              Ordem: dois POST, e não um campo de número na lista. Quem
+              organiza a página pensa em "este vem antes daquele", não em
+              qual inteiro digitar. O número continua existindo e é
+              editável no formulário, para quem preferir.
+              {% endcomment %}
+              {% if not linha.primeiro %}
+              <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="direcao" value="subir">
+                <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Subir {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+              </form>
+              {% endif %}
+              {% if not linha.ultimo %}
+              <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="direcao" value="descer">
+                <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Descer {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+              </form>
+              {% endif %}
+            {% endif %}
+
+            <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
+
+            {% if pode_editar %}
+            <form method="post" action="{% url 'backoffice:partner_activation' linha.parceiro.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="ativo" value="{% if linha.parceiro.is_active %}0{% else %}1{% endif %}">
+              <button type="submit" class="btn btn-ghost btn-sm">{% if linha.parceiro.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+            </form>
+            {% endif %}
+
+            {% if pode_excluir %}
+            <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:partner_delete' linha.parceiro.pk %}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+            {% endif %}
+          </div>
+        </td>
       </tr>
       {% empty %}
-      <tr><td colspan="4" class="cell-muted">{% translate "Nenhum parceiro cadastrado. Enquanto não houver, a seção inteira não aparece na página inicial." %}</td></tr>
+      <tr><td colspan="5" class="cell-muted">{% translate "Nenhum parceiro cadastrado. Enquanto não houver, a seção inteira não aparece na página inicial." %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

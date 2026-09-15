@@ -25,7 +25,9 @@ mudança de estrutura, e estrutura mora no template.
 import copy
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
+from .models import Asset, Partner
 from .section_schema import Lista, campos_da_secao
 
 # Separa as partes do nome de um campo de lista: `cards__0__title`.
@@ -127,3 +129,58 @@ class FormularioDeSecao(forms.Form):
                 novo[declaracao.chave] = self.cleaned_data.get(declaracao.chave, "")
 
         return novo
+
+
+class FormularioDeParceiro(forms.ModelForm):
+    """
+    O cadastro de um parceiro, no Backoffice.
+
+    POR QUE UM `ModelForm`, E NAO UM FORMULARIO DECLARADO
+    ----------------------------------------------------
+    Aqui os campos SAO as colunas do modelo -- nome, descrição, logo,
+    endereço, situação e ordem. `FormularioDeSecao` é declarativo porque
+    o que ele edita mora num JSON sem colunas; este não tem esse
+    problema, e repetir a declaração à mão só criaria dois lugares para
+    mudar quando uma coluna mudasse.
+
+    A IMAGEM E UM `Asset` JA EXISTENTE
+    ----------------------------------
+    O campo escolhe entre as imagens que a biblioteca já tem; não há
+    upload aqui. Toda imagem administrável do projeto mora em
+    `content.Asset` -- inclusive com a proteção contra trocar o arquivo
+    do qual uma carta finalizada depende --, e um `ImageField` neste
+    modelo seria uma segunda casa para a mesma coisa.
+
+    Só as ATIVAS: oferecer uma imagem desativada seria oferecer algo que
+    não se quer mais usar. O filtro não olha o `kind`: uma imagem boa
+    continua boa tendo sido cadastrada como "de parceiro" ou não, e
+    recusá-la por causa da etiqueta seria uma restrição inventada.
+    """
+
+    # Declarado a mao so por causa de `assume_scheme`: o Django 6 vai
+    # trocar o padrao de http para https, e o aviso de depreciacao pede
+    # que a escolha seja explicita. Mesmo caminho ja tomado em
+    # `core.forms` para os enderecos das redes sociais. O rotulo e a
+    # ajuda continuam vindo do modelo -- nao ha segundo lugar para mudar.
+    url = forms.URLField(
+        label=Partner._meta.get_field("url").verbose_name,
+        help_text=Partner._meta.get_field("url").help_text,
+        required=False,
+        assume_scheme="https",
+        widget=forms.URLInput(attrs={"class": "input"}),
+    )
+
+    class Meta:
+        model = Partner
+        fields = ("name", "description", "logo", "url", "is_active", "order")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "input"}),
+            "description": forms.Textarea(attrs={"class": "input", "rows": 3}),
+            "logo": forms.Select(attrs={"class": "input"}),
+            "order": forms.NumberInput(attrs={"class": "input", "min": 0}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["logo"].queryset = Asset.objects.filter(is_active=True)
+        self.fields["logo"].empty_label = _("Sem imagem")

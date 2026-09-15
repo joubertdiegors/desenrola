@@ -483,13 +483,13 @@ class Partner(TimeStampedModel):
     """
     Um parceiro exibido na secao "Nossos parceiros" da Home.
 
-    NAO SE APAGA UM PARCEIRO
-    ------------------------
-    Desativar (`is_active=False`) e o caminho, e nao e preciosismo: o
-    parceiro some da Home na hora, mas o registro continua la para quem
-    precisar saber com quem ja houve acordo. `PartnerAdmin` nao oferece
-    exclusao, e a permissao `delete` nem chega a existir (ver `Meta`) --
-    mesma decisao ja tomada em modelos e usuarios.
+    DESATIVAR E O CAMINHO; APAGAR EXISTE PARA O ERRO
+    -----------------------------------------------
+    Desativar (`is_active=False`) tira o parceiro da Home na hora e
+    mantem o registro para quem precisar saber com quem ja houve acordo
+    -- e o que a tela sugere. Apagar existe desde a Etapa 11, para quem
+    foi cadastrado errado, e passa por uma confirmacao propria no
+    Backoffice (`content.delete_partner`).
 
     A IMAGEM E UM `Asset`
     ---------------------

@@ -23,6 +23,7 @@ lista antes de virar consulta, nunca usado como veio.
 
 from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -32,8 +33,8 @@ from django.views.decorators.http import require_POST
 from apps.core.views import exige_permissao
 
 from . import section_schema, services
-from .forms import FormularioDeSecao
-from .models import Page, PageSection, PageSectionTranslation
+from .forms import FormularioDeParceiro, FormularioDeSecao
+from .models import Page, PageSection, PageSectionTranslation, Partner
 from .services import CHAVE_DA_HOME
 
 # As duas permissões desta seção. Constantes, e não a string solta em
@@ -183,8 +184,6 @@ def backoffice_content_section(request, pk):
 
     if request.method == "POST":
         if not pode_editar:
-            from django.core.exceptions import PermissionDenied
-
             raise PermissionDenied
         form = FormularioDeSecao(
             secao, traducao.content if traducao else {}, data=request.POST
@@ -353,3 +352,221 @@ def backoffice_content_activation(request, pk):
 
 def _url_da_lista(idioma):
     return f"{reverse('backoffice:content')}?idioma={idioma}"
+
+
+# ---------------------------------------------------------------------------
+# Parceiros
+# ---------------------------------------------------------------------------
+#
+# As quatro permissoes que o Django ja gera para o modelo. Nao ha
+# permissao inventada aqui: `view/add/change/delete_partner` sao as
+# mesmas que a administracao do Django cobra neste cadastro, e agora sao
+# cobradas tambem por estas telas.
+VER_PARCEIRO = "content.view_partner"
+CRIAR_PARCEIRO = "content.add_partner"
+EDITAR_PARCEIRO = "content.change_partner"
+EXCLUIR_PARCEIRO = "content.delete_partner"
+
+
+def _url_dos_parceiros():
+    return reverse("backoffice:partners")
+
+
+def _contexto_de_parceiros(request, extra=None):
+    """
+    O basico que toda tela de parceiro precisa.
+
+    Os `pode_*` existem para o template NAO desenhar botao que o
+    servidor recusaria. Eles nao sao a protecao -- a protecao e o
+    decorador --, sao a cortesia de nao oferecer o que nao se pode
+    fazer.
+    """
+    contexto = {
+        "active": "partners",
+        "bo_title": _("Parceiros"),
+        "pode_criar": request.user.has_perm(CRIAR_PARCEIRO),
+        "pode_editar": request.user.has_perm(EDITAR_PARCEIRO),
+        "pode_excluir": request.user.has_perm(EXCLUIR_PARCEIRO),
+        "url_dos_parceiros": _url_dos_parceiros(),
+    }
+    contexto.update(extra or {})
+    return contexto
+
+
+@exige_permissao(VER_PARCEIRO)
+def backoffice_partners(request):
+    """
+    A lista de parceiros -- os mesmos que a Home mostra.
+
+    Ate a Etapa 11 esta tela era so leitura e mandava quem quisesse
+    cadastrar para a administracao do Django. Agora o cadastro inteiro
+    mora aqui: o produto nao depende do Admin do Django para uma tela
+    que e do produto.
+
+    `select_related`: cada linha diz se ha imagem, e sem isto cada
+    parceiro custaria uma consulta a mais.
+    """
+    parceiros = list(Partner.objects.select_related("logo"))
+
+    # `primeiro`/`ultimo` alimentam os botoes de ordem: quem esta no topo
+    # nao recebe "subir". Botao que nao faz nada e o que esta tela tinha
+    # antes da Etapa I, e nao volta.
+    linhas = [
+        {
+            "parceiro": parceiro,
+            "primeiro": indice == 0,
+            "ultimo": indice == len(parceiros) - 1,
+        }
+        for indice, parceiro in enumerate(parceiros)
+    ]
+
+    return render(
+        request,
+        "backoffice/partners.html",
+        _contexto_de_parceiros(request, {"linhas": linhas, "total": len(parceiros)}),
+    )
+
+
+@exige_permissao(CRIAR_PARCEIRO)
+def backoffice_partner_new(request):
+    """Cadastra um parceiro."""
+    if request.method == "POST":
+        form = FormularioDeParceiro(request.POST)
+        if form.is_valid():
+            parceiro = form.save()
+            messages.success(request, _("Parceiro cadastrado: %(nome)s.") % {"nome": parceiro.name})
+            return redirect(_url_dos_parceiros())
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDeParceiro()
+
+    return render(
+        request,
+        "backoffice/partner_form.html",
+        _contexto_de_parceiros(
+            request,
+            {
+                "form": form,
+                "parceiro": None,
+                "titulo": _("Novo parceiro"),
+                "pode_salvar": True,
+            },
+        ),
+    )
+
+
+@exige_permissao(VER_PARCEIRO)
+def backoffice_partner_edit(request, pk):
+    """
+    Altera um parceiro.
+
+    VER abre a tela; GRAVAR exige `change_partner` -- e a checagem do
+    POST e aqui, no servidor, nao no botao.
+    """
+    parceiro = get_object_or_404(Partner.objects.select_related("logo"), pk=pk)
+    pode_salvar = request.user.has_perm(EDITAR_PARCEIRO)
+
+    if request.method == "POST":
+        if not pode_salvar:
+            raise PermissionDenied
+        form = FormularioDeParceiro(request.POST, instance=parceiro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Parceiro salvo."))
+            return redirect(_url_dos_parceiros())
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDeParceiro(instance=parceiro)
+
+    return render(
+        request,
+        "backoffice/partner_form.html",
+        _contexto_de_parceiros(
+            request,
+            {
+                "form": form,
+                "parceiro": parceiro,
+                "titulo": parceiro.name,
+                "pode_salvar": pode_salvar,
+            },
+        ),
+    )
+
+
+@exige_permissao(EDITAR_PARCEIRO)
+@require_POST
+def backoffice_partner_activation(request, pk):
+    """
+    Liga e desliga um parceiro. Desligado, ele some da Home na hora.
+
+    Nao apaga nada -- e o caminho recomendado para tirar alguem da
+    pagina sem perder o registro.
+    """
+    parceiro = get_object_or_404(Partner, pk=pk)
+    parceiro.is_active = request.POST.get("ativo") == "1"
+    parceiro.save(update_fields=["is_active", "updated_at"])
+
+    if parceiro.is_active:
+        messages.success(request, _("Parceiro ativado. Volta a aparecer na Home."))
+    else:
+        messages.success(request, _("Parceiro desativado. Deixa de aparecer na Home."))
+    return redirect(_url_dos_parceiros())
+
+
+@exige_permissao(EDITAR_PARCEIRO)
+@require_POST
+def backoffice_partner_move(request, pk):
+    """
+    Sobe ou desce um parceiro na ordem da Home.
+
+    POR QUE RENUMERAR TUDO, E NAO TROCAR DOIS `order`
+    -------------------------------------------------
+    `order` nasce 0 para todo mundo, e a ordem real e desempatada pelo
+    `pk` (ver `Partner.Meta`). Trocar o numero de dois empatados nao
+    mudaria nada -- o botao pareceria quebrado. Renumerar a lista pela
+    POSICAO resolve o empate de uma vez e faz o botao significar o que
+    diz.
+    """
+    parceiro = get_object_or_404(Partner, pk=pk)
+    ordenados = list(Partner.objects.all())
+    atual = next(i for i, p in enumerate(ordenados) if p.pk == parceiro.pk)
+    destino = atual - 1 if request.POST.get("direcao") == "subir" else atual + 1
+
+    if 0 <= destino < len(ordenados):
+        ordenados[atual], ordenados[destino] = ordenados[destino], ordenados[atual]
+        for posicao, p in enumerate(ordenados, start=1):
+            if p.order != posicao:
+                p.order = posicao
+                p.save(update_fields=["order", "updated_at"])
+        messages.success(request, _("Ordem atualizada."))
+
+    return redirect(_url_dos_parceiros())
+
+
+@exige_permissao(EXCLUIR_PARCEIRO)
+def backoffice_partner_delete(request, pk):
+    """
+    Apaga um parceiro, depois de confirmar.
+
+    GET pergunta; POST apaga. Apagar e para quem foi cadastrado errado
+    -- para tirar da Home quem existe de verdade, o caminho e desativar,
+    e a tela de confirmacao diz isso.
+
+    A IMAGEM NAO VAI JUNTO
+    ----------------------
+    `logo` e um `Asset`, que e uma biblioteca compartilhada: apagar o
+    parceiro nao apaga a imagem, que pode estar em uso em outro lugar.
+    """
+    parceiro = get_object_or_404(Partner.objects.select_related("logo"), pk=pk)
+
+    if request.method == "POST":
+        nome = parceiro.name
+        parceiro.delete()
+        messages.success(request, _("Parceiro removido: %(nome)s.") % {"nome": nome})
+        return redirect(_url_dos_parceiros())
+
+    return render(
+        request,
+        "backoffice/partner_delete.html",
+        _contexto_de_parceiros(request, {"parceiro": parceiro}),
+    )

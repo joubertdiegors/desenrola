@@ -130,7 +130,26 @@ urlpatterns = [
     # Idiomas dos DOCUMENTOS (nao os da interface, que e so
     # portuguesa). Deixou de ser o placeholder na Etapa E.
     path("idiomas/", views.backoffice_languages, name="languages"),
-    path("partners/", views.backoffice_partners, name="partners"),
+    # Parceiros: o cadastro inteiro, no produto. Ate a Etapa 11 esta
+    # tela era so leitura e mandava para a administracao do Django.
+    path("partners/", content_backoffice.backoffice_partners, name="partners"),
+    path("partners/novo/", content_backoffice.backoffice_partner_new, name="partner_new"),
+    path("partners/<int:pk>/", content_backoffice.backoffice_partner_edit, name="partner_edit"),
+    path(
+        "partners/<int:pk>/situacao/",
+        content_backoffice.backoffice_partner_activation,
+        name="partner_activation",
+    ),
+    path(
+        "partners/<int:pk>/ordem/",
+        content_backoffice.backoffice_partner_move,
+        name="partner_move",
+    ),
+    path(
+        "partners/<int:pk>/excluir/",
+        content_backoffice.backoffice_partner_delete,
+        name="partner_delete",
+    ),
     path("appearance/", views.backoffice_appearance, name="appearance"),
     # Configuracoes globais do site (nome, contato, redes). Deixou de
     # ser o placeholder na Etapa F.

@@ -34,13 +34,14 @@ DASHBOARD = reverse("core:dashboard")
 #                                   (accounts/tests/test_backoffice_usuarios.py)
 #   backoffice:document_library  -> doctemplates.view_documenttemplate
 #                                   (doctemplates/tests/test_biblioteca_admin.py)
+#   backoffice:partners          -> content.view_partner
+#                                   (content/tests/test_parceiros_no_backoffice.py)
 #
 # `backoffice:permissions` saiu do projeto: permissão agora se administra
 # por pessoa, no detalhe de cada usuário.
 ROTAS = [
     "backoffice:overview",
     "backoffice:letter_policy",
-    "backoffice:partners",
     "backoffice:appearance",
 ]
 

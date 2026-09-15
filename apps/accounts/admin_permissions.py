@@ -156,6 +156,42 @@ CATALOGO = (
                 ),
                 aplicada_em="content.backoffice_views.backoffice_content_section / _activation",
             ),
+            PermissaoAdministrativa(
+                chave="content.view_partner",
+                rotulo=_("Ver os parceiros"),
+                descricao=_(
+                    "Abre a tela de parceiros e vê quem está cadastrado, com que "
+                    "imagem e quem aparece na página inicial."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_partners / _edit",
+            ),
+            PermissaoAdministrativa(
+                chave="content.add_partner",
+                rotulo=_("Cadastrar parceiros"),
+                descricao=_("Acrescenta um parceiro novo à página inicial."),
+                aplicada_em="content.backoffice_views.backoffice_partner_new",
+            ),
+            PermissaoAdministrativa(
+                chave="content.change_partner",
+                rotulo=_("Editar os parceiros"),
+                descricao=_(
+                    "Altera os dados de um parceiro, muda a ordem em que aparecem "
+                    "e mostra ou oculta cada um."
+                ),
+                aplicada_em=(
+                    "content.backoffice_views.backoffice_partner_edit / "
+                    "_activation / _move"
+                ),
+            ),
+            PermissaoAdministrativa(
+                chave="content.delete_partner",
+                rotulo=_("Remover parceiros"),
+                descricao=_(
+                    "Apaga o cadastro de um parceiro para sempre. Para apenas "
+                    "tirá-lo da página inicial, basta editar e desativar."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_partner_delete",
+            ),
         ),
     ),
     GrupoDePermissoes(

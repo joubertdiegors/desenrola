@@ -31,7 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from apps.content import services as content
-from apps.content.models import Partner, SiteSettings
+from apps.content.models import SiteSettings
 from apps.letters import lifecycle, presentation
 from apps.letters import services as letter_services
 
@@ -258,33 +258,6 @@ def backoffice_overview(request):
         }
     )
     return render(request, "backoffice/overview.html", context)
-
-
-@backoffice_required
-def backoffice_partners(request):
-    """
-    Parceiros: os que a Home mostra, e em que estado cada um esta.
-
-    SOMENTE LEITURA, pela mesma razao da tela de Aparencia: quem
-    cadastra parceiro e a administracao do Django, que ja tem o
-    formulario completo (nome, descricao, imagem, endereco, ordem).
-    Um segundo formulario aqui seria dois lugares para a mesma
-    coisa.
-
-    Ate a Etapa I esta tela mostrava `demo.ADMIN_PARTNERS` -- quatro
-    parceiros escritos no codigo, que nao estavam no banco e que a
-    Home nunca mostrou -- com tres botoes que nao faziam nada.
-    """
-    context = _backoffice_context("partners")
-    context.update(
-        {
-            # `select_related`: a lista mostra se ha imagem, e sem
-            # isto cada linha custaria uma consulta a mais.
-            "parceiros": Partner.objects.select_related("logo"),
-            "url_do_admin": reverse("admin:content_partner_changelist"),
-        }
-    )
-    return render(request, "backoffice/partners.html", context)
 
 
 @backoffice_required

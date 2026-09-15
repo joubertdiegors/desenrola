@@ -1,0 +1,66 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Parceiros · confirmação de remoção.
+
+UMA TELA, E NÃO UM `confirm()`
+------------------------------
+Apagar é a única ação daqui que não tem volta. Uma caixa do navegador
+depende de JavaScript e desaparece num toque errado; esta tela diz o que
+vai sumir, oferece a alternativa que quase sempre é a certa (desativar)
+e exige um POST próprio.
+
+A IMAGEM NÃO VAI JUNTO
+----------------------
+`logo` aponta para a biblioteca de Assets, que é compartilhada. Apagar o
+parceiro não apaga a imagem, que pode estar em uso em outro lugar.
+
+Contexto: parceiro, pode_editar, url_dos_parceiros.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Remover parceiro" %}</h1>
+    <p class="text-muted">{% translate "Esta ação não tem volta." %}</p>
+  </div>
+  <a class="btn btn-secondary" href="{{ url_dos_parceiros }}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{% translate "Esta ação não tem volta." %}</p>
+
+<div class="notice notice-error">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{% blocktranslate trimmed with nome=parceiro.name %}
+    Remover <strong>{{ nome }}</strong> apaga o cadastro para sempre. Se a intenção é só tirá-lo da página inicial, desative-o: ele some da Home na hora e o registro continua aqui.
+  {% endblocktranslate %}</span>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{{ parceiro.name }}</h3>
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Descrição" %}</dt><dd>{{ parceiro.description|default:"—" }}</dd>
+    <dt>{% translate "Endereço" %}</dt><dd>{{ parceiro.url|default:"—" }}</dd>
+    <dt>{% translate "Imagem" %}</dt><dd>{% if parceiro.logo %}{{ parceiro.logo }} <span class="cell-muted">{% translate "(continua na biblioteca)" %}</span>{% else %}—{% endif %}</dd>
+    <dt>{% translate "Na Home" %}</dt><dd>{% if parceiro.is_active %}{% translate "Aparece" %}{% else %}{% translate "Oculto" %}{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="bo-actions">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover definitivamente" %}</button>
+  </form>
+
+  {% if pode_editar and parceiro.is_active %}
+  <form method="post" action="{% url 'backoffice:partner_activation' parceiro.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="0">
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Só desativar" %}</button>
+  </form>
+  {% endif %}
+
+  <a class="btn btn-ghost" href="{{ url_dos_parceiros }}">{% translate "Cancelar" %}</a>
+</div>
+{% endblock %}

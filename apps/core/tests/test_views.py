@@ -17,10 +17,14 @@ from django.urls import reverse
 # `backoffice:content` (`content.view_pagesection`, em
 # apps/content/tests/test_conteudo_da_home.py) -- esta ultima saiu
 # daqui quando deixou de ser um marcador e virou a tela de conteudo.
+#
+# `backoffice:partners` saiu pelo mesmo motivo na Etapa 11: deixou de
+# ser tela de leitura e virou o cadastro de parceiros, que cobra
+# `content.view_partner` (em
+# apps/content/tests/test_parceiros_no_backoffice.py).
 BACKOFFICE = [
     "backoffice:overview",
     "backoffice:languages",
-    "backoffice:partners",
     "backoffice:appearance",
     "backoffice:system",
 ]
