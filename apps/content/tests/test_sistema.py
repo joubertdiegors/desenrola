@@ -477,7 +477,7 @@ class TestTela:
         """
         corpo = cliente.get(TELA).content.decode()
         inicio = corpo.index("Configurado em outras telas")
-        cartao = corpo[inicio : corpo.index("Links legais", inicio)]
+        cartao = corpo[inicio : corpo.index("Documentos legais", inicio)]
 
         for url in (
             reverse("backoffice:appearance"),
@@ -486,11 +486,23 @@ class TestTela:
         ):
             assert f'href="{url}"' in cartao
 
-    def test_diz_que_nao_ha_links_legais(self, cliente):
-        """Não se inventa endereço: diz-se que não há."""
-        corpo = cliente.get(TELA).content.decode()
+    def test_mostra_o_estado_dos_documentos_legais_sem_edita_los(self, cliente):
+        """
+        Até a Etapa F esta tela dizia que não havia links legais, porque
+        não havia mesmo. A Etapa G criou as duas páginas, e o cartão
+        passou a mostrar o ESTADO de cada documento.
 
-        assert "Não há links legais configurados" in corpo
+        O que não mudou, e é o que esta asserção guarda: aqui não se
+        edita texto legal. Não há formulário paralelo -- o texto é
+        escrito na administração do Django.
+        """
+        corpo = cliente.get(TELA).content.decode()
+        inicio = corpo.index("Documentos legais")
+        cartao = corpo[inicio:]
+
+        assert "Sem texto" in cartao
+        assert "<form" not in cartao
+        assert 'name="legal.terms_of_use"' not in corpo
 
     def test_nao_ha_infraestrutura_inventada(self, cliente):
         corpo = cliente.get(TELA).content.decode()
@@ -618,16 +630,20 @@ class TestSitePublico:
 
         assert "Outro Nome ©" in corpo or "Outro Nome &copy;" in corpo
 
-    def test_os_links_legais_continuam_sem_destino_inventado(self, client):
+    def test_sem_documento_publicado_o_rodape_nao_traz_link_legal(self, client):
         """
-        Não há página de Termos nem de Privacidade. Enquanto não houver,
-        não se inventa endereço -- e a tela de Sistema diz isso.
+        Até a Etapa F os dois links existiam apontando para `#`. A Etapa
+        G trocou a regra: sem texto publicado, o link não existe -- e em
+        nenhuma hipótese vira um endereço inventado.
+
+        A cobertura completa das páginas legais está em
+        `apps/content/tests/test_paginas_legais.py`.
         """
         corpo = client.get(HOME).content.decode()
 
-        assert "Termos de uso" in corpo
+        assert 'href="#"' not in corpo
         assert "termos-de-uso" not in corpo
-        assert "privacidade" not in corpo.lower().replace("privacidade<", "")
+        assert "/legal/" not in corpo
 
     def test_a_aparencia_continua_funcionando(self, client):
         """Regressão da Etapa C: as cores continuam saindo no `<style>`."""

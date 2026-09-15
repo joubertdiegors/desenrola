@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+Uma página legal: Termos de uso ou Privacidade.
+
+O TEXTO É TEXTO
+---------------
+`linebreaks` e mais nada: converte parágrafos e quebras de linha em
+`<p>`/`<br>` e ESCAPA todo o resto. Não há `|safe`, não há HTML, não há
+Markdown -- o que o cliente escrever no Django Admin aparece como
+escreveu, e uma marcação digitada ali sai visível na página em vez de
+virar marcação.
+
+SÓ CHEGA AQUI O QUE ESTÁ PUBLICADO
+----------------------------------
+A view responde 404 quando o documento não tem texto. Este template
+nunca desenha uma página legal em branco.
+
+Contexto: titulo, texto.
+{% endcomment %}
+
+{% block title %}{{ titulo }} · {{ site_config.name }}{% endblock %}
+
+{% comment %}
+Cabeçalho próprio, e não `components/site_nav.html`: aquele traz
+âncoras da Home (`#como-funciona`, `#parceiros`) que nesta página não
+levariam a lugar nenhum -- exatamente o defeito que esta etapa existe
+para remover. Aqui vai só a marca, de volta para a Home, com as mesmas
+classes das telas de autenticação.
+{% endcomment %}
+{% block header %}
+<header class="auth-header">
+  <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+</header>
+{% endblock %}
+
+{% block content %}
+<article class="section container legal-page">
+  <h1>{{ titulo }}</h1>
+  <div class="legal-texto">{{ texto|linebreaks }}</div>
+</article>
+{% endblock %}
+
+{% block footer %}{% include "components/site_footer.html" %}{% endblock %}

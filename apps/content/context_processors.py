@@ -14,8 +14,13 @@ A identidade global do site: nome, logo, favicon, as duas cores do
 tema e -- desde a etapa do Sistema -- contato e redes sociais. Nada
 mais, e não por preguiça: o que um template alcança é o que alguém pode
 publicar sem pensar. Cada campo entra junto com a tela que o apresenta,
-de propósito. Textos legais continuam de fora: não há tela nem página
-que os mostre.
+de propósito.
+
+Os documentos legais chegam por uma CHAVE SEPARADA (`paginas_legais`), e
+não dentro de `site_config`: são outra consulta, a outra tabela, e só as
+telas que desenham esses links a pagam. Juntar as duas cobraria a
+consulta de toda página do site -- `site_config` é lido em todo
+`<title>`.
 
 O QUE VAI PARA DENTRO DE UM ATRIBUTO É VALIDADO AQUI, DE NOVO
 -------------------------------------------------------------
@@ -187,6 +192,38 @@ def globais():
     )
 
 
+@dataclass(frozen=True)
+class PaginasLegais:
+    """
+    Quais documentos legais já têm texto publicado.
+
+    Booleanos, e não o texto: o rodapé, o cadastro e o perfil precisam
+    saber se DEVEM mostrar o link, não o que há dentro dele. Quem lê o
+    conteúdo é a própria página legal.
+    """
+
+    termos_de_uso: bool
+    privacidade: bool
+
+    def __bool__(self):
+        """Há algum documento publicado?"""
+        return self.termos_de_uso or self.privacidade
+
+
+def legais():
+    """
+    Uma consulta para os dois documentos, e só quando algum template
+    pergunta (ver `SimpleLazyObject` abaixo).
+    """
+    from .services import legais_publicadas
+
+    publicadas = legais_publicadas()
+    return PaginasLegais(
+        termos_de_uso="legal.terms_of_use" in publicadas,
+        privacidade="legal.privacy_policy" in publicadas,
+    )
+
+
 def site(request):
     """
     O processador de contexto. Registrado em `config.settings.base`.
@@ -196,5 +233,12 @@ def site(request):
     ou um `RequestSite`), e a chave da view vence a do processador. Com o
     nome `site`, a tela de entrar recebia o objeto do Django e as cores
     saiam vazias -- em silencio, que e o pior jeito de quebrar.
+
+    `paginas_legais` vem junto, na mesma ponte, mas em chave propria e
+    com preguica propria: quem so usa o nome do site nao paga a consulta
+    dos documentos legais.
     """
-    return {"site_config": SimpleLazyObject(globais)}
+    return {
+        "site_config": SimpleLazyObject(globais),
+        "paginas_legais": SimpleLazyObject(legais),
+    }

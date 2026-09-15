@@ -96,7 +96,25 @@ desktop, bloco recolhivel "Telefone e endereço" no celular.
       <label class="check{% if form.terms.errors %} is-invalid{% endif %}">
         <input type="checkbox" name="terms" value="on"{% if form.terms.value %} checked{% endif %}>
         <span class="box"></span>
-        <span>{% blocktranslate trimmed %}Li e aceito os <a href="#">Termos de uso</a> e a <a href="#">Política de privacidade</a>.{% endblocktranslate %}</span>
+        {% comment %}
+        O aceite continua obrigatório (`SignupForm.terms`). O que
+        mudou na Etapa G é o DESTINO: cada documento vira link
+        quando tem texto publicado, e continua texto puro
+        enquanto não tem -- nunca um `#` que não abre nada.
+        {% endcomment %}
+        <span>
+          {% if paginas_legais.termos_de_uso %}{% url 'core:legal_termos' as url_termos %}{% endif %}
+          {% if paginas_legais.privacidade %}{% url 'core:legal_privacidade' as url_privacidade %}{% endif %}
+          {% if url_termos and url_privacidade %}
+            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}">Termos de uso</a> e a <a href="{{ url_privacidade }}">Política de privacidade</a>.{% endblocktranslate %}
+          {% elif url_termos %}
+            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}">Termos de uso</a> e a Política de privacidade.{% endblocktranslate %}
+          {% elif url_privacidade %}
+            {% blocktranslate trimmed %}Li e aceito os Termos de uso e a <a href="{{ url_privacidade }}">Política de privacidade</a>.{% endblocktranslate %}
+          {% else %}
+            {% translate "Li e aceito os Termos de uso e a Política de privacidade." %}
+          {% endif %}
+        </span>
       </label>
       {% include "components/field_errors.html" with errors=form.terms.errors %}
 

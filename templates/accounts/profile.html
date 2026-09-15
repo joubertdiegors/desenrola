@@ -63,7 +63,11 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       {% csrf_token %}
       <button type="submit" class="btn btn-ghost btn-block"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
     </form>
-    <p class="text-muted profile-foot">{{ site_config.name }} v1.0 · <a href="#">{% translate "Privacidade" %}</a></p>
+    {% comment %}
+    O link de Privacidade só existe quando o documento tem texto
+    publicado. Antes da Etapa G era um `#`.
+    {% endcomment %}
+    <p class="text-muted profile-foot">{{ site_config.name }} v1.0{% if paginas_legais.privacidade %} · <a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}</p>
   </div>
 
   <div class="profile-main">

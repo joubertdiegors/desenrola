@@ -14,7 +14,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -145,6 +145,26 @@ def home(request):
             "cartas_emitidas": statistics.cartas_emitidas(),
         },
     )
+
+
+def legal(request, chave, titulo):
+    """
+    Uma pagina legal: Termos de uso ou Privacidade.
+
+    O texto vem de `content.ContentBlock`, pela chave -- que e FIXA na
+    rota, nunca vinda do cliente. Sem texto publicado (bloco ausente,
+    desativado, sem traducao ou em branco), responde 404: uma pagina
+    legal em branco e pior do que pagina nenhuma.
+
+    Publica e sem login, como a landing: um documento legal precisa ser
+    legivel antes de a pessoa criar conta -- e o link dele esta,
+    justamente, na tela de cadastro.
+    """
+    texto = content.texto_legal(chave)
+    if texto is None:
+        raise Http404("documento legal sem conteúdo publicado")
+
+    return render(request, "core/legal.html", {"titulo": titulo, "texto": texto})
 
 
 @login_required
@@ -406,6 +426,10 @@ def backoffice_system(request):
             "url_da_aparencia": reverse("backoffice:appearance"),
             "url_dos_idiomas": reverse("backoffice:languages"),
             "url_do_email": reverse("backoffice:email_settings"),
+            # Onde o texto dos documentos legais e escrito. A tela de
+            # Sistema mostra o ESTADO deles e aponta para ca -- nao
+            # duplica o editor (decisao da Etapa G).
+            "url_dos_blocos": reverse("admin:content_contentblock_changelist"),
         }
     )
     return render(request, "backoffice/system.html", context)

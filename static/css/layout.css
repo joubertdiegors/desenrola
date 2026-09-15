@@ -138,6 +138,17 @@ img.partner-image { width: 100%; object-fit: contain; }
   color: var(--mu);
   flex-wrap: wrap;
 }
+/* Pagina legal: uma coluna de texto corrido. Largura de leitura, e nao
+   os 1280px do `.container` -- linha longa demais cansa, e um texto
+   juridico ja e dificil o bastante. */
+.legal-page { max-width: 760px; padding-bottom: 64px; }
+.legal-page h1 { font-size: 34px; margin-bottom: 20px; }
+.legal-texto { color: var(--tx); line-height: 1.7; }
+.legal-texto p { margin: 0 0 16px; }
+@media (max-width: 767px) {
+  .legal-page h1 { font-size: 26px; }
+}
+
 .site-footer a { color: inherit; }
 .site-footer a:hover { color: var(--p); }
 /* Redes sociais: so icone, e so as que estao configuradas (o nome vai no

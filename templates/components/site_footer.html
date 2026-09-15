@@ -18,17 +18,19 @@ Ate esta etapa estava escrito "2026" no codigo, em dois lugares.
 
 TERMOS DE USO E PRIVACIDADE
 ---------------------------
-Continuam apontando para `#`: nao ha pagina, rota nem texto por tras
-deles. Nao se inventa endereco -- a tela de Sistema do Backoffice diz,
-em voz alta, que nao ha links legais configurados. Criar os textos (em
-`content.ContentBlock`, que e onde o modelo os preve) e as paginas que
-os mostram e etapa propria.
+Cada um so aparece quando o documento correspondente TEM TEXTO
+publicado (`content.ContentBlock`, chaves `legal.*`). Sem texto, o link
+nao existe -- e nao vira um `#`, que era o que havia aqui ate a Etapa G.
+Um link que leva a lugar nenhum e pior do que link nenhum.
+
+Quem escreve os textos e o cliente, pelo Django Admin. O codigo cria o
+lugar; o conteudo juridico nao se inventa.
 {% endcomment %}
 <footer class="site-footer">
   <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
   <span class="d-only">&copy; {% now "Y" %}</span>
-  <a href="#">{% translate "Termos de uso" %}</a>
-  <a href="#">{% translate "Privacidade" %}</a>
+  {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
+  {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
   {% if site_config.contact.email %}<a class="d-only" href="mailto:{{ site_config.contact.email }}">{% translate "Contato" %}</a>{% endif %}
   {% for rede in site_config.social %}
   <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
