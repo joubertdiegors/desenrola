@@ -30,7 +30,7 @@ import pathlib
 
 import pytest
 from django.urls import reverse
-from django.utils import timezone
+from freezegun import freeze_time
 
 from apps.letters import services
 
@@ -40,7 +40,27 @@ RAIZ = pathlib.Path(__file__).resolve().parents[3]
 APP_JS = (RAIZ / "static" / "js" / "app.js").read_text(encoding="utf-8")
 COMPONENTS_CSS = (RAIZ / "static" / "css" / "components.css").read_text(encoding="utf-8")
 
-HOJE = timezone.localdate()
+# O RELOGIO DESTE MODULO E PARADO
+#
+# Todo teste daqui compara uma data que a APLICACAO calcula na requisicao
+# com uma data que o TESTE ja conhece. Com o relogio real, uma suite longa
+# que atravessasse a meia-noite faria a aplicacao responder "amanha" para
+# um teste que tinha guardado "hoje" -- falha sem defeito nenhum.
+#
+# Congela o modulo INTEIRO, e nao so os testes que citam HOJE: CHEGADA e
+# PARTIDA sao futuras em relacao a HOJE, e a regra de chegada nao
+# retroativa as recusaria se o resto do modulo ficasse no relogio real.
+#
+# Meio-dia, e nao meia-noite: com TIME_ZONE = "Europe/Brussels" a
+# conversao de fuso perto da meia-noite mudaria o DIA -- seria trocar uma
+# dependencia do relogio por outra.
+HOJE = datetime.date(2026, 3, 17)
+
+
+@pytest.fixture(autouse=True)
+def _relogio_parado():
+    with freeze_time("2026-03-17 12:00:00"):
+        yield
 
 # O mínimo para a etapa 1 passar e a 2 abrir.
 PASSO_1 = {

@@ -12,7 +12,7 @@ import datetime
 
 import pytest
 from django.urls import reverse
-from django.utils import timezone
+from freezegun import freeze_time
 
 from apps.doctemplates.models import Nationality
 from apps.letters import services
@@ -42,7 +42,27 @@ def _modelos_oficiais_prontos(modelos_oficiais_prontos):
     nao viraria PDF).
     """
 
-HOJE = timezone.localdate()
+# O RELOGIO DESTE MODULO E PARADO
+#
+# Todo teste daqui compara uma data que a APLICACAO calcula na requisicao
+# com uma data que o TESTE ja conhece. Com o relogio real, uma suite longa
+# que atravessasse a meia-noite faria a aplicacao responder "amanha" para
+# um teste que tinha guardado "hoje" -- falha sem defeito nenhum.
+#
+# Congela o modulo INTEIRO, e nao so os testes que citam HOJE: CHEGADA e
+# PARTIDA sao futuras em relacao a HOJE, e a regra de chegada nao
+# retroativa as recusaria se o resto do modulo ficasse no relogio real.
+#
+# Meio-dia, e nao meia-noite: com TIME_ZONE = "Europe/Brussels" a
+# conversao de fuso perto da meia-noite mudaria o DIA -- seria trocar uma
+# dependencia do relogio por outra.
+HOJE = datetime.date(2026, 3, 17)
+
+
+@pytest.fixture(autouse=True)
+def _relogio_parado():
+    with freeze_time("2026-03-17 12:00:00"):
+        yield
 CHEGADA = HOJE + datetime.timedelta(days=30)
 PARTIDA = CHEGADA + datetime.timedelta(days=14)
 
