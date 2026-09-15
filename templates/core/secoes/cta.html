@@ -1,0 +1,16 @@
+{% load i18n %}{% comment %}
+Mini Banner -- a faixa de chamada no fim da pagina.
+
+Contexto: secoes.cta.
+{% endcomment %}
+<section class="section container">
+  <div class="cta-banner">
+    <i class="ph cta-banner-icon ph-airplane-tilt" aria-hidden="true"></i>
+    <div>
+      <h2>{{ secoes.cta.title }}</h2>
+      <p>{{ secoes.cta.text }}</p>
+    </div>
+    <a class="btn" href="{% url 'accounts:signup' %}">{{ secoes.cta.button }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    <i class="ph cta-banner-deco ph-globe-hemisphere-west" aria-hidden="true"></i>
+  </div>
+</section>

@@ -1,0 +1,31 @@
+{% load i18n %}{% comment %}
+Banner superior · desenho "Imagem completa".
+
+A imagem ocupa o banner inteiro. NADA de titulo ou texto por cima: texto
+sobre imagem arbitraria e ilegivel na metade das fotos, e este desenho
+existe justamente para quando a imagem fala sozinha.
+
+O BOTAO FICA ABAIXO, E SO SE HOUVER
+-----------------------------------
+`cta` esta declarado para este desenho (ver `section_schema`), e o botao
+sai ABAIXO da imagem -- nao sobreposto, pela mesma razao. Em branco, o
+botao nao aparece: e um estado legitimo, nao um campo esquecido.
+
+O TEXTO NAO SE PERDE
+--------------------
+Titulo, chamada e rotulos do contador continuam gravados no banco. Este
+desenho simplesmente nao os le. Voltar para "Imagem e texto" os traz de
+volta inteiros.
+
+Contexto: secoes.hero.
+{% endcomment %}
+<section class="hero-cheio container">
+  <div class="hero-cheio-art" aria-hidden="true">
+    <div class="img-slot"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+  </div>
+  {% if secoes.hero.cta %}
+  <div class="hero-cheio-acao">
+    <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,41 @@
+{% load i18n static %}<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  {% comment %}
+  A PREVIA E A HOME, NAO UMA IMITACAO DELA.
+
+  Mesmo CSS do site, mesmo parcial, mesmo contexto. Esta casca existe so
+  para o `<iframe>` ter um documento proprio -- nao ha marcacao de
+  conteudo aqui.
+
+  A LARGURA E O PONTO
+  -------------------
+  Dentro de um `<iframe>`, a largura do ELEMENTO e a largura de
+  referencia das media queries. Entao o painel do editor nao reduz uma
+  pagina larga: ele estreita o proprio quadro, e o CSS responde como
+  responderia num aparelho daquele tamanho. E simulacao de verdade, nao
+  desenho encolhido.
+
+  A MINIATURA E O CASO OPOSTO
+  ---------------------------
+  Ela precisa mostrar o desenho de DESKTOP num quadro de 220px. Por isso
+  so ela forca `width=1280` -- sem esse `<meta>`, o quadro estreito
+  dispararia o CSS de celular e a miniatura mostraria a pagina errada.
+  {% endcomment %}
+  {% if viewport == "miniatura" %}<meta name="viewport" content="width=1280">{% else %}<meta name="viewport" content="width=device-width, initial-scale=1">{% endif %}
+  <title>{{ secao.key }}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+  <style>:root{--p:{{ site_config.primary_color }};--s:{{ site_config.success_color }};}
+    html,body{margin:0;background:#fff;overflow:hidden}</style>
+</head>
+<body class="bo-previa" data-viewport="{{ viewport }}">
+  {% include parcial %}
+</body>
+</html>

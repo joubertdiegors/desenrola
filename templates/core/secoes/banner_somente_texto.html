@@ -1,0 +1,24 @@
+{% load i18n %}{% comment %}
+Banner superior · desenho "Somente texto".
+
+Sem imagem, e sem espaco reservado para ela: a moldura nao e escondida
+com CSS, ela simplesmente nao e desenhada. Composicao centralizada, na
+largura de leitura.
+
+A legenda da imagem continua gravada no banco e nao e lida aqui --
+trocar de desenho nunca apaga dado.
+
+Contexto: secoes.hero.
+{% endcomment %}
+<section class="hero-texto container">
+  <h1>{{ secoes.hero.title }}</h1>
+  <p class="hero-lead">{{ secoes.hero.lead }}</p>
+  {% if secoes.hero.cta %}
+  <div class="hero-actions">
+    <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+  </div>
+  {% endif %}
+  {% if secoes.hero.login_prompt or secoes.hero.login_link %}
+  <p class="hero-alt">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></p>
+  {% endif %}
+</section>

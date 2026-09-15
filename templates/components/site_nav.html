@@ -1,27 +1,39 @@
 {% load i18n %}{% comment %}
-Barra da landing (layout 2a desktop, 4a celular): logotipo, "Como
-funciona", "Parceiros", idioma, "Fazer login" e "Criar minha conta".
-No celular: logotipo + menu.
-{% endcomment %}
+Barra superior da landing (layout 2a desktop, 4a celular).
+
+O QUE VEM DO CMS, E O QUE NÃO VEM
+---------------------------------
+  menu_itens              `content.MenuItem` ativos, na ordem definida --
+                          texto e destino administráveis;
+  partes.navbar.conteudo  os rótulos dos dois botões de conta;
+  logotipo                `content.SiteSettings`, pelo processador de
+                          contexto. NÃO é duplicado aqui: identidade do
+                          site tem um dono só.
+
+A barra inteira só aparece quando a parte "navbar" está ativa. Desligada,
+o cabeçalho simplesmente não existe -- e não fica faixa vazia no lugar,
+porque quem some é o `<header>`.
+
+Os botões de entrar e criar conta continuam sendo ESTRUTURA do produto:
+o que se administra é o texto deles, não a existência. Um site de gerar
+cartas sem porta de entrada não é uma configuração, é um defeito.
+{% endcomment %}{% if partes.navbar %}
+{% with nav=partes.navbar.conteudo %}
 <header class="d-only">
   {% comment %}
   `container` e o mesmo max-width do resto do site (ver .container em
   static/css/layout.css) -- e o que mantem o conteudo da barra alinhado
-  com o conteudo das paginas. O `push` no meio empurra idioma e botoes
-  para a direita, em vez de deixar tudo amontoado a esquerda. Mesmo
-  padrao da barra da area logada (components/app_nav.html).
+  com o conteudo das paginas. O `push` no meio empurra os botoes para a
+  direita. Mesmo padrao da barra da area logada (components/app_nav.html).
   {% endcomment %}
   <nav class="nav-desktop site-nav container" aria-label="{% translate 'Navegação principal' %}">
     <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
-    <a class="nav-link" href="#como-funciona">{% translate "Como funciona" %}</a>
-    {% comment %}
-    A âncora só existe quando há parceiro cadastrado (ver core/home.html):
-    o item some junto, em vez de levar a lugar nenhum.
-    {% endcomment %}
-    {% if parceiros %}<a class="nav-link" href="#parceiros">{% translate "Parceiros" %}</a>{% endif %}
+    {% for item in menu_itens %}
+    <a class="nav-link" href="{{ item.destination }}">{{ item.label }}</a>
+    {% endfor %}
     <span class="push"></span>
-    <a class="btn btn-text" href="{% url 'accounts:login' %}">{% translate "Fazer login" %}</a>
-    <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}</a>
+    <a class="btn btn-text" href="{% url 'accounts:login' %}">{{ nav.login_label|default:_("Fazer login") }}</a>
+    <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{{ nav.signup_label|default:_("Criar minha conta") }}</a>
   </nav>
 </header>
 <header class="m-only">
@@ -30,12 +42,15 @@ No celular: logotipo + menu.
     <details class="dropdown">
       <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
-        <a class="dropdown-item" href="#como-funciona">{% translate "Como funciona" %}</a>
-        {% if parceiros %}<a class="dropdown-item" href="#parceiros">{% translate "Parceiros" %}</a>{% endif %}
-        <div class="dropdown-sep"></div>
-        <a class="dropdown-item" href="{% url 'accounts:login' %}">{% translate "Fazer login" %}</a>
-        <a class="dropdown-item" href="{% url 'accounts:signup' %}">{% translate "Criar minha conta" %}</a>
+        {% for item in menu_itens %}
+        <a class="dropdown-item" href="{{ item.destination }}">{{ item.label }}</a>
+        {% endfor %}
+        {% if menu_itens %}<div class="dropdown-sep"></div>{% endif %}
+        <a class="dropdown-item" href="{% url 'accounts:login' %}">{{ nav.login_label|default:_("Fazer login") }}</a>
+        <a class="dropdown-item" href="{% url 'accounts:signup' %}">{{ nav.signup_label|default:_("Criar minha conta") }}</a>
       </div>
     </details>
   </nav>
 </header>
+{% endwith %}
+{% endif %}

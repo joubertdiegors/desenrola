@@ -23,6 +23,7 @@ lista antes de virar consulta, nunca usado como veio.
 
 from django.conf import settings
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -30,7 +31,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.views import exige_permissao
 
-from . import section_schema
+from . import section_schema, services
 from .forms import FormularioDeSecao
 from .models import Page, PageSection, PageSectionTranslation
 from .services import CHAVE_DA_HOME
@@ -38,6 +39,22 @@ from .services import CHAVE_DA_HOME
 # As duas permissões desta seção. Constantes, e não a string solta em
 # cada view e template, para o dia em que alguém procurar "quem decide
 # isto".
+# As tres larguras que a previa simula, em pixels. Sao as larguras do
+# CSS de verdade -- a media query de celular do projeto corta em 767px
+# (ver static/css/layout.css), entao 390 e 1280 caem dos dois lados dela
+# com folga, e 834 exercita a faixa do meio.
+#
+# Lista FECHADA: o valor chega do navegador e acaba num `<meta>`.
+VIEWPORTS = {
+    "desktop": 1280,
+    "tablet": 834,
+    "mobile": 390,
+    # A miniatura da Central: quadro pequeno, desenho de desktop. E o
+    # unico caso em que a largura de referencia e FORCADA por `<meta>`.
+    "miniatura": 1280,
+}
+PADRAO_DO_VIEWPORT = "desktop"
+
 VER_PERM = "content.view_pagesection"
 EDITAR_PERM = "content.change_pagesection"
 
@@ -83,17 +100,30 @@ def backoffice_content(request):
         .first()
     )
 
-    secoes = []
-    for secao in pagina.sections.all() if pagina else []:
-        traducao = _traducao(secao, idioma)
-        secoes.append(
-            {
-                "secao": secao,
-                "editavel": section_schema.editavel(secao),
-                "tem_traducao": bool(traducao and traducao.content),
-                "atualizada_em": traducao.updated_at if traducao else None,
-            }
-        )
+    todas = list(pagina.sections.all()) if pagina else []
+
+    # Topo / Meio / Final, na ordem da página. Os grupos vêm de
+    # `section_schema` -- são a forma de ler a página, não uma tabela.
+    grupos = []
+    for chave, nome, explicacao in [
+        (g[0], g[1], g[2]) for g in section_schema.GRUPOS
+    ]:
+        do_grupo = [
+            _linha_da_central(secao, idioma)
+            for secao in todas
+            if (section_schema.secao_declarada(secao) or None)
+            and section_schema.secao_declarada(secao).grupo == chave
+        ]
+        if do_grupo:
+            grupos.append(
+                {"chave": chave, "nome": nome, "explicacao": explicacao, "partes": do_grupo}
+            )
+
+    # As que nenhuma declaração conhece. Não somem da tela: some a
+    # ILUSÃO de que a Central sabe editá-las.
+    sem_declaracao = [
+        secao for secao in todas if section_schema.secao_declarada(secao) is None
+    ]
 
     return render(
         request,
@@ -102,12 +132,27 @@ def backoffice_content(request):
             "active": "content",
             "bo_title": _("Conteúdo do site"),
             "pagina": pagina,
-            "secoes": secoes,
+            "grupos": grupos,
+            "sem_declaracao": sem_declaracao,
             "idioma": idioma,
             "idiomas": idiomas_disponiveis(idioma),
             "pode_editar": request.user.has_perm(EDITAR_PERM),
         },
     )
+
+
+def _linha_da_central(secao, idioma):
+    """Uma parte da página, como a Central a apresenta."""
+    declarada = section_schema.secao_declarada(secao)
+    traducao = _traducao(secao, idioma)
+    return {
+        "secao": secao,
+        "nome": declarada.nome,
+        "descricao": declarada.descricao,
+        "editavel": section_schema.editavel(secao),
+        "tem_traducao": bool(traducao and traducao.content),
+        "atualizada_em": traducao.updated_at if traducao else None,
+    }
 
 
 @exige_permissao(VER_PERM)
@@ -171,6 +216,118 @@ def backoffice_content_section(request, pk):
             "url_da_lista": _url_da_lista(idioma),
         },
     )
+
+
+@exige_permissao(VER_PERM)
+def backoffice_content_preview(request, pk):
+    """
+    UMA parte da Home, desenhada com o código real.
+
+    É o que a Central põe no `<iframe>` de cada miniatura e o que o
+    editor põe no painel de pré-visualização. O contexto é
+    `contexto_da_home()` -- o mesmo da página pública -- e o parcial é o
+    mesmo que a Home inclui. Não existe segunda implementação visual,
+    então a prévia não tem como divergir.
+
+    GET desenha o que está SALVO. POST desenha o que está DIGITADO,
+    sem gravar nada: é o que permite ver antes de salvar.
+
+    Mostra a parte MESMO QUE ELA ESTEJA DESATIVADA: quem administra
+    precisa ver o que está prestes a religar. A Home pública continua
+    não a mostrando -- são perguntas diferentes.
+
+    O NAVEGADOR NUNCA ESCOLHE TEMPLATE
+    ----------------------------------
+    Ele manda, no máximo, o DESENHO (`imagem_texto`, ...) e a LARGURA.
+    Os dois passam por lista fechada: desenho desconhecido cai no
+    padrão, largura desconhecida cai em `desktop`. Nenhum caminho de
+    arquivo atravessa daqui.
+    """
+    secao = get_object_or_404(
+        PageSection.objects.select_related("page"), pk=pk, page__key=CHAVE_DA_HOME
+    )
+    chave = secao.key or secao.kind
+
+    # O desenho: o gravado, ou o que o formulário está propondo.
+    desenho = secao.layout
+    if request.method == "POST":
+        desenho = request.POST.get("layout") or desenho
+
+    parcial = section_schema.parcial_da_secao(chave, desenho)
+    if parcial is None:
+        raise Http404("esta parte não tem desenho próprio")
+
+    contexto = services.contexto_da_home()
+
+    # A parte desativada nao vem em `contexto_da_home()` (ele so traz as
+    # ativas). Para a previa, ela e reposta -- so aqui, e so para
+    # desenhar.
+    if chave not in contexto["partes"]:
+        reposta = services.parte_avulsa(secao)
+        contexto["partes"] = {**contexto["partes"], chave: reposta}
+        contexto["secoes"] = {**contexto["secoes"], chave: reposta.conteudo}
+        if chave == "footer":
+            contexto.update(services.contexto_do_rodape())
+
+    if request.method == "POST":
+        contexto = _com_o_que_esta_digitado(contexto, secao, chave, desenho, request.POST)
+
+    contexto.update(
+        {
+            "parcial": parcial,
+            "secao": secao,
+            "viewport": _viewport_pedido(request),
+        }
+    )
+    return render(request, "backoffice/content_preview.html", contexto)
+
+
+def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados):
+    """
+    O contexto da prévia, com o conteúdo do formulário por cima -- em
+    memória, sem tocar no banco.
+
+    `FormularioDeSecao.conteudo()` é o MESMO método que o salvamento
+    usa: o que a prévia mostra é exatamente o que seria gravado. Duas
+    montagens diferentes divergiriam, e a prévia passaria a mentir.
+
+    Formulário inválido não derruba a prévia: ela continua desenhando o
+    que está salvo, e quem valida é a tela de edição.
+    """
+    from copy import deepcopy
+
+    parte = contexto["partes"][chave]
+    # A seção precisa do desenho proposto para o formulário montar os
+    # campos certos -- sem gravar.
+    espelho = deepcopy(secao)
+    espelho.layout = desenho
+
+    form = FormularioDeSecao(espelho, parte.conteudo, data=dados)
+    if not form.is_valid():
+        return contexto
+
+    proposto = services.ParteDaPagina(
+        chave=chave, conteudo=form.conteudo(), desenho=desenho, ordem=parte.ordem
+    )
+    contexto = dict(contexto)
+    contexto["partes"] = {**contexto["partes"], chave: proposto}
+    contexto["secoes"] = {**contexto["secoes"], chave: proposto.conteudo}
+    if chave == "footer":
+        from .section_schema import blocos_do_rodape
+
+        blocos = blocos_do_rodape(proposto.conteudo)
+        contexto["blocos_do_rodape"] = blocos
+        contexto["mostra_contato_do_rodape"] = "contato" in blocos
+    return contexto
+
+
+def _viewport_pedido(request):
+    """
+    Qual largura simular. Lista fechada -- o valor vem do navegador e
+    acaba num `<meta>`.
+    """
+    pedido = request.POST.get("viewport") or request.GET.get("viewport") or ""
+    return pedido if pedido in VIEWPORTS else PADRAO_DO_VIEWPORT
 
 
 @exige_permissao(EDITAR_PERM)

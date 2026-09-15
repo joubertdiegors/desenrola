@@ -215,6 +215,7 @@ class TestPageSection:
 
     def test_tipos_disponiveis(self):
         assert set(PageSection.Kind.values) == {
+            "navbar",
             "hero",
             "text",
             "image_text",
@@ -224,6 +225,7 @@ class TestPageSection:
             "cta",
             "banner",
             "contact",
+            "footer",
         }
 
     def test_secoes_sao_ordenadas_pelo_campo_order(self, pagina):

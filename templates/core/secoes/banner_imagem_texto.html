@@ -1,0 +1,39 @@
+{% load i18n humanize %}{% comment %}
+Banner superior · desenho "Imagem e texto".
+
+E o desenho que a Home ja tinha antes da Etapa 11, movido para ca sem
+uma virgula de diferenca: texto a esquerda, moldura da imagem a direita.
+Continua sendo o PADRAO e a referencia visual do produto.
+
+Contexto: secoes.hero (o texto), cartas_emitidas (o contador real).
+{% endcomment %}
+<section class="hero container">
+  <div>
+    <div class="tint stat-badge">
+      <i class="ph-fill ph-users" aria-hidden="true"></i>
+      <div class="stat-badge-row">
+        {% comment %}
+        O número conta CARTAS EMITIDAS (apps.letters.statistics), não
+        pessoas -- e o rótulo ao lado, que vem do CMS, diz isso.
+
+        `intcomma` põe o separador de milhar da locale: 999 continua
+        "999", 1000 vira "1.000". A separação é de APRESENTAÇÃO -- o
+        contexto recebe o número inteiro.
+        {% endcomment %}
+        <span class="stat-badge-value">{{ cartas_emitidas|intcomma }}</span>
+        <span class="stat-badge-label">{{ secoes.hero.badge_label|linebreaksbr }}</span>
+      </div>
+      <span class="stat-badge-live d-only"><i class="ph-fill ph-circle" aria-hidden="true"></i>{{ secoes.hero.badge_note }}</span>
+    </div>
+    <h1>{{ secoes.hero.title }}</h1>
+    <p class="hero-lead">{{ secoes.hero.lead }}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      <span class="hero-alt d-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></span>
+    </div>
+    <p class="hero-alt m-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></p>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="img-slot"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+  </div>
+</section>

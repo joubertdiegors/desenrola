@@ -32,7 +32,7 @@ from django.views.decorators.http import require_POST
 
 from apps.content import services as content
 from apps.content.models import Partner, SiteSettings
-from apps.letters import lifecycle, presentation, statistics
+from apps.letters import lifecycle, presentation
 from apps.letters import services as letter_services
 
 from . import demo, mail
@@ -132,29 +132,17 @@ def home(request):
     vai direto para a sua area. O logout traz de volta para ca
     (LOGOUT_REDIRECT_URL), e ai a sessao ja acabou -- entao nao ha laco.
 
-    TRES FONTES REAIS, NENHUMA INVENTADA
-    ------------------------------------
-      secoes          o texto, de `content.Page` (chave "home");
-      parceiros       os `content.Partner` ativos, com o logo ja carregado;
-      cartas_emitidas quantas Cartas Convite existem de fato.
-
-    Carregadas AQUI, e nao no processador de contexto global: sao dados
-    desta pagina. O processador guarda o que vale para o site inteiro
-    (`site.name`, logo, favicon) -- enche-lo com o que so a Home usa
-    faria toda pagina pagar por isto.
+    O CONTEXTO VEM DE UM LUGAR SO
+    -----------------------------
+    `content.contexto_da_home()` monta tudo -- partes, menu, parceiros e
+    contador. A pre-visualizacao do Backoffice usa a MESMA funcao e o
+    MESMO template: e o que faz a miniatura e o preview mostrarem a Home
+    de verdade, em vez de um desenho paralelo que envelheceria.
     """
     if request.user.is_authenticated:
         return redirect("core:dashboard")
 
-    return render(
-        request,
-        "core/home.html",
-        {
-            "secoes": content.secoes_da_pagina(content.CHAVE_DA_HOME),
-            "parceiros": Partner.objects.publicados(),
-            "cartas_emitidas": statistics.cartas_emitidas(),
-        },
-    )
+    return render(request, "core/home.html", content.contexto_da_home())
 
 
 def legal(request, chave, titulo):
@@ -174,7 +162,11 @@ def legal(request, chave, titulo):
     if texto is None:
         raise Http404("documento legal sem conteúdo publicado")
 
-    return render(request, "core/legal.html", {"titulo": titulo, "texto": texto})
+    return render(
+        request,
+        "core/legal.html",
+        {"titulo": titulo, "texto": texto, **content.contexto_do_rodape()},
+    )
 
 
 @login_required

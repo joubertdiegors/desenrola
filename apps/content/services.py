@@ -24,12 +24,14 @@ o banco recém-migrado, mostra a Home com as seções vazias em vez de um
 500 -- e o administrador preenche pela tela.
 """
 
+from dataclasses import dataclass
+
 from django.conf import settings
 from django.db.models import Prefetch
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
-from .models import ContentTranslation, Page, PageSection
+from .models import ContentTranslation, MenuItem, Page, PageSection, Partner
 
 # A página que a landing pública consome.
 CHAVE_DA_HOME = "home"
@@ -47,12 +49,30 @@ def _idioma_do_conteudo():
     return get_language() or settings.LANGUAGE_CODE
 
 
-def secoes_da_pagina(page_key, language=None):
+@dataclass(frozen=True)
+class ParteDaPagina:
     """
-    As seções ativas de `page_key`, indexadas pela chave da seção.
+    Uma parte da página como o template a enxerga: o texto, o desenho
+    escolhido e a ordem.
 
-    Devolve `{"hero": {...}, "partners": {...}}`. Seção sem `key` cai no
-    seu `kind`, que é o que basta quando há uma só daquele tipo.
+    Não é o `PageSection`: é o retrato do que aquela parte publica. Um
+    template não tem por que alcançar `is_active` ou `page_id` -- se
+    chegou até aqui, é porque está ativa.
+    """
+
+    chave: str
+    conteudo: dict
+    desenho: str
+    ordem: int
+
+
+def partes_da_pagina(page_key, language=None):
+    """
+    As partes ATIVAS de `page_key`, na ordem da página.
+
+    Devolve `{"hero": ParteDaPagina(...), ...}` -- um dicionário, porque
+    o template alcança cada parte pelo nome (`partes.hero`), e em ordem,
+    porque quem itera precisa da sequência real.
 
     O idioma pedido, com queda para o padrão do projeto: uma seção sem
     tradução no idioma ativo aparece no idioma de origem em vez de
@@ -83,8 +103,157 @@ def secoes_da_pagina(page_key, language=None):
     for secao in pagina.sections.all():
         por_idioma = {t.language: t.content for t in secao.translations.all()}
         conteudo = por_idioma.get(idioma) or por_idioma.get(padrao) or {}
-        resultado[secao.key or secao.kind] = conteudo if isinstance(conteudo, dict) else {}
+        chave = secao.key or secao.kind
+        resultado[chave] = ParteDaPagina(
+            chave=chave,
+            conteudo=conteudo if isinstance(conteudo, dict) else {},
+            desenho=secao.layout or "",
+            ordem=secao.order,
+        )
     return resultado
+
+
+def parte_avulsa(secao, language=None):
+    """
+    O retrato de UMA seção, ativa ou não.
+
+    `partes_da_pagina()` só traz as ativas, e está certo: é o que a
+    página pública deve mostrar. A pré-visualização do Backoffice
+    pergunta outra coisa -- "como ficaria esta parte?" -- e precisa
+    desenhar também a que está desligada.
+    """
+    idioma = language or _idioma_do_conteudo()
+    padrao = settings.LANGUAGE_CODE
+
+    por_idioma = {t.language: t.content for t in secao.translations.all()}
+    conteudo = por_idioma.get(idioma) or por_idioma.get(padrao) or {}
+    return ParteDaPagina(
+        chave=secao.key or secao.kind,
+        conteudo=conteudo if isinstance(conteudo, dict) else {},
+        desenho=secao.layout or "",
+        ordem=secao.order,
+    )
+
+
+def secoes_da_pagina(page_key, language=None):
+    """
+    Só o texto de cada parte ativa: `{"hero": {...}, "partners": {...}}`.
+
+    Continua existindo porque é o que a maioria dos templates precisa --
+    `partes_da_pagina()` é para quem também precisa do desenho.
+    """
+    return {
+        chave: parte.conteudo
+        for chave, parte in partes_da_pagina(page_key, language).items()
+    }
+
+
+# ---------------------------------------------------------------------------
+# O contexto da Home -- UM lugar so
+# ---------------------------------------------------------------------------
+#
+# A pagina publica, a miniatura da Central e a pre-visualizacao saem
+# daqui. E o que faz "uma unica fonte visual real" ser verdade e nao
+# promessa: nao ha um segundo desenho da Home em lugar nenhum, entao a
+# miniatura nao tem como ficar desatualizada.
+
+
+def contexto_do_rodape(language=None):
+    """
+    O que `components/site_footer.html` precisa, em qualquer página.
+
+    O rodapé aparece na Home E nas páginas legais. Sem isto, a página
+    legal incluiria o componente sem os dados e o rodapé simplesmente
+    não desenharia -- que foi exatamente o que aconteceu quando a
+    composição passou a vir do CMS.
+    """
+    from .section_schema import blocos_do_rodape
+
+    rodape = partes_da_pagina(CHAVE_DA_HOME, language).get("footer")
+    blocos = blocos_do_rodape(rodape.conteudo) if rodape else []
+    return {
+        "partes": {"footer": rodape} if rodape else {},
+        "blocos_do_rodape": blocos,
+        # Telefone e endereco sao a SEGUNDA linha do bloco de contato:
+        # so aparecem quando o bloco esta ligado E ha o que mostrar.
+        "mostra_contato_do_rodape": "contato" in blocos,
+    }
+
+
+def contexto_da_home(language=None):
+    """
+    Tudo o que `core/home.html` precisa para desenhar a Home.
+
+    Carregado aqui, e não no processador de contexto global: são dados
+    DESTA página. O processador guarda o que vale para o site inteiro.
+    """
+    from apps.letters import statistics
+
+    from .section_schema import blocos_do_rodape, template_do_desenho
+
+    partes = partes_da_pagina(CHAVE_DA_HOME, language)
+    parceiros = list(Partner.objects.publicados())
+
+    # Qual desenho o Banner usa. Resolvido AQUI, e nao no template: um
+    # valor invalido na coluna nao pode virar um `{% include %}` de um
+    # arquivo que nao existe.
+    banner = partes.get("hero")
+    template_do_banner = (
+        template_do_desenho("hero", banner.desenho) if banner else None
+    )
+
+    rodape = partes.get("footer")
+    blocos = blocos_do_rodape(rodape.conteudo) if rodape else []
+
+    return {
+        "partes": partes,
+        "template_do_banner": template_do_banner,
+        "blocos_do_rodape": blocos,
+        "mostra_contato_do_rodape": "contato" in blocos,
+        # `secoes` continua no contexto: e o que os templates ja leem, e
+        # trocar tudo de uma vez seria mexer em marcacao que funciona.
+        "secoes": {chave: parte.conteudo for chave, parte in partes.items()},
+        "menu_itens": _menu_sem_ancora_morta(partes, parceiros),
+        "parceiros": parceiros,
+        "cartas_emitidas": statistics.cartas_emitidas(),
+    }
+
+
+# As ancoras que a Home desenha, e de que parte cada uma depende.
+# `#parceiros` tem uma condicao a mais: a secao so aparece quando ha
+# parceiro cadastrado (ver `core/home.html`).
+ANCORAS_DA_HOME = {
+    "#como-funciona": "how",
+    "#parceiros": "partners",
+}
+
+
+def _menu_sem_ancora_morta(partes, parceiros):
+    """
+    Os itens do menu, menos os que levariam a lugar nenhum.
+
+    Um item que aponta para `#parceiros` some quando a seção de
+    parceiros não está na página -- desativada, ou sem nenhum parceiro
+    cadastrado. Era o comportamento do template antes de o menu virar
+    cadastro (`{% if parceiros %}`), e ele não podia se perder: âncora
+    que não leva a lugar nenhum é o defeito que este projeto remove
+    desde a Etapa G.
+
+    Destino que não é âncora (um caminho ou um endereço externo) passa
+    sempre -- quem digitou sabe para onde aponta.
+    """
+    visiveis = []
+    for item in MenuItem.objects.publicados():
+        parte = ANCORAS_DA_HOME.get(item.destination)
+        if parte is None:
+            visiveis.append(item)
+            continue
+        if parte not in partes:
+            continue
+        if parte == "partners" and not parceiros:
+            continue
+        visiveis.append(item)
+    return visiveis
 
 
 # ---------------------------------------------------------------------------

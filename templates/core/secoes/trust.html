@@ -1,0 +1,16 @@
+{% load i18n %}{% comment %}
+Destaques abaixo do Banner superior.
+
+Marcacao identica a que estava em `core/home.html` -- movida para ca
+para que a Central possa renderizar ESTA secao isolada, com o mesmo
+codigo e o mesmo CSS. Nao ha segunda implementacao.
+
+Contexto: secoes.trust.
+{% endcomment %}
+<section class="trust-bar container">
+  <div class="card trust-bar-grid">
+    {% for card in secoes.trust.cards %}
+    <span class="trust-item"><i class="ph {{ card.icon }}" aria-hidden="true"></i>{{ card.title }}</span>
+    {% endfor %}
+  </div>
+</section>

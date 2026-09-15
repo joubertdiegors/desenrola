@@ -229,6 +229,7 @@ class PageSection(TimeStampedModel):
     """
 
     class Kind(models.TextChoices):
+        NAVBAR = "navbar", _("Barra superior")
         HERO = "hero", _("Destaque (hero)")
         TEXT = "text", _("Texto")
         IMAGE_TEXT = "image_text", _("Imagem e texto")
@@ -238,6 +239,7 @@ class PageSection(TimeStampedModel):
         CTA = "cta", _("Chamada para ação")
         BANNER = "banner", _("Banner")
         CONTACT = "contact", _("Contato")
+        FOOTER = "footer", _("Rodapé")
 
     page = models.ForeignKey(
         Page, on_delete=models.CASCADE, related_name="sections", verbose_name=_("página")
@@ -253,6 +255,19 @@ class PageSection(TimeStampedModel):
         _("ordem"),
         default=0,
         help_text=_("Posição na página. Não precisa ser sequencial nem única."),
+    )
+    # QUAL desenho, separado de QUAL conteudo.
+    #
+    # Vazio significa "o desenho unico desta secao" -- a maioria so tem
+    # um. O banner tem tres (ver `content.section_schema.LAYOUTS`), e
+    # trocar entre eles NAO apaga o texto: o conteudo mora na traducao,
+    # nao aqui. E o que permite experimentar um desenho e voltar atras.
+    layout = models.CharField(
+        _("desenho"),
+        max_length=40,
+        blank=True,
+        default="",
+        help_text=_("Qual variação visual esta seção usa. Vazio = a única que existe."),
     )
     is_active = models.BooleanField(_("ativa"), default=True)
 
@@ -522,7 +537,11 @@ class Partner(TimeStampedModel):
     class Meta:
         # Sem `delete`: a exclusao nao faz parte do fluxo (ver o docstring).
         # Uma permissao que nao controla nada e ruido no catalogo.
-        default_permissions = ("add", "change", "view")
+        # `delete` entra na Etapa 11: a Central de Conteudo passou a
+        # permitir remover um parceiro, e ate aqui nem o Django Admin
+        # podia. Desativar continua sendo o caminho recomendado -- apagar
+        # e para quem entrou errado.
+        default_permissions = ("add", "change", "delete", "view")
         verbose_name = _("parceiro")
         verbose_name_plural = _("parceiros")
         # `pk` desempata: dois parceiros com a mesma ordem trocariam de
@@ -531,3 +550,71 @@ class Partner(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+# Um destino de menu: ancora interna (`#como-funciona`), caminho do
+# proprio site (`/pt/...`) ou endereco http(s). Nada de `javascript:` --
+# o valor termina dentro de um `href`, onde o autoescape NAO protege.
+DESTINO_DO_MENU = RegexValidator(
+    regex=r"^(#[\w-]+|/[\w\-/.]*|https?://\S+)$",
+    message=_(
+        "O destino deve ser uma âncora (#como-funciona), um caminho do site "
+        "(/pt/...) ou um endereço http:// ou https://."
+    ),
+)
+
+
+class MenuItemQuerySet(models.QuerySet):
+    def publicados(self):
+        """Os que aparecem na barra: ativos, na ordem definida."""
+        return self.filter(is_active=True)
+
+
+class MenuItem(TimeStampedModel):
+    """
+    Um item da barra superior do site.
+
+    POR QUE UM MODELO, E NAO UMA LISTA DENTRO DO JSON DA SECAO
+    ----------------------------------------------------------
+    Os itens precisam ser ACRESCENTADOS, REMOVIDOS e REORDENADOS. O
+    editor declarativo de secao (`content.forms.FormularioDeSecao`) edita
+    os textos dos itens que EXISTEM -- de proposito, porque para os
+    cartoes da Home a quantidade e desenho, nao conteudo. Aqui e o
+    contrario: a quantidade E a decisao.
+
+    Mesma forma de `Partner`, que ja e o precedente do projeto para "uma
+    lista de coisas com ordem e ativacao propria".
+
+    O QUE ELE NAO GUARDA
+    --------------------
+    Nada de identidade: logotipo, nome do site e cores continuam em
+    `SiteSettings`, e os botoes de entrar/criar conta continuam sendo
+    estrutura do produto. Este modelo guarda a NAVEGACAO, e so ela.
+    """
+
+    label = models.CharField(_("texto"), max_length=60)
+    destination = models.CharField(
+        _("destino"),
+        max_length=200,
+        validators=[DESTINO_DO_MENU],
+        help_text=_("#ancora, /caminho do site ou endereço http(s)."),
+    )
+    is_active = models.BooleanField(_("ativo"), default=True)
+    order = models.PositiveIntegerField(
+        _("ordem"), default=0, help_text=_("Menor aparece primeiro.")
+    )
+
+    objects = MenuItemQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("item do menu")
+        verbose_name_plural = _("itens do menu")
+        ordering = ["order", "pk"]
+        # A Central de Conteudo inteira e governada por
+        # `content.change_pagesection`, que ja esta no catalogo. Criar
+        # add/change/delete/view aqui seria criar quatro permissoes que
+        # nada confere.
+        default_permissions = ()
+
+    def __str__(self):
+        return self.label

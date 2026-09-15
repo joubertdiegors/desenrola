@@ -3,25 +3,36 @@
 {% comment %}
 Administração · Conteúdo do site.
 
-As seções da Home, no idioma escolhido. A estrutura (quais seções
-existem, em que ordem, com que desenho) vem do template da Home e das
-migrations; aqui se escreve o TEXTO de cada uma.
+A PÁGINA DE CIMA PARA BAIXO
+---------------------------
+Topo, Meio e Final -- a ordem em que quem visita encontra cada parte.
+Dentro de cada grupo, as partes na ordem real da página.
 
-Falta de tradução aparece como falta. Não se inventa texto, e não há
-porcentagem de tradução -- ou a seção tem conteúdo naquele idioma, ou
-não tem.
+Os nomes são os de `content.section_schema`: "Banner superior", não
+"hero"; "Mini Banner", não "CTA". Quem administra não tem por que
+aprender o nome interno de nada.
 
-Contexto: pagina, secoes, idioma, idiomas, pode_editar.
+A MINIATURA É A HOME
+--------------------
+Cada quadro é um `<iframe>` com a parte de verdade dentro, reduzida por
+`transform: scale()`. Não é captura de tela nem desenho: é o mesmo
+parcial, o mesmo contexto e o mesmo CSS da página pública. Mudou o
+texto, mudou a miniatura -- sem nenhum passo de geração.
+
+`loading="lazy"`: sete quadros numa tela só, e o navegador carrega o que
+entra em cena.
+
+Contexto: grupos, sem_declaracao, idioma, idiomas, pode_editar.
 {% endcomment %}
 
 {% block bo_main %}
 <div class="bo-head d-only">
   <div>
     <h1>{% translate "Conteúdo do site" %}</h1>
-    <p class="text-muted">{% translate "Os textos da página inicial." %}</p>
+    <p class="text-muted">{% translate "As partes da página inicial, de cima para baixo." %}</p>
   </div>
 </div>
-<p class="m-only text-muted">{% translate "Os textos da página inicial." %}</p>
+<p class="m-only text-muted">{% translate "As partes da página inicial, de cima para baixo." %}</p>
 
 {% if not pode_editar %}
   <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este conteúdo, mas não tem permissão para alterá-lo." %}</span></div>
@@ -43,62 +54,69 @@ O idioma do CONTEÚDO -- não o da interface, que é sempre português.
   <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "A página inicial ainda não existe no conteúdo. Rode as migrações do projeto." %}</span></div>
 {% else %}
 
-<div class="card table-wrap">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>{% translate "Seção" %}</th>
-        <th>{% translate "Tipo" %}</th>
-        <th>{% translate "Neste idioma" %}</th>
-        <th>{% translate "Na Home" %}</th>
-        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for linha in secoes %}
-      <tr>
-        <td class="cell-name">{{ linha.secao.key|default:linha.secao.kind }}</td>
-        <td class="cell-muted">{{ linha.secao.get_kind_display }}</td>
-        <td>
-          {% if linha.tem_traducao %}
-            <span class="tag tag-success">{% translate "Preenchida" %}</span>
-          {% else %}
-            <span class="tag tag-warning">{% translate "Sem tradução" %}</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if linha.secao.is_active %}
-            <span class="tag tag-neutral">{% translate "Aparece" %}</span>
-          {% else %}
-            <span class="tag tag-neutral">{% translate "Oculta" %}</span>
-          {% endif %}
-        </td>
-        <td class="cell-actions">
-          <div class="bo-actions">
-            {% if linha.editavel %}
-              <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:content_section' linha.secao.pk %}?idioma={{ idioma }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
-            {% else %}
-              <span class="text-muted">{% translate "Sem campos definidos" %}</span>
-            {% endif %}
-            {% if pode_editar %}
-            <form method="post" action="{% url 'backoffice:content_activation' linha.secao.pk %}"
-                  onsubmit="return confirm('{% if linha.secao.is_active %}{% translate "Ocultar esta seção da Home?" %}{% else %}{% translate "Mostrar esta seção na Home?" %}{% endif %}');">
-              {% csrf_token %}
-              <input type="hidden" name="idioma" value="{{ idioma }}">
-              <input type="hidden" name="ativa" value="{% if linha.secao.is_active %}0{% else %}1{% endif %}">
-              <button type="submit" class="btn btn-ghost btn-sm">{% if linha.secao.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Ocultar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Mostrar" %}{% endif %}</button>
-            </form>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="cell-muted">{% translate "Nenhuma seção cadastrada." %}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% for grupo in grupos %}
+<section class="bo-grupo">
+  <div class="bo-grupo-head">
+    <h2>{{ grupo.nome }}</h2>
+    <p class="text-muted">{{ grupo.explicacao }}</p>
+  </div>
 
-<p class="field-hint">{% translate "Os parceiros são cadastrados em Parceiros; o número de cartas é contado automaticamente." %}</p>
+  <div class="bo-partes">
+    {% for parte in grupo.partes %}
+    <article class="card bo-parte{% if not parte.secao.is_active %} is-desligada{% endif %}">
+      <div class="bo-parte-miniatura">
+        {% comment %}
+        A Home de verdade, em miniatura. `tabindex="-1"` e o rótulo
+        descritivo: o quadro é ilustração, não um destino de navegação.
+        {% endcomment %}
+        <iframe src="{% url 'backoffice:content_preview' parte.secao.pk %}?viewport=miniatura"
+                title="{% blocktranslate with nome=parte.nome %}Prévia: {{ nome }}{% endblocktranslate %}"
+                loading="lazy" tabindex="-1" scrolling="no"></iframe>
+      </div>
+
+      <div class="bo-parte-corpo">
+        <h3>{{ parte.nome }}</h3>
+        <p class="text-muted">{{ parte.descricao }}</p>
+
+        <div class="bo-parte-situacao">
+          {% if parte.secao.is_active %}
+            <span class="tag tag-success">{% translate "Ativo" %}</span>
+          {% else %}
+            <span class="tag tag-warning">{% translate "Inativo" %}</span>
+          {% endif %}
+          {% if not parte.tem_traducao %}
+            <span class="tag tag-neutral">{% translate "Sem tradução neste idioma" %}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="bo-parte-acoes">
+        {% if parte.editavel %}
+          <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:content_section' parte.secao.pk %}?idioma={{ idioma }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
+        {% endif %}
+        {% if pode_editar %}
+        <form method="post" action="{% url 'backoffice:content_activation' parte.secao.pk %}"
+              onsubmit="return confirm('{% if parte.secao.is_active %}{% translate "Ocultar esta parte da página inicial?" %}{% else %}{% translate "Mostrar esta parte na página inicial?" %}{% endif %}');">
+          {% csrf_token %}
+          <input type="hidden" name="idioma" value="{{ idioma }}">
+          <input type="hidden" name="ativa" value="{% if parte.secao.is_active %}0{% else %}1{% endif %}">
+          <button type="submit" class="btn btn-ghost btn-sm">{% if parte.secao.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+{% if sem_declaracao %}
+<div class="notice notice-warning">
+  <i class="ph-fill ph-warning" aria-hidden="true"></i>
+  <span>{% blocktranslate count total=sem_declaracao|length %}Há {{ total }} parte da página que esta tela ainda não sabe editar.{% plural %}Há {{ total }} partes da página que esta tela ainda não sabe editar.{% endblocktranslate %}</span>
+</div>
+{% endif %}
+
+<p class="field-hint">{% translate "Os parceiros são cadastrados em Parceiros; o número de cartas é contado automaticamente. Nome, contato, redes sociais e cores ficam em Sistema e Aparência." %}</p>
 {% endif %}
 {% endblock %}

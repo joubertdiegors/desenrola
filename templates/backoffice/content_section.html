@@ -1,5 +1,5 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Administração · Conteúdo do site · uma seção.
 
@@ -49,7 +49,10 @@ outro idioma, sem gravar o que estiver na tela.
   <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este conteúdo, mas não tem permissão para alterá-lo." %}</span></div>
 {% endif %}
 
-<form method="post" novalidate>
+<div class="bo-editor">
+<div class="bo-editor-campos">
+<form method="post" novalidate id="form-da-secao"
+      data-previa="{% url 'backoffice:content_preview' secao.pk %}">
   {% csrf_token %}
   <input type="hidden" name="idioma" value="{{ idioma }}">
 
@@ -100,4 +103,39 @@ outro idioma, sem gravar o que estiver na tela.
   </div>
   {% endif %}
 </form>
+</div>
+
+{% comment %}
+O PAINEL DE PRE-VISUALIZACAO.
+
+Dentro do quadro vai a Home de verdade: mesmo parcial, mesmo contexto,
+mesmo CSS. Os tres botoes ESTREITAM O QUADRO -- nao reduzem um desenho
+largo --, entao o CSS responde como responderia no aparelho daquele
+tamanho.
+
+SEM JAVASCRIPT o quadro continua mostrando o que esta SALVO (o `src` e
+um GET). Com JavaScript, cada tecla redesenha com o que esta digitado,
+sem gravar nada. A pagina nunca depende do script para funcionar.
+{% endcomment %}
+<aside class="bo-editor-previa" id="painel-da-previa">
+  <div class="bo-previa-head">
+    <span class="card-title">{% translate "Pré-visualização" %}</span>
+    <nav class="seg seg-sm" aria-label="{% translate 'Largura da tela' %}">
+      <button type="button" class="seg-opt is-on" data-viewport="desktop" aria-pressed="true">{% translate "Desktop" %}</button>
+      <button type="button" class="seg-opt" data-viewport="tablet" aria-pressed="false">{% translate "Tablet" %}</button>
+      <button type="button" class="seg-opt" data-viewport="mobile" aria-pressed="false">{% translate "Celular" %}</button>
+    </nav>
+  </div>
+
+  <div class="bo-previa-palco" data-viewport="desktop">
+    <iframe class="bo-previa-quadro"
+            src="{% url 'backoffice:content_preview' secao.pk %}?viewport=desktop"
+            title="{% translate 'Pré-visualização desta parte da página' %}"></iframe>
+  </div>
+
+  <p class="field-hint">{% translate "Mostra o que está digitado, antes de salvar. A página pública só muda quando você salvar." %}</p>
+</aside>
+</div>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/previa-do-conteudo.js' %}" defer></script>{% endblock %}

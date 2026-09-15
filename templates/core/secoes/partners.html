@@ -1,0 +1,37 @@
+{% load i18n %}{% comment %}
+Nossos Parceiros.
+
+Sem parceiro cadastrado a secao inteira sai do ar -- titulo e grade
+vazios seriam uma promessa nao cumprida. O item "Parceiros" do menu some
+junto (ver `content.services._menu_sem_ancora_morta`), senao a ancora
+levaria a lugar nenhum.
+
+Contexto: secoes.partners, parceiros.
+{% endcomment %}
+{% if parceiros %}
+<section class="section container" id="parceiros">
+  <h2>{{ secoes.partners.title }}</h2>
+  <p class="section-lead">{{ secoes.partners.lead }}</p>
+  <div class="partners-grid">
+    {% for parceiro in parceiros %}
+    {% comment %}
+    Sem endereço, a âncora fica sem `href`: continua sendo o mesmo
+    cartão, mas não é clicável nem recebe foco. Um `href="#"` que não
+    leva a lugar nenhum seria pior.
+    {% endcomment %}
+    <a class="card partner-card"{% if parceiro.url %} href="{{ parceiro.url }}" target="_blank" rel="noopener"{% endif %}>
+      {% if parceiro.logo %}
+        <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+      {% else %}
+        <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+      {% endif %}
+      <div>
+        <h3>{{ parceiro.name }}</h3>
+        {% if parceiro.description %}<p>{{ parceiro.description }}</p>{% endif %}
+      </div>
+      {% if parceiro.url %}<span class="btn btn-primary">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

@@ -71,6 +71,29 @@ body { display: flex; flex-direction: column; }
 .hero-alt { font-size: 14px; color: var(--mu); }
 .hero-art { position: relative; height: 380px; }
 
+/* Banner · desenho "Imagem completa". A imagem ocupa a largura inteira;
+   nada de texto por cima. Mesmo fundo e mesmo respiro do banner padrao,
+   para os tres desenhos pertencerem a mesma pagina. */
+.hero-cheio {
+  padding: 56px 48px 48px;
+  background: linear-gradient(180deg, #fff, var(--bg));
+}
+.hero-cheio-art { position: relative; height: 380px; }
+.hero-cheio-art .img-slot { height: 100%; }
+.hero-cheio-acao { display: flex; justify-content: center; margin-top: 24px; }
+
+/* Banner · desenho "Somente texto". Sem moldura de imagem e sem espaco
+   reservado para ela: a coluna de leitura fica centrada. */
+.hero-texto {
+  padding: 72px 48px 56px;
+  background: linear-gradient(180deg, #fff, var(--bg));
+  text-align: center;
+}
+.hero-texto h1 { font-size: 54px; max-width: 20ch; margin: 0 auto 18px; }
+.hero-texto .hero-lead { font-size: 18px; max-width: 60ch; margin: 0 auto 28px; }
+.hero-texto .hero-actions { justify-content: center; }
+.hero-texto .hero-alt { margin-top: 14px; }
+
 .trust-bar {
   padding: 0 48px 48px;
 }
@@ -189,6 +212,15 @@ img.partner-image { width: 100%; object-fit: contain; }
   .hero-actions .btn { width: 100%; }
   .hero-alt { text-align: center; display: block; margin-top: 12px; }
   .hero-art { height: 170px; margin-top: 22px; }
+  .hero-cheio { padding: 8px 20px 0; background: none; }
+  .hero-cheio-art { height: 200px; }
+  .hero-cheio-acao { margin-top: 18px; }
+  .hero-cheio-acao .btn { width: 100%; }
+  .hero-texto { padding: 24px 20px 8px; background: none; }
+  .hero-texto h1 { font-size: 36px; max-width: none; margin: 0 0 12px; }
+  .hero-texto .hero-lead { font-size: 16px; max-width: none; margin-bottom: 22px; }
+  .hero-texto .hero-actions { display: block; }
+  .hero-texto .hero-actions .btn { width: 100%; }
   .stat-badge { display: flex; padding: 14px; }
   .stat-badge-row { display: flex; gap: 10px; align-items: baseline; }
   .stat-badge-live { margin-top: 4px; }
@@ -743,6 +775,125 @@ img.partner-image { width: 100%; object-fit: contain; }
 .seg-opt { color: inherit; text-decoration: none; }
 .seg-opt.is-on { color: var(--p); background: var(--p10); font-weight: 600; }
 .seg-opt:focus-visible { outline: 2px solid var(--p); outline-offset: -2px; }
+
+/* ---------------------------------------------------------------------
+   Central de Conteudo: as partes da Home, agrupadas em Topo/Meio/Final.
+   --------------------------------------------------------------------- */
+
+.bo-grupo { margin-bottom: 32px; }
+.bo-grupo-head { margin-bottom: 14px; }
+.bo-grupo-head h2 { font-size: 20px; }
+.bo-grupo-head p { font-size: 13.5px; margin-top: 2px; }
+
+.bo-partes { display: flex; flex-direction: column; gap: 12px; }
+
+.bo-parte {
+  display: grid;
+  grid-template-columns: 220px 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 14px;
+}
+/* Parte desligada continua visivel e continua editavel -- so fica
+   evidente que ela nao esta na pagina publica. */
+.bo-parte.is-desligada .bo-parte-miniatura { opacity: .45; }
+.bo-parte.is-desligada h3 { color: var(--mu); }
+
+/* O QUADRO DA MINIATURA.
+   Dentro dele vai um `<iframe>` de 1280px de largura -- a Home de
+   verdade, em tamanho de desktop -- reduzido por `scale()`. O quadro
+   recorta; o iframe nao sabe que foi reduzido. */
+.bo-parte-miniatura {
+  position: relative;
+  width: 220px;
+  height: 124px;
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: #fff;
+  flex: none;
+}
+.bo-parte-miniatura iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  transform: scale(0.1719);   /* 220 / 1280 */
+  transform-origin: 0 0;
+  pointer-events: none;       /* o quadro e ilustracao, nao destino */
+}
+
+.bo-parte-corpo { min-width: 0; }
+.bo-parte-corpo h3 { font-size: 16px; }
+.bo-parte-corpo p { font-size: 13.5px; margin-top: 2px; }
+.bo-parte-situacao { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.bo-parte-acoes { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+
+@media (max-width: 767px) {
+  .bo-parte { grid-template-columns: 1fr; gap: 12px; }
+  .bo-parte-miniatura { width: 100%; height: 150px; }
+  /* Em coluna unica o quadro ocupa a largura da tela; a reducao
+     acompanha por `zoom`-equivalente em escala menor. */
+  .bo-parte-miniatura iframe { transform: scale(0.25); }
+  .bo-parte-acoes { flex-direction: row; }
+  .bo-parte-acoes .btn { flex: 1; }
+}
+
+/* ---------------------------------------------------------------------
+   Editor de uma parte: campos a esquerda, previa a direita.
+   --------------------------------------------------------------------- */
+
+.bo-editor { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.bo-editor-campos { min-width: 0; }
+
+.bo-editor-previa {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+.bo-previa-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bo-previa-head nav { margin-left: auto; }
+/* Os botoes de largura so existem quando o script esta ligado -- sem
+   ele o quadro mostra o que esta salvo, e um botao inerte seria pior
+   do que botao nenhum. */
+.bo-previa-head nav { display: none; }
+.js-ligado .bo-previa-head nav { display: flex; }
+
+/* O PALCO centraliza o quadro; o QUADRO tem a largura do aparelho.
+   Nao ha `transform`: e a largura real do iframe que faz o CSS do site
+   responder como responderia naquele tamanho. */
+.bo-previa-palco {
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+}
+.bo-previa-quadro {
+  width: 100%;
+  max-width: 100%;
+  height: 520px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: #fff;
+}
+.bo-previa-palco[data-viewport="tablet"] .bo-previa-quadro { width: 834px; max-width: 834px; }
+.bo-previa-palco[data-viewport="mobile"] .bo-previa-quadro { width: 390px; max-width: 390px; height: 560px; }
+
+@media (max-width: 1023px) {
+  /* Em tela estreita a previa vai para baixo dos campos, e deixa de
+     grudar no topo -- rolar o editor com um painel fixo atrapalha. */
+  .bo-editor { grid-template-columns: 1fr; }
+  .bo-editor-previa { position: static; }
+  .bo-previa-quadro { height: 420px; }
+}
 
 /* Um item de uma lista editavel (os cartoes de uma secao). */
 .bo-item-da-lista { display: flex; flex-direction: column; gap: 10px; }

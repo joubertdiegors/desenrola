@@ -117,16 +117,23 @@ class TestPartner:
 
         assert list(Partner.objects.publicados()) == [ativo]
 
-    def test_nao_existe_permissao_de_apagar(self):
+    def test_apagar_parceiro_e_possivel_desde_a_central_de_conteudo(self):
         """
-        Parceiro se desativa, não se apaga -- e a permissão que não
-        controla nada nem chega a existir.
+        Até a Etapa 11 parceiro só se desativava, e a permissão de apagar
+        nem existia. A Central de Conteúdo passou a permitir remover o
+        que entrou errado -- desativar continua sendo o caminho
+        recomendado para quem só quer tirar da Home.
         """
         codenames = {
             f"{acao}_partner" for acao in Partner._meta.default_permissions
         }
 
-        assert codenames == {"add_partner", "change_partner", "view_partner"}
+        assert codenames == {
+            "add_partner",
+            "change_partner",
+            "delete_partner",
+            "view_partner",
+        }
 
     def test_o_admin_nao_oferece_exclusao(self, rf):
         from apps.content.admin import PartnerAdmin
@@ -380,11 +387,13 @@ class TestConteudoDoCms:
 
         assert pagina.is_active is True
         assert set(pagina.sections.values_list("key", flat=True)) == {
+            "navbar",
             "hero",
             "trust",
             "partners",
             "how",
             "cta",
+            "footer",
         }
 
     def test_os_textos_da_pagina_vem_do_banco(self, client):

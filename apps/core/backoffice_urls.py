@@ -115,6 +115,13 @@ urlpatterns = [
         content_backoffice.backoffice_content_section,
         name="content_section",
     ),
+    # A previa de UMA parte, para o `<iframe>` da miniatura. Mesma
+    # permissao de ver o conteudo.
+    path(
+        "conteudo/<int:pk>/previa/",
+        content_backoffice.backoffice_content_preview,
+        name="content_preview",
+    ),
     path(
         "conteudo/<int:pk>/situacao/",
         content_backoffice.backoffice_content_activation,

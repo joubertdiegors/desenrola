@@ -104,22 +104,58 @@ class TestDeclaracao:
 
         assert de_trust != de_how
 
+    def test_a_tela_nao_mostra_nome_tecnico(self):
+        """
+        Quem administra lê "Banner superior", não "hero". Os nomes
+        técnicos continuam sendo as chaves em banco -- e só isso.
+        """
+        for chave, esperado in (
+            ("hero", "Banner superior"),
+            ("trust", "Destaques abaixo do Banner superior"),
+            ("cta", "Mini Banner"),
+            ("navbar", "Barra superior"),
+            ("footer", "Rodapé"),
+        ):
+            assert str(section_schema.nome_amigavel(secao(chave))) == esperado
+
     def test_declara_exatamente_o_que_o_template_le(self):
         """
         Se a declaração e o template divergirem, a tela oferece um campo
         que a página ignora -- ou esconde um que ela mostra.
+
+        A varredura cobre TODOS os templates públicos, e não só a Home:
+        desde a Etapa 11 a barra superior e o rodapé também leem
+        `secoes.`. E, para o Banner, o campo pode estar em qualquer um
+        dos desenhos -- basta que algum deles o declare.
         """
         import pathlib
         import re
 
         raiz = pathlib.Path(__file__).resolve().parents[3]
-        html = (raiz / "templates" / "core" / "home.html").read_text(encoding="utf-8")
-        lidas = set(re.findall(r"secoes\.(\w+)\.(\w+)", html))
+        arquivos = [
+            raiz / "templates" / "core" / "home.html",
+            raiz / "templates" / "components" / "site_nav.html",
+            raiz / "templates" / "components" / "site_footer.html",
+        ]
+        arquivos += list((raiz / "templates" / "core" / "secoes").glob("*.html"))
+
+        lidas = set()
+        for caminho in arquivos:
+            if caminho.exists():
+                lidas |= set(
+                    re.findall(r"secoes\.(\w+)\.(\w+)", caminho.read_text(encoding="utf-8"))
+                )
+
+        assert lidas, "nenhum template lê `secoes.` -- a varredura quebrou"
 
         for chave_da_secao, chave_do_campo in lidas:
-            declarados = set()
-            for campo in section_schema.SECOES.get(chave_da_secao, ()):
-                declarados.add(campo.chave)
+            declarada = section_schema.SECOES.get(chave_da_secao)
+            assert declarada is not None, chave_da_secao
+
+            declarados = {campo.chave for campo in declarada.campos}
+            for layout in declarada.layouts:
+                declarados |= {campo.chave for campo in layout.campos}
+
             assert chave_do_campo in declarados, f"{chave_da_secao}.{chave_do_campo}"
 
     def test_o_icone_nao_e_editavel(self):
@@ -144,9 +180,22 @@ class TestDeclaracao:
 
 class TestServico:
     def test_devolve_as_secoes_pela_chave(self):
+        """
+        Sete desde a Etapa 11: a barra superior e o rodapé deixaram de
+        ser marcação fixa e viraram seções de verdade, com ativação e
+        conteúdo próprios.
+        """
         conteudo = services.secoes_da_pagina("home")
 
-        assert set(conteudo) == {"hero", "trust", "partners", "how", "cta"}
+        assert set(conteudo) == {
+            "navbar",
+            "hero",
+            "trust",
+            "partners",
+            "how",
+            "cta",
+            "footer",
+        }
 
     def test_secao_inativa_nao_entra(self):
         PageSection.objects.filter(page__key="home", key="cta").update(is_active=False)
@@ -278,10 +327,26 @@ class TestAcesso:
 
 class TestEdicao:
     def test_a_lista_mostra_as_secoes(self, cliente):
+        """
+        Até a Etapa 11 a Central listava a CHAVE de cada seção
+        ("hero", "trust", "cta"). Agora mostra o nome que quem
+        administra entende -- e a chave técnica ficou onde sempre
+        deveria estar: só no banco.
+
+        A cobertura completa da Central está em
+        `test_central_de_conteudo.py`; aqui fica a garantia de que a
+        tela de edição continua alcançável a partir dela.
+        """
         corpo = cliente.get(LISTA).content.decode()
 
-        for chave in ("hero", "trust", "partners", "how", "cta"):
-            assert chave in corpo
+        for nome in (
+            "Banner superior",
+            "Destaques abaixo do Banner superior",
+            "Nossos Parceiros",
+            "Como funciona",
+            "Mini Banner",
+        ):
+            assert nome in corpo
 
     def test_o_formulario_tem_campos_e_nao_json(self, cliente):
         corpo = cliente.get(url_da_secao("hero")).content.decode()
