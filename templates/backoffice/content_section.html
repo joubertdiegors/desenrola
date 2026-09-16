@@ -165,7 +165,7 @@ e <form> dentro de <form> e HTML invalido.
     <li class="bo-item-do-menu{% if not linha.objeto.is_active %} is-desligado{% endif %}">
       <div class="bo-item-do-menu-texto">
         <strong>{{ linha.objeto.label }}</strong>
-        <span class="cell-muted">{{ linha.objeto.destination }}</span>
+        <span class="cell-muted bo-item-do-menu-destino">{{ linha.objeto.destination }}</span>
       </div>
       {% if not linha.objeto.is_active %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}
       <div class="bo-parceiro-acoes">

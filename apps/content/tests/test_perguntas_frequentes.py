@@ -481,3 +481,66 @@ class TestSoVer:
         html = cliente_leitora.get(url_do_editor()).content.decode()
 
         assert reverse("backoffice:faq_item_new") not in html
+
+
+# ===========================================================================
+# 9. A prévia e a lista, na tela de quem administra
+# ===========================================================================
+
+
+class TestNaTelaDeQuemAdministra:
+    """
+    Os dois defeitos que só a inspeção visual encontrou.
+
+    Nenhum teste de HTTP os pegaria: o primeiro era um `<iframe>`
+    apontando para um 404 -- a página em volta respondia 200 e o quadro
+    vinha vazio, sem erro nenhum na tela. O segundo era a lista de
+    perguntas quebrando LETRA POR LETRA, porque cinco botões de ação
+    pediam a largura deles antes de o texto pedir a sua.
+    """
+
+    def test_a_previa_da_secao_responde(self, cliente):
+        criar(1)
+        parte = PageSection.objects.get(page__key="home", key="faq")
+
+        resposta = cliente.get(
+            reverse("backoffice:content_preview", args=[parte.pk])
+        )
+
+        assert resposta.status_code == 200, "o iframe da prévia apontava para um 404"
+        assert "Pergunta 1?" in resposta.content.decode()
+
+    def test_TODA_parte_da_home_tem_previa(self, cliente):
+        """
+        A regra, e não o caso: uma parte nova sem prévia declarada
+        aparece como quadro vazio na Central, e nada avisa.
+        """
+        for parte in PageSection.objects.filter(page__key="home"):
+            resposta = cliente.get(
+                reverse("backoffice:content_preview", args=[parte.pk])
+            )
+
+            assert resposta.status_code == 200, parte.key
+
+    def test_a_linha_da_lista_quebra_em_vez_de_espremer_o_texto(self):
+        import pathlib
+
+        css = pathlib.Path("static/css/layout.css").read_text(encoding="utf-8")
+        onde = css.index(".bo-item-do-menu {")
+        bloco = css[onde : onde + 400]
+
+        assert "flex-wrap: wrap" in bloco
+        assert "flex: 1 1 240px" in css[onde : onde + 900]
+
+    def test_so_o_destino_do_menu_quebra_letra_por_letra(self):
+        """
+        `break-all` é para um endereço sem espaços. Numa pergunta, ele
+        produz uma coluna de letras.
+        """
+        import pathlib
+
+        css = pathlib.Path("static/css/layout.css").read_text(encoding="utf-8")
+        onde = css.index(".bo-item-do-menu-texto span {")
+
+        assert "word-break: break-all" not in css[onde : onde + 120]
+        assert ".bo-item-do-menu-destino { word-break: break-all; }" in css

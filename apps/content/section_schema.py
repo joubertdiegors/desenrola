@@ -550,6 +550,7 @@ PARCIAIS = {
     "trust": "core/secoes/trust.html",
     "partners": "core/secoes/partners.html",
     "how": "core/secoes/how.html",
+    "faq": "core/secoes/faq.html",
     "cta": "core/secoes/cta.html",
     "footer": "components/site_footer.html",
 }

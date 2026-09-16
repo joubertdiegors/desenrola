@@ -1529,9 +1529,22 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
    --------------------------------------------------------------------------- */
 
 .bo-itens-do-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.bo-item-do-menu { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 10px; }
-.bo-item-do-menu-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.bo-item-do-menu-texto span { font-size: 13px; word-break: break-all; }
+/* A LINHA QUEBRA. Sao cinco botoes de acao, e eles pedem a largura
+   deles antes de o texto pedir a sua: sem `flex-wrap`, sobravam quinze
+   pixels para o texto e ele quebrava letra por letra. Nao aparecia no
+   menu porque "Como funciona" e curto -- uma pergunta frequente com
+   noventa caracteres de resposta o mostrou na primeira olhada. */
+.bo-item-do-menu { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 10px; }
+/* `1 1 240px`: o texto PEDE 240px. Quando a linha nao tem espaco para
+   ele e para os botoes, os botoes caem para a linha de baixo -- em vez
+   de espremerem o texto ate ele nao caber mais em si mesmo. */
+.bo-item-do-menu-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 240px; }
+.bo-item-do-menu-texto span { font-size: 13px; }
+/* `break-all` so no DESTINO do menu, que e um endereco sem espacos e
+   precisa poder quebrar em qualquer letra. Texto comum -- uma pergunta,
+   uma resposta -- quebra entre palavras, como texto. */
+.bo-item-do-menu-destino { word-break: break-all; }
+.bo-parceiro-acoes { margin-left: auto; }
 
 /* Desligado continua legivel -- quem administra precisa ler o que vai
    religar --, so nao compete com os que estao no ar. */
