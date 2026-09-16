@@ -18,22 +18,24 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
 {% block content %}
 <div class="container">
 <div class="dash">
+  {% comment %}
+  O CONTADOR SAIU.
+
+  "8 cartas" ao lado do titulo nao dizia nada que a propria lista, logo
+  abaixo, nao dissesse melhor -- e quem tem muitas ve a paginacao no
+  fim, que informa de verdade. Era ele, tambem, que ocupava o canto
+  onde o botao caberia no celular.
+
+  O BOTAO FOI PARA O FIM.
+
+  Esta tela existe para CONSULTAR cartas: quem chega aqui vem procurar
+  uma, nao comecar outra. O convite para comecar fica depois da lista,
+  que e onde a pessoa termina de olhar -- e no painel, que e a tela de
+  comecar, ele continua no alto.
+  {% endcomment %}
   <div class="section-head">
     <h1>{% translate "Minhas cartas" %}</h1>
-    <span class="count"><span class="d-only">{% blocktranslate count counter=total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ total }}</span></span>
-    <span class="push d-only"></span>
-    <a class="btn btn-primary d-only" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
   </div>
-
-  {% comment %}
-  No celular o botão não cabe no cabeçalho (título + contador já o
-  ocupam), então vem logo abaixo, de largura inteira. Sem ele, quem
-  abrisse o histórico pelo menu teria de voltar ao painel para começar
-  uma carta.
-  {% endcomment %}
-  {% if cards %}
-  <a class="btn btn-primary btn-block m-only" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-  {% endif %}
 
   {% if not cards %}
     <div class="card letters-empty">
@@ -92,6 +94,14 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
       </div>
     </div>
     {% endfor %}
+  </div>
+
+  {% comment %}
+  O convite para comecar outra, DEPOIS da lista -- e antes da
+  paginacao, que e navegacao da propria lista.
+  {% endcomment %}
+  <div class="letters-nova">
+    <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
   </div>
 
   {% if pagina.has_other_pages %}

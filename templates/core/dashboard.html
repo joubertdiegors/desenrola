@@ -31,7 +31,6 @@ nesta tela. Uma porta so.
 
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>
-    <span class="count"><span class="d-only">{% blocktranslate count counter=letters_total trimmed %}{{ counter }} carta{% plural %}{{ counter }} cartas{% endblocktranslate %}</span><span class="m-only">{{ letters_total }}</span></span>
     {% comment %}
     O painel é um resumo: mostra as mais recentes e manda para o
     histórico quem tem mais do que cabe aqui.
@@ -43,12 +42,19 @@ nesta tela. Uma porta so.
   </div>
 
   {% if not cards %}
-    <div class="card letters-empty">
-      <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
-      <h3>{% translate "Você ainda não tem cartas" %}</h3>
-      <p>{% translate "Quando gerar sua primeira Carta Convite, ela aparece aqui." %}</p>
-      <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    </div>
+    {% comment %}
+    NO PAINEL, o vazio diz uma coisa so.
+
+    Tinha icone, titulo, uma frase explicando que a carta apareceria
+    ali, e um botao "Gerar Carta Convite" -- o MESMO botao que esta
+    quarenta pixels acima, no cartao de chamada que abre a tela. Duas
+    portas para a mesma acao, uma embaixo da outra, fazem quem chega
+    parar para decidir entre elas.
+
+    A tela de Minhas Cartas continua com o vazio completo: la nao ha
+    outro botao, e o convite precisa estar em algum lugar.
+    {% endcomment %}
+    <p class="letters-vazio">{% translate "Você não tem cartas ainda." %}</p>
   {% else %}
 
   <div class="card table-wrap d-only letters-table">

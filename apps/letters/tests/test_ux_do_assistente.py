@@ -225,17 +225,27 @@ class TestDuracaoEmCor:
 
         assert "15 dias" in html
 
-    def test_o_limite_vem_da_regra_do_servidor(self, auth_client, draft):
+    def test_o_limite_vem_da_regra_do_servidor(self, auth_client, draft, monkeypatch):
         """
         Não é um 90 escrito no template: sai de `apps/letters/rules.py`,
         pela mesma constante que recusa a estadia longa demais.
+
+        A CONSTANTE É TROCADA DE PROPÓSITO.
+
+        Comparar com `rules.MAX_STAY_DAYS` não provava nada: ele vale
+        90, e um `data-max-stay="90"` escrito à mão no template passaria
+        igual. Foi o que uma mutação deliberada mostrou. Mudando a regra
+        para 45, o template só acompanha se estiver lendo dela.
         """
-        from apps.letters import rules
+        from apps.letters import views
+
+        monkeypatch.setattr(views, "MAX_STAY_DAYS", 45)
 
         auth_client.post(url(draft, 1), ETAPA_1)
         html = auth_client.get(url(draft, 2)).content.decode()
 
-        assert f'data-max-stay="{rules.MAX_STAY_DAYS}"' in html
+        assert 'data-max-stay="45"' in html
+        assert 'data-max-stay="90"' not in html
 
 
 # ===========================================================================
@@ -310,6 +320,27 @@ class TestExemploDoPassaporte:
         html = html_da_etapa(auth_client, draft, 1)
 
         assert "YY0000" not in html
+
+    def test_o_modulo_de_origem_tambem_traz_o_formato_novo(self):
+        """
+        A MIGRATION CONSERTA O BANCO; ISTO GUARDA A ORIGEM.
+
+        Uma mutação deliberada devolveu o exemplo antigo ao módulo e
+        NADA falhou -- porque a migration 0018 corrige o valor no banco
+        logo depois da semeadura, e é o banco que o assistente lê. O
+        módulo continua sendo de onde uma instalação nova parte, e
+        deixá-lo divergir do que o produto mostra seria uma armadilha
+        para quem for ler o código.
+        """
+        from apps.doctemplates.official_templates import CARTA_CONVITE_FIELD_SCHEMA
+
+        campo = next(
+            c
+            for c in CARTA_CONVITE_FIELD_SCHEMA["fields"]
+            if c["key"] == "guest_passport"
+        )
+
+        assert campo["placeholder"] == "YY123456"
 
     def test_o_schema_no_banco_acompanhou(self, modelos_oficiais_prontos):
         """

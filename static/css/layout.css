@@ -789,10 +789,13 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
    diferente. */
 .letters-table .cell-actions { width: 1%; white-space: nowrap; text-align: right; }
 .letter-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.letters-table td .btn { min-height: 38px; padding: 0 12px; font-size: 13px; }
+/* 40px, e nao 38: a tabela aparece tambem no tablet, que e toque. Dois
+   pixels que nao mudam a altura da linha (o `td` ja tem folga) e poem
+   estas acoes na mesma medida de todos os controles do projeto. */
+.letters-table td .btn { min-height: 40px; padding: 0 12px; font-size: 13px; }
 /* Botao so de icone: quadrado de verdade. O `padding` da regra acima
    valeria tambem para ele e o deixaria mais largo que alto. */
-.letters-table td .btn-icon-sm { width: 38px; min-height: 38px; padding: 0; }
+.letters-table td .btn-icon-sm { width: 40px; min-height: 40px; padding: 0; }
 .letters-cards { display: flex; flex-direction: column; gap: 10px; }
 .letter-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .letter-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -803,6 +806,13 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 
 /* Estado vazio de "Minhas cartas": mesma moldura .card do resto do
    dashboard, so centrada. */
+/* O vazio DO PAINEL: uma frase, e mais nada. O botao de gerar esta
+   quarenta pixels acima, no cartao de chamada. */
+.letters-vazio { color: var(--mu); font-size: 15px; padding: 8px 0 4px; }
+
+/* O convite para comecar outra carta, no fim de Minhas Cartas. */
+.letters-nova { display: flex; justify-content: center; margin-top: 28px; }
+
 .letters-empty { padding: 40px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .letters-empty-icon { font-size: 40px; color: var(--mu); line-height: 1; }
 .letters-empty h3 { font-size: 18px; }
@@ -818,6 +828,8 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .section-head { margin: 28px 0 12px; }
   .letters-empty { padding: 32px 20px; }
   .letters-empty .btn { width: 100%; min-height: 48px; }
+  .letters-nova { margin-top: 22px; }
+  .letters-nova .btn { width: 100%; min-height: 52px; }
 }
 
 
@@ -1019,20 +1031,31 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
    Conclusao (carta gerada / visualizacao)
    -------------------------------------------------------------------------- */
 
-.done-wrap { display: grid; grid-template-columns: 460px 1fr; gap: 40px; max-width: 1080px; margin: 0 auto; padding: 44px 24px 60px; align-items: start; }
+/* UMA COLUNA, CENTRADA.
+
+   Eram duas -- 460px para o cartao e `1fr` para a pre-visualizacao da
+   carta ao lado. Aquela pre-visualizacao era o mock `paper_letter.html`,
+   que saiu no Bloco L (era orfao, e carregava dado pessoal de aparencia
+   real em codigo versionado). A coluna ficou: o cartao encostado a
+   esquerda com meia tela vazia a direita, sem nada que explicasse a
+   folga. */
+.done-wrap { max-width: 560px; margin: 0 auto; padding: 44px 24px 60px; }
 .done-card { padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; }
+/* O selo do "pronto": 84px era um circulo verde do tamanho da mao
+   ocupando a primeira dobra inteira antes de qualquer informacao. 64
+   continua sendo a primeira coisa que se ve, sem ser a unica. */
 .done-icon {
-  width: 84px;
-  height: 84px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--s);
   color: #fff;
   display: grid;
   place-items: center;
-  font-size: 44px;
-  box-shadow: 0 0 0 10px color-mix(in srgb, var(--s) 14%, white);
+  font-size: 32px;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--s) 14%, white);
 }
-.done-card h1 { font-size: 30px; }
+.done-card h1 { font-size: 26px; }
 .done-info { width: 100%; padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; text-align: left; box-sizing: border-box; }
 .done-info-row { display: flex; gap: 10px; align-items: center; }
 .done-info-row.is-multiline { align-items: flex-start; }
@@ -1047,15 +1070,19 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .done-thanks-sub { font-size: 12.5px; color: var(--mu); margin-top: -12px; }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .done-wrap { display: flex; flex-direction: column; align-items: center; max-width: 520px; padding: 30px 32px 40px; }
-  .done-card { width: 100%; }
+  .done-wrap { max-width: 520px; padding: 30px 32px 40px; }
 }
 
 @media (max-width: 767px) {
-  .done-wrap { display: flex; flex-direction: column; padding: 26px 24px 0; gap: 16px; }
-  .done-card { padding: 0; border: 0; box-shadow: none; }
-  .done-icon { width: 88px; height: 88px; font-size: 46px; }
-  .done-preview { display: none; }
+  .done-wrap { padding: 20px 20px 0; }
+  .done-card { padding: 0; border: 0; box-shadow: none; gap: 14px; }
+  /* No celular o selo era MAIOR que no desktop (88px contra 84), e
+     empurrava a referencia e o botao de baixar para fora da primeira
+     tela. Aqui ele encolhe mais ainda: a tela e menor, e o que precisa
+     caber nela e a acao, nao a comemoracao. */
+  .done-icon { width: 52px; height: 52px; font-size: 26px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--s) 14%, white); }
+  .done-card h1 { font-size: 22px; }
+  .done-info { padding: 14px; font-size: 13.5px; gap: 8px; }
 }
 
 

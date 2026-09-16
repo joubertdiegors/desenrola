@@ -51,8 +51,13 @@ centrado, `done-*`), com dados reais e só as ações que existem de fato.
       passado), com baixar, imprimir, compartilhar e WhatsApp.
       {% endcomment %}
       {% include "letters/_letter_actions.html" with card=card %}
+      {% comment %}
+      "Voltar ao inicio", e nao "Dashboard": o resto do produto chama
+      aquela tela de "Inicio" (barra superior, barra do celular), e
+      "dashboard" e palavra de quem constroi, nao de quem usa.
+      {% endcomment %}
       <div class="done-actions-row">
-        <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-house" aria-hidden="true"></i>{% translate "Dashboard" %}</a>
+        <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar ao início" %}</a>
       </div>
     </div>
   </div>
