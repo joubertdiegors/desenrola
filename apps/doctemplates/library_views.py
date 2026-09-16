@@ -82,8 +82,8 @@ def document_library(request):
     A biblioteca: todos os modelos, com o que cada um é e o que se pode
     fazer com ele.
 
-    TODO FILTRO NO BANCO
-    --------------------
+    O FILTRO INTEIRO VAI PARA O BANCO
+    ---------------------------------
     Busca, tipo, idioma, situação e natureza viram `WHERE` -- nenhum é
     resolvido em Python sobre a lista inteira. `Count("letters")` também
     vem na mesma consulta, em vez de uma por linha.
