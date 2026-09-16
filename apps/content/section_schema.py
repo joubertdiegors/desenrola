@@ -53,6 +53,8 @@ from dataclasses import dataclass, field
 
 from django.utils.translation import gettext_lazy as _
 
+from .models import DESTINO_EXTERNO_OU_CAMINHO
+
 
 @dataclass(frozen=True)
 class Texto:
@@ -62,6 +64,11 @@ class Texto:
     rotulo: str
     longo: bool = False
     ajuda: str = ""
+    # Validadores de FORMATO, opcionais -- hoje só o destino do botão
+    # "Ver todos" dos parceiros precisa de um (ver `DESTINO_EXTERNO_OU_CAMINHO`
+    # em `models.py`). Vazio continua sendo aceito mesmo com validador:
+    # é assim que todo `CharField` opcional do Django já funciona.
+    validators: tuple = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -160,6 +167,21 @@ class Secao:
     # para um desenho com imagem a traz de volta inteira. Trocar de
     # desenho nunca apaga dado -- é a mesma regra dos textos.
     imagem: bool = False
+    # A seção tem um contador de cartas (`PageSection.counter_*`)?
+    #
+    # Mesma ideia de `imagem`: é uma capacidade da SEÇÃO, não de um
+    # desenho específico -- e é o que garante o contador funcionar nos
+    # sete desenhos do Banner ao mesmo tempo, sem duplicar campo nenhum
+    # em cada um deles (ver `campos_da_secao`, logo abaixo).
+    contador: bool = False
+    # A seção tem botão por cartão e carrossel (`PageSection.partners_*`)?
+    #
+    # Só "partners" declara isto hoje. O nome genérico (e não
+    # "parceiros_botao") é de propósito: se um dia outra seção com
+    # cartões e botão precisar do mesmo comportamento, a capacidade já
+    # está nomeada para ser compartilhada, em vez de nascer presa ao
+    # primeiro caso de uso.
+    cartoes_com_botao: bool = False
 
     def layout_ou_padrao(self, escolhido):
         """O layout escolhido, ou o primeiro declarado."""
@@ -198,16 +220,6 @@ BANNER_IMAGEM_TEXTO = Layout(
         Texto("cta", _("Botão")),
         Texto("login_prompt", _("Antes do link de entrar")),
         Texto("login_link", _("Texto do link de entrar")),
-        Texto(
-            "badge_label",
-            _("Rótulo do contador"),
-            longo=True,
-            ajuda=_(
-                "Aparece ao lado do número de cartas já geradas. "
-                "A quebra de linha é respeitada."
-            ),
-        ),
-        Texto("badge_note", _("Nota do contador")),
         Texto(
             "art_caption",
             _("Legenda da imagem"),
@@ -284,11 +296,6 @@ BANNER_DESTAQUE = Layout(
             _("Botão secundário"),
             ajuda=_("Leva para a tela de entrar. Em branco, não aparece."),
         ),
-        Texto(
-            "badge_label",
-            _("Rótulo do contador"),
-            ajuda=_("Sai ao lado do número real de cartas já geradas."),
-        ),
         Texto("selo_1", _("Etiqueta sobre a foto (1)")),
         Texto("selo_2", _("Etiqueta sobre a foto (2)")),
         Texto(
@@ -304,7 +311,7 @@ BANNER_ASSIMETRICO = Layout(
     nome=_("Assimétrico"),
     descricao=_(
         "Texto à esquerda e foto sangrando na borda direita, com véu "
-        "de transição. O contador vira uma pílula abaixo dos botões."
+        "de transição."
     ),
     campos=(
         Texto("title", _("Título principal")),
@@ -312,16 +319,6 @@ BANNER_ASSIMETRICO = Layout(
         Texto("cta", _("Botão")),
         Texto("login_prompt", _("Antes do link de entrar")),
         Texto("login_link", _("Texto do link de entrar")),
-        Texto(
-            "badge_label",
-            _("Rótulo do contador"),
-            ajuda=_("Sai depois do número real de cartas já geradas."),
-        ),
-        Texto(
-            "badge_note",
-            _("Nota do contador"),
-            ajuda=_("Sai depois do rótulo, separada por um ponto."),
-        ),
         Texto(
             "art_caption",
             _("Legenda da imagem"),
@@ -410,6 +407,29 @@ SECOES = {
         nome=_("Banner superior"),
         descricao=_("A primeira área da página, com o título e a chamada principal."),
         grupo=TOPO,
+        # O rótulo e a nota do contador ficam AQUI, na seção -- não em
+        # cada desenho. Antes eram redeclarados em três dos sete
+        # (`imagem_texto`, `destaque`, `assimetrico`), com nomes e ajudas
+        # ligeiramente diferentes; os outros quatro não tinham onde
+        # escrever, e o contador simplesmente não existia neles. Um
+        # campo comum, somado ao do desenho escolhido em
+        # `campos_da_secao`, é o que faz o contador valer nos sete de
+        # uma vez -- inclusive em "Somente texto", sem imagem nenhuma.
+        campos=(
+            Texto(
+                "badge_label",
+                _("Rótulo do contador"),
+                ajuda=_("Sai ao lado do número real de cartas já emitidas."),
+            ),
+            Texto(
+                "badge_note",
+                _("Texto do indicador \"ao vivo\""),
+                ajuda=_(
+                    "Sai ao lado do contador, quando o indicador está ativo "
+                    "(ver \"Desenho e imagem\", abaixo)."
+                ),
+            ),
+        ),
         layouts=(
             BANNER_IMAGEM_TEXTO,
             BANNER_DESTAQUE,
@@ -420,6 +440,7 @@ SECOES = {
             BANNER_SOMENTE_TEXTO,
         ),
         imagem=True,
+        contador=True,
     ),
     "trust": Secao(
         chave="trust",
@@ -440,8 +461,27 @@ SECOES = {
             Texto("title", _("Título da seção")),
             Texto("lead", _("Texto de apoio"), longo=True),
             Texto("cta", _("Botão de cada parceiro")),
+            Texto(
+                "ver_todos_label",
+                _("Botão \"Ver todos\""),
+                ajuda=_(
+                    "Em branco, o botão não aparece -- mesmo com um destino "
+                    "configurado."
+                ),
+            ),
+            Texto(
+                "ver_todos_destino",
+                _("Destino do botão \"Ver todos\""),
+                ajuda=_(
+                    "Um caminho do site (/pt/...) ou um endereço http(s). Em "
+                    "branco, o botão não aparece -- nunca um link que não "
+                    "leva a lugar nenhum."
+                ),
+                validators=(DESTINO_EXTERNO_OU_CAMINHO,),
+            ),
         ),
         cadastro="parceiros",
+        cartoes_com_botao=True,
     ),
     "how": Secao(
         chave="how",
@@ -584,13 +624,21 @@ def campos_da_secao(secao):
 
     Tupla vazia para uma seção que ninguém declarou -- a tela avisa que
     não sabe editá-la, em vez de mostrar um JSON cru.
+
+    OS CAMPOS DA SEÇÃO, MAIS OS DO DESENHO -- NÃO UM OU OUTRO
+    -----------------------------------------------------------
+    Uma seção com `layouts` declarados ainda pode ter `campos` PRÓPRIOS
+    (ex.: `badge_label`/`badge_note` do contador, em "hero"): são os que
+    valem em QUALQUER desenho escolhido. Os do desenho vêm depois, e são
+    os que mudam de um para o outro. Uma seção sem desenho continua
+    tendo só os seus `campos`, como sempre.
     """
     declarada = secao_declarada(secao)
     if declarada is None:
         return ()
     if declarada.layouts:
         layout = declarada.layout_ou_padrao(secao.layout)
-        return layout.campos if layout else ()
+        return declarada.campos + (layout.campos if layout else ())
     return declarada.campos
 
 

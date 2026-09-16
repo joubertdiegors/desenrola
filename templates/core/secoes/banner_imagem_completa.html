@@ -17,9 +17,17 @@ Titulo, chamada e rotulos do contador continuam gravados no banco. Este
 desenho simplesmente nao os le. Voltar para "Imagem e texto" os traz de
 volta inteiros.
 
+O CONTADOR
+----------
+`_banner_contador.html` continua disponível aqui -- é a única coisa que
+pode sair SOBRE a imagem neste desenho, porque é uma cápsula opaca com
+o próprio fundo, e não texto solto sobre uma foto arbitrária (a mesma
+razão pela qual título e chamada não são desenhados aqui).
+
 Contexto: secoes.hero, partes.hero.imagem (o Asset).
 {% endcomment %}
 <section class="hero-cheio container">
+  {% include "core/secoes/_banner_contador.html" %}
   <div class="hero-cheio-art">
     {% if partes.hero.imagem %}
     <img class="hero-image" src="{{ partes.hero.imagem.file.url }}" alt="{{ partes.hero.imagem.alt_text|default:secoes.hero.art_caption }}">

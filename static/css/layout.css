@@ -58,10 +58,11 @@ body { display: flex; flex-direction: column; }
 .site-nav-lang { min-height: 40px; padding: 0 12px; font-size: 13px; gap: 6px; width: auto; }
 
 .hero {
+  position: relative;
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 48px;
-  padding: 56px 48px 48px;
+  padding: 110px 48px 48px;
   align-items: center;
   background: linear-gradient(180deg, #fff, var(--bg));
 }
@@ -87,6 +88,7 @@ body { display: flex; flex-direction: column; }
    nada de texto por cima. Mesmo fundo e mesmo respiro do banner padrao,
    para os tres desenhos pertencerem a mesma pagina. */
 .hero-cheio {
+  position: relative;
   padding: 56px 48px 48px;
   background: linear-gradient(180deg, #fff, var(--bg));
 }
@@ -97,7 +99,8 @@ body { display: flex; flex-direction: column; }
 /* Banner · desenho "Somente texto". Sem moldura de imagem e sem espaco
    reservado para ela: a coluna de leitura fica centrada. */
 .hero-texto {
-  padding: 72px 48px 56px;
+  position: relative;
+  padding: 110px 48px 56px;
   background: linear-gradient(180deg, #fff, var(--bg));
   text-align: center;
 }
@@ -105,6 +108,49 @@ body { display: flex; flex-direction: column; }
 .hero-texto .hero-lead { font-size: 18px; max-width: 60ch; margin: 0 auto 28px; }
 .hero-texto .hero-actions { justify-content: center; }
 .hero-texto .hero-alt { margin-top: 14px; }
+
+/* ---------------------------------------------------------------------------
+   Posicionamento fechado -- nove classes para as nove opcoes de
+   `content.models.PageSection.Posicao9`; nao ha coordenada livre.
+   Compartilhado por qualquer elemento absoluto sobre um ancestral
+   `position: relative`: o contador do banner (logo abaixo) e o botao do
+   cartao de parceiro (Bloco B, `.partner-botao`, mais adiante neste
+   arquivo). Um SO lugar para as nove posicoes -- nao duas classes
+   iguais criadas em dois pontos do CSS para o mesmo problema.
+   --------------------------------------------------------------------------- */
+.pos-superior-esquerda { top: 24px; left: 24px; }
+.pos-superior-centro { top: 24px; left: 50%; transform: translateX(-50%); }
+.pos-superior-direita { top: 24px; right: 24px; }
+.pos-centro-esquerda { top: 50%; left: 24px; transform: translateY(-50%); }
+.pos-centro { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.pos-centro-direita { top: 50%; right: 24px; transform: translateY(-50%); }
+.pos-inferior-esquerda { bottom: 24px; left: 24px; }
+.pos-inferior-centro { bottom: 24px; left: 50%; transform: translateX(-50%); }
+.pos-inferior-direita { bottom: 24px; right: 24px; }
+
+/* Contador do banner -- um parcial so (`_banner_contador.html`), incluido
+   pelos sete desenhos de banner (acima e abaixo). O ancestral posicionado
+   e sempre a propria secao do banner -- todas ganharam `position: relative`
+   -- entao as nove classes acima bastam em qualquer um dos sete desenhos,
+   com ou sem foto. */
+.banner-contador {
+  position: absolute;
+  z-index: 2;
+  max-width: calc(100% - 32px);
+  box-shadow: var(--shadow-card);
+}
+/* ELE FLUTUA EM QUALQUER LARGURA -- NUNCA MUDA DE MODO
+   -------------------------------------------------------
+   Uma versao anterior o tirava do posicionamento absoluto abaixo de
+   1024px para evitar que cobrisse o titulo. Reentrar no fluxo normal
+   tem um efeito colateral serio: em quatro dos sete desenhos ele e
+   filho direto de um grid/flex de duas colunas (`.hero`,
+   `.hero-editorial`, `.hero-amplo`) -- virar um TERCEIRO item nessa
+   grade bagunça as duas colunas de verdade (texto e imagem trocam de
+   lugar, ou ficam lado a lado com o contador). Ficar sempre absoluto
+   preserva a contagem de itens do grid/flex em qualquer largura; o que
+   muda por breakpoint, logo abaixo, e so o respiro (`padding-top`) que
+   cada desenho reserva para ele nao cobrir o titulo. */
 
 /* ---------------------------------------------------------------------------
    Os quatro desenhos vindos da referencia visual do cliente.
@@ -181,7 +227,7 @@ body { display: flex; flex-direction: column; }
 .hero-assimetrico-grade {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44%;
-  padding: 56px 48px 48px;
+  padding: 110px 48px 48px;
 }
 .hero-assimetrico-texto { grid-column: 1; }
 .hero-assimetrico-texto h1 { font-size: 54px; max-width: 13ch; margin-bottom: 18px; }
@@ -200,20 +246,6 @@ body { display: flex; flex-direction: column; }
   inset: 0;
   background: linear-gradient(90deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 45%, transparent) 45%, transparent 100%);
 }
-.hero-pilula {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 22px;
-  padding: 9px 16px;
-  border: 1px solid var(--bd);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--mu);
-  font-size: 13.5px;
-}
-.hero-pilula strong { color: var(--navy); }
-.hero-pilula-ponto { color: var(--s); font-size: 9px; }
 
 /* Banner · desenho "Foto ampla". Texto SOBRE a foto -- so este desenho
    faz isso, e so porque tem o veu que garante o contraste. */
@@ -232,7 +264,7 @@ body { display: flex; flex-direction: column; }
   inset: 0;
   background: linear-gradient(90deg, rgba(11, 26, 51, 0.9) 0%, rgba(11, 26, 51, 0.72) 42%, rgba(11, 26, 51, 0.15) 100%);
 }
-.hero-amplo-texto { position: relative; padding: 56px 48px; }
+.hero-amplo-texto { position: relative; padding: 110px 48px 56px; }
 .hero-amplo-texto > div { max-width: 46ch; }
 .hero-amplo-texto h1 { color: #fff; font-size: 50px; margin-bottom: 16px; }
 .hero-amplo-texto .hero-lead { color: rgba(255, 255, 255, 0.86); margin-bottom: 26px; }
@@ -248,10 +280,11 @@ body { display: flex; flex-direction: column; }
 /* Banner · desenho "Editorial". Passos numerados a esquerda, foto em
    retrato a direita. */
 .hero-editorial {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.72fr);
   gap: 56px;
-  padding: 56px 48px 48px;
+  padding: 110px 48px 48px;
   align-items: start;
   background: linear-gradient(180deg, #fff, var(--bg));
 }
@@ -305,8 +338,9 @@ body { display: flex; flex-direction: column; }
 .section h2 { font-size: 30px; }
 .section-lead { color: var(--mu); margin: 6px 0 22px; }
 
-/* Nossos Parceiros · modelo 2a. Cabecalho sobre uma linha, e cartoes
-   altos de altura igual com o botao ancorado no pe. */
+/* Nossos Parceiros · modelo 2a (Bloco B). Cabecalho sobre uma linha, e
+   so imagem + botao por cartao -- nome e descricao continuam gravados
+   (administracao/SEO), mas nao sao desenhados (ver `_partner_card.html`). */
 .parceiros-cabeca {
   border-bottom: 1px solid var(--bd);
   padding-bottom: 16px;
@@ -314,47 +348,89 @@ body { display: flex; flex-direction: column; }
 }
 .parceiros-cabeca .section-lead { margin: 6px 0 0; }
 
+/* ATE QUATRO, UMA GRADE; NUNCA UMA SEGUNDA FILEIRA
+   --------------------------------------------------
+   Acima de quatro, `partners.html` desenha `.partners-carrossel` no
+   lugar desta grade -- ver logo abaixo. As duas sao listas (`<ul>`),
+   entao a marca de item some aqui, uma vez so para as duas. */
+.partners-grid,
+.partners-carrossel { list-style: none; margin: 0; padding: 0; }
+
 .partners-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
-/* Menos de quatro cadastrados: a grade encolhe em vez de espichar os
-   cartoes por colunas vazias. A contagem vem do banco. */
+/* Menos de quatro cadastrados (ou carrossel desligado, com mais):
+   a grade encolhe em vez de espichar os cartoes por colunas vazias. */
 .partners-grid-1 { grid-template-columns: minmax(0, 320px); }
 .partners-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 660px; }
 .partners-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1000px; }
 
+.partner-item { min-width: 0; }
 .partner-card {
   position: relative;
-  min-height: 360px;
-  padding: 0;
+  display: block;
+  height: 100%;
+  min-height: 220px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
   text-decoration: none;
   color: inherit;
 }
 .partner-card:hover { color: inherit; }
-/* A imagem toma o alto do cartao; o corpo empurra o botao para o pe, e
-   por isso todos os botoes da fileira ficam na mesma linha. */
-.partner-media { position: relative; flex: 1; min-height: 0; }
+.partner-media { position: absolute; inset: 0; }
 .partner-image { height: 100%; width: 100%; }
-img.partner-image { object-fit: contain; padding: 22px 22px 0; }
-/* O veu funde o pe da imagem no fundo do cartao -- e o que costura os
-   dois blocos, como na referencia. */
-.partner-veu {
+img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; }
+/* O botao e uma capsula SOBRE o cartao -- nao uma faixa no pe. Reusa as
+   nove classes `.pos-*` do contador do banner (mesmo arquivo, acima):
+   a mesma posicao fechada, o mesmo CSS, nenhuma coordenada livre. */
+.partner-botao {
   position: absolute;
-  inset: auto 0 0;
-  height: 56%;
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, #fff 92%, transparent) 55%, #fff 100%);
+  z-index: 1;
+  max-width: calc(100% - 24px);
+  box-shadow: var(--shadow-card);
 }
-.partner-corpo {
-  position: relative;
-  padding: 0 18px 18px;
+
+/* CARROSSEL -- SO ACIMA DE QUATRO, E SO QUANDO LIGADO NO BACKOFFICE
+   --------------------------------------------------------------------
+   `overflow-x: auto` rola por toque, roda do mouse e teclado (a trilha
+   e focavel) sem nenhuma linha de script -- as setas em
+   `carrossel-de-parceiros.js` sao so mais um jeito de mover a MESMA
+   rolagem, nunca o unico. O scroll fica preso a esta caixa: a pagina em
+   volta nao ganha barra de rolagem nenhuma. */
+.partners-carrossel-caixa { display: flex; align-items: center; gap: 12px; }
+.partners-carrossel {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
+  padding-bottom: 4px;
+  /* Sem isto, o item flexivel recusa encolher abaixo da largura de
+     todos os cartoes somados -- o "auto" acima nunca chegaria a rolar,
+     e a pagina inteira e que ganharia a barra horizontal. */
+  min-width: 0;
 }
-.partner-card h3 { font-size: 17px; }
-.partner-card p { font-size: 13px; color: var(--mu); margin-top: 2px; }
-.partner-card .btn { min-height: 44px; font-size: 14px; }
+.partners-carrossel .partner-item {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+}
+@media (prefers-reduced-motion: reduce) {
+  .partners-carrossel { scroll-behavior: auto; }
+}
+.partners-seta {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--bd);
+  background: #fff;
+  color: var(--navy);
+  font-size: 18px;
+  cursor: pointer;
+}
+.partners-seta:hover { border-color: var(--p); color: var(--p); }
+
+.parceiros-rodape { display: flex; justify-content: center; margin-top: 28px; }
 
 .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .how-card { padding: 24px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
@@ -460,16 +536,18 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .cta-banner .btn { background: #fff; color: var(--navy); min-height: 50px; padding: 0 24px; flex: none; }
 .cta-banner-deco { position: absolute; right: -30px; bottom: -60px; font-size: 220px; opacity: 0.12; }
 
+/* Rodape minimalista em tres linhas (Bloco C): marca, links, copyright
+   -- ver `components/site_footer.html`. Sem cartao, sem borda entre as
+   linhas: so espaco, que e o que "leve" pede. */
 .site-footer {
-  padding: 28px 48px;
+  padding: 32px 48px;
   border-top: 1px solid var(--bd);
   background: #fff;
   display: flex;
-  align-items: center;
-  gap: 24px;
+  flex-direction: column;
+  gap: 18px;
   font-size: 13px;
   color: var(--mu);
-  flex-wrap: wrap;
 }
 /* Pagina legal: uma coluna de texto corrido. Largura de leitura, e nao
    os 1280px do `.container` -- linha longa demais cansa, e um texto
@@ -482,54 +560,55 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .legal-page h1 { font-size: 26px; }
 }
 
-.site-footer a { color: inherit; }
+/* Alvo de toque de pelo menos 40px, mesmo com o texto pequeno (13px) do
+   rodape: a altura fica no LINK, nao no texto dentro dele. */
+.site-footer a { display: inline-flex; align-items: center; min-height: 40px; color: inherit; }
 .site-footer a:hover { color: var(--p); }
+
+.site-footer-marca { display: flex; }
+
+/* Linha do meio: legais, contato e redes, na ordem escolhida no
+   Backoffice -- os tres cabem lado a lado, e quebram em mais linhas
+   sozinhos quando o espaco nao alcanca. */
+.site-footer-links { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 /* Redes sociais: so icone, e so as que estao configuradas (o nome vai no
    aria-label). Herdam a cor do rodape como os demais links. */
-.site-footer-social { display: inline-flex; font-size: 18px; line-height: 1; }
-/* Telefone e endereco, quando cadastrados. Linha propria abaixo do
-   rodape para nao disputar espaco com os links. */
-.site-footer-contato {
-  padding: 0 48px 24px;
-  background: #fff;
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  font-style: normal;
-  color: var(--mu);
-}
+.site-footer-social { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 18px; line-height: 1; }
+.site-footer-contato { display: inline-flex; gap: 16px; flex-wrap: wrap; }
 .site-footer-contato span { display: inline-flex; align-items: flex-start; gap: 6px; }
-.footer-lang { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+.site-footer-copyright { font-size: 12px; }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .hero { grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 24px 32px 0; background: none; }
+  .hero { grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 110px 32px 0; background: none; }
   .hero h1 { font-size: 44px; max-width: none; }
   .hero-art { height: 300px; }
   .hero-destaque-art { height: 340px; }
-  .hero-assimetrico-grade { padding: 24px 32px 32px; }
+  .hero-assimetrico-grade { padding: 110px 32px 32px; }
   .hero-assimetrico-texto h1 { font-size: 44px; max-width: none; }
   .hero-amplo { min-height: 380px; }
-  .hero-amplo-texto { padding: 32px; }
+  .hero-amplo-texto { padding: 110px 32px 32px; }
   .hero-amplo-texto h1 { font-size: 40px; }
-  .hero-editorial { gap: 32px; padding: 24px 32px 32px; }
+  .hero-editorial { gap: 32px; padding: 110px 32px 32px; }
   .hero-editorial h1 { font-size: 38px; }
   .trust-bar { padding: 28px 32px 0; }
   .section { padding: 0 32px; margin-top: 40px; }
   .faq { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeca" "lista" "contato"; grid-template-rows: none; gap: 28px; }
   .faq-coluna .section-lead { max-width: none; }
-  /* Duas colunas no tablet: quatro cartoes 2a em 834px dariam 180px de
-     largura, e o botao de largura inteira quebraria em duas linhas. */
+  /* Duas colunas no tablet: quatro cartoes em 834px dariam 180px de
+     largura -- estreito demais para a logomarca respirar dentro do
+     `padding` do cartao. */
   .partners-grid,
   .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
   .partners-grid { gap: 14px; }
+  .partners-carrossel .partner-item { flex-basis: 200px; }
   .how-grid { gap: 14px; }
   .cta-banner { margin: 32px; padding: 30px 32px; }
 }
 
 @media (max-width: 767px) {
   .site-nav { padding: 12px 20px; }
-  .hero { display: block; padding: 8px 20px 0; background: none; }
+  .hero { display: block; padding: 100px 20px 0; background: none; }
   .hero h1 { font-size: 36px; max-width: none; margin: 24px 0 12px; }
   .hero-lead { font-size: 16px; max-width: none; margin-bottom: 22px; }
   .hero-actions { display: block; }
@@ -540,7 +619,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .hero-cheio-art { height: 200px; }
   .hero-cheio-acao { margin-top: 18px; }
   .hero-cheio-acao .btn { width: 100%; }
-  .hero-texto { padding: 24px 20px 8px; background: none; }
+  .hero-texto { padding: 100px 20px 8px; background: none; }
   .hero-texto h1 { font-size: 36px; max-width: none; margin: 0 0 12px; }
   .hero-texto .hero-lead { font-size: 16px; max-width: none; margin-bottom: 22px; }
   .hero-texto .hero-actions { display: block; }
@@ -549,7 +628,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   /* Os quatro desenhos novos, no celular. Todos viram UMA coluna: no
      telefone nao ha "esquerda e direita", e insistir na grade so
      produziria colunas de sete caracteres. */
-  .hero-destaque { display: block; padding: 8px 20px 0; background: none; }
+  .hero-destaque { display: block; padding: 100px 20px 0; background: none; }
   .hero-kicker { margin: 18px 0 12px; }
   .hero-destaque h1 { max-width: none; }
   .hero-destaque-art { height: 240px; }
@@ -557,7 +636,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .hero-selo { padding: 7px 12px; font-size: 12px; }
 
   .hero-assimetrico { background: none; }
-  .hero-assimetrico-grade { display: block; padding: 8px 20px 0; }
+  .hero-assimetrico-grade { display: block; padding: 100px 20px 0; }
   .hero-assimetrico-texto h1 { font-size: 36px; max-width: none; margin: 24px 0 12px; }
   /* A foto deixa de sangrar: no celular ela vai para baixo do texto, no
      fluxo normal, com a mesma altura da moldura dos outros desenhos. */
@@ -565,17 +644,16 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .hero-assimetrico-art .hero-image,
   .hero-assimetrico-art .img-slot { border-radius: var(--radius-md); }
   .hero-assimetrico-veu { display: none; }
-  .hero-pilula { margin-top: 18px; font-size: 12.5px; }
 
   .hero-amplo { min-height: 0; }
-  .hero-amplo-texto { padding: 32px 20px; }
+  .hero-amplo-texto { padding: 100px 20px 32px; }
   .hero-amplo-texto > div { max-width: none; }
   .hero-amplo-texto h1 { font-size: 32px; }
   .hero-amplo-texto .hero-lead { font-size: 16px; }
   .hero-amplo-texto .hero-actions { display: block; }
   .hero-amplo-texto .hero-actions .btn { width: 100%; }
 
-  .hero-editorial { display: block; padding: 8px 20px 0; background: none; }
+  .hero-editorial { display: block; padding: 100px 20px 0; background: none; }
   .hero-editorial h1 { font-size: 34px; max-width: none; margin: 18px 0 12px; }
   .hero-editorial .hero-actions { display: block; }
   .hero-editorial .hero-actions .btn { width: 100%; }
@@ -595,9 +673,9 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .aviso-do-email .notice { align-items: flex-start; flex-wrap: wrap; }
   .aviso-do-email .btn { margin-left: 0; width: 100%; }
 
-  .stat-badge { display: flex; padding: 14px; }
-  .stat-badge-row { display: flex; gap: 10px; align-items: baseline; }
-  .stat-badge-live { margin-top: 4px; }
+  .stat-badge { display: flex; padding: 10px 12px; }
+  .stat-badge-row { display: flex; gap: 8px; align-items: baseline; }
+  .stat-badge-live { margin-top: 3px; }
 
   .trust-bar { padding: 22px 20px 0; }
   .trust-bar-grid { padding: 14px 8px; gap: 6px; text-align: center; }
@@ -606,16 +684,19 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 
   .section { padding: 30px 20px 0; }
   .section h2 { font-size: 24px; }
-  /* Uma coluna: o cartao 2a tem imagem, nome, descricao e um botao de
-     largura inteira. Espremido em meia tela de celular, "Conheça" e a
-     seta quebrariam em duas linhas dentro do botao. */
+  /* Grade compacta, nao despejo vertical: ate quatro parceiros cabem em
+     duas colunas -- uma coluna so empilharia quatro cartoes numa fila
+     comprida, exatamente o que a composicao principal evita. Sozinho,
+     um parceiro ocupa a largura inteira: dividir a linha ao meio para
+     UM cartao so deixaria a outra metade vazia. */
   .partners-grid,
-  .partners-grid-1,
   .partners-grid-2,
-  .partners-grid-3 { grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: none; }
-  .partner-card { min-height: 280px; }
-  img.partner-image { padding: 18px 18px 0; }
-  .partner-corpo { padding: 0 16px 16px; }
+  .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: none; }
+  .partners-grid-1 { grid-template-columns: minmax(0, 1fr); }
+  .partner-card { min-height: 160px; }
+  img.partner-image { padding: 18px; }
+  .partners-carrossel .partner-item { flex-basis: 190px; }
+  .partners-seta { width: 40px; height: 40px; font-size: 16px; }
   /* Perguntas frequentes · desenho 2a. Cada pergunta vira um cartao
      com borda propria, em vez de linhas separadas por filete: na
      largura do celular o filete sozinho nao separa o suficiente. */
@@ -671,8 +752,12 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .cta-banner .btn { width: 100%; min-height: 52px; font-size: 16px; }
   .cta-banner-deco { font-size: 150px; bottom: -50px; right: -40px; }
 
-  .site-footer { margin-top: auto; padding: 20px 20px 30px; flex-direction: column; align-items: flex-start; gap: 8px; }
-  .site-footer-contato { padding: 0 20px 24px; flex-direction: column; gap: 8px; }
+  /* A marca fica centralizada (a identidade pedida para o celular); os
+     links quebram sozinhos em linhas conforme o espaco, tambem
+     centralizados -- nunca uma so coluna comprida de links empilhados. */
+  .site-footer { margin-top: auto; padding: 24px 20px 28px; align-items: center; text-align: center; gap: 16px; }
+  .site-footer-links { justify-content: center; }
+  .site-footer-contato { flex-direction: column; align-items: center; gap: 6px; }
   .footer-lang { margin-left: 0; }
 }
 

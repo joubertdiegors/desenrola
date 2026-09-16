@@ -23,9 +23,15 @@ Aquela secao continua existindo, com os seus proprios textos. Estes
 passos sao o resumo dentro do banner -- quem escolher este desenho
 decide se quer os dois ou se desliga o outro na Central.
 
+O CONTADOR
+----------
+`_banner_contador.html` -- a mesma cápsula dos outros seis desenhos,
+flutuando sobre a seção inteira.
+
 Contexto: secoes.hero, partes.hero.imagem.
 {% endcomment %}
 <section class="hero-editorial container">
+  {% include "core/secoes/_banner_contador.html" %}
   <div class="hero-editorial-texto">
     {% if secoes.hero.kicker %}<p class="hero-amplo-kicker">{{ secoes.hero.kicker }}</p>{% endif %}
     <h1>{{ secoes.hero.title }}</h1>

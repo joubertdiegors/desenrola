@@ -141,11 +141,16 @@ class TestImagemCompleta:
         assert titulo not in desenhado
         assert "hero-lead" not in desenhado
 
-    def test_nao_desenha_o_contador(self, client):
-        """O selo pertence ao desenho com texto ao lado."""
+    def test_desenha_o_contador(self, client):
+        """
+        O contador é a ÚNICA coisa que pode sair sobre a imagem neste
+        desenho: é uma cápsula opaca com fundo próprio, não texto solto
+        sobre uma foto arbitrária (a mesma razão pela qual título e
+        chamada não são desenhados aqui -- ver `TestPadrao` acima).
+        """
         usar(IMAGEM_COMPLETA)
 
-        assert "stat-badge-value" not in corpo(client)
+        assert "stat-badge-value" in corpo(client)
 
     def test_o_botao_fica_abaixo_e_so_se_houver(self, client):
         usar(IMAGEM_COMPLETA)

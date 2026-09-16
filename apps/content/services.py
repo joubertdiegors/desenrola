@@ -67,6 +67,17 @@ class ParteDaPagina:
     # O `Asset` desta parte, ou None. O template pergunta
     # `partes.hero.imagem.file.url` -- mesma forma do parceiro.
     imagem: object = None
+    # Estrutural, das colunas de `PageSection` -- não do JSON de
+    # conteúdo. Valem em qualquer idioma, e por isso não moram em
+    # `conteudo`. Ver os campos equivalentes em `PageSection`
+    # (Bloco A: contador; Bloco B: botão e carrossel de parceiros).
+    contador_ativo: bool = False
+    contador_posicao: str = PageSection.Posicao9.SUPERIOR_ESQUERDA
+    contador_ao_vivo_ativo: bool = True
+    parceiros_posicao_botao: str = PageSection.Posicao9.INFERIOR_CENTRO
+    parceiros_carrossel_ativo: bool = True
+    parceiros_carrossel_controles_ativo: bool = True
+    parceiros_ver_todos_ativo: bool = True
 
 
 def partes_da_pagina(page_key, language=None):
@@ -106,15 +117,37 @@ def partes_da_pagina(page_key, language=None):
     for secao in pagina.sections.all():
         por_idioma = {t.language: t.content for t in secao.translations.all()}
         conteudo = por_idioma.get(idioma) or por_idioma.get(padrao) or {}
-        chave = secao.key or secao.kind
-        resultado[chave] = ParteDaPagina(
-            chave=chave,
-            conteudo=conteudo if isinstance(conteudo, dict) else {},
-            desenho=secao.layout or "",
-            ordem=secao.order,
-            imagem=secao.image,
-        )
+        resultado[secao.key or secao.kind] = _parte_de(secao, conteudo)
     return resultado
+
+
+def _parte_de(secao, conteudo):
+    """
+    Monta o `ParteDaPagina` de uma `PageSection` já carregada.
+
+    UM LUGAR SÓ PARA OS CAMPOS ESTRUTURAIS
+    ---------------------------------------
+    `partes_da_pagina()` e `parte_avulsa()` fazem a MESMA pergunta --
+    "como esta seção se parece?" -- só que para conjuntos diferentes de
+    seções (ativas / uma qualquer). Manter os campos estruturais
+    (contador, botão e carrossel de parceiros) escritos nos dois lugares
+    seria exatamente o tipo de duplicação que este projeto evita: o dia
+    em que uma coluna nova entrar em `PageSection`, só este ponto muda.
+    """
+    return ParteDaPagina(
+        chave=secao.key or secao.kind,
+        conteudo=conteudo if isinstance(conteudo, dict) else {},
+        desenho=secao.layout or "",
+        ordem=secao.order,
+        imagem=secao.image,
+        contador_ativo=secao.counter_enabled,
+        contador_posicao=secao.counter_position,
+        contador_ao_vivo_ativo=secao.counter_live_enabled,
+        parceiros_posicao_botao=secao.partners_button_position,
+        parceiros_carrossel_ativo=secao.partners_carousel_enabled,
+        parceiros_carrossel_controles_ativo=secao.partners_carousel_controls_enabled,
+        parceiros_ver_todos_ativo=secao.partners_view_all_enabled,
+    )
 
 
 def parte_avulsa(secao, language=None):
@@ -131,13 +164,7 @@ def parte_avulsa(secao, language=None):
 
     por_idioma = {t.language: t.content for t in secao.translations.all()}
     conteudo = por_idioma.get(idioma) or por_idioma.get(padrao) or {}
-    return ParteDaPagina(
-        chave=secao.key or secao.kind,
-        conteudo=conteudo if isinstance(conteudo, dict) else {},
-        desenho=secao.layout or "",
-        ordem=secao.order,
-        imagem=secao.image,
-    )
+    return _parte_de(secao, conteudo)
 
 
 def secoes_da_pagina(page_key, language=None):
@@ -179,9 +206,6 @@ def contexto_do_rodape(language=None):
     return {
         "partes": {"footer": rodape} if rodape else {},
         "blocos_do_rodape": blocos,
-        # Telefone e endereco sao a SEGUNDA linha do bloco de contato:
-        # so aparecem quando o bloco esta ligado E ha o que mostrar.
-        "mostra_contato_do_rodape": "contato" in blocos,
     }
 
 
@@ -215,7 +239,6 @@ def contexto_da_home(language=None):
         "partes": partes,
         "template_do_banner": template_do_banner,
         "blocos_do_rodape": blocos,
-        "mostra_contato_do_rodape": "contato" in blocos,
         # `secoes` continua no contexto: e o que os templates ja leem, e
         # trocar tudo de uma vez seria mexer em marcacao que funciona.
         "secoes": {chave: parte.conteudo for chave, parte in partes.items()},

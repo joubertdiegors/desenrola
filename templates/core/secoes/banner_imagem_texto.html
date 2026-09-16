@@ -1,4 +1,4 @@
-{% load i18n humanize %}{% comment %}
+{% load i18n %}{% comment %}
 Banner superior · desenho "Imagem e texto".
 
 E o desenho que a Home ja tinha antes da Etapa 11, movido para ca sem
@@ -15,23 +15,8 @@ Contexto: secoes.hero (o texto), partes.hero.imagem (o Asset),
 cartas_emitidas (o contador real).
 {% endcomment %}
 <section class="hero container">
+  {% include "core/secoes/_banner_contador.html" %}
   <div>
-    <div class="tint stat-badge">
-      <i class="ph-fill ph-users" aria-hidden="true"></i>
-      <div class="stat-badge-row">
-        {% comment %}
-        O número conta CARTAS EMITIDAS (apps.letters.statistics), não
-        pessoas -- e o rótulo ao lado, que vem do CMS, diz isso.
-
-        `intcomma` põe o separador de milhar da locale: 999 continua
-        "999", 1000 vira "1.000". A separação é de APRESENTAÇÃO -- o
-        contexto recebe o número inteiro.
-        {% endcomment %}
-        <span class="stat-badge-value">{{ cartas_emitidas|intcomma }}</span>
-        <span class="stat-badge-label">{{ secoes.hero.badge_label|linebreaksbr }}</span>
-      </div>
-      <span class="stat-badge-live d-only"><i class="ph-fill ph-circle" aria-hidden="true"></i>{{ secoes.hero.badge_note }}</span>
-    </div>
     <h1>{{ secoes.hero.title }}</h1>
     <p class="hero-lead">{{ secoes.hero.lead }}</p>
     <div class="hero-actions">

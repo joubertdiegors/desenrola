@@ -15,9 +15,17 @@ SEM FOTO, O VEU VIRA FUNDO
 A faixa continua la, agora sobre a moldura vazia: o contraste do texto
 nao depende de haver foto escolhida.
 
+O CONTADOR
+----------
+`_banner_contador.html` -- a mesma cápsula dos outros seis desenhos.
+Como aqui o texto já fica sobre a foto, o contador nasce na posição
+padrão (superior esquerda); o Backoffice continua livre para escolher
+outra das nove, inclusive uma que caia sobre a foto sem texto.
+
 Contexto: secoes.hero, partes.hero.imagem.
 {% endcomment %}
 <section class="hero-amplo">
+  {% include "core/secoes/_banner_contador.html" %}
   <div class="hero-amplo-art">
     {% if partes.hero.imagem %}
     <img class="hero-image" src="{{ partes.hero.imagem.file.url }}" alt="{{ partes.hero.imagem.alt_text|default:secoes.hero.art_caption }}">

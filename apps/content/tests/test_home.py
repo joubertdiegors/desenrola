@@ -148,12 +148,17 @@ class TestPartner:
 
 class TestParceirosNaHome:
     def test_o_parceiro_ativo_aparece(self, client):
+        """
+        Desde o Bloco B o cartão mostra só imagem e botão -- o nome
+        continua saindo no `aria-label` do link inteiro, mas a
+        descrição não é mais desenhada em lugar nenhum (ver
+        `test_parceiros_carrossel_e_botao.py`).
+        """
         criar_parceiro("JD-Print", description="Impressões 3D sob medida.")
 
         html = client.get(HOME).content.decode()
 
         assert "JD-Print" in html
-        assert "Impressões 3D sob medida." in html
         assert "Nossos parceiros" in html
 
     def test_o_inativo_nao_aparece(self, client):

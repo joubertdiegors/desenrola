@@ -1,0 +1,43 @@
+{% comment %}
+Um cartão de parceiro -- só imagem e botão (Bloco B).
+
+NOME E DESCRIÇÃO CONTINUAM GRAVADOS, SÓ NÃO SÃO DESENHADOS
+-----------------------------------------------------------
+A referência (modelo 2a) pede um cartão limpo: logomarca e um botão, sem
+nome nem texto explicativo por cima. `parceiro.name` e
+`parceiro.description` continuam na tela de administração e servem de
+`aria-label` -- é o cartão INTEIRO que é o link, e é ele que precisa do
+nome para quem usa leitor de tela, já que não há mais texto visível
+para anunciar.
+
+O BOTÃO É UMA CÁPSULA SOBRE O CARTÃO, NÃO UMA FAIXA NO PÉ
+------------------------------------------------------------
+`parte.parceiros_posicao_botao` é um dos nove valores fechados de
+`PageSection.Posicao9` -- a MESMA classe `pos-*` do contador do banner
+(`static/css/layout.css`): nenhuma segunda tabela de posições, nenhuma
+coordenada livre.
+
+SEM DESTINO, O CARTÃO NÃO É UM LINK -- E O BOTÃO NÃO EXISTE
+-------------------------------------------------------------
+Um parceiro sem `url` continua aparecendo (a imagem sozinha ainda
+apresenta a marca), mas a moldura não vira `<a href="#">`: é uma div, e
+não há botão para lugar nenhum.
+
+Contexto: parceiro, parte (`partes.partners`), secoes.partners.cta.
+{% endcomment %}
+{% if parceiro.url %}
+<a class="card partner-card" href="{{ parceiro.url }}" target="_blank" rel="noopener" aria-label="{{ parceiro.name }}">
+{% else %}
+<div class="card partner-card" aria-label="{{ parceiro.name }}">
+{% endif %}
+  <div class="partner-media">
+    {% if parceiro.logo %}
+    <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+    {% else %}
+    <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+    {% endif %}
+  </div>
+  {% if parceiro.url and secoes.partners.cta %}
+  <span class="partner-botao btn btn-primary pos-{{ parte.parceiros_posicao_botao }}">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>
+  {% endif %}
+{% if parceiro.url %}</a>{% else %}</div>{% endif %}

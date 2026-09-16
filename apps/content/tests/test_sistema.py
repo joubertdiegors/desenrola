@@ -625,7 +625,7 @@ class TestSitePublico:
         markup = fonte[fonte.index("{% endcomment %}") :]
 
         assert re.search(r"20\d\d", markup) is None
-        assert markup.count('{% now "Y" %}') == 2
+        assert markup.count('{% now "Y" %}') == 1
 
     def test_o_nome_do_rodape_movel_vem_do_cms(self, client):
         atual = config()

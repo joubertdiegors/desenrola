@@ -1,22 +1,24 @@
 """
 A seção "Nossos Parceiros" no modelo 2a, o escolhido pelo cliente.
 
-O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
+Desde o Bloco B, o cartão mostra só imagem e botão -- a cobertura de
+nome/descrição visíveis, do véu e do botão de largura inteira saiu
+daqui; `test_parceiros_carrossel_e_botao.py` cobre o desenho novo por
+inteiro (carrossel, posição do botão, "Ver todos", teclado/toque).
+
+O QUE ESTA SUÍTE CONTINUA IMPEDINDO
 ------------------------------------
 1. **Que a grade fique presa em quatro colunas.** A quantidade de
    parceiros vem do banco e muda. Com dois cadastrados, quatro colunas
    deixariam metade da fileira vazia -- a grade tem de acompanhar;
-2. **Que apareça um "Ver todos" sem para onde ir.** Na referência ele
-   já é opcional; aqui não existe página de listagem, então ele não é
-   desenhado;
-3. **Que a logomarca seja recortada.** O cartão da referência recorta
+2. **Que a logomarca seja recortada.** O cartão da referência recorta
    FOTOGRAFIAS. O que está cadastrado aqui é logomarca, e cortá-la
    cortaria o nome da empresa;
-4. **Que um cartão sem endereço mostre um botão morto.** Sem `url`, o
+3. **Que um cartão sem endereço mostre um botão morto.** Sem `url`, o
    cartão não é link e não ganha botão;
-5. **Que o Mini Banner perca o botão no celular.** Ele era escondido
+4. **Que o Mini Banner perca o botão no celular.** Ele era escondido
    por CSS -- uma chamada para ação sem a ação;
-6. **Que a seção apareça vazia.** Sem nenhum parceiro ativo, some
+5. **Que a seção apareça vazia.** Sem nenhum parceiro ativo, some
    inteira, com o item do menu junto.
 """
 
@@ -83,13 +85,28 @@ class TestGradeDinamica:
 
         assert f"partners-grid-{quantos}" in html
 
-    @pytest.mark.parametrize("quantos", (4, 5, 9))
-    def test_quatro_ou_mais_usa_a_grade_cheia(self, client, quantos):
-        criar(quantos)
+    def test_quatro_usa_a_grade_cheia(self, client):
+        criar(4)
 
         html = secao_dos_parceiros(client)
 
         assert 'class="partners-grid"' in html
+
+    @pytest.mark.parametrize("quantos", (5, 9))
+    def test_mais_de_quatro_vira_carrossel_em_vez_de_segunda_fileira(
+        self, client, quantos
+    ):
+        """
+        O carrossel vem ligado por padrão (`PageSection.partners_carousel_enabled`).
+        A cobertura do interruptor desligado mora em
+        `test_parceiros_carrossel_e_botao.py`.
+        """
+        criar(quantos)
+
+        html = secao_dos_parceiros(client)
+
+        assert "partners-carrossel" in html
+        assert 'class="partners-grid"' not in html
 
     def test_a_contagem_vem_do_banco(self, client):
         """Desativar um parceiro muda a grade -- o número não está escrito."""
@@ -141,13 +158,18 @@ class TestCabecalho:
         assert "parceiros-cabeca" in html
         assert html.index("parceiros-cabeca") < html.index("partners-grid")
 
-    def test_nao_ha_link_ver_todos(self, client):
-        """Não existe página de listagem: o link não é desenhado."""
+    def test_ate_quatro_nao_ha_botao_ver_todos(self, client):
+        """
+        Com toda a lista já visível na grade, "Ver todos" não teria para
+        onde apontar que a seção não mostre. A cobertura do botão
+        aparecendo de verdade, com mais de quatro parceiros, mora em
+        `test_parceiros_carrossel_e_botao.py`.
+        """
         criar(4)
 
         html = secao_dos_parceiros(client)
 
-        assert "Ver todos" not in html
+        assert "parceiros-rodape" not in html
 
     def test_sem_texto_de_apoio_o_paragrafo_nao_sai(self, client):
         from apps.content.models import PageSectionTranslation
@@ -170,27 +192,44 @@ class TestCabecalho:
 
 
 class TestCartao:
-    def test_o_botao_ocupa_a_largura_inteira(self, client):
+    def test_o_botao_e_uma_capsula_sobre_o_cartao(self, client):
+        """
+        Bloco B: nada de faixa de largura inteira no pé -- o botão é uma
+        cápsula posicionada (`partner-botao`), como o cartão da
+        referência pede.
+        """
         criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert "btn btn-primary btn-block" in html
+        assert "partner-botao btn btn-primary" in html
+        assert "btn-block" not in html
 
-    def test_o_botao_fica_depois_do_nome(self, client):
-        """Na referência ele é ancorado no pé do cartão."""
-        criar(1)
+    def test_nome_e_descricao_nao_aparecem_no_cartao(self, client):
+        """
+        Continuam gravados (administração/SEO): o nome ainda vai no
+        `aria-label` do link inteiro -- só não vira texto visível.
+        `test_parceiros_carrossel_e_botao.py` cobre o `aria-label`.
+        """
+        Partner.objects.create(
+            name="Nome Não Visível",
+            description="Descrição não visível na tela",
+            url="https://x.example.com",
+            order=1,
+        )
 
         html = secao_dos_parceiros(client)
 
-        assert html.index("<h3>") < html.index("btn-block")
+        assert "<h3>" not in html
+        assert "<p>" not in html
+        assert "Descrição não visível na tela" not in html
 
     def test_sem_endereco_nao_ha_botao_nem_link(self, client):
         criar(2, com_url=False)
 
         html = secao_dos_parceiros(client)
 
-        assert "btn-block" not in html
+        assert "partner-botao" not in html
         assert "href=" not in html
 
     def test_a_logomarca_nao_e_recortada(self):
@@ -204,18 +243,6 @@ class TestCartao:
 
         assert "contain" in regra
         assert "cover" not in regra
-
-    def test_a_imagem_tem_veu(self, client):
-        criar(1)
-
-        assert "partner-veu" in secao_dos_parceiros(client)
-
-    def test_o_veu_nao_e_lido_por_leitor_de_tela(self, client):
-        criar(1)
-
-        assert '<span class="partner-veu" aria-hidden="true"></span>' in secao_dos_parceiros(
-            client
-        )
 
     def test_a_logomarca_cadastrada_aparece(self, client, imagem_de_parceiro):
         Partner.objects.create(

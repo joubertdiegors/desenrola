@@ -1,60 +1,81 @@
 {% load i18n %}{% comment %}
-Rodape da landing (layout 2a desktop, 4a celular).
+Rodapé minimalista, em três linhas (Bloco C): 1. Marca, 2. Links,
+3. Copyright. Mesma identidade nos dois tamanhos -- no celular a marca
+fica centralizada, os links quebram em linhas conforme precisarem, e o
+copyright continua por último; nenhuma linha de bloco pesado ou cartão.
 
 O QUE O CMS CONTROLA AQUI
 -------------------------
-A COMPOSICAO, e so ela: quais blocos aparecem e em que ordem
-(`blocos_do_rodape`), mais o rotulo do link de contato. O rodape inteiro
-some quando a parte "footer" esta desativada -- e some o ELEMENTO, sem
-deixar faixa vazia no lugar.
+A COMPOSIÇÃO, e só ela: quais blocos aparecem e em que ordem
+(`blocos_do_rodape`, editado em Central de Conteúdo → Final → Rodapé),
+mais o rótulo do link de contato. O rodapé inteiro some quando a parte
+"footer" está desativada -- e some o ELEMENTO, sem deixar faixa vazia
+no lugar. A ordem escolhida vale para os blocos da linha do meio
+(legais/contato/redes); a marca é sempre a primeira linha e o copyright
+é sempre a última -- é a forma "três linhas" da referência, não uma
+lista solta.
 
-O QUE ELE NAO CONTROLA
+O QUE ELE NÃO CONTROLA
 ----------------------
-Os DADOS. Nome e logotipo vem de `SiteSettings` (Aparencia e Sistema);
-contato e redes, tambem de `SiteSettings`; os links legais, dos
-`ContentBlock` legais. Nada disso e duplicado aqui: cada dado tem um
-dono so, e o rodape apenas decide se mostra e em que ordem.
+Os DADOS. Nome e logotipo vêm de `SiteSettings` (Aparência e Sistema);
+contato e redes, também de `SiteSettings`; os links legais, dos
+`ContentBlock` legais. Nada disso é duplicado aqui: cada dado tem um
+dono só, e o rodapé apenas decide se mostra e em que ordem.
 
-O ANO E DO SERVIDOR
+O ANO É DO SERVIDOR
 -------------------
-`{% templatetag openblock %} now "Y" {% templatetag closeblock %}`, e nao
-uma configuracao: o ano corrente nao e uma decisao editorial, e um campo
-para ele so criaria uma coisa a mais para alguem esquecer de atualizar.
+`{% templatetag openblock %} now "Y" {% templatetag closeblock %}`, e não
+uma configuração: o ano corrente não é uma decisão editorial, e um campo
+para ele só criaria uma coisa a mais para alguém esquecer de atualizar.
+Uma linha só de copyright -- não duas (uma para desktop, outra para
+celular) --, porque as duas sempre diriam a mesma coisa.
 
 TERMOS DE USO E PRIVACIDADE
 ---------------------------
-Cada um so aparece quando o documento correspondente TEM TEXTO
+Cada um só aparece quando o documento correspondente TEM TEXTO
 publicado (`content.ContentBlock`, chaves `legal.*`). Sem texto, o link
-nao existe -- e nao vira um `#`. Um link que leva a lugar nenhum e pior
+não existe -- e não vira um `#`. Um link que leva a lugar nenhum é pior
 do que link nenhum.
 
-Quem escreve os textos e o cliente, pelo Django Admin. O codigo cria o
-lugar; o conteudo juridico nao se inventa.
+Quem escreve os textos é o cliente, pelo Django Admin. O código cria o
+lugar; o conteúdo jurídico não se inventa.
+
+Contexto: partes.footer, blocos_do_rodape, paginas_legais, site_config.
 {% endcomment %}{% if partes.footer %}
 {% with rodape=partes.footer.conteudo %}
 <footer class="site-footer">
-  {% for bloco in blocos_do_rodape %}
-    {% if bloco == "marca" %}
-      <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
-      <span class="d-only">&copy; {% now "Y" %}</span>
-    {% elif bloco == "legais" %}
-      {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
-      {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
-    {% elif bloco == "contato" %}
-      {% if site_config.contact.email %}<a class="d-only" href="mailto:{{ site_config.contact.email }}">{{ rodape.contato_label|default:_("Contato") }}</a>{% endif %}
-    {% elif bloco == "redes" %}
-      {% for rede in site_config.social %}
-      <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
-      {% endfor %}
-    {% endif %}
-  {% endfor %}
-  <span class="m-only">{{ site_config.name }} &copy; {% now "Y" %}</span>
+  {% if "marca" in blocos_do_rodape %}
+  <div class="site-footer-marca">
+    <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
+  </div>
+  {% endif %}
+
+  {% if "legais" in blocos_do_rodape or "contato" in blocos_do_rodape or "redes" in blocos_do_rodape %}
+  <div class="site-footer-links">
+    {% for bloco in blocos_do_rodape %}
+      {% if bloco == "legais" %}
+        {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
+        {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
+      {% elif bloco == "contato" %}
+        {% if site_config.contact.email or site_config.contact.phone or site_config.contact.address %}
+        <span class="site-footer-contato">
+          {% if site_config.contact.email %}<a href="mailto:{{ site_config.contact.email }}">{{ rodape.contato_label|default:_("Contato") }}</a>{% endif %}
+          {% if site_config.contact.phone %}<span>{{ site_config.contact.phone }}</span>{% endif %}
+          {% if site_config.contact.address %}<span>{{ site_config.contact.address|linebreaksbr }}</span>{% endif %}
+        </span>
+        {% endif %}
+      {% elif bloco == "redes" %}
+        {% for rede in site_config.social %}
+        <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="site-footer-copyright">
+    <span>{{ site_config.name }} &copy; {% now "Y" %}</span>
+  </div>
 </footer>
-{% if mostra_contato_do_rodape and site_config.contact.phone or mostra_contato_do_rodape and site_config.contact.address %}
-<address class="site-footer-contato">
-  {% if site_config.contact.phone %}<span><i class="ph ph-phone" aria-hidden="true"></i>{{ site_config.contact.phone }}</span>{% endif %}
-  {% if site_config.contact.address %}<span><i class="ph ph-map-pin" aria-hidden="true"></i>{{ site_config.contact.address|linebreaksbr }}</span>{% endif %}
-</address>
-{% endif %}
 {% endwith %}
 {% endif %}

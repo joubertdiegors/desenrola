@@ -57,7 +57,7 @@ outro idioma, sem gravar o que estiver na tela.
 
 <div class="bo-editor">
 <div class="bo-editor-campos">
-<form method="post" novalidate id="form-da-secao"
+<form method="post" enctype="multipart/form-data" novalidate id="form-da-secao"
       data-previa="{% url 'backoffice:content_preview' secao.pk %}">
   {% csrf_token %}
   <input type="hidden" name="idioma" value="{{ idioma }}">
@@ -85,12 +85,35 @@ outro idioma, sem gravar o que estiver na tela.
       <span class="note d-only">{% translate "Valem em todos os idiomas" %}</span>
     </div>
     {% for campo in form.campos_da_parte %}
+    {% if campo.name == "imagem_upload" %}
+    <div class="field campo-de-imagem">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {% if secao.image %}
+      <div class="imagem-atual">
+        <img src="{{ secao.image.file.url }}" alt="">
+        <span class="cell-muted">{% translate "Imagem atual" %}</span>
+      </div>
+      {% endif %}
+      {{ campo }}
+      <img class="imagem-preview" alt="{% translate 'Pré-visualização' %}" hidden>
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% elif campo.field.widget.input_type == "checkbox" %}
+    <label class="field field-check">
+      {{ campo }}
+      <span>{{ campo.label }}</span>
+    </label>
+    {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+    {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    {% else %}
     <div class="field">
       <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
       {{ campo }}
       {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
       {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
     </div>
+    {% endif %}
     {% endfor %}
   </div>
   {% endif %}
@@ -289,6 +312,65 @@ para uma lista igual envelheceria em direcoes diferentes.
     {% endfor %}
   </ul>
 </div>
+{% elif cadastro == "rodape" %}
+{% comment %}
+Os quatro blocos do rodapé -- fixos (não se cria nem se apaga um: o
+CMS decide só se cada um aparece e em que ordem, ver `BLOCOS_DO_RODAPE`
+em `section_schema`). Mesma lista visual dos itens do menu e das
+perguntas, sem editar/excluir, que não fazem sentido para um bloco
+fixo.
+{% endcomment %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{% translate "Blocos do rodapé" %}</h2>
+  </div>
+
+  <p class="field-hint">{% translate "Cada bloco usa dados que já existem em Aparência, Sistema ou nas páginas legais -- aqui se decide só se ele aparece, e em que ordem." %}</p>
+
+  <ul class="bo-itens-do-menu">
+    {% for linha in blocos_do_rodape_admin %}
+    <li class="bo-item-do-menu{% if not linha.ativo %} is-desligado{% endif %}">
+      <div class="bo-item-do-menu-texto">
+        <strong>{{ linha.bloco.nome }}</strong>
+        <span class="cell-muted">{{ linha.bloco.origem }}</span>
+      </div>
+      {% if not linha.ativo %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}
+      <div class="bo-parceiro-acoes">
+        {% if pode_editar and linha.ativo %}
+          {% if not linha.primeiro %}
+          <form method="post" action="{% url 'backoffice:footer_bloco_move' %}">
+            {% csrf_token %}
+            <input type="hidden" name="idioma" value="{{ idioma }}">
+            <input type="hidden" name="chave" value="{{ linha.bloco.chave }}">
+            <input type="hidden" name="direcao" value="subir">
+            <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.bloco.nome %}Subir {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+          </form>
+          {% endif %}
+          {% if not linha.ultimo %}
+          <form method="post" action="{% url 'backoffice:footer_bloco_move' %}">
+            {% csrf_token %}
+            <input type="hidden" name="idioma" value="{{ idioma }}">
+            <input type="hidden" name="chave" value="{{ linha.bloco.chave }}">
+            <input type="hidden" name="direcao" value="descer">
+            <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.bloco.nome %}Descer {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+          </form>
+          {% endif %}
+        {% endif %}
+
+        {% if pode_editar %}
+        <form method="post" action="{% url 'backoffice:footer_bloco_activation' %}">
+          {% csrf_token %}
+          <input type="hidden" name="idioma" value="{{ idioma }}">
+          <input type="hidden" name="chave" value="{{ linha.bloco.chave }}">
+          <input type="hidden" name="ativo" value="{% if linha.ativo %}0{% else %}1{% endif %}">
+          <button type="submit" class="btn btn-ghost btn-sm">{% if linha.ativo %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
 {% endif %}
 </div>
 
@@ -325,4 +407,4 @@ sem gravar nada. A pagina nunca depende do script para funcionar.
 </div>
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'js/previa-do-conteudo.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/previa-do-conteudo.js' %}" defer></script><script src="{% static 'js/preview-de-imagem.js' %}" defer></script>{% endblock %}

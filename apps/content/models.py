@@ -241,6 +241,39 @@ class PageSection(TimeStampedModel):
         CONTACT = "contact", _("Contato")
         FOOTER = "footer", _("Rodapé")
 
+    class Posicao9(models.TextChoices):
+        """
+        As nove posições fixas para um elemento flutuando sobre outro --
+        hoje o contador do banner e o botão de cada cartão de parceiro.
+
+        NOVE, E NÃO COORDENADAS LIVRES
+        -------------------------------
+        Um `x`/`y` digitado pelo administrador é CSS arbitrário por
+        outro nome: sairia da tela em qualquer combinação de conteúdo e
+        produziria posições que ninguém testou. Nove pontos fixos são
+        fáceis de entender ("canto superior esquerdo"), fáceis de testar
+        (são só nove) e impossíveis de sair da caixa que os contém.
+
+        UMA LISTA SÓ, REUSADA
+        ----------------------
+        O contador do banner e o botão do parceiro não têm nada em
+        comum a não ser "um elemento sobre outro" -- e é exatamente por
+        isso que a mesma lista serve aos dois: a pergunta que ela
+        responde é sempre a mesma, o que muda é ONDE ela é feita. Ver
+        `static/css/layout.css`, as classes `.pos-*`, que os dois
+        consomem.
+        """
+
+        SUPERIOR_ESQUERDA = "superior-esquerda", _("Superior esquerda")
+        SUPERIOR_CENTRO = "superior-centro", _("Superior centro")
+        SUPERIOR_DIREITA = "superior-direita", _("Superior direita")
+        CENTRO_ESQUERDA = "centro-esquerda", _("Centro esquerda")
+        CENTRO = "centro", _("Centro")
+        CENTRO_DIREITA = "centro-direita", _("Centro direita")
+        INFERIOR_ESQUERDA = "inferior-esquerda", _("Inferior esquerda")
+        INFERIOR_CENTRO = "inferior-centro", _("Inferior centro")
+        INFERIOR_DIREITA = "inferior-direita", _("Inferior direita")
+
     page = models.ForeignKey(
         Page, on_delete=models.CASCADE, related_name="sections", verbose_name=_("página")
     )
@@ -291,6 +324,70 @@ class PageSection(TimeStampedModel):
         help_text=_("A imagem desta parte. Sem ela, aparece a moldura vazia."),
     )
     is_active = models.BooleanField(_("ativa"), default=True)
+
+    # -- Contador do banner (Bloco A) --------------------------------------
+    #
+    # ESTRUTURAL, E NÃO CONTEÚDO: valem para a seção inteira, em
+    # qualquer idioma -- mesma razão de `layout`/`image` logo acima.
+    # Só a seção "hero" os usa hoje (`section_schema.SECOES["hero"].contador`
+    # é quem decide se o formulário oferece estes campos), mas a coluna
+    # é genérica: qualquer seção futura que precise de um contador ganha
+    # o recurso só declarando `contador=True`.
+    #
+    # O NÚMERO NUNCA MORA AQUI
+    # ------------------------
+    # Só a ativação, a posição e o rótulo/indicador (este dois últimos
+    # em `PageSectionTranslation.content`, como texto comum). O número
+    # em si vem sempre de `apps.letters.statistics.cartas_emitidas()` --
+    # nunca escrito, nunca gravado, nunca duplicado.
+    counter_enabled = models.BooleanField(
+        _("contador ativo"),
+        default=True,
+        help_text=_("Mostra o número real de cartas já emitidas sobre o banner."),
+    )
+    counter_position = models.CharField(
+        _("posição do contador"),
+        max_length=20,
+        choices=Posicao9.choices,
+        default=Posicao9.SUPERIOR_ESQUERDA,
+    )
+    counter_live_enabled = models.BooleanField(
+        _("indicador \"ao vivo\" ativo"),
+        default=True,
+        help_text=_("Mostra a nota de atualização ao lado do contador."),
+    )
+
+    # -- Botão e carrossel de "Nossos parceiros" (Bloco B) -----------------
+    #
+    # Mesma razão de existir das colunas do contador: estrutural, não
+    # traduzível, e só usada pela seção "partners" -- mas genérica o
+    # bastante para não precisar de uma segunda tabela.
+    partners_button_position = models.CharField(
+        _("posição do botão no cartão"),
+        max_length=20,
+        choices=Posicao9.choices,
+        default=Posicao9.INFERIOR_CENTRO,
+    )
+    partners_carousel_enabled = models.BooleanField(
+        _("carrossel ativo"),
+        default=True,
+        help_text=_(
+            "Com mais de 4 parceiros ativos, exibe os demais rolando na "
+            "horizontal em vez de criar uma segunda fileira. Desativado, a "
+            "seção mostra só os 4 primeiros e o botão \"Ver todos\"."
+        ),
+    )
+    partners_carousel_controls_enabled = models.BooleanField(
+        _("setas do carrossel ativas"), default=True
+    )
+    partners_view_all_enabled = models.BooleanField(
+        _("botão \"Ver todos\" ativo"),
+        default=True,
+        help_text=_(
+            "Só aparece quando também há um destino configurado nos textos "
+            "da seção -- sem destino, o botão continua oculto."
+        ),
+    )
 
     class Meta:
         verbose_name = _("seção de página")
@@ -581,6 +678,21 @@ DESTINO_DO_MENU = RegexValidator(
     message=_(
         "O destino deve ser uma âncora (#como-funciona), um caminho do site "
         "(/pt/...) ou um endereço http:// ou https://."
+    ),
+)
+
+# O destino do botão "Ver todos os parceiros" -- MESMA forma de
+# `DESTINO_DO_MENU`, SEM a âncora.
+#
+# Uma âncora levaria a algum lugar DENTRO da própria Home -- e a seção
+# de parceiros já está na Home; um botão "ver todos" que aponta para
+# ela mesma é circular, não um destino. Só caminho do site ou endereço
+# externo fazem sentido aqui.
+DESTINO_EXTERNO_OU_CAMINHO = RegexValidator(
+    regex=r"^(/[\w\-/.]*|https?://\S+)$",
+    message=_(
+        "O destino deve ser um caminho do site (/pt/...) ou um endereço "
+        "http:// ou https://."
     ),
 )
 

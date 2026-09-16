@@ -11,8 +11,9 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 3. **Que "ordenar" seja um botão que não muda nada.** `order` nasce 0
    para todo mundo e o desempate é o `pk`: trocar o número de dois
    empatados não moveria ninguém;
-4. **Que apagar um parceiro leve junto a imagem**, que mora numa
-   biblioteca compartilhada;
+4. **Que apagar (ou trocar) um parceiro leve junto uma imagem
+   compartilhada** -- e, desde o Bloco D, o oposto também: **que uma
+   imagem que ninguém mais usa fique órfã** no disco e na Biblioteca;
 5. **Que a Home deixe de refletir ordem e situação.**
 """
 
@@ -416,10 +417,29 @@ class TestEditar:
         assert parceiro.name == "Novo"
         assert parceiro.order == 3
 
-    def test_tira_a_imagem_sem_apagar_o_asset(self, cliente):
-        """Desassociar não é apagar: a biblioteca é compartilhada."""
+    def test_tirar_a_imagem_apaga_o_asset_orfao(self, cliente):
+        """
+        Desde o Bloco D, desassociar limpa a imagem que ficou sem uso --
+        `test_tirar_a_imagem_preserva_o_asset_compartilhado`, logo
+        abaixo, cobre o caso em que outra coisa ainda a usa.
+        """
         imagem = Asset.objects.create(kind=Asset.Kind.PARTNER, file=_gif())
         parceiro = criar("Com logo", logo=imagem)
+
+        cliente.post(
+            reverse("backoffice:partner_edit", args=[parceiro.pk]),
+            {"name": "Com logo", "logo": "", "order": 0},
+        )
+
+        parceiro.refresh_from_db()
+        assert parceiro.logo_id is None
+        assert not Asset.objects.filter(pk=imagem.pk).exists()
+
+    def test_tirar_a_imagem_preserva_o_asset_compartilhado(self, cliente):
+        """A biblioteca é compartilhada: uma imagem em uso alhures não some."""
+        imagem = Asset.objects.create(kind=Asset.Kind.PARTNER, file=_gif())
+        parceiro = criar("Com logo", logo=imagem)
+        criar("Outro parceiro com a mesma logo", logo=imagem)
 
         cliente.post(
             reverse("backoffice:partner_edit", args=[parceiro.pk]),
@@ -612,10 +632,23 @@ class TestRemover:
         assert resposta.status_code == 302
         assert not Partner.objects.filter(pk=parceiro.pk).exists()
 
-    def test_apagar_nao_leva_a_imagem_junto(self, cliente):
+    def test_apagar_leva_a_imagem_junto_quando_ela_fica_orfa(self, cliente):
+        """
+        Desde o Bloco D: sem mais ninguém usando, a imagem some com o
+        parceiro -- nem arquivo nem registro de `Asset` ficam para trás.
+        """
+        imagem = Asset.objects.create(kind=Asset.Kind.PARTNER, file=_gif())
+        parceiro = criar("Padaria", logo=imagem)
+
+        cliente.post(reverse("backoffice:partner_delete", args=[parceiro.pk]))
+
+        assert not Asset.objects.filter(pk=imagem.pk).exists()
+
+    def test_apagar_nao_leva_a_imagem_junto_quando_compartilhada(self, cliente):
         """A biblioteca é compartilhada: a imagem pode estar em uso alhures."""
         imagem = Asset.objects.create(kind=Asset.Kind.PARTNER, file=_gif())
         parceiro = criar("Padaria", logo=imagem)
+        criar("Confeitaria", logo=imagem)
 
         cliente.post(reverse("backoffice:partner_delete", args=[parceiro.pk]))
 
@@ -734,8 +767,14 @@ class TestCelular:
         assert reverse("backoffice:partner_delete", args=[parceiro.pk]) in corpo
 
     def test_o_cadastro_novo_nao_oferece_acao_de_registro(self, cliente):
-        """Não há o que desativar nem remover antes de existir."""
+        """
+        Não há o que desativar nem remover antes de existir -- o botão
+        de ação do REGISTRO, não o campo "Remover a imagem atual" do
+        formulário (Bloco D), que é sobre a imagem, não sobre o
+        parceiro, e nem aparece sem um parceiro já salvo com logo.
+        """
         corpo = cliente.get(NOVO).content.decode()
 
         assert "Desativar" not in corpo
-        assert "Remover" not in corpo
+        assert ">Remover<" not in corpo
+        assert "Remover a imagem atual" not in corpo

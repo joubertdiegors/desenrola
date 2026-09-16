@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Landing (layouts 2a desktop, 3a tablet, 4a celular).
 
@@ -48,3 +48,5 @@ desconhecido. Aqui so se inclui o que foi escolhido.
 {% endblock %}
 
 {% block footer %}{% include "components/site_footer.html" %}{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/carrossel-de-parceiros.js' %}" defer></script>{% endblock %}

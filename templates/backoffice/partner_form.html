@@ -1,17 +1,18 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Administração · Parceiros · cadastro.
 
 Serve para criar e para editar: a única diferença é o título e o texto
 do botão. Dois templates quase iguais divergiriam no primeiro ajuste.
 
-A IMAGEM É ESCOLHIDA, NÃO ENVIADA
----------------------------------
-O campo lista as imagens que a biblioteca de Assets já tem. Não há
-upload aqui -- toda imagem administrável do projeto mora em
-`content.Asset`, e um envio próprio nesta tela seria uma segunda casa
-para a mesma coisa.
+A IMAGEM É ENVIADA DIRETO AQUI (Bloco D)
+------------------------------------------
+`logo_upload` cria o `Asset` na hora -- não é preciso passar pela
+Biblioteca Central primeiro. O seletor da biblioteca (`logo`) continua
+existindo, para quem realmente quer reaproveitar uma imagem já
+cadastrada, mas deixou de ser o caminho obrigatório: ver
+`FormularioDeParceiro` para a ordem de precedência entre os dois.
 
 Contexto: form, parceiro (None ao criar), titulo, pode_salvar,
 url_dos_parceiros.
@@ -31,7 +32,7 @@ url_dos_parceiros.
   <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este cadastro, mas não tem permissão para alterá-lo." %}</span></div>
 {% endif %}
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
 
   {% for erro in form.non_field_errors %}
@@ -44,12 +45,34 @@ url_dos_parceiros.
       <span class="note d-only">{% translate "O que aparece no cartão" %}</span>
     </div>
     {% for campo in form %}
+    {% if campo.name == "logo_upload" %}
+    <div class="field campo-de-imagem">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {% if parceiro.logo %}
+      <div class="imagem-atual">
+        <img src="{{ parceiro.logo.file.url }}" alt="">
+        <span class="cell-muted">{% translate "Imagem atual" %}</span>
+      </div>
+      {% endif %}
+      {{ campo }}
+      <img class="imagem-preview" alt="{% translate 'Pré-visualização' %}" hidden>
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% elif campo.field.widget.input_type == "checkbox" %}
+    <label class="field field-check">
+      {{ campo }}
+      <span>{{ campo.label }}</span>
+    </label>
+    {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+    {% else %}
     <div class="field">
       <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
       {{ campo }}
       {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
       {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
     </div>
+    {% endif %}
     {% endfor %}
   </div>
 
@@ -84,3 +107,5 @@ impossivel.
 </div>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/preview-de-imagem.js' %}" defer></script>{% endblock %}

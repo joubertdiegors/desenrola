@@ -21,6 +21,9 @@ de `settings.LANGUAGES`: o que o cliente manda é conferido contra essa
 lista antes de virar consulta, nunca usado como veio.
 """
 
+import base64
+from types import SimpleNamespace
+
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
@@ -203,8 +206,12 @@ def backoffice_content_section(request, pk):
     if request.method == "POST":
         if not pode_editar:
             raise PermissionDenied
+        # A imagem ANTERIOR, antes do formulario mutar `secao.image` --
+        # `aplicar_na_secao` grava por cima da mesma instancia, entao
+        # depois dela rodar nao ha mais como saber qual era a antiga.
+        imagem_anterior = secao.image
         form = FormularioDeSecao(
-            secao, traducao.content if traducao else {}, data=request.POST
+            secao, traducao.content if traducao else {}, data=request.POST, files=request.FILES
         )
         if form.is_valid():
             PageSectionTranslation.objects.update_or_create(
@@ -215,6 +222,8 @@ def backoffice_content_section(request, pk):
             # Desenho e imagem sao da SECAO, nao da traducao: gravados
             # aqui, valem em todos os idiomas.
             form.aplicar_na_secao(secao)
+            if imagem_anterior and imagem_anterior.pk != secao.image_id:
+                _apagar_asset_se_orfao(imagem_anterior)
             messages.success(request, _("Conteúdo salvo."))
             return redirect(_url_da_lista(idioma))
         messages.error(request, _("Corrija os campos destacados antes de salvar."))
@@ -251,6 +260,11 @@ def backoffice_content_section(request, pk):
             "perguntas": (
                 _linhas_com_pontas(FaqItem.objects.all())
                 if declarada.cadastro == "faq"
+                else None
+            ),
+            "blocos_do_rodape_admin": (
+                _linhas_dos_blocos_do_rodape(traducao.content if traducao else {})
+                if declarada.cadastro == "rodape"
                 else None
             ),
         },
@@ -321,7 +335,9 @@ def backoffice_content_preview(request, pk):
             contexto.update(services.contexto_do_rodape())
 
     if request.method == "POST":
-        contexto = _com_o_que_esta_digitado(contexto, secao, chave, desenho, request.POST)
+        contexto = _com_o_que_esta_digitado(
+            contexto, secao, chave, desenho, request.POST, request.FILES
+        )
 
     contexto.update(
         {
@@ -334,7 +350,21 @@ def backoffice_content_preview(request, pk):
     return render(request, "backoffice/content_preview.html", contexto)
 
 
-def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados):
+def _asset_temporario_para_previa(arquivo):
+    """
+    O arquivo ENVIADO AGORA, como algo que os parciais sabem desenhar
+    (`imagem.file.url`, `imagem.alt_text`) -- sem criar um `Asset` de
+    verdade. A prévia nunca grava nada; um `Asset` novo a cada tecla
+    digitada encheria a Biblioteca de lixo antes mesmo de alguém clicar
+    em Salvar.
+    """
+    arquivo.seek(0)
+    dados = base64.b64encode(arquivo.read()).decode("ascii")
+    tipo = getattr(arquivo, "content_type", None) or "image/png"
+    return SimpleNamespace(file=SimpleNamespace(url=f"data:{tipo};base64,{dados}"), alt_text="")
+
+
+def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=None):
     """
     O contexto da prévia, com o conteúdo do formulário por cima -- em
     memória, sem tocar no banco.
@@ -354,22 +384,62 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados):
     espelho = deepcopy(secao)
     espelho.layout = desenho
 
-    form = FormularioDeSecao(espelho, parte.conteudo, data=dados)
+    form = FormularioDeSecao(espelho, parte.conteudo, data=dados, files=arquivos)
     if not form.is_valid():
         return contexto
+
+    def _proposto_ou_atual(nome_do_campo, nome_na_parte):
+        """
+        O que está no formulário, quando o campo existe nele -- senão o
+        que já está gravado. Mesma regra da `imagem`, generalizada: os
+        campos estruturais (contador, botão e carrossel de parceiros)
+        só aparecem no formulário das seções que os declaram, e a prévia
+        de uma seção sem eles não pode inventar um valor.
+        """
+        if nome_do_campo in form.fields:
+            return form.cleaned_data.get(nome_do_campo)
+        return getattr(parte, nome_na_parte)
+
+    def _imagem_proposta():
+        """
+        Upload novo (Bloco D) vence a seleção da biblioteca, que vence
+        "remover", que vence a imagem já gravada -- mesma ordem de
+        `FormularioDeSecao.aplicar_na_secao`. Um upload novo NUNCA vira
+        `Asset`: a prévia mostra o arquivo em memória, direto.
+        """
+        if "imagem" not in form.fields:
+            return parte.imagem
+        novo_arquivo = form.cleaned_data.get("imagem_upload")
+        if novo_arquivo:
+            return _asset_temporario_para_previa(novo_arquivo)
+        if form.cleaned_data.get("imagem_remover"):
+            return None
+        return form.cleaned_data.get("imagem")
 
     proposto = services.ParteDaPagina(
         chave=chave,
         conteudo=form.conteudo(),
         desenho=desenho,
         ordem=parte.ordem,
-        # A imagem proposta, quando esta secao tem campo de imagem --
-        # senao a da secao, como esta gravada. O formulario ja resolveu o
-        # id em objeto e recusou o que nao existe ou esta desativado.
-        imagem=(
-            form.cleaned_data.get("imagem")
-            if "imagem" in form.fields
-            else parte.imagem
+        imagem=_imagem_proposta(),
+        contador_ativo=bool(_proposto_ou_atual("contador_ativo", "contador_ativo")),
+        contador_posicao=_proposto_ou_atual("contador_posicao", "contador_posicao"),
+        contador_ao_vivo_ativo=bool(
+            _proposto_ou_atual("contador_ao_vivo_ativo", "contador_ao_vivo_ativo")
+        ),
+        parceiros_posicao_botao=_proposto_ou_atual(
+            "parceiros_posicao_botao", "parceiros_posicao_botao"
+        ),
+        parceiros_carrossel_ativo=bool(
+            _proposto_ou_atual("parceiros_carrossel_ativo", "parceiros_carrossel_ativo")
+        ),
+        parceiros_carrossel_controles_ativo=bool(
+            _proposto_ou_atual(
+                "parceiros_carrossel_controles_ativo", "parceiros_carrossel_controles_ativo"
+            )
+        ),
+        parceiros_ver_todos_ativo=bool(
+            _proposto_ou_atual("parceiros_ver_todos_ativo", "parceiros_ver_todos_ativo")
         ),
     )
     contexto = dict(contexto)
@@ -378,9 +448,7 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados):
     if chave == "footer":
         from .section_schema import blocos_do_rodape
 
-        blocos = blocos_do_rodape(proposto.conteudo)
-        contexto["blocos_do_rodape"] = blocos
-        contexto["mostra_contato_do_rodape"] = "contato" in blocos
+        contexto["blocos_do_rodape"] = blocos_do_rodape(proposto.conteudo)
     return contexto
 
 
@@ -487,7 +555,7 @@ def backoffice_partners(request):
 def backoffice_partner_new(request):
     """Cadastra um parceiro."""
     if request.method == "POST":
-        form = FormularioDeParceiro(request.POST)
+        form = FormularioDeParceiro(request.POST, request.FILES)
         if form.is_valid():
             parceiro = form.save()
             messages.success(request, _("Parceiro cadastrado: %(nome)s.") % {"nome": parceiro.name})
@@ -521,13 +589,19 @@ def backoffice_partner_edit(request, pk):
     """
     parceiro = get_object_or_404(Partner.objects.select_related("logo"), pk=pk)
     pode_salvar = request.user.has_perm(EDITAR_PARCEIRO)
+    # Antes do formulario mutar `parceiro.logo` (a mesma instancia, via
+    # `instance=parceiro`): sem isto nao haveria como saber, depois do
+    # `save()`, qual era a imagem de antes.
+    imagem_anterior = parceiro.logo
 
     if request.method == "POST":
         if not pode_salvar:
             raise PermissionDenied
-        form = FormularioDeParceiro(request.POST, instance=parceiro)
+        form = FormularioDeParceiro(request.POST, request.FILES, instance=parceiro)
         if form.is_valid():
-            form.save()
+            parceiro = form.save()
+            if imagem_anterior and imagem_anterior.pk != parceiro.logo_id:
+                _apagar_asset_se_orfao(imagem_anterior)
             messages.success(request, _("Parceiro salvo."))
             return redirect(_url_dos_parceiros())
         messages.error(request, _("Corrija os campos destacados antes de salvar."))
@@ -594,23 +668,32 @@ def backoffice_partner_delete(request, pk):
     -- para tirar da Home quem existe de verdade, o caminho e desativar,
     e a tela de confirmacao diz isso.
 
-    A IMAGEM NAO VAI JUNTO
-    ----------------------
+    A IMAGEM SO VAI JUNTO SE FICAR ORFA
+    ------------------------------------
     `logo` e um `Asset`, que e uma biblioteca compartilhada: apagar o
-    parceiro nao apaga a imagem, que pode estar em uso em outro lugar.
+    parceiro nao apaga a imagem cegamente -- `_apagar_asset_se_orfao`
+    confere primeiro se mais alguem a usa (outro parceiro, um banner,
+    um modelo de documento, uma carta finalizada) antes de decidir.
     """
     parceiro = get_object_or_404(Partner.objects.select_related("logo"), pk=pk)
 
     if request.method == "POST":
         nome = parceiro.name
+        imagem = parceiro.logo
         parceiro.delete()
+        _apagar_asset_se_orfao(imagem)
         messages.success(request, _("Parceiro removido: %(nome)s.") % {"nome": nome})
         return redirect(_url_dos_parceiros())
 
+    imagem_sera_removida = bool(
+        parceiro.logo and not _onde_esta_em_uso(parceiro.logo, excluir_parceiro=parceiro)
+    )
     return render(
         request,
         "backoffice/partner_delete.html",
-        _contexto_de_parceiros(request, {"parceiro": parceiro}),
+        _contexto_de_parceiros(
+            request, {"parceiro": parceiro, "imagem_sera_removida": imagem_sera_removida}
+        ),
     )
 
 
@@ -825,7 +908,7 @@ def _contexto_de_imagens(request, extra=None):
     return contexto
 
 
-def _onde_esta_em_uso(imagem):
+def _onde_esta_em_uso(imagem, excluir_parceiro=None):
     """
     Onde esta imagem está sendo usada, em português.
 
@@ -833,6 +916,11 @@ def _onde_esta_em_uso(imagem):
     e, quando o banco recusar, precisa entender por quê. As duas
     primeiras são as que o PROTECT defende; as outras duas somem
     sozinhas (SET_NULL) e por isso são aviso, não impedimento.
+
+    `excluir_parceiro`: quando a pergunta é "sobra alguma referência
+    DEPOIS de apagar ESTE parceiro" (a tela de confirmação, Bloco D) --
+    o parceiro ainda existe no banco neste momento, e contaria como uso
+    dele mesmo se fosse a única referência.
     """
     usos = []
     if imagem.referenciado_por_carta_finalizada():
@@ -841,9 +929,35 @@ def _onde_esta_em_uso(imagem):
         usos.append(_("um modelo de documento"))
     if imagem.page_sections.exists():
         usos.append(_("uma parte da página inicial"))
-    if imagem.partners.exists():
+    parceiros = imagem.partners.all()
+    if excluir_parceiro is not None:
+        parceiros = parceiros.exclude(pk=excluir_parceiro.pk)
+    if parceiros.exists():
         usos.append(_("um parceiro"))
     return usos
+
+
+def _apagar_asset_se_orfao(imagem):
+    """
+    Apaga o `Asset` -- arquivo incluído -- SE nada mais o referenciar.
+
+    Reusa `_onde_esta_em_uso`: a MESMA verificação que decide se a
+    Biblioteca oferece o botão de apagar decide, aqui, se um upload
+    contextual (Bloco D) pode limpar a imagem que acabou de deixar de
+    usar. Chamar isto depois de já ter aplicado a nova associação --
+    nunca antes -- é o que garante que "nada mais usa" reflita o estado
+    de VERDADE, não o de um instante atrás.
+
+    Nunca apaga uma imagem com `key`: essas são as fixas que o próprio
+    código localiza por nome (logotipo, favicon) -- perdê-las por
+    engano não é o tipo de "órfã" que este upload contextual cria.
+    """
+    if imagem is None or imagem.key:
+        return
+    if _onde_esta_em_uso(imagem):
+        return
+    imagem.file.delete(save=False)
+    imagem.delete()
 
 
 @exige_permissao(VER_IMAGEM)
@@ -1130,3 +1244,124 @@ def backoffice_faq_item_delete(request, pk):
             "url_do_faq": _url_do_faq(idioma_pedido(request)),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Rodapé
+# ---------------------------------------------------------------------------
+#
+# A tela dele é o editor da seção "footer" (ver `cadastro="rodape"` em
+# `section_schema`), mesma forma dos itens do menu e das perguntas --
+# só que os "itens" aqui são os QUATRO blocos fixos de
+# `section_schema.BLOCOS_DO_RODAPE`, e não registros de um cadastro que
+# cresce. Ligar/desligar/reordenar grava em `content["blocos"]`, a
+# MESMA lista que `blocos_do_rodape()` já lê para desenhar o rodapé --
+# nenhum dado novo, só a tela que faltava para editá-lo.
+
+
+def _url_do_rodape(idioma=None):
+    secao = PageSection.objects.filter(page__key=CHAVE_DA_HOME, key="footer").first()
+    if secao is None:
+        return _url_da_lista(idioma or settings.LANGUAGE_CODE)
+    url = reverse("backoffice:content_section", args=[secao.pk])
+    return f"{url}?idioma={idioma}" if idioma else url
+
+
+def _linhas_dos_blocos_do_rodape(conteudo):
+    """
+    Os quatro blocos, como a tela de administração apresenta: os
+    ativos primeiro, na ordem escolhida, depois os desligados.
+
+    Subir/descer só faz sentido entre os ativos -- por isso eles vêm
+    com `primeiro`/`ultimo` (mesma ideia de `_linhas_com_pontas`, mas
+    aqui a lista não vem de um `QuerySet`) e os desligados não vêm com
+    posição nenhuma para trocar.
+    """
+    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
+
+    ativos = blocos_do_rodape(conteudo)
+    por_chave = {bloco.chave: bloco for bloco in BLOCOS_DO_RODAPE}
+    desligados = [chave for chave in por_chave if chave not in ativos]
+
+    linhas = [
+        {
+            "bloco": por_chave[chave],
+            "ativo": True,
+            "primeiro": indice == 0,
+            "ultimo": indice == len(ativos) - 1,
+        }
+        for indice, chave in enumerate(ativos)
+    ]
+    linhas += [
+        {"bloco": por_chave[chave], "ativo": False, "primeiro": False, "ultimo": False}
+        for chave in desligados
+    ]
+    return linhas
+
+
+def _traducao_do_rodape(idioma):
+    """A tradução do rodapé naquele idioma, criando-a vazia se faltar."""
+    secao = get_object_or_404(PageSection, page__key=CHAVE_DA_HOME, key="footer")
+    traducao, _criada = PageSectionTranslation.objects.get_or_create(
+        section=secao, language=idioma, defaults={"content": {}}
+    )
+    return traducao
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_footer_bloco_activation(request):
+    """
+    Liga e desliga um bloco do rodapé. Desligado, some do rodapé na
+    hora -- sem apagar dado nenhum: `marca`/`legais`/`contato`/`redes`
+    continuam existindo em `BLOCOS_DO_RODAPE`, só saem da lista gravada.
+    """
+    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
+
+    chave = request.POST.get("chave")
+    if chave not in {bloco.chave for bloco in BLOCOS_DO_RODAPE}:
+        raise Http404("bloco desconhecido")
+
+    idioma = idioma_pedido(request)
+    traducao = _traducao_do_rodape(idioma)
+    atuais = blocos_do_rodape(traducao.content)
+    ligar = request.POST.get("ativo") == "1"
+
+    if ligar and chave not in atuais:
+        atuais = [*atuais, chave]
+    elif not ligar and chave in atuais:
+        atuais = [c for c in atuais if c != chave]
+    traducao.content = {**traducao.content, "blocos": atuais}
+    traducao.save(update_fields=["content"])
+
+    if ligar:
+        messages.success(request, _("Bloco ativado. Volta a aparecer no rodapé."))
+    else:
+        messages.success(request, _("Bloco desativado. Deixa de aparecer no rodapé."))
+    return redirect(_url_do_rodape(idioma))
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_footer_bloco_move(request):
+    """Sobe ou desce um bloco ativo do rodapé."""
+    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
+
+    chave = request.POST.get("chave")
+    if chave not in {bloco.chave for bloco in BLOCOS_DO_RODAPE}:
+        raise Http404("bloco desconhecido")
+
+    idioma = idioma_pedido(request)
+    traducao = _traducao_do_rodape(idioma)
+    atuais = blocos_do_rodape(traducao.content)
+
+    if chave in atuais:
+        atual = atuais.index(chave)
+        destino = atual - 1 if request.POST.get("direcao") == "subir" else atual + 1
+        if 0 <= destino < len(atuais):
+            atuais = list(atuais)
+            atuais[atual], atuais[destino] = atuais[destino], atuais[atual]
+            traducao.content = {**traducao.content, "blocos": atuais}
+            traducao.save(update_fields=["content"])
+            messages.success(request, _("Ordem atualizada."))
+    return redirect(_url_do_rodape(idioma))

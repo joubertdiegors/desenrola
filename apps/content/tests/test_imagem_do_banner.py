@@ -23,6 +23,8 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
    propostos, sem gravar nada.
 """
 
+import os
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -141,17 +143,33 @@ class TestOEditorOferece:
 
         assert '<option value="somente_texto" selected>' in corpo
 
-    @pytest.mark.parametrize("chave", ["trust", "partners", "how", "cta"])
+    @pytest.mark.parametrize("chave", ["trust", "how", "cta"])
     def test_parte_sem_desenho_nem_imagem_nao_oferece_nada(self, cliente, chave):
         """
         Um seletor de uma opção só, ou um campo de imagem numa parte que
-        não tem imagem, seria ruído na tela.
+        não tem imagem, seria ruído na tela. "partners" saiu desta lista
+        no Bloco B: ganhou posição de botão e carrossel, então passou a
+        ter, sim, o que mostrar no cartão "Desenho e imagem" -- ver o
+        teste seguinte.
         """
         corpo = cliente.get(url_do_editor(chave)).content.decode()
 
         assert 'name="layout"' not in corpo
         assert 'name="imagem"' not in corpo
         assert "Desenho e imagem" not in corpo
+
+    def test_parceiros_oferece_o_cartao_sem_layout_nem_imagem(self, cliente):
+        """
+        "partners" não tem desenho nem imagem próprios, mas desde o
+        Bloco B tem botão e carrossel -- o cartão aparece por causa
+        deles, não dos dois campos que este grupo de testes cobre.
+        """
+        corpo = cliente.get(url_do_editor("partners")).content.decode()
+
+        assert 'name="layout"' not in corpo
+        assert 'name="imagem"' not in corpo
+        assert "Desenho e imagem" in corpo
+        assert 'name="parceiros_posicao_botao"' in corpo
 
     def test_imagem_desativada_nao_e_oferecida(self, cliente, imagem):
         morta = Asset.objects.create(kind=Asset.Kind.HOME, file=_gif("m.gif"), is_active=False)
@@ -178,8 +196,27 @@ class TestSalvar:
 
         assert secao("hero").image_id == imagem.pk
 
-    def test_tira_a_imagem_sem_apagar_o_asset(self, cliente, imagem):
+    def test_tirar_a_imagem_apaga_o_asset_orfao(self, cliente, imagem):
+        """
+        Desde o Bloco D, tirar a imagem do banner (escolher a opção
+        vazia do seletor, ou marcar "remover") limpa o `Asset` -- e o
+        arquivo -- quando nada mais o usa.
+        """
         salvar(cliente, layout="imagem_texto", imagem=imagem.pk)
+        caminho_do_arquivo = imagem.file.path
+
+        salvar(cliente, layout="imagem_texto", imagem="")
+
+        assert secao("hero").image_id is None
+        assert not Asset.objects.filter(pk=imagem.pk).exists()
+        assert not os.path.exists(caminho_do_arquivo)
+
+    def test_tirar_a_imagem_preserva_o_asset_compartilhado(self, cliente, imagem):
+        """Um Asset usado por um parceiro também não pode sumir do banner."""
+        from apps.content.models import Partner
+
+        salvar(cliente, layout="imagem_texto", imagem=imagem.pk)
+        Partner.objects.create(name="Usa a mesma imagem", logo=imagem, url="https://x.example.com")
 
         salvar(cliente, layout="imagem_texto", imagem="")
 

@@ -8,9 +8,17 @@ largura de leitura.
 A legenda da imagem continua gravada no banco e nao e lida aqui --
 trocar de desenho nunca apaga dado.
 
+O CONTADOR FUNCIONA AQUI TAMBÉM, SEM IMAGEM NENHUMA
+-----------------------------------------------------
+`_banner_contador.html` não depende de foto: é um elemento estrutural
+da seção, e este é justamente o desenho que prova isso -- ele não tem
+`partes.hero.imagem` em lugar nenhum, e o contador aparece do mesmo
+jeito.
+
 Contexto: secoes.hero.
 {% endcomment %}
 <section class="hero-texto container">
+  {% include "core/secoes/_banner_contador.html" %}
   <h1>{{ secoes.hero.title }}</h1>
   <p class="hero-lead">{{ secoes.hero.lead }}</p>
   {% if secoes.hero.cta %}

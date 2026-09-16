@@ -351,10 +351,18 @@ class TestSegredos:
 
 
 class TestUpload:
-    def test_so_a_biblioteca_de_imagens_aceita_arquivo(self):
+    def test_so_quem_valida_formato_e_tamanho_aceita_arquivo(self):
         """
         Um `FileField` num formulário qualquer é um caminho de upload sem
         as conferências de formato e tamanho.
+
+        A lista é uma ALLOWLIST, não um teto de um item: o Bloco D
+        acrescentou upload direto em Parceiros e Banners
+        (`FormularioDeParceiro.logo_upload`), e cada um chama
+        `_validar_arquivo_de_imagem` -- a MESMA função de
+        `FormularioDeImagem.clean_file()` -- no seu `clean_<campo>()`.
+        Um nome novo aqui só é seguro se também aparecer em
+        `test_todo_upload_direto_usa_o_mesmo_validador`, logo abaixo.
         """
         from django import forms
 
@@ -380,7 +388,31 @@ class TestUpload:
                     if isinstance(objeto, forms.FileField):
                         com_arquivo.append(f"{modulo.__name__}.{nome}.{campo}")
 
-        assert com_arquivo == ["apps.content.forms.FormularioDeImagem.file"], com_arquivo
+        assert com_arquivo == [
+            "apps.content.forms.FormularioDeImagem.file",
+            "apps.content.forms.FormularioDeParceiro.logo_upload",
+        ], com_arquivo
+
+    def test_todo_upload_direto_usa_o_mesmo_validador(self):
+        """
+        `FormularioDeSecao.imagem_upload` (Banners) não aparece no teste
+        acima -- é um campo montado em `__init__`, não em `base_fields`
+        -- mas passa pela mesma função, e é isso que este teste confere
+        diretamente no código-fonte, em vez de depender de introspecção
+        de classe.
+        """
+        import inspect
+
+        from apps.content import forms as content_forms
+
+        for nome_da_classe, nome_do_campo in (
+            ("FormularioDeImagem", "clean_file"),
+            ("FormularioDeParceiro", "clean_logo_upload"),
+            ("FormularioDeSecao", "clean_imagem_upload"),
+        ):
+            classe = getattr(content_forms, nome_da_classe)
+            metodo = getattr(classe, nome_do_campo)
+            assert "_validar_arquivo_de_imagem" in inspect.getsource(metodo)
 
     def test_o_upload_confere_formato_e_tamanho(self):
         from apps.content.forms import FORMATOS_ACEITOS, TAMANHO_MAXIMO_DA_IMAGEM

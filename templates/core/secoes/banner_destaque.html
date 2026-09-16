@@ -1,14 +1,16 @@
-{% load i18n humanize %}{% comment %}
+{% load i18n %}{% comment %}
 Banner superior · desenho "Destaque" (referencia 3a do cliente).
 
 Selo, titulo com uma palavra realcada, chamada e DOIS botoes a esquerda;
 foto a direita com etiquetas flutuantes por cima.
 
-A ETIQUETA DO CONTADOR E O NUMERO REAL
---------------------------------------
-Uma das etiquetas mostra `cartas_emitidas` -- a contagem de cartas
-finalizadas (apps.letters.statistics), nunca um numero escrito a mao. As
-outras duas sao texto livre do CMS.
+O CONTADOR E COMPARTILHADO
+---------------------------
+`_banner_contador.html` desenha a mesma cápsula dos outros seis
+desenhos; aqui ela flutua sobre a seção inteira, não sobre a foto --
+"selo_1"/"selo_2" (as OUTRAS duas etiquetas flutuantes, texto livre do
+CMS, sem relação com o contador) continuam só sobre a foto, onde sempre
+estiveram.
 
 O SEGUNDO BOTAO LEVA PARA ALGUM LUGAR
 -------------------------------------
@@ -18,6 +20,7 @@ botao nao e desenhado -- botao sem funcao e pior do que botao nenhum.
 Contexto: secoes.hero, partes.hero.imagem, cartas_emitidas.
 {% endcomment %}
 <section class="hero hero-destaque container">
+  {% include "core/secoes/_banner_contador.html" %}
   <div class="hero-destaque-texto">
     {% if secoes.hero.kicker %}
     <p class="hero-kicker"><i class="ph-fill ph-sparkle" aria-hidden="true"></i>{{ secoes.hero.kicker }}</p>
@@ -39,12 +42,6 @@ Contexto: secoes.hero, partes.hero.imagem, cartas_emitidas.
     {% endif %}
     <div class="hero-selos">
       {% if secoes.hero.selo_1 %}<span class="hero-selo">{{ secoes.hero.selo_1 }}</span>{% endif %}
-      {% if secoes.hero.badge_label %}
-      <span class="hero-selo hero-selo-contador">
-        <i class="ph-fill ph-users" aria-hidden="true"></i>
-        <strong>{{ cartas_emitidas|intcomma }}</strong> {{ secoes.hero.badge_label }}
-      </span>
-      {% endif %}
       {% if secoes.hero.selo_2 %}<span class="hero-selo"><i class="ph-fill ph-star" aria-hidden="true"></i>{{ secoes.hero.selo_2 }}</span>{% endif %}
     </div>
   </div>

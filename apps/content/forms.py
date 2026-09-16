@@ -27,7 +27,7 @@ import copy
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Asset, FaqItem, MenuItem, Partner
+from .models import Asset, FaqItem, MenuItem, PageSection, Partner
 from .section_schema import Lista, campos_da_secao, secao_declarada
 from .services import ANCORAS_DA_HOME
 
@@ -52,6 +52,7 @@ def _campo(texto, valor):
         required=False,
         initial=valor,
         widget=_widget(texto),
+        validators=list(texto.validators),
     )
 
 
@@ -64,9 +65,21 @@ class FormularioDeSecao(forms.Form):
     de preenchimento. O template já lida com texto ausente.
     """
 
-    # Os dois campos que NÃO vão para o JSON da tradução: são colunas
-    # da seção, e valem em todos os idiomas.
-    DA_SECAO = ("layout", "imagem")
+    # Os campos que NÃO vão para o JSON da tradução: são colunas da
+    # seção, e valem em todos os idiomas.
+    DA_SECAO = (
+        "layout",
+        "imagem_upload",
+        "imagem",
+        "imagem_remover",
+        "contador_ativo",
+        "contador_posicao",
+        "contador_ao_vivo_ativo",
+        "parceiros_posicao_botao",
+        "parceiros_carrossel_ativo",
+        "parceiros_carrossel_controles_ativo",
+        "parceiros_ver_todos_ativo",
+    )
 
     def __init__(self, secao, conteudo=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -107,18 +120,89 @@ class FormularioDeSecao(forms.Form):
             )
 
         if declarada.imagem:
+            self.fields["imagem_upload"] = forms.ImageField(
+                label=_("Enviar uma imagem nova"),
+                required=False,
+                widget=forms.ClearableFileInput(
+                    attrs={"class": "input", "accept": "image/*", "data-preview-de-imagem": "1"}
+                ),
+                help_text=_(
+                    "PNG, JPEG, GIF ou WEBP, até 3 MB. Substitui a imagem "
+                    "escolhida abaixo -- não é preciso passar pela "
+                    "Biblioteca Central primeiro."
+                ),
+            )
             self.fields["imagem"] = forms.ModelChoiceField(
-                label=_("Imagem"),
+                label=_("Ou escolher uma imagem já existente na Biblioteca"),
                 required=False,
                 initial=secao.image_id,
                 queryset=Asset.objects.filter(is_active=True),
                 empty_label=_("Sem imagem (mostra a moldura vazia)"),
-                help_text=_(
-                    "Escolhida na biblioteca de imagens. O desenho “Somente "
-                    "texto” não a usa, mas ela fica guardada."
-                ),
                 widget=forms.Select(attrs={"class": "input"}),
             )
+            if secao.image_id:
+                self.fields["imagem_remover"] = forms.BooleanField(
+                    label=_("Remover a imagem atual"), required=False
+                )
+
+        if declarada.contador:
+            self.fields["contador_ativo"] = forms.BooleanField(
+                label=_("Mostrar o contador de cartas"),
+                required=False,
+                initial=secao.counter_enabled,
+                help_text=_(
+                    "O número vem sempre do sistema (cartas realmente "
+                    "emitidas) -- não é editável."
+                ),
+            )
+            self.fields["contador_posicao"] = forms.ChoiceField(
+                label=_("Posição do contador"),
+                required=False,
+                initial=secao.counter_position,
+                choices=PageSection.Posicao9.choices,
+                widget=forms.Select(attrs={"class": "input"}),
+            )
+            self.fields["contador_ao_vivo_ativo"] = forms.BooleanField(
+                label=_("Mostrar o indicador \"ao vivo\""),
+                required=False,
+                initial=secao.counter_live_enabled,
+            )
+
+        if declarada.cartoes_com_botao:
+            self.fields["parceiros_posicao_botao"] = forms.ChoiceField(
+                label=_("Posição do botão no cartão"),
+                required=False,
+                initial=secao.partners_button_position,
+                choices=PageSection.Posicao9.choices,
+                widget=forms.Select(attrs={"class": "input"}),
+            )
+            self.fields["parceiros_carrossel_ativo"] = forms.BooleanField(
+                label=_("Carrossel com mais de 4 parceiros"),
+                required=False,
+                initial=secao.partners_carousel_enabled,
+                help_text=_(
+                    "Desligado, a seção mostra só os 4 primeiros parceiros "
+                    "ativos e o botão \"Ver todos\", sem criar uma segunda "
+                    "fileira."
+                ),
+            )
+            self.fields["parceiros_carrossel_controles_ativo"] = forms.BooleanField(
+                label=_("Setas do carrossel"),
+                required=False,
+                initial=secao.partners_carousel_controls_enabled,
+            )
+            self.fields["parceiros_ver_todos_ativo"] = forms.BooleanField(
+                label=_("Botão \"Ver todos os parceiros\""),
+                required=False,
+                initial=secao.partners_view_all_enabled,
+                help_text=_(
+                    "Só aparece com um destino preenchido em \"Destino do "
+                    "botão 'Ver todos'\", abaixo."
+                ),
+            )
+
+    def clean_imagem_upload(self):
+        return _validar_arquivo_de_imagem(self.cleaned_data.get("imagem_upload"))
 
     def _montar_lista(self, lista):
         """Um conjunto de campos por item já existente no conteúdo."""
@@ -167,10 +251,65 @@ class FormularioDeSecao(forms.Form):
                 secao.layout = escolhido
                 mudou.append("layout")
         if "imagem" in self.fields:
-            imagem = self.cleaned_data.get("imagem")
+            # Upload novo vence a selecao da biblioteca, que vence
+            # "remover", que vence manter a imagem gravada -- mesma
+            # ordem de `FormularioDeParceiro.save()`. A limpeza da
+            # imagem ANTERIOR quando ela fica orfa e' responsabilidade
+            # de quem chama este metodo (a view conhece o `image_id` de
+            # antes de `aplicar_na_secao` rodar).
+            novo_arquivo = self.cleaned_data.get("imagem_upload")
+            if novo_arquivo:
+                imagem = Asset.objects.create(
+                    file=novo_arquivo, kind=Asset.Kind.HOME, alt_text=secao.key or secao.kind
+                )
+            elif self.cleaned_data.get("imagem_remover"):
+                imagem = None
+            else:
+                imagem = self.cleaned_data.get("imagem")
             if secao.image_id != (imagem.pk if imagem else None):
                 secao.image = imagem
                 mudou.append("image")
+        if "contador_ativo" in self.fields:
+            ativo = bool(self.cleaned_data.get("contador_ativo"))
+            if secao.counter_enabled != ativo:
+                secao.counter_enabled = ativo
+                mudou.append("counter_enabled")
+        if "contador_posicao" in self.fields:
+            posicao = (
+                self.cleaned_data.get("contador_posicao")
+                or PageSection.Posicao9.SUPERIOR_ESQUERDA
+            )
+            if secao.counter_position != posicao:
+                secao.counter_position = posicao
+                mudou.append("counter_position")
+        if "contador_ao_vivo_ativo" in self.fields:
+            ao_vivo = bool(self.cleaned_data.get("contador_ao_vivo_ativo"))
+            if secao.counter_live_enabled != ao_vivo:
+                secao.counter_live_enabled = ao_vivo
+                mudou.append("counter_live_enabled")
+        if "parceiros_posicao_botao" in self.fields:
+            posicao = (
+                self.cleaned_data.get("parceiros_posicao_botao")
+                or PageSection.Posicao9.INFERIOR_CENTRO
+            )
+            if secao.partners_button_position != posicao:
+                secao.partners_button_position = posicao
+                mudou.append("partners_button_position")
+        if "parceiros_carrossel_ativo" in self.fields:
+            ativo = bool(self.cleaned_data.get("parceiros_carrossel_ativo"))
+            if secao.partners_carousel_enabled != ativo:
+                secao.partners_carousel_enabled = ativo
+                mudou.append("partners_carousel_enabled")
+        if "parceiros_carrossel_controles_ativo" in self.fields:
+            ativo = bool(self.cleaned_data.get("parceiros_carrossel_controles_ativo"))
+            if secao.partners_carousel_controls_enabled != ativo:
+                secao.partners_carousel_controls_enabled = ativo
+                mudou.append("partners_carousel_controls_enabled")
+        if "parceiros_ver_todos_ativo" in self.fields:
+            ativo = bool(self.cleaned_data.get("parceiros_ver_todos_ativo"))
+            if secao.partners_view_all_enabled != ativo:
+                secao.partners_view_all_enabled = ativo
+                mudou.append("partners_view_all_enabled")
         if mudou:
             secao.save(update_fields=[*mudou, "updated_at"])
         return bool(mudou)
@@ -220,18 +359,19 @@ class FormularioDeParceiro(forms.ModelForm):
     problema, e repetir a declaração à mão só criaria dois lugares para
     mudar quando uma coluna mudasse.
 
-    A IMAGEM E UM `Asset` JA EXISTENTE
-    ----------------------------------
-    O campo escolhe entre as imagens que a biblioteca já tem; não há
-    upload aqui. Toda imagem administrável do projeto mora em
-    `content.Asset` -- inclusive com a proteção contra trocar o arquivo
-    do qual uma carta finalizada depende --, e um `ImageField` neste
-    modelo seria uma segunda casa para a mesma coisa.
+    A IMAGEM CONTINUA SENDO UM `Asset` (Bloco D)
+    ---------------------------------------------
+    Nao ha `ImageField` no modelo `Partner` -- toda imagem administrável
+    do projeto continua morando em `content.Asset`, inclusive com a
+    proteção contra trocar o arquivo do qual uma carta finalizada
+    depende. O que muda aqui é SÓ a tela: `logo_upload` cria o `Asset`
+    na hora, sem passar pela Biblioteca Central primeiro -- `save()`,
+    abaixo, é quem faz essa ponte. `logo` (o seletor) continua existindo
+    para quem realmente quer reaproveitar uma imagem já cadastrada, mas
+    deixou de ser o caminho obrigatório.
 
-    Só as ATIVAS: oferecer uma imagem desativada seria oferecer algo que
-    não se quer mais usar. O filtro não olha o `kind`: uma imagem boa
-    continua boa tendo sido cadastrada como "de parceiro" ou não, e
-    recusá-la por causa da etiqueta seria uma restrição inventada.
+    Só as ATIVAS no seletor: oferecer uma imagem desativada seria
+    oferecer algo que não se quer mais usar.
     """
 
     # Declarado a mao so por causa de `assume_scheme`: o Django 6 vai
@@ -246,7 +386,14 @@ class FormularioDeParceiro(forms.ModelForm):
         assume_scheme="https",
         widget=forms.URLInput(attrs={"class": "input"}),
     )
-
+    logo_upload = forms.ImageField(
+        label=_("Imagem/logo"),
+        required=False,
+        widget=forms.ClearableFileInput(
+            attrs={"class": "input", "accept": "image/*", "data-preview-de-imagem": "1"}
+        ),
+        help_text=_("PNG, JPEG, GIF ou WEBP, até 3 MB. Substitui o que estiver escolhido abaixo."),
+    )
     class Meta:
         model = Partner
         fields = ("name", "description", "logo", "url", "is_active", "order")
@@ -256,11 +403,59 @@ class FormularioDeParceiro(forms.ModelForm):
             "logo": forms.Select(attrs={"class": "input"}),
             "order": forms.NumberInput(attrs={"class": "input", "min": 0}),
         }
+        labels = {"logo": _("Ou escolher uma imagem já existente na Biblioteca")}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["logo"].required = False
         self.fields["logo"].queryset = Asset.objects.filter(is_active=True)
         self.fields["logo"].empty_label = _("Sem imagem")
+        # So oferece "remover" para quem ja tem imagem -- cadastrando um
+        # parceiro novo, sem logo nenhuma ainda, o campo seria ruido.
+        if self.instance.pk and self.instance.logo_id:
+            self.fields["logo_remover"] = forms.BooleanField(
+                label=_("Remover a imagem atual"), required=False
+            )
+        # `logo_upload` e `logo_remover` sao so DECLARADOS (nao estao em
+        # `Meta.fields`), entao o Django os poe no fim da lista por
+        # padrao -- depois de "Ordem". Reordenado aqui para o upload
+        # ficar junto do resto da identificacao do parceiro, como
+        # "Escolher uma imagem" ja fica.
+        self.order_fields(
+            [
+                "name",
+                "description",
+                "logo_upload",
+                "logo",
+                "logo_remover",
+                "url",
+                "is_active",
+                "order",
+            ]
+        )
+
+    def clean_logo_upload(self):
+        return _validar_arquivo_de_imagem(self.cleaned_data.get("logo_upload"))
+
+    def save(self, commit=True):
+        """
+        Resolve a imagem final ANTES de gravar: upload novo vence
+        seleção da biblioteca, que vence "remover", que vence manter o
+        que já estava. A limpeza da imagem ANTERIOR (quando ela fica
+        órfã) é responsabilidade de quem chama `save()` -- a view, que é
+        quem sabe qual era o `Partner.logo_id` antes deste método rodar.
+        """
+        parceiro = super().save(commit=False)
+        novo_arquivo = self.cleaned_data.get("logo_upload")
+        if novo_arquivo:
+            parceiro.logo = Asset.objects.create(
+                file=novo_arquivo, kind=Asset.Kind.PARTNER, alt_text=parceiro.name
+            )
+        elif self.cleaned_data.get("logo_remover"):
+            parceiro.logo = None
+        if commit:
+            parceiro.save()
+        return parceiro
 
 
 class FormularioDeItemDoMenu(forms.ModelForm):
@@ -369,6 +564,45 @@ TAMANHO_MAXIMO_DA_IMAGEM = 3 * 1024 * 1024
 FORMATOS_ACEITOS = ("PNG", "JPEG", "GIF", "WEBP")
 
 
+def _validar_arquivo_de_imagem(arquivo):
+    """
+    Tamanho e formato REAL do arquivo -- as mesmas regras em todo lugar
+    que aceita upload (Biblioteca, Parceiros, Banners).
+
+    Um lugar só para esta checagem: `FormularioDeImagem.clean_file()` e
+    os campos de upload embutido em `FormularioDeParceiro` e
+    `FormularioDeSecao` (Bloco D) chamam esta função em vez de repetir
+    as duas condições cada um a seu modo.
+
+    O atributo `accept` do HTML é só atalho de tela -- quem manda um
+    arquivo por fora do navegador nunca passa por ele. `ImageField` já
+    recusou o que o Pillow não consegue abrir como imagem antes desta
+    função rodar; aqui é só tamanho e formato.
+    """
+    if arquivo is None or not hasattr(arquivo, "image"):
+        return arquivo
+
+    if arquivo.size > TAMANHO_MAXIMO_DA_IMAGEM:
+        raise forms.ValidationError(
+            _("A imagem tem %(tem)s MB e o limite é %(limite)s MB.")
+            % {
+                "tem": round(arquivo.size / 1024 / 1024, 1),
+                "limite": TAMANHO_MAXIMO_DA_IMAGEM // 1024 // 1024,
+            }
+        )
+
+    formato = getattr(arquivo.image, "format", None)
+    if formato not in FORMATOS_ACEITOS:
+        raise forms.ValidationError(
+            _("Formato %(formato)s não aceito. Use: %(aceitos)s.")
+            % {
+                "formato": formato or _("desconhecido"),
+                "aceitos": ", ".join(FORMATOS_ACEITOS),
+            }
+        )
+    return arquivo
+
+
 class FormularioDeImagem(forms.ModelForm):
     """
     Uma imagem da biblioteca.
@@ -390,28 +624,7 @@ class FormularioDeImagem(forms.ModelForm):
         }
 
     def clean_file(self):
-        arquivo = self.cleaned_data.get("file")
         # Na edicao sem trocar o arquivo, o que chega e o `FieldFile` que
-        # ja esta no disco -- nao ha envio para conferir.
-        if arquivo is None or not hasattr(arquivo, "image"):
-            return arquivo
-
-        if arquivo.size > TAMANHO_MAXIMO_DA_IMAGEM:
-            raise forms.ValidationError(
-                _("A imagem tem %(tem)s MB e o limite é %(limite)s MB.")
-                % {
-                    "tem": round(arquivo.size / 1024 / 1024, 1),
-                    "limite": TAMANHO_MAXIMO_DA_IMAGEM // 1024 // 1024,
-                }
-            )
-
-        formato = getattr(arquivo.image, "format", None)
-        if formato not in FORMATOS_ACEITOS:
-            raise forms.ValidationError(
-                _("Formato %(formato)s não aceito. Use: %(aceitos)s.")
-                % {
-                    "formato": formato or _("desconhecido"),
-                    "aceitos": ", ".join(FORMATOS_ACEITOS),
-                }
-            )
-        return arquivo
+        # ja esta no disco -- nao ha envio para conferir (a funcao
+        # devolve sem checar quando nao ha `.image` para olhar).
+        return _validar_arquivo_de_imagem(self.cleaned_data.get("file"))

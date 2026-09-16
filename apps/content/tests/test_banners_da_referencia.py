@@ -139,7 +139,7 @@ class TestContadorReal:
         html = area_do_banner(client)
 
         assert statistics.cartas_emitidas() == 1
-        assert "<strong>1</strong>" in html
+        assert '<span class="stat-badge-value">1</span>' in html
 
     @pytest.mark.parametrize("desenho", (DESTAQUE, ASSIMETRICO))
     def test_sem_carta_nenhuma_mostra_zero(self, client, desenho):
@@ -149,7 +149,7 @@ class TestContadorReal:
 
         html = area_do_banner(client)
 
-        assert "<strong>0</strong>" in html
+        assert '<span class="stat-badge-value">0</span>' in html
 
     @pytest.mark.parametrize("desenho", NOVOS)
     def test_o_numero_do_arquivo_de_desenho_nao_esta_em_lugar_nenhum(
@@ -173,7 +173,8 @@ class TestContadorReal:
 
         html = area_do_banner(client)
 
-        assert "hero-selo-contador" not in html
+        assert "stat-badge-value" not in html
+        assert "banner-contador" not in html
 
 
 # ===========================================================================
