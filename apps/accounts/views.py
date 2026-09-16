@@ -174,6 +174,10 @@ class PasswordResetView(auth_views.PasswordResetView):
 
     template_name = "accounts/password_reset.html"
     email_template_name = "accounts/password_reset_email.txt"
+    # A alternativa HTML. O Django manda as DUAS: quem le em texto puro,
+    # em cliente antigo ou com HTML desligado recebe a mesma informacao.
+    # O texto continua sendo o conteudo; o HTML e a apresentacao.
+    html_email_template_name = "accounts/password_reset_email.html"
     subject_template_name = "accounts/password_reset_subject.txt"
     success_url = reverse_lazy("accounts:password_reset_done")
 
@@ -184,11 +188,33 @@ class PasswordResetView(auth_views.PasswordResetView):
         # `globais()` e nao `SiteSettings.load()`: aquele LE sem criar
         # linha. Pedir uma senha nova nao e motivo para escrever no
         # banco de configuracao.
+        site = globais()
         self.extra_email_context = {
             **(self.extra_email_context or {}),
-            "nome_do_site": globais().name,
+            "nome_do_site": site.name,
+            # A identidade visual vem do MESMO lugar que o site le. Uma
+            # cor escrita no template do e-mail seria uma segunda fonte
+            # de verdade, e o e-mail deixaria de acompanhar a Aparencia.
+            "cor_principal": site.primary_color,
+            "logo_url": self._endereco_da_logomarca(site),
         }
         return super().form_valid(form)
+
+    def _endereco_da_logomarca(self, site):
+        """
+        O endereco ABSOLUTO da logomarca, ou vazio.
+
+        Absoluto porque um e-mail nao tem pagina de origem: `/media/...`
+        nao resolve em lugar nenhum dentro do cliente de e-mail.
+        `build_absolute_uri` usa o mesmo host de onde a pessoa pediu a
+        senha -- a mesma regra de `domain` e `protocol`.
+
+        Vazio quando nao ha logomarca cadastrada: o template cai na marca
+        escrita, como o site faz.
+        """
+        if not (site.logo and site.logo.file):
+            return ""
+        return self.request.build_absolute_uri(site.logo.file.url)
 
 
 class PasswordResetDoneView(auth_views.PasswordResetDoneView):
