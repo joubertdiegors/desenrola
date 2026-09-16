@@ -198,3 +198,46 @@ autenticada. Nunca por mapeamento estatico publico.
 Pendente. Pre-requisitos conhecidos, todos exigindo plano pago:
 PostgreSQL, dominio proprio (`desenrola.be`) e SMTP de saida para a
 recuperacao de senha.
+
+## Preparar o banco
+
+Tres comandos, nesta ordem. Nenhum deles roda sozinho: sao passos de
+deploy visiveis, e nao efeitos escondidos dentro do `migrate`.
+
+```bash
+python manage.py migrate                       # esquema e dados de base
+python manage.py reconstruir_modelos_oficiais  # os quatro modelos da Carta Convite
+python manage.py conteudo_demonstrativo        # OPCIONAL: so para demonstrar
+```
+
+O terceiro nao deve ser rodado em producao: ele preenche o CMS com
+contato e parceiros ficticios (todos em `exemplo.test`, dominio
+reservado pela RFC 2606) e com textos legais que dizem, em maiusculas,
+que precisam ser substituidos.
+
+### Antes de entregar ao cliente
+
+```bash
+python manage.py preparar_para_producao            # apenas RELATA
+python manage.py preparar_para_producao --confirmar
+```
+
+Sem `--confirmar` ele nao apaga nada -- so mostra o que removeria. Com
+`--confirmar`, ainda pergunta: e preciso digitar `PREPARAR`.
+
+**Remove:** todas as cartas (de qualquer pessoa, inclusive de
+superusuario), os usuarios que nao sao superusuario, os parceiros, as
+copias de modelos, as imagens que nenhum modelo oficial e nenhuma
+configuracao usam, e o conteudo de DEMONSTRACAO -- contato e redes que
+apontam para `exemplo.test`, e os textos legais que ainda carregam o
+aviso de substituicao.
+
+**Nao toca:** os quatro modelos oficiais, os superusuarios, as
+configuracoes do sistema (site, e-mail, politica das cartas, idiomas),
+as permissoes, o conteudo da pagina inicial e os itens do menu.
+
+Contato de verdade e texto juridico de verdade ficam onde estao: o
+comando distingue porque a demonstracao se identifica.
+
+Depois dele, tres coisas so uma pessoa pode fazer -- cadastrar o contato
+real, escrever os textos legais e conferir a configuracao de e-mail.
