@@ -495,3 +495,42 @@ class TestIsolamento:
         client.force_login(get_user_model().objects.get(pk=pessoa.pk))
 
         assert client.get(reverse("backoffice:letters")).status_code == 403
+
+
+# ===========================================================================
+# 6. Responsividade: o que só um navegador vê, e o fio que o segura
+# ===========================================================================
+
+
+class TestRolagemHorizontal:
+    """
+    Um arame de aviso, e ele se assume como tal.
+
+    A rolagem horizontal quem mede é um navegador de verdade -- foi assim
+    que ela apareceu: no tablet (834px), as telas de Usuários, Cartas e
+    Modelos rolavam de 31 a 67px para o lado. A tabela já estava dentro de
+    um `.table-wrap` com `overflow-x: auto`, que RECORTA o desenho; o que
+    faltava era o transbordo deixar de contar para a área rolável do
+    DOCUMENTO, e nenhuma regra de `overflow` em ancestral resolvia isso.
+    `contain: paint` resolveu.
+
+    Um teste em Python não enxerga layout. O que ele pode fazer é impedir
+    que a regra saia sem que alguém repare -- e dizer, aqui, por que ela
+    existe.
+    """
+
+    def test_a_tabela_larga_continua_contida_no_cartao(self):
+        from pathlib import Path
+
+        css = Path("static/css/components.css").read_text(encoding="utf-8")
+        regra = [
+            linha for linha in css.splitlines()
+            if linha.startswith(".table-wrap {")
+        ]
+
+        assert regra, "a regra de `.table-wrap` sumiu"
+        assert "overflow-x: auto" in regra[0], "a tabela larga precisa rolar dentro"
+        assert "contain: paint" in regra[0], (
+            "sem `contain: paint` a página inteira volta a rolar para o lado "
+            "no tablet -- medido no navegador"
+        )

@@ -463,7 +463,13 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
    Tabela
    -------------------------------------------------------------------------- */
 
-.table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
+/* A tabela larga rola DENTRO do cartao, e a pagina nao rola junto.
+   `contain: paint` e o que fecha a segunda metade: sem ele o
+   `overflow-x: auto` recorta o desenho, mas o transbordo continua
+   contando para a area rolavel do DOCUMENTO -- e no tablet as telas de
+   Usuarios, Cartas e Modelos rolavam de 31 a 67px para o lado. Nenhuma
+   regra de `overflow` em ancestral resolvia; medido no navegador. */
+.table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; contain: paint; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th {
   text-align: left;
