@@ -510,17 +510,91 @@ class TestNaTelaDeQuemAdministra:
         assert resposta.status_code == 200, "o iframe da prévia apontava para um 404"
         assert "Pergunta 1?" in resposta.content.decode()
 
-    def test_TODA_parte_da_home_tem_previa(self, cliente):
+    def test_a_previa_da_secao_responde_ao_POST(self, cliente):
+        """
+        É o POST que o painel usa ENQUANTO SE DIGITA.
+
+        O `GET` desenha o que está salvo; o `POST` desenha o que está na
+        tela, sem gravar (ver `backoffice_content_preview`). Guardar só
+        o `GET` deixaria metade da prévia sem trava -- e é a metade que
+        a pessoa usa o tempo todo.
+        """
+        criar(1)
+        parte = PageSection.objects.get(page__key="home", key="faq")
+
+        resposta = cliente.post(
+            reverse("backoffice:content_preview", args=[parte.pk]),
+            {"title": "Título ainda não salvo", "lead": "Apoio ainda não salvo"},
+        )
+        corpo = resposta.content.decode()
+
+        assert resposta.status_code == 200
+        assert "Título ainda não salvo" in corpo
+        # E o que NÃO foi digitado continua vindo do banco.
+        assert "Pergunta 1?" in corpo
+
+    def test_o_POST_da_previa_nao_grava_nada(self, cliente):
+        """A prévia mostra; quem grava é o botão de salvar."""
+        from apps.content.models import PageSectionTranslation
+
+        criar(1)
+        parte = PageSection.objects.get(page__key="home", key="faq")
+        antes = PageSectionTranslation.objects.get(section=parte, language="pt").content
+
+        cliente.post(
+            reverse("backoffice:content_preview", args=[parte.pk]),
+            {"title": "Título ainda não salvo"},
+        )
+
+        depois = PageSectionTranslation.objects.get(section=parte, language="pt").content
+        assert depois == antes
+
+    @pytest.mark.parametrize("metodo", ("get", "post"))
+    def test_TODA_parte_da_home_tem_previa(self, cliente, metodo):
         """
         A regra, e não o caso: uma parte nova sem prévia declarada
         aparece como quadro vazio na Central, e nada avisa.
         """
         for parte in PageSection.objects.filter(page__key="home"):
-            resposta = cliente.get(
+            resposta = getattr(cliente, metodo)(
                 reverse("backoffice:content_preview", args=[parte.pk])
             )
 
-            assert resposta.status_code == 200, parte.key
+            assert resposta.status_code == 200, f"{parte.key} ({metodo})"
+
+    @pytest.mark.parametrize(
+        "largura", ("desktop", "tablet", "mobile", "miniatura", "inventada")
+    )
+    def test_a_previa_responde_em_toda_largura_pedida(self, cliente, largura):
+        """
+        As três larguras do painel, mais a da miniatura -- e uma
+        inventada, que tem de cair no padrão em vez de derrubar o quadro.
+        """
+        criar(1)
+        parte = PageSection.objects.get(page__key="home", key="faq")
+
+        resposta = cliente.get(
+            reverse("backoffice:content_preview", args=[parte.pk]),
+            {"viewport": largura},
+        )
+
+        assert resposta.status_code == 200
+
+    def test_a_previa_do_faq_nao_e_uma_pagina_paralela(self):
+        """
+        Ela usa o MESMO parcial que a Home inclui. Uma segunda
+        implementação visual envelheceria no primeiro ajuste.
+        """
+        from apps.content import section_schema
+
+        assert section_schema.PARCIAIS["faq"] == "core/secoes/faq.html"
+
+    def test_quem_nao_pode_nao_ve_a_previa(self, client, auth_client):
+        """A prévia é do Backoffice, e cobra a mesma permissão dele."""
+        parte = PageSection.objects.get(page__key="home", key="faq")
+        endereco = reverse("backoffice:content_preview", args=[parte.pk])
+
+        assert client.get(endereco).status_code in (302, 403)
 
     def test_a_linha_da_lista_quebra_em_vez_de_espremer_o_texto(self):
         import pathlib
