@@ -1010,3 +1010,7 @@ img.partner-image { width: 100%; object-fit: contain; }
    de altura para uma foto grande nao empurrar o formulario para fora da
    tela. */
 .bo-imagem-previa { max-width: 100%; max-height: 240px; object-fit: contain; display: block; }
+
+/* O seletor de cor nativo. Largura propria: com a largura de um campo de
+   texto, alguns navegadores desenham uma faixa enorme de cor solida. */
+.input-cor { width: 72px; height: 40px; padding: 4px; cursor: pointer; }

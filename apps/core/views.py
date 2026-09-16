@@ -37,6 +37,7 @@ from apps.letters import services as letter_services
 
 from . import demo, mail
 from .forms import (
+    AparenciaForm,
     DocumentLanguagesForm,
     EmailSettingsForm,
     EmailTestForm,
@@ -263,22 +264,50 @@ def backoffice_overview(request):
 @backoffice_required
 def backoffice_appearance(request):
     """
-    Aparencia: mostra as cores publicadas -- e diz onde se edita.
+    Aparência: a identidade visual do site.
 
-    SOMENTE LEITURA, de proposito. Ate aqui esta tela oferecia botoes de
-    cor que gravavam a escolha no `localStorage` do navegador de quem
-    estava mexendo: mudavam a aparencia para uma pessoa so, e nada era
-    publicado. Os botoes sairam.
+    As duas cores, a logomarca e o favicon -- os campos de
+    `content.SiteSettings` que a tela de Sistema já dizia, por escrito,
+    que ESTA administra. Até a Etapa 11 ela só mostrava e mandava alterar
+    na administração do Django: uma promessa que o produto não cumpria, e
+    a única forma de trocar a cor do site era sair dele.
 
-    As cores agora vem de `content.SiteSettings` e valem para todo
-    visitante. A tela de edicao propria do Backoffice e etapa posterior;
-    ate la o cadastro e pelo Django Admin, e a tela diz isso.
+    Antes disso a tela oferecia botões de cor que gravavam a escolha no
+    `localStorage` do navegador de quem estava mexendo -- mudavam a
+    aparência para uma pessoa só, e nada era publicado. Os botões saíram
+    na Etapa I; agora o que havia no lugar deles é um formulário de
+    verdade.
 
-    Nao passa as cores no contexto: elas ja chegam a todo template pelo
-    processador de contexto do app content (`site.primary_color`).
+    Entrar exige `core.access_backoffice`; SALVAR exige, além disso,
+    `content.change_sitesettings` -- a mesma permissão que a tela de
+    Sistema cobra para este mesmo modelo, e que a administração do Django
+    já cobrava. A checagem é no POST, no servidor, não só no botão.
+
+    A PRÉVIA CONTINUA SENDO A DE VERDADE
+    ------------------------------------
+    Ela usa os mesmos componentes e as mesmas variáveis CSS do site, e
+    por isso mostra as cores PUBLICADAS -- não as que estão no
+    formulário. Salvar é o que publica, e é depois de salvar que a prévia
+    muda. Uma prévia que acompanhasse o formulário sem salvar precisaria
+    de JavaScript e mostraria algo que nenhum visitante vê.
     """
+    config = SiteSettings.load()
+    pode_editar = request.user.has_perm(SITE_SETTINGS_PERM)
+
+    if request.method == "POST":
+        if not pode_editar:
+            raise PermissionDenied
+        form = AparenciaForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Aparência do site atualizada."))
+            return redirect(reverse("backoffice:appearance"))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = AparenciaForm(instance=config)
+
     context = _backoffice_context("appearance")
-    context["url_do_admin"] = reverse("admin:content_sitesettings_changelist")
+    context.update({"form": form, "pode_editar": pode_editar})
     return render(request, "backoffice/appearance.html", context)
 
 

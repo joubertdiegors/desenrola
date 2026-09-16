@@ -3,18 +3,32 @@
 {% comment %}
 Administração · Aparência.
 
-ESTA TELA SÓ MOSTRA; QUEM EDITA É O DJANGO ADMIN
-------------------------------------------------
-Até esta etapa ela oferecia botões de cor que gravavam a escolha no
-`localStorage` do navegador de quem estava mexendo -- ou seja, mudavam a
-aparência para uma pessoa só, e nada era publicado. Os botões saíram.
+AQUI SE EDITA A IDENTIDADE VISUAL DO SITE
+-----------------------------------------
+Duas cores, logomarca e favicon. Até a Etapa 11 esta tela só MOSTRAVA e
+mandava alterar na administração do Django -- enquanto a tela de Sistema
+dizia, por escrito, que era ESTA quem administrava esses campos. Era uma
+promessa que o produto não cumpria.
 
-As cores agora vêm de `content.SiteSettings` e valem para todo visitante
-(ver `templates/base.html`). A tela de edição própria do Backoffice é
-etapa posterior; enquanto isso, o cadastro é pelo Django Admin, e este
-aviso diz exatamente isso em vez de fingir o contrário.
+Antes disso ela oferecia botões de cor que gravavam a escolha no
+`localStorage` do navegador de quem estava mexendo: mudavam a aparência
+para uma pessoa só, e nada era publicado. Os botões saíram na Etapa I, e
+o que entra agora no lugar deles é um formulário de verdade.
 
-Contexto: `site_config` (processador de contexto do app content).
+AS IMAGENS VÊM DA BIBLIOTECA
+----------------------------
+Logomarca e favicon são escolhidos entre os `content.Asset` ativos -- a
+mesma biblioteca de onde o banner e os parceiros se servem. Não há envio
+de arquivo aqui: toda imagem administrável do projeto tem um lugar só.
+
+A PRÉVIA MOSTRA O PUBLICADO
+---------------------------
+Ela usa as mesmas variáveis CSS do site, então mostra as cores que estão
+NO AR -- não as que estão no formulário. Salvar é o que publica, e é
+depois de salvar que ela muda. Acompanhar o formulário exigiria
+JavaScript e mostraria algo que nenhum visitante vê.
+
+Contexto: form, pode_editar, `site_config` (processador de contexto).
 {% endcomment %}
 
 {% block bo_main %}
@@ -26,11 +40,60 @@ Contexto: `site_config` (processador de contexto do app content).
 </div>
 <p class="m-only text-muted">{% translate "As cores do site, derivadas da cor principal." %}</p>
 
-<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Esta tela mostra o que está publicado. Para alterar, use <a href="{{ url_do_admin }}">a configuração do site</a> na administração do Django.{% endblocktranslate %}</span></div>
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar a aparência, mas não tem permissão para alterá-la." %}</span></div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Cores" %}</h3>
+      <span class="note d-only">{% translate "Valem para todos os visitantes" %}</span>
+    </div>
+    {% for campo in form.campos_das_cores %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Marca" %}</h3>
+      <span class="note d-only">{% translate "Escolhidas na biblioteca de imagens" %}</span>
+    </div>
+    {% for campo in form.campos_das_imagens %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+    {% if perms.content.view_asset %}
+    <p class="field-hint"><a href="{% url 'backoffice:assets' %}">{% translate "Enviar uma imagem nova" %}</a></p>
+    {% endif %}
+  </div>
+
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar aparência" %}</button>
+  </div>
+  {% endif %}
+</form>
 
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Cores publicadas" %}</h3>
+    <h3>{% translate "No ar agora" %}</h3>
     <span class="note d-only">{% translate "Valem para todos os visitantes" %}</span>
   </div>
   <dl class="bo-dados">

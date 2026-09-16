@@ -21,8 +21,10 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 import pathlib
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client
 from django.urls import reverse
 
 from apps.content.context_processors import globais
@@ -381,14 +383,34 @@ class TestTelaDeAparencia:
         assert "#6b3fd6" in html
         assert "#0f8f8a" in html
 
-    def test_diz_onde_se_edita(self, html):
+    def test_nao_manda_mais_ninguem_para_o_admin_do_django(self, html):
         """
-        Não finge gerenciar o que não gerencia: aponta para o Django
-        Admin, que é onde a edição acontece nesta etapa.
+        Até a Etapa 11 esta tela mostrava as cores e mandava alterar na
+        administração do Django -- enquanto a tela de Sistema dizia, por
+        escrito, que era ESTA quem administrava esses campos. Era uma
+        promessa que o produto não cumpria.
         """
-        assert reverse("admin:content_sitesettings_changelist") in html
+        assert reverse("admin:content_sitesettings_changelist") not in html
+        assert "administração do Django" not in html
+
+    def test_oferece_o_formulario(self, html):
+        assert 'name="theme_primary_color"' in html
+        assert 'name="theme_success_color"' in html
+        assert 'name="logo"' in html
+        assert 'name="favicon"' in html
+
+    def test_a_cor_usa_o_seletor_nativo(self, html):
+        """
+        `type="color"` devolve sempre `#rrggbb` -- o formato que o modelo
+        valida -- e não depende de JavaScript.
+        """
+        assert 'type="color"' in html
 
     def test_nao_oferece_mais_botoes_que_nao_publicam(self, html):
+        """
+        Os botões que gravavam no `localStorage` do navegador de quem
+        estava mexendo. Mudavam a aparência para uma pessoa só.
+        """
         assert "data-theme-primary" not in html
         assert "data-theme-success" not in html
 
@@ -397,31 +419,138 @@ class TestTelaDeAparencia:
 
         assert client.get(reverse("backoffice:appearance")).status_code == 403
 
-    def test_esta_tela_continua_sem_editar_nada(self):
-        """
-        A tela de aparência não tem formulário nem rota de gravação:
-        quem edita cor, logo e favicon é o Django Admin.
 
-        O catálogo ganhou `content.change_sitesettings` na Etapa F, mas
-        por causa da tela de SISTEMA -- que de fato a confere. Aparência
-        continua sem criar permissão própria, e é isso que se afirma
-        aqui: nenhuma permissão do catálogo aponta para esta view.
+class TestGravarAAparencia:
+    """A tela passou a editar -- e a permissão que ela cobra não é nova."""
+
+    @pytest.fixture
+    def quem_pode(self, db, permissao_backoffice):
+        from django.contrib.auth.models import Permission
+
+        pessoa = get_user_model().objects.create_user(
+            email="aparencia@mail.com", password="x", full_name="Clara Dias"
+        )
+        pessoa.user_permissions.add(permissao_backoffice)
+        pessoa.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="content", codename="change_sitesettings"
+            )
+        )
+        return get_user_model().objects.get(pk=pessoa.pk)
+
+    def test_grava_as_cores(self, client, quem_pode):
+        client.force_login(quem_pode)
+
+        resposta = client.post(
+            reverse("backoffice:appearance"),
+            {"theme_primary_color": "#aa3311", "theme_success_color": "#22aa55"},
+        )
+
+        assert resposta.status_code == 302
+        config = SiteSettings.load()
+        assert config.theme_primary_color == "#aa3311"
+        assert config.theme_success_color == "#22aa55"
+
+    def test_a_cor_gravada_chega_ao_site(self, client, quem_pode):
+        """De nada adianta gravar se a página continua com a cor antiga."""
+        client.force_login(quem_pode)
+        client.post(
+            reverse("backoffice:appearance"),
+            {"theme_primary_color": "#aa3311", "theme_success_color": "#22aa55"},
+        )
+
+        corpo = Client().get(reverse("core:home")).content.decode()
+
+        assert "#aa3311" in corpo
+
+    def test_escolhe_a_logomarca_na_biblioteca(self, client, quem_pode):
+        imagem = Asset.objects.create(key="nova", kind=Asset.Kind.LOGO, file=_gif())
+        client.force_login(quem_pode)
+
+        client.post(
+            reverse("backoffice:appearance"),
+            {
+                "theme_primary_color": "#1a5fd6",
+                "theme_success_color": "#17a34a",
+                "logo": imagem.pk,
+            },
+        )
+
+        assert SiteSettings.load().logo_id == imagem.pk
+
+    def test_imagem_desativada_nao_e_oferecida(self, client, quem_pode):
+        viva = Asset.objects.create(key="viva", kind=Asset.Kind.LOGO, file=_gif())
+        morta = Asset.objects.create(
+            key="morta", kind=Asset.Kind.LOGO, file=_gif(), is_active=False
+        )
+        client.force_login(quem_pode)
+
+        html = client.get(reverse("backoffice:appearance")).content.decode()
+
+        assert f'<option value="{viva.pk}">' in html
+        assert f'<option value="{morta.pk}">' not in html
+
+    def test_cor_invalida_nao_grava(self, client, quem_pode):
+        """
+        `#ZZZZZZ`, e não "vermelho": aquele tem OITO caracteres e seria
+        recusado pelo `max_length=7` do campo, antes de o validador de
+        hexadecimal ser consultado. O teste passaria medindo o tamanho e
+        apagar o validador não o quebraria.
+        """
+        client.force_login(quem_pode)
+        antes = SiteSettings.load().theme_primary_color
+
+        resposta = client.post(
+            reverse("backoffice:appearance"),
+            {"theme_primary_color": "#ZZZZZZ", "theme_success_color": "#17a34a"},
+        )
+
+        assert resposta.status_code == 200
+        assert SiteSettings.load().theme_primary_color == antes
+
+    def test_quem_so_entra_no_backoffice_nao_grava(self, client, staff_user):
+        """
+        Entrar na administração não dá direito de mudar a cara do site.
+        A checagem é no POST, no servidor -- não só no botão.
+        """
+        client.force_login(staff_user)
+        antes = SiteSettings.load().theme_primary_color
+
+        resposta = client.post(
+            reverse("backoffice:appearance"),
+            {"theme_primary_color": "#aa3311", "theme_success_color": "#17a34a"},
+        )
+
+        assert resposta.status_code == 403
+        assert SiteSettings.load().theme_primary_color == antes
+
+    def test_quem_so_entra_nao_recebe_o_botao(self, client, staff_user):
+        client.force_login(staff_user)
+
+        html = client.get(reverse("backoffice:appearance")).content.decode()
+
+        assert "Salvar aparência" not in html
+
+    def test_post_sem_token_e_recusado(self, quem_pode):
+        sem_token = Client(enforce_csrf_checks=True)
+        sem_token.force_login(quem_pode)
+
+        resposta = sem_token.post(
+            reverse("backoffice:appearance"), {"theme_primary_color": "#aa3311"}
+        )
+
+        assert resposta.status_code == 403
+
+    def test_a_permissao_nao_e_nova(self):
+        """
+        `content.change_sitesettings` -- a mesma que a tela de Sistema
+        cobra para o mesmo modelo, e que o Django Admin já cobrava. Uma
+        permissão própria para Aparência seria uma a mais para
+        administrar sem necessidade.
         """
         from apps.accounts import admin_permissions
 
-        apontam_para_aparencia = [
-            permissao.chave
-            for permissao in admin_permissions.todas()
-            if "appearance" in permissao.aplicada_em
-        ]
+        chaves = {p.chave for p in admin_permissions.todas()}
 
-        assert apontam_para_aparencia == []
-
-    def test_esta_tela_nao_aceita_gravacao(self, client, staff_user):
-        """Somente leitura: um POST aqui não tem o que fazer."""
-        client.force_login(staff_user)
-
-        resposta = client.post(reverse("backoffice:appearance"), {"site_name": "Invadido"})
-
-        assert resposta.status_code == 200
-        assert SiteSettings.load().site_name != "Invadido"
+        assert "content.change_sitesettings" in chaves
+        assert not any("appearance" in p.chave for p in admin_permissions.todas())

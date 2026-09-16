@@ -10,7 +10,7 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from apps.content.models import REDES_SOCIAIS, SiteSettings
+from apps.content.models import REDES_SOCIAIS, Asset, SiteSettings
 from apps.core.models import EmailSettings
 from apps.letters.models import DocumentLanguageSettings, LetterPolicy
 
@@ -324,3 +324,68 @@ class EmailTestForm(forms.Form):
             attrs={"class": "input", "placeholder": EXEMPLO_DE_EMAIL}
         ),
     )
+
+
+class AparenciaForm(forms.ModelForm):
+    """
+    A identidade visual do site: as duas cores, a logomarca e o favicon.
+
+    POR QUE AQUI, E NAO EM `SiteSettingsForm`
+    -----------------------------------------
+    São telas diferentes, e a de Sistema diz isso por escrito. Juntar os
+    campos num formulário só faria uma tela mostrar o que a outra
+    promete administrar -- e os dois lugares divergiriam no primeiro
+    ajuste.
+
+    AS IMAGENS VÊM DA BIBLIOTECA
+    ----------------------------
+    `content.Asset`, a mesma de onde o banner e os parceiros se servem.
+    Não há upload aqui: toda imagem administrável do projeto tem um lugar
+    só, e é lá que está a proteção contra trocar arquivo do qual uma
+    carta finalizada depende.
+
+    A COR USA O SELETOR NATIVO DO NAVEGADOR
+    ---------------------------------------
+    `type="color"` devolve sempre `#rrggbb` -- exatamente o formato que
+    `HEX_COLOR_VALIDATOR` cobra no modelo -- e não depende de JavaScript.
+    """
+
+    class Meta:
+        model = SiteSettings
+        fields = ("theme_primary_color", "theme_success_color", "logo", "favicon")
+        widgets = {
+            "theme_primary_color": forms.TextInput(
+                attrs={"class": "input input-cor", "type": "color"}
+            ),
+            "theme_success_color": forms.TextInput(
+                attrs={"class": "input input-cor", "type": "color"}
+            ),
+            "logo": forms.Select(attrs={"class": "input"}),
+            "favicon": forms.Select(attrs={"class": "input"}),
+        }
+        labels = {
+            "theme_primary_color": _("Cor principal"),
+            "theme_success_color": _("Cor de sucesso"),
+            "logo": _("Logomarca"),
+            "favicon": _("Favicon"),
+        }
+        help_texts = {
+            "theme_primary_color": _(
+                "Títulos, botões e tintas claras são derivados dela."
+            ),
+            "theme_success_color": _("Usada em confirmações e estados concluídos."),
+            "logo": _("Sem imagem, o site desenha a marca padrão."),
+            "favicon": _("O ícone da aba do navegador."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ("logo", "favicon"):
+            self.fields[campo].queryset = Asset.objects.filter(is_active=True)
+            self.fields[campo].empty_label = _("Nenhuma (usar o padrão)")
+
+    def campos_das_cores(self):
+        return [self["theme_primary_color"], self["theme_success_color"]]
+
+    def campos_das_imagens(self):
+        return [self["logo"], self["favicon"]]
