@@ -11,17 +11,22 @@ from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.http import require_POST
 
 from apps.content.context_processors import globais
 
+from . import confirmacao
+from .confirmacao import token_de_email
 from .forms import LoginForm, PasswordChangeForm, ProfileForm, SetPasswordForm, SignupForm
+from .models import User
 
 # Secoes do perfil e o titulo usado no cabecalho do celular.
 #
@@ -58,6 +63,12 @@ def signup(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            # O convite de confirmacao sai AQUI, depois de a conta
+            # existir. `enviar` nao levanta excecao se o servidor de
+            # e-mail estiver fora: a conta ja foi criada e a pessoa ja
+            # esta dentro -- derrubar a tela agora seria o pior dos dois
+            # mundos. O botao de reenviar fica no aviso da area logada.
+            confirmacao.enviar(request, user)
             return redirect(_safe_next(request) or "core:dashboard")
     else:
         form = SignupForm()
@@ -116,8 +127,27 @@ def profile(request):
         else:
             profile_form = ProfileForm(request.POST, instance=user)
             if profile_form.is_valid():
+                # O endereco ANTES de salvar: e a comparacao que diz se a
+                # confirmacao ainda vale.
+                email_anterior = User.objects.values_list("email", flat=True).get(pk=user.pk)
                 profile_form.save()
-                messages.success(request, _("Alterações salvas."))
+
+                if user.email != email_anterior:
+                    # Herdar a confirmacao do endereco antigo faria a
+                    # marca de "confirmado" dizer algo falso. Some, e o
+                    # convite sai para o endereco novo.
+                    confirmacao.esquecer(user)
+                    confirmacao.enviar(request, user)
+                    messages.success(
+                        request,
+                        _(
+                            "Alterações salvas. Enviamos um link de confirmação "
+                            "para %(email)s."
+                        )
+                        % {"email": user.email},
+                    )
+                else:
+                    messages.success(request, _("Alterações salvas."))
                 return redirect(voltar_para or _profile_url(section))
             section = "dados"
 
@@ -229,3 +259,97 @@ class PasswordResetConfirmView(auth_views.PasswordResetConfirmView):
 
 class PasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     template_name = "accounts/password_reset_complete.html"
+
+
+# ---------------------------------------------------------------------------
+# Confirmacao de e-mail
+# ---------------------------------------------------------------------------
+#
+# O token, o prazo e o que entra no hash estao em `accounts.confirmacao`.
+# Aqui ficam so as duas portas: abrir o link, e pedir outro.
+
+
+def _pessoa_do_link(uidb64):
+    """
+    De quem e o link, ou None.
+
+    `None` para uid ilegivel, para pk inexistente e para conta
+    desativada -- os tres dao a MESMA resposta na tela, de proposito:
+    dizer "esta conta nao existe" contaria a quem tem o link se aquele
+    endereco tem conta aqui.
+    """
+    try:
+        pk = urlsafe_base64_decode(uidb64).decode()
+        pessoa = User.objects.get(pk=pk, is_active=True)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist, ValidationError):
+        return None
+    return pessoa
+
+
+@never_cache
+def confirmar_email(request, uidb64, token):
+    """
+    Abre o link do e-mail e confirma o endereco.
+
+    NAO EXIGE ESTAR AUTENTICADO
+    ---------------------------
+    O link chega por e-mail e costuma ser aberto no celular, noutro
+    navegador, sem sessao. Exigir login mandaria a pessoa para a tela de
+    entrar e o link se perderia no caminho. O que prova quem e nao e a
+    sessao: e o token assinado.
+
+    JA CONFIRMADO NAO E ERRO
+    ------------------------
+    O token morre no uso, entao abrir de novo cai no ramo invalido. Por
+    isso quem ja confirmou e reconhecido ANTES da checagem do token e ve
+    uma tela de sucesso -- e o mesmo link, aberto duas vezes, ou o
+    pre-carregador do cliente de e-mail.
+    """
+    pessoa = _pessoa_do_link(uidb64)
+
+    if pessoa is not None and pessoa.email_confirmado:
+        return render(
+            request,
+            "accounts/email_confirmation_done.html",
+            {"confirmou": True, "ja_estava": True, "pessoa": pessoa},
+        )
+
+    valido = pessoa is not None and token_de_email.check_token(pessoa, token)
+    if valido:
+        confirmacao.confirmar(pessoa)
+
+    return render(
+        request,
+        "accounts/email_confirmation_done.html",
+        {"confirmou": valido, "ja_estava": False, "pessoa": pessoa if valido else None},
+    )
+
+
+@login_required
+@require_POST
+def reenviar_confirmacao(request):
+    """
+    Manda outro convite de confirmacao para o proprio e-mail.
+
+    So POST, e so para `request.user`: um GET seria disparado por
+    qualquer pre-carregador de navegador, e um destinatario vindo do
+    pedido transformaria esta rota num disparador de e-mail para
+    terceiros.
+    """
+    if request.user.email_confirmado:
+        messages.info(request, _("Seu e-mail já está confirmado."))
+    elif confirmacao.enviar(request, request.user):
+        messages.success(
+            request,
+            _("Enviamos um novo link para %(email)s. Confira também o spam.")
+            % {"email": request.user.email},
+        )
+    else:
+        messages.error(
+            request,
+            _(
+                "Não conseguimos enviar o e-mail agora. Tente de novo em alguns "
+                "minutos."
+            ),
+        )
+    return redirect(_safe_next(request) or "accounts:profile")

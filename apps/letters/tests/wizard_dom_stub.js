@@ -43,6 +43,17 @@ function criarCampoDeData(id, valorInicial, opcoes) {
     disabled: false,
     get value() { return valor; },
     set value(novo) { valor = novo; },
+    // Todo Element de verdade tem `closest`. Sem ele aqui, qualquer
+    // manipulador de `app.js` que procure um ancestral explodia ao
+    // receber este campo -- e nenhum deles procura um ancestral que
+    // exista neste cenario, entao a resposta certa e "nao achei".
+    closest: function () { return null; },
+    classList: {
+      add: function () {},
+      remove: function () {},
+      toggle: function () {},
+      contains: function () { return false; }
+    },
     hasAttribute: function (nome) {
       return nome === "data-date-input" || Object.prototype.hasOwnProperty.call(atributos, nome);
     },

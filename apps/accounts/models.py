@@ -99,6 +99,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     country = models.CharField(_("pais"), max_length=120, blank=True)
 
     # --- Controle ----------------------------------------------------------
+    #
+    # QUANDO o e-mail foi confirmado -- nao um booleano.
+    #
+    # A data responde as duas perguntas ("confirmou?" e "quando?") pelo
+    # mesmo preco, e e ela que entra no hash do token de confirmacao
+    # (ver `accounts.confirmacao`): e por isso que o link vale UMA vez.
+    # Um booleano nao daria essa propriedade -- `True` e sempre `True`,
+    # e o token continuaria valendo depois de usado.
+    #
+    # Nulo = nao confirmado. Vale para toda conta criada antes desta
+    # coluna existir, e e o estado certo: ninguem confirmou nada.
+    email_verified_at = models.DateTimeField(
+        _("e-mail confirmado em"), null=True, blank=True
+    )
     is_active = models.BooleanField(_("ativo"), default=True)
     is_staff = models.BooleanField(
         _("acesso a administracao"),
@@ -126,6 +140,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         super().clean()
         self.email = self.__class__.objects.normalize_email(self.email)
+
+    @property
+    def email_confirmado(self):
+        """
+        O e-mail desta conta ja foi confirmado?
+
+        Nome proprio para a pergunta que a interface faz, em vez de
+        `user.email_verified_at is not None` espalhado por template e
+        view -- e um template Django nao sabe escrever `is not None`.
+        """
+        return self.email_verified_at is not None
 
     def get_full_name(self):
         return self.full_name

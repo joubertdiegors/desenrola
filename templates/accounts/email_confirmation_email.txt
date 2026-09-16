@@ -1,0 +1,31 @@
+{% load i18n %}{% autoescape off %}{% comment %}
+Corpo do e-mail de confirmacao de endereco, em texto.
+
+E ESTA E A VERSAO PRINCIPAL
+---------------------------
+A alternativa HTML (`email_confirmation_email.html`) e a APRESENTACAO.
+Quem le em texto puro, em cliente antigo ou com HTML desligado recebe a
+mesma informacao -- inclusive o endereco do link, por extenso.
+
+`autoescape off` aqui e inofensivo: texto puro nao interpreta marcacao.
+No arquivo HTML seria o contrario, e por isso la o escape fica ligado.
+
+DE ONDE VEM CADA COISA
+----------------------
+  nome_do_site   `content.SiteSettings`, por `accounts.confirmacao.contexto`;
+  protocol       `request.is_secure()`;
+  domain         `request.get_host()`.
+
+Nao ha dominio escrito neste arquivo -- de proposito, e ha teste que
+confere: o endereco e sempre o mesmo de onde a conta foi criada.
+{% endcomment %}{% blocktranslate with name=user.get_short_name trimmed %}Olá, {{ name }}.{% endblocktranslate %}
+
+{% blocktranslate trimmed %}Falta um passo para a sua conta {{ nome_do_site }} ficar completa: confirmar que este endereço ({{ email }}) é seu.{% endblocktranslate %}
+
+{% translate "Para confirmar, abra este link:" %}
+{{ protocol }}://{{ domain }}{% url 'accounts:email_confirm' uidb64=uid token=token %}
+
+{% translate "O link vale por 3 dias e pode ser usado uma vez. Se você não criou esta conta, ignore este e-mail: sem a confirmação, nada é feito com o seu endereço." %}
+
+{{ nome_do_site }} · {{ protocol }}://{{ domain }}
+{% endautoescape %}

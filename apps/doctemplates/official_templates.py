@@ -128,7 +128,12 @@ CARTA_CONVITE_FIELD_SCHEMA = {
             # O placeholder aqui é um EXEMPLO DE FORMATO, não uma frase:
             # não muda com o idioma, então não tem tradução por idioma --
             # `resolve_field_text` cai neste valor de origem em todos.
-            "placeholder": "YY0000",
+            #
+            # "YY123456": duas letras e seis dígitos, que é a forma do
+            # passaporte belga e da maioria dos europeus. O exemplo
+            # anterior ("YY0000") tinha quatro dígitos e sugeria um
+            # número mais curto do que o real.
+            "placeholder": "YY123456",
             "translations": {
                 "fr": {"label": "Numéro de passeport"},
                 "nl": {"label": "Paspoortnummer"},

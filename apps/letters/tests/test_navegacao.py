@@ -51,7 +51,7 @@ VALID_STEP_1 = {
     "guest_name": "Maria Santos da Silva",
     "guest_nationality": "Brasileira",
     "guest_birth_date": "15/08/1990",
-    "guest_passport": "YY0000",
+    "guest_passport": "BE123456",
 }
 # Datas relativas a hoje: a chegada nao pode ser no passado, entao uma
 # data fixa no codigo venceria com o tempo. O intervalo de 15 dias
@@ -424,12 +424,16 @@ class TestAcoesDoPdf:
 class TestPlaceholderDoPassaporte:
     def test_o_placeholder_e_o_formato_de_exemplo(self, auth_client, draft):
         """
-        O placeholder mostra o FORMATO esperado ("YY0000"), não repete o
-        rótulo do campo.
+        O placeholder mostra o FORMATO esperado, não repete o rótulo do
+        campo.
+
+        "YY123456" -- duas letras e seis dígitos, a forma do passaporte
+        belga e da maioria dos europeus. Era "YY0000", com quatro
+        dígitos, e sugeria um número mais curto do que o real.
         """
         html = auth_client.get(_step_url(draft, 1)).content.decode()
 
-        assert 'placeholder="YY0000"' in html
+        assert 'placeholder="YY123456"' in html
 
     @pytest.mark.parametrize("idioma", ["pt", "fr", "nl", "en"])
     def test_o_formato_e_o_mesmo_em_todos_os_idiomas(self, idioma):
@@ -441,7 +445,7 @@ class TestPlaceholderDoPassaporte:
         campo = next(
             f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )
-        assert resolve_field_text(campo, idioma, "placeholder") == "YY0000"
+        assert resolve_field_text(campo, idioma, "placeholder") == "YY123456"
 
     def test_o_schema_gravado_no_banco_ja_tem_o_novo_placeholder(self):
         """
@@ -455,4 +459,4 @@ class TestPlaceholderDoPassaporte:
         campo = next(
             f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )
-        assert campo["placeholder"] == "YY0000"
+        assert campo["placeholder"] == "YY123456"

@@ -52,6 +52,12 @@
 
   <main id="main" class="{% block main_class %}page{% endblock %}">
     {% include "components/messages.html" %}
+    {% comment %}
+    Um bloco ANTES do conteudo, para a casca da area logada por avisos
+    que valem em todas as telas dela (ver `app_base.html`). Vazio em
+    todo o resto do site.
+    {% endcomment %}
+    {% block pre_content %}{% endblock %}
     {% block content %}{% endblock %}
   </main>
 

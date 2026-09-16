@@ -232,6 +232,22 @@ def _steps_context(letter, step):
 HOST_STEP = 3
 
 
+# O nome do campo que o botao "Salvar e sair" manda, e as duas
+# mensagens que ele produz. Constantes porque as MESMAS valem para as
+# etapas de formulario e para a de idioma -- duas copias divergiriam na
+# primeira mudanca de texto.
+SAIR = "salvar_e_sair"
+
+RASCUNHO_SALVO = _(
+    "Rascunho salvo. Você pode continuar de onde parou quando quiser."
+)
+
+SAIU_SEM_GRAVAR = _(
+    "Saímos do assistente. Esta etapa não foi gravada porque ainda "
+    "faltavam campos -- o que já estava salvo continua lá."
+)
+
+
 def _handle_form_step(request, letter, step):
     data = request.POST if request.method == "POST" else None
     form = services.form_for_step(letter, step, data=data)
@@ -255,10 +271,27 @@ def _handle_form_step(request, letter, step):
         return redirect("letters:step", letter_uuid=letter.uuid, step=step)
 
     if request.method == "POST":
+        quer_sair = bool(request.POST.get(SAIR))
+
         if form.is_valid():
             services.save_step_data(letter, step, form.cleaned_data)
+            if quer_sair:
+                messages.success(request, RASCUNHO_SALVO)
+                return redirect("letters:detail", letter_uuid=letter.uuid)
             next_step = min(step + 1, services.LAST_STEP)
             return redirect("letters:step", letter_uuid=letter.uuid, step=next_step)
+
+        if quer_sair:
+            # SAI DO MESMO JEITO.
+            #
+            # O botao diz "Salvar e sair", e aqui nao ha o que salvar --
+            # a etapa esta incompleta. Prender quem clicou num botao de
+            # saida seria pior do que nao ter o botao, e sair de um
+            # rascunho e sempre legitimo. A mensagem diz exatamente o que
+            # aconteceu, para ninguem achar que gravou.
+            messages.warning(request, SAIU_SEM_GRAVAR)
+            return redirect("letters:detail", letter_uuid=letter.uuid)
+
         messages.error(request, _("Corrija os campos destacados antes de continuar."))
 
     context = _steps_context(letter, step)
@@ -334,8 +367,19 @@ def _handle_language_step(request, letter):
         return render(request, "letters/wizard.html", context)
 
     if request.method == "POST":
-        if services.change_language(letter, request.POST.get("language")):
+        quer_sair = bool(request.POST.get(SAIR))
+        escolheu = services.change_language(letter, request.POST.get("language"))
+
+        if escolheu:
+            if quer_sair:
+                messages.success(request, RASCUNHO_SALVO)
+                return redirect("letters:detail", letter_uuid=letter.uuid)
             return redirect("letters:step", letter_uuid=letter.uuid, step=services.REVIEW_STEP)
+
+        if quer_sair:
+            messages.warning(request, SAIU_SEM_GRAVAR)
+            return redirect("letters:detail", letter_uuid=letter.uuid)
+
         messages.error(request, DOCUMENT_UNAVAILABLE)
 
     # A configuracao e lida UMA vez e desce para as duas funcoes: sem

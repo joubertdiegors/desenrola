@@ -1,0 +1,126 @@
+{% load i18n %}{% comment %}
+Corpo do e-mail de confirmação de endereço, em HTML.
+
+MESMA CASA DO E-MAIL DE RECUPERAÇÃO
+-----------------------------------
+Mesma largura, mesmo cartão, mesmo cabeçalho, mesmo botão em tabela,
+mesmo rodapé. Não é repetição por descuido: quem recebe os dois tem de
+reconhecer o remetente no segundo sem precisar ler. As decisões todas
+estão explicadas em `password_reset_email.html`; o resumo delas:
+
+  * tabela com `role="presentation"` e estilo em linha, porque o
+    Outlook desenha com o motor do Word e o Gmail remove o `<head>`;
+  * botão montado em `<td bgcolor>`, porque um `<a>` com padding não é
+    clicável inteiro no Outlook;
+  * o link também por extenso, para quem prefere copiar e colar;
+  * o logotipo com `alt` igual ao nome do site, porque cliente de
+    e-mail bloqueia imagem por padrão;
+  * autoescape LIGADO -- o nome vem do cadastro da própria pessoa.
+
+DE ONDE VEM CADA COISA
+----------------------
+  nome_do_site, cor_principal, logo_url  `accounts.confirmacao.contexto`;
+  protocol, domain                       do request, no mesmo lugar.
+
+Nenhum domínio escrito aqui: o endereço é sempre o mesmo de onde a
+conta foi criada.
+{% endcomment %}<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% translate "Confirme o seu e-mail" %}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6fb; -webkit-text-size-adjust:100%;">
+
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">{% blocktranslate trimmed %}Abra o link para confirmar o seu endereço. Vale por 3 dias.{% endblocktranslate %}</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6fb;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#ffffff; border-radius:12px; border:1px solid #e2e8f2;">
+
+        <tr>
+          <td align="left" style="padding:28px 32px 0 32px;">
+            {% if logo_url %}
+              <img src="{{ logo_url }}" alt="{{ nome_do_site }}" height="36" style="display:block; height:36px; width:auto; border:0;">
+            {% else %}
+              <span style="font-family:Helvetica,Arial,sans-serif; font-size:13px; line-height:16px; color:{{ cor_principal }}; font-weight:700; letter-spacing:0.02em;">{{ nome_do_site }}</span><br>
+              <span style="font-family:Helvetica,Arial,sans-serif; font-size:19px; line-height:24px; color:#0f2a4d; font-weight:700;">Carta Convite</span>
+            {% endif %}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 0 32px; font-family:Helvetica,Arial,sans-serif; font-size:24px; line-height:32px; color:#0f2a4d; font-weight:700;">
+            {% translate "Confirme o seu e-mail" %}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:16px 32px 0 32px; font-family:Helvetica,Arial,sans-serif; font-size:16px; line-height:24px; color:#31405a;">
+            {% blocktranslate with name=user.get_short_name trimmed %}Olá, {{ name }}.{% endblocktranslate %}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:12px 32px 0 32px; font-family:Helvetica,Arial,sans-serif; font-size:16px; line-height:24px; color:#31405a;">
+            {% blocktranslate trimmed %}Falta um passo para a sua conta {{ nome_do_site }} ficar completa: confirmar que este endereço ({{ email }}) é seu.{% endblocktranslate %}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 32px 0 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="{{ cor_principal }}" style="border-radius:8px;">
+                  <a href="{{ protocol }}://{{ domain }}{% url 'accounts:email_confirm' uidb64=uid token=token %}"
+                     style="display:inline-block; padding:14px 28px; font-family:Helvetica,Arial,sans-serif; font-size:16px; line-height:20px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:8px;">
+                    {% translate "Confirmar meu e-mail" %}
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 0 32px; font-family:Helvetica,Arial,sans-serif; font-size:13px; line-height:20px; color:#5b6b85;">
+            {% translate "Se o botão não funcionar, copie e cole este endereço no navegador:" %}<br>
+            <a href="{{ protocol }}://{{ domain }}{% url 'accounts:email_confirm' uidb64=uid token=token %}" style="color:{{ cor_principal }}; word-break:break-all;">{{ protocol }}://{{ domain }}{% url 'accounts:email_confirm' uidb64=uid token=token %}</a>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6fb; border-radius:8px;">
+              <tr>
+                <td style="padding:14px 16px; font-family:Helvetica,Arial,sans-serif; font-size:14px; line-height:21px; color:#31405a;">
+                  {% translate "O link vale por 3 dias e pode ser usado uma vez. Se você não criou esta conta, ignore este e-mail: sem a confirmação, nada é feito com o seu endereço." %}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 28px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-top:1px solid #e2e8f2; padding-top:16px; font-family:Helvetica,Arial,sans-serif; font-size:12px; line-height:18px; color:#7a8699;">
+                  {{ nome_do_site }} · <a href="{{ protocol }}://{{ domain }}/" style="color:#7a8699;">{{ domain }}</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

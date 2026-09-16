@@ -1,0 +1,1 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate trimmed %}{{ nome_do_site }}: confirme o seu e-mail{% endblocktranslate %}{% endautoescape %}

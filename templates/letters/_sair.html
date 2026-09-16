@@ -1,0 +1,36 @@
+{% load i18n %}{% comment %}
+"Salvar e sair" -- o caminho de saida do assistente.
+
+POR QUE ELE E UM SUBMIT, E NAO UM LINK
+--------------------------------------
+Um link sairia da pagina levando embora o que estava digitado na tela. E
+o que o botao "Sair" da barra superior fazia, sem avisar: a carta ja
+tinha rascunho salvo ATE A ETAPA ANTERIOR, e a etapa em curso se perdia.
+Como submit, ele grava a etapa antes de sair.
+
+QUANDO A ETAPA NAO ESTA VALIDA
+------------------------------
+Sai do mesmo jeito, e a mensagem diz que aquela etapa nao foi gravada
+(ver `letters.views._handle_form_step`). Botao de saida que prende quem
+clicou e pior do que botao nenhum -- e sair de um rascunho e sempre
+legitimo.
+
+O TEXTO FICA NUM <span> DE PROPOSITO
+-----------------------------------
+No celular o CSS esconde o <span> e deixa so o icone -- tres botoes com
+texto em 390px espremeriam "Proxima etapa" ate quebrar em duas linhas.
+O `aria-label` do botao continua dizendo o que ele faz, entao quem le a
+tela nao perde nada.
+
+`form_id` so e preciso quando o botao esta FORA do <form> da etapa
+(etapas 1 e 3, onde as acoes ficam num bloco proprio). Dentro do
+<form>, o atributo nao e necessario e o parametro nao vem.
+{% endcomment %}
+<button type="submit"
+        name="salvar_e_sair"
+        value="1"
+        class="btn btn-ghost"
+        {% if form_id %}form="{{ form_id }}" {% endif %}formnovalidate
+        aria-label="{% translate 'Salvar e sair do assistente' %}">
+  <i class="ph ph-floppy-disk" aria-hidden="true"></i><span>{% translate "Salvar e sair" %}</span>
+</button>

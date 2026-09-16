@@ -61,6 +61,10 @@ PUBLICAS = {
     "accounts:password_reset_done",
     "accounts:password_reset_confirm",
     "accounts:password_reset_complete",
+    # Pelo mesmo motivo do link de senha: chega por e-mail, e quem prova
+    # quem é não é a sessão -- é o token assinado. Exigir login mandaria
+    # a pessoa para a tela de entrar e o link se perderia no caminho.
+    "accounts:email_confirm",
     "set_language",
     # Sonda de infraestrutura: tem de responder sem conta, senao o
     # monitoramento nao consegue perguntar se o site esta de pe.
@@ -188,6 +192,24 @@ def endereco(nome, mundo):
         return reverse(nome)
     if nome == "letters:step":
         return reverse(nome, args=[mundo["carta"].uuid, 1])
+    if nome == "accounts:email_confirm":
+        # Os dois argumentos têm de ser DE VERDADE: um uid inventado
+        # daria uma tela de "link inválido", e a auditoria estaria
+        # medindo a própria recusa em vez da tela.
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        from apps.accounts.confirmacao import token_de_email
+
+        quem = mundo["usuario"]
+        return reverse(
+            nome,
+            args=[
+                urlsafe_base64_encode(force_bytes(quem.pk)),
+                token_de_email.make_token(quem),
+            ],
+        )
+
     if nome == "accounts:password_reset_confirm":
         # Dois argumentos, e os dois têm de ser DE VERDADE: um uid
         # inventado daria 404 e a auditoria estaria medindo o 404 dela

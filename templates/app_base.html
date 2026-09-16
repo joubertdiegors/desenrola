@@ -13,6 +13,33 @@ superior tambem aparece no celular).
   {% block mobile_header %}{% endblock %}
 {% endblock %}
 
+{% comment %}
+O aviso de e-mail nao confirmado fica AQUI, na casca: uma faixa so, que
+alcanca o painel, as cartas, o perfil e o assistente. Repeti-la em cada
+template seria quatro copias para envelhecer em direcoes diferentes.
+
+NAO TRANCA NADA
+---------------
+Quem nao confirmou continua entrando e gerando carta. Confirmar e o que
+garante o caminho de volta (recuperar senha, receber avisos) -- e
+exigi-lo trancaria fora toda conta criada antes desta etapa existir.
+{% endcomment %}
+{% block pre_content %}
+{% if user.is_authenticated and not user.email_confirmado %}
+<div class="container aviso-do-email">
+  <div class="notice notice-warning">
+    <i class="ph-fill ph-envelope-simple" aria-hidden="true"></i>
+    <span>{% blocktranslate trimmed with email=user.email %}Confirme o seu e-mail: mandamos um link para <strong>{{ email }}</strong>. Sem ele, voce nao consegue recuperar a senha por e-mail.{% endblocktranslate %}</span>
+    <form method="post" action="{% url 'accounts:email_confirm_resend' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="btn btn-secondary btn-sm">{% translate "Enviar de novo" %}</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block footer %}
   {% block tabbar %}{% include "components/tabbar.html" %}{% endblock %}
 {% endblock %}

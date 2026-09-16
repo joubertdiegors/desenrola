@@ -16,22 +16,26 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
 {% block title %}{{ step_info.title }} · {{ site_config.name }}{% endblock %}
 
 {% block header %}
+{% comment %}
+A barra do assistente NAO tem mais botao de sair.
+
+Ele ficava longe da acao -- no alto, fora do fluxo -- e, pior, saia sem
+gravar o que estava digitado na tela: quem clicava perdia a etapa em
+curso sem ser avisado. O caminho de saida passou para junto dos outros
+botoes da etapa, como "Salvar e sair", que grava antes de sair.
+
+O indicador "Rascunho salvo" fica: e informacao, nao controle.
+{% endcomment %}
 <header class="d-only">
   <nav class="nav-desktop wizard-nav" aria-label="{% translate 'Gerar Carta Convite' %}">
     <a href="{% url 'core:dashboard' %}">{% include "components/logo.html" %}</a>
     <span class="wizard-saved"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Rascunho salvo" %}</span>
-    <a class="btn btn-ghost push" href="{% url 'core:dashboard' %}"><i class="ph ph-x" aria-hidden="true"></i>{% translate "Sair" %}</a>
   </nav>
 </header>
 <header class="m-only">
   <nav class="nav-mobile" aria-label="{% translate 'Gerar Carta Convite' %}">
     <a href="{% url 'core:dashboard' %}">{% include "components/logo.html" %}</a>
-    <details class="dropdown">
-      <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="{% url 'core:dashboard' %}"><i class="ph ph-x" aria-hidden="true"></i>{% translate "Sair" %}</a>
-      </div>
-    </details>
+    <span class="wizard-saved"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Rascunho salvo" %}</span>
   </nav>
 </header>
 {% endblock %}
@@ -67,6 +71,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       {% for row in field_rows %}{% include "letters/_field.html" %}{% endfor %}
     </form>
     <div class="wizard-actions is-single">
+      {% include "letters/_sair.html" with form_id="step-form" %}
       <button type="submit" form="step-form" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
     </div>
 
@@ -88,7 +93,16 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
         Os blocos ficam sempre no HTML e aparecem/somem por `hidden`: é o
         que permite ao script atualizá-los sem recarregar a página.
         {% endcomment %}
-        <div class="tint duration-box span-2{% if duration_exceeded %} is-invalid{% endif %}"
+        {% comment %}
+        A caixa muda de COR conforme a regra dos 90 dias: verde enquanto
+        a estadia cabe no prazo, vermelha quando passa. Antes ela era
+        sempre neutra, e a unica pista era um selo pequeno ao lado --
+        quem passava do prazo descobria ao tentar avancar.
+
+        A classe e calculada no servidor E no navegador (static/js/app.js),
+        com a MESMA regra de `apps/letters/rules.py`.
+        {% endcomment %}
+        <div class="tint duration-box span-2{% if duration_exceeded %} is-invalid{% elif duration_days %} is-ok{% endif %}"
              data-duration-box
              data-max-stay="{{ max_stay_days }}"
              data-unit-one="{% translate 'dia' %}"
@@ -106,6 +120,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=1 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        {% include "letters/_sair.html" %}
         <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       </div>
     </form>
@@ -157,6 +172,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
     </form>
     <div class="wizard-actions">
       <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=2 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+      {% include "letters/_sair.html" with form_id="step-form" %}
       {% if missing_profile_fields %}
       <button type="button" class="btn btn-primary" data-dialog-open="dlg-perfil">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       {% else %}
@@ -195,6 +211,7 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=3 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        {% include "letters/_sair.html" %}
         <button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>
       </div>
     </form>
@@ -216,21 +233,34 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
     <form method="post" novalidate>
       {% csrf_token %}
       <div class="wizard-card wizard-stack">
-        {% for lang in language_options %}
-        <label class="card lang-card{% if not lang.available %} is-unavailable{% endif %}">
-          <input type="radio" name="language" value="{{ lang.code }}"{% if lang.code == selected_language %} checked{% endif %}{% if not lang.available %} disabled{% endif %} required>
-          <span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>
-          <span class="lang-card-text">
+        {% comment %}
+        BANDEIRA E NOME, e mais nada.
+
+        A descricao de cada idioma ("o documento sai em frances...") dizia
+        a mesma coisa quatro vezes, com outras palavras, e era ela que
+        empurrava os cartoes para uma coluna alta: no celular so dois
+        cabiam na tela, e o quarto idioma ficava fora do campo de visao
+        de quem estava escolhendo. Sem ela os quatro cabem lado a lado.
+
+        A unica frase que fica e a do idioma INDISPONIVEL -- essa
+        informa, e nao ha como deduzi-la da bandeira.
+        {% endcomment %}
+        <div class="lang-grid">
+          {% for lang in language_options %}
+          <label class="card lang-card{% if not lang.available %} is-unavailable{% endif %}">
+            <input type="radio" name="language" value="{{ lang.code }}"{% if lang.code == selected_language %} checked{% endif %}{% if not lang.available %} disabled{% endif %} required>
+            <span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>
             <span class="lang-card-name">{{ lang.name }}</span>
-            <span class="lang-card-desc">{% if lang.available %}{{ lang.hint }}{% else %}{% translate "Documento oficial ainda não disponível neste idioma." %}{% endif %}</span>
-          </span>
-          <span class="lang-card-radio"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
-        </label>
-        {% endfor %}
+            {% if not lang.available %}<span class="lang-card-desc">{% translate "Ainda não disponível" %}</span>{% endif %}
+            <span class="lang-card-radio"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
+          </label>
+          {% endfor %}
+        </div>
         <div class="notice"><i class="ph-fill ph-lock" aria-hidden="true"></i><span>{% translate "O conteúdo do documento será gerado automaticamente no idioma selecionado. O layout e o padrão visual são sempre os mesmos." %}</span></div>
       </div>
       <div class="wizard-actions">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=4 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        {% include "letters/_sair.html" %}
         {% if language_locked %}<a class="btn btn-primary" href="{% url 'letters:step' letter_uuid=letter.uuid step=6 %}">{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% else %}<button type="submit" class="btn btn-primary" data-step-submit>{% translate "Próxima etapa" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></button>{% endif %}
       </div>
     </form>
@@ -261,6 +291,11 @@ Contexto comum: letter, step, steps, step_info. Por etapa: `form` e
       {% csrf_token %}
       <div class="wizard-actions is-final">
         <a class="btn btn-secondary" href="{% url 'letters:step' letter_uuid=letter.uuid step=5 %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+        {% comment %}
+        Na revisao nao ha o que gravar -- esta etapa nao altera dado
+        nenhum --, entao o botao e "Sair", sem promessa de salvar.
+        {% endcomment %}
+        <a class="btn btn-ghost" href="{% url 'letters:detail' letter_uuid=letter.uuid %}"><i class="ph ph-x" aria-hidden="true"></i>{% translate "Sair" %}</a>
         <button type="submit" class="btn btn-success btn-lg"><i class="ph ph-check-circle" aria-hidden="true"></i>{% translate "Finalizar Carta Convite" %}</button>
       </div>
     </form>

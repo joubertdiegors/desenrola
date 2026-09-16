@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+O que a pessoa vê depois de abrir o link do e-mail.
+
+TRÊS ESTADOS, UMA TELA
+----------------------
+  confirmou + ja_estava   já tinha confirmado antes (link aberto duas
+                          vezes, ou o pré-carregador do cliente de
+                          e-mail passando por ele);
+  confirmou               confirmou agora;
+  nada                    link vencido, já usado, ou adulterado.
+
+O TERCEIRO CASO NÃO DIZ QUAL DELES É
+------------------------------------
+"Vencido", "já usado" e "inválido" dariam informação a quem tem um link
+que não é seu. A saída é a mesma nos três: pedir outro, estando dentro
+da conta.
+
+Contexto: confirmou, ja_estava, pessoa.
+{% endcomment %}
+
+{% block title %}{% if confirmou %}{% translate "E-mail confirmado" %}{% else %}{% translate "Link expirado" %}{% endif %} · {{ site_config.name }}{% endblock %}
+{% block main_class %}auth-page{% endblock %}
+
+{% block header %}
+<header class="auth-header m-only">
+  <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <a class="logo d-only" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+
+    {% if confirmou %}
+    <div class="auth-title">
+      <span class="tint auth-selo" aria-hidden="true"><i class="ph-fill ph-check-circle"></i></span>
+      <h2>{% translate "E-mail confirmado" %}</h2>
+      {% if ja_estava %}
+      <p>{% translate "Este endereço já estava confirmado. Não há mais nada a fazer." %}</p>
+      {% else %}
+      <p>{% blocktranslate trimmed with email=pessoa.email %}Pronto: <strong>{{ email }}</strong> é seu. A conta está completa.{% endblocktranslate %}</p>
+      {% endif %}
+    </div>
+    <a class="btn btn-primary btn-block btn-lg" href="{% if user.is_authenticated %}{% url 'core:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}">
+      {% if user.is_authenticated %}{% translate "Ir para o início" %}{% else %}{% translate "Fazer login" %}{% endif %}
+      <i class="ph-bold ph-arrow-right" aria-hidden="true"></i>
+    </a>
+
+    {% else %}
+    <div class="auth-title">
+      <span class="tint auth-selo is-aviso" aria-hidden="true"><i class="ph-fill ph-warning-circle"></i></span>
+      <h2>{% translate "Este link não vale mais" %}</h2>
+      <p>{% translate "Links de confirmação valem por 3 dias e podem ser usados uma vez. Entre na sua conta e peça outro — leva um segundo." %}</p>
+    </div>
+    {% if user.is_authenticated %}
+    {% comment %}
+    Quem já está dentro pede o link novo daqui mesmo, sem passar pelo
+    perfil. Continua sendo um POST, e continua sendo só para a própria
+    conta.
+    {% endcomment %}
+    <form method="post" action="{% url 'accounts:email_confirm_resend' %}">
+      {% csrf_token %}
+      <button class="btn btn-primary btn-block btn-lg" type="submit">{% translate "Enviar outro link" %}</button>
+    </form>
+    {% else %}
+    <a class="btn btn-primary btn-block btn-lg" href="{% url 'accounts:login' %}">{% translate "Entrar na minha conta" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    {% endif %}
+    {% endif %}
+
+    <p class="auth-alt"><a href="{% url 'core:home' %}">{% translate "Voltar ao início" %}</a></p>
+  </div>
+</div>
+{% endblock %}

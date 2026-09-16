@@ -588,6 +588,13 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
      para o numero. Empilhado, cada um fica com a largura inteira. */
   .phone-field { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 
+  /* A faixa do e-mail nao confirmado, no celular: o texto e o botao
+     empilham, e o botao ocupa a largura inteira -- lado a lado, a
+     frase sobraria em quatro palavras por linha. */
+  .aviso-do-email { padding: 12px 20px 0; }
+  .aviso-do-email .notice { align-items: flex-start; flex-wrap: wrap; }
+  .aviso-do-email .btn { margin-left: 0; width: 100%; }
+
   .stat-badge { display: flex; padding: 14px; }
   .stat-badge-row { display: flex; gap: 10px; align-items: baseline; }
   .stat-badge-live { margin-top: 4px; }
@@ -681,6 +688,25 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .auth-card-wide { width: 520px; }
 .auth-card .logo { margin-bottom: 2px; }
 .auth-title p { color: var(--mu); margin-top: 4px; }
+/* O selo redondo das telas de resultado (e-mail confirmado, link
+   vencido). Mesma metrica do icone do Mini Banner, para as duas telas
+   pertencerem ao mesmo produto. */
+.auth-selo {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--s);
+  font-size: 30px;
+  margin-bottom: 14px;
+}
+.auth-selo.is-aviso { color: var(--warning-dark); background: color-mix(in srgb, var(--warning) 14%, white); }
+
+/* A faixa de "confirme o seu e-mail", no alto da area logada. */
+.aviso-do-email { padding: 16px 48px 0; }
+.aviso-do-email .notice { align-items: center; }
+.aviso-do-email .btn { margin-left: auto; flex: none; }
 .auth-form { display: flex; flex-direction: column; gap: 18px; }
 .auth-link { font-size: 13.5px; font-weight: 600; margin-top: -8px; min-height: 44px; display: flex; align-items: center; }
 .auth-alt { font-size: 14px; color: var(--mu); text-align: center; }
@@ -828,7 +854,19 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .duration-icon { width: 44px; height: 44px; background: #fff; border-radius: var(--radius-md); display: grid; place-items: center; color: var(--p); font-size: 24px; flex: none; }
 .duration-label { font-size: 13px; font-weight: 600; color: var(--navy); }
 .duration-value { font-size: 20px; font-weight: 800; color: var(--navy); }
-/* Estadia acima do limite legal: a duracao passa a ser o alerta. */
+/* A DURACAO RESPONDE EM COR.
+   Verde enquanto a estadia cabe na regra dos 90 dias, vermelha quando
+   passa. Antes a caixa era sempre neutra e a unica pista era um selo
+   pequeno ao lado: quem passava do prazo so descobria ao tentar
+   avancar.
+
+   A COR NAO E A UNICA PISTA: o numero continua escrito, o selo com "> N
+   dias" continua la e o aviso em texto tambem. Quem nao distingue verde
+   de vermelho le a mesma coisa. */
+.duration-box.is-ok { background: color-mix(in srgb, var(--s) 9%, white); }
+.duration-box.is-ok .duration-value,
+.duration-box.is-ok .duration-icon { color: color-mix(in srgb, var(--s) 82%, black); }
+
 .duration-box.is-invalid { background: color-mix(in srgb, var(--error) 8%, white); }
 .duration-box.is-invalid .duration-value,
 .duration-box.is-invalid .duration-icon { color: var(--error-dark); }
@@ -838,19 +876,29 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 /* Avisos legais: cards com checkbox */
 .notice-check { padding: 14px; display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.45; cursor: pointer; }
 
-/* Idioma: cards selecionaveis */
+/* Idioma: botoes visuais -- bandeira e nome, lado a lado.
+
+   Eram cartoes altos, empilhados numa coluna, com uma frase de
+   descricao cada. No celular so dois cabiam na tela de uma vez, e
+   escolher entre quatro exigia rolar. Em grade, os quatro aparecem
+   juntos -- que e como se escolhe entre opcoes equivalentes. */
+.lang-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .lang-card {
-  padding: 14px 16px;
+  padding: 18px 16px;
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
   align-items: center;
+  text-align: center;
   cursor: pointer;
-  min-height: 72px;
+  min-height: 130px;
+  justify-content: center;
   box-sizing: border-box;
+  position: relative;
 }
 .lang-card input { position: absolute; opacity: 0; width: 0; height: 0; }
-.lang-card:has(input:checked) { border: 2px solid var(--p); background: var(--p10); padding: 13px 15px; }
-.lang-flag { width: 40px; height: 40px; border-radius: 50%; flex: none; position: relative; overflow: hidden; }
+.lang-card:has(input:checked) { border: 2px solid var(--p); background: var(--p10); padding: 17px 15px; }
+.lang-flag { width: 48px; height: 48px; border-radius: 50%; flex: none; position: relative; overflow: hidden; }
 .lang-flag-fr { background: linear-gradient(90deg, #000 33%, #fae042 33% 66%, #ed2939 66%); }
 .lang-flag-pt { background: linear-gradient(90deg, #006600 40%, #ff0000 40%); }
 .lang-flag-en {
@@ -866,10 +914,24 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   background: linear-gradient(0deg, #21468b 33%, #fff 33% 66%, #ae1c28 66%);
 }
 .lang-flag-sm { width: 20px; height: 20px; }
-.lang-card-text { flex: 1; }
-.lang-card-name { display: block; font-size: 16px; font-weight: 600; color: var(--navy); }
-.lang-card-desc { font-size: 13px; color: var(--mu); }
-.lang-card-radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--bd); flex: none; display: grid; place-items: center; color: #fff; font-size: 14px; }
+.lang-card-name { display: block; font-size: 16px; font-weight: 700; color: var(--navy); }
+.lang-card-desc { font-size: 12px; color: var(--mu); }
+/* A marca de escolhido vai para o canto do cartao: no meio da coluna
+   ela disputaria o eixo com a bandeira e o nome. */
+.lang-card-radio {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--bd);
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+}
 .lang-card:has(input:checked) .lang-card-radio { background: var(--p); border-color: var(--p); }
 
 /* Revisao: grade 2x2 de resumo */
@@ -909,6 +971,39 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .wizard-actions .btn { min-height: 54px; font-size: 16px; }
   .wizard-actions .btn-secondary { flex: none; min-height: 54px; padding: 0 18px; }
   .wizard-actions .btn-primary, .wizard-actions .btn-success { flex: 1; min-width: 0; }
+  /* "Salvar e sair" no celular: so o icone, com o nome para quem le a
+     tela. Tres botoes com texto em 390px espremeriam "Proxima etapa"
+     ate quebrar em duas linhas. */
+  .wizard-actions .btn-ghost { flex: none; min-height: 54px; width: 54px; padding: 0; gap: 0; }
+  .wizard-actions .btn-ghost span { display: none; }
+  .wizard-actions.is-final .btn-ghost { width: 100%; }
+
+  /* Etapa 3: os dados vindos do perfil sao so LEITURA, e no celular
+     eles viravam uma parede de caixas cinzentas de 48px, uma embaixo
+     da outra, com o rotulo por cima. Deitados -- rotulo a esquerda,
+     valor a direita -- a etapa inteira cabe na tela e se le como uma
+     ficha, que e o que ela e. */
+  .wizard-card .field:has(> .input.is-readonly) {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--bd);
+  }
+  .wizard-card .field:has(> .input.is-readonly) > label { flex: none; font-size: 13px; color: var(--mu); }
+  .wizard-card .input.is-readonly {
+    border: 0;
+    background: none;
+    padding: 0;
+    min-height: 0;
+    height: auto;
+    width: auto;
+    text-align: right;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .host-edit-link { margin-top: 6px; }
   /* Etapa 6: os dois botoes empilham em largura total (layout 4j) — o
      rotulo "Gerar Carta Convite em PDF" nao caberia ao lado de "Voltar". */
   .wizard-actions.is-final { flex-direction: column; }

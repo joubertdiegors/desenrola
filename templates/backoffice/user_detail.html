@@ -33,7 +33,21 @@ campo para elas.
     <div class="bo-card-head"><h3>{% translate "Dados" %}</h3></div>
     <dl class="bo-dados">
       <dt>{% translate "Nome completo" %}</dt><dd>{{ alvo.full_name|default:"—" }}</dd>
-      <dt>{% translate "E-mail" %}</dt><dd>{{ alvo.email }}</dd>
+      {% comment %}
+      A confirmação do e-mail aparece AO LADO do endereço, não numa
+      linha própria: é uma propriedade dele. Quem atende o suporte
+      precisa saber, antes de mandar um link de senha, se aquele
+      endereço chegou a ser provado.
+      {% endcomment %}
+      <dt>{% translate "E-mail" %}</dt>
+      <dd>
+        {{ alvo.email }}
+        {% if alvo.email_confirmado %}
+        <span class="tag tag-success" title="{{ alvo.email_verified_at|date:'d/m/Y · H:i' }}">{% translate "Confirmado" %}</span>
+        {% else %}
+        <span class="tag tag-warning">{% translate "Não confirmado" %}</span>
+        {% endif %}
+      </dd>
       <dt>{% translate "Telefone" %}</dt><dd>{{ alvo.phone|default:"—" }}</dd>
       <dt>{% translate "Cadastrado em" %}</dt><dd>{{ alvo.date_joined|date:"d/m/Y · H:i" }}</dd>
       <dt>{% translate "Último acesso" %}</dt><dd>{% if alvo.last_login %}{{ alvo.last_login|date:"d/m/Y · H:i" }}{% else %}{% translate "Nunca acessou" %}{% endif %}</dd>

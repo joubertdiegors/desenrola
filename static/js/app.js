@@ -321,7 +321,12 @@
 
     var maximo = Number(caixa.getAttribute("data-max-stay"));
     var passou = !!maximo && dias > maximo;
+    // A caixa RESPONDE EM COR: verde dentro da regra dos 90 dias,
+    // vermelha fora. As duas classes sao exclusivas -- sem o `false`
+    // explicito na outra, voltar as datas para dentro do prazo deixaria
+    // a caixa vermelha E verde ao mesmo tempo.
     caixa.classList.toggle("is-invalid", passou);
+    caixa.classList.toggle("is-ok", !passou);
 
     var etiqueta = caixa.querySelector("[data-duration-over]");
     if (etiqueta) { etiqueta.hidden = !passou; }
