@@ -1,0 +1,56 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Conteúdo do site · remover item da barra.
+
+Um item do menu não guarda conteúdo -- é um rótulo e um destino --,
+então apagar não perde texto de ninguém. Ainda assim pergunta, e oferece
+a alternativa: desativar tira da barra e mantém o cadastro.
+
+Contexto: item, url_do_menu.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Remover item do menu" %}</h1>
+    <p class="text-muted">{% translate "Esta ação não tem volta." %}</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_do_menu }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{% translate "Esta ação não tem volta." %}</p>
+
+<div class="notice notice-error">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{% blocktranslate trimmed with rotulo=item.label %}
+    Remover <strong>{{ rotulo }}</strong> apaga o item da barra superior. Se a intenção é só tirá-lo do site por ora, desative-o.
+  {% endblocktranslate %}</span>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{{ item.label }}</h3>
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Destino" %}</dt><dd>{{ item.destination }}</dd>
+    <dt>{% translate "Na barra" %}</dt><dd>{% if item.is_active %}{% translate "Aparece" %}{% else %}{% translate "Oculto" %}{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="bo-actions">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover definitivamente" %}</button>
+  </form>
+
+  {% if item.is_active %}
+  <form method="post" action="{% url 'backoffice:menu_item_activation' item.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="0">
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Só desativar" %}</button>
+  </form>
+  {% endif %}
+
+  <a class="btn btn-ghost" href="{{ url_do_menu }}">{% translate "Cancelar" %}</a>
+</div>
+{% endblock %}

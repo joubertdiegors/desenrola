@@ -130,6 +130,34 @@ urlpatterns = [
     # Idiomas dos DOCUMENTOS (nao os da interface, que e so
     # portuguesa). Deixou de ser o placeholder na Etapa E.
     path("idiomas/", views.backoffice_languages, name="languages"),
+    # Itens da barra superior do SITE (nao deste menu lateral). A tela
+    # deles e o editor da secao "navbar" -- ver `cadastro="menu"` em
+    # `content.section_schema` --, entao nao ha rota de lista propria.
+    path(
+        "conteudo/menu/novo/",
+        content_backoffice.backoffice_menu_item_new,
+        name="menu_item_new",
+    ),
+    path(
+        "conteudo/menu/<int:pk>/",
+        content_backoffice.backoffice_menu_item_edit,
+        name="menu_item_edit",
+    ),
+    path(
+        "conteudo/menu/<int:pk>/situacao/",
+        content_backoffice.backoffice_menu_item_activation,
+        name="menu_item_activation",
+    ),
+    path(
+        "conteudo/menu/<int:pk>/ordem/",
+        content_backoffice.backoffice_menu_item_move,
+        name="menu_item_move",
+    ),
+    path(
+        "conteudo/menu/<int:pk>/excluir/",
+        content_backoffice.backoffice_menu_item_delete,
+        name="menu_item_delete",
+    ),
     # Parceiros: o cadastro inteiro, no produto. Ate a Etapa 11 esta
     # tela era so leitura e mandava para a administracao do Django.
     path("partners/", content_backoffice.backoffice_partners, name="partners"),

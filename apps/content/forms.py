@@ -27,8 +27,9 @@ import copy
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Asset, Partner
+from .models import Asset, MenuItem, Partner
 from .section_schema import Lista, campos_da_secao
+from .services import ANCORAS_DA_HOME
 
 # Separa as partes do nome de um campo de lista: `cards__0__title`.
 SEPARADOR = "__"
@@ -184,3 +185,52 @@ class FormularioDeParceiro(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["logo"].queryset = Asset.objects.filter(is_active=True)
         self.fields["logo"].empty_label = _("Sem imagem")
+
+
+class FormularioDeItemDoMenu(forms.ModelForm):
+    """
+    Um item da barra superior do site.
+
+    O DESTINO É CONFERIDO DUAS VEZES
+    --------------------------------
+    O validador do modelo (`DESTINO_DO_MENU`) cuida da FORMA: âncora,
+    caminho do site ou endereço http(s) -- nada de `javascript:`, que
+    terminaria dentro de um `href`, onde o autoescape não protege.
+
+    Aqui se confere o SENTIDO: uma âncora só é aceita se a Home
+    realmente a desenha. `#promoções` passa na forma e é um link morto
+    na prática, e link que não leva a lugar nenhum é o defeito que este
+    projeto remove desde a Etapa G.
+
+    Caminho e endereço externo não são conferidos aqui: o servidor não
+    tem como saber o que existe do outro lado, e fingir que sabe seria
+    pior do que não conferir.
+    """
+
+    class Meta:
+        model = MenuItem
+        fields = ("label", "destination", "is_active", "order")
+        widgets = {
+            "label": forms.TextInput(attrs={"class": "input"}),
+            "destination": forms.TextInput(attrs={"class": "input", "list": "ancoras-da-home"}),
+            "order": forms.NumberInput(attrs={"class": "input", "min": 0}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["destination"].help_text = _(
+            "Uma parte da página inicial (%(ancoras)s), um caminho do site "
+            "(/pt/...) ou um endereço http(s)."
+        ) % {"ancoras": ", ".join(sorted(ANCORAS_DA_HOME))}
+
+    def clean_destination(self):
+        destino = (self.cleaned_data.get("destination") or "").strip()
+        if destino.startswith("#") and destino not in ANCORAS_DA_HOME:
+            raise forms.ValidationError(
+                _(
+                    "A página inicial não tem esta parte. As âncoras possíveis "
+                    "são: %(ancoras)s."
+                )
+                % {"ancoras": ", ".join(sorted(ANCORAS_DA_HOME))}
+            )
+        return destino

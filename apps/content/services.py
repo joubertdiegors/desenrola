@@ -222,6 +222,11 @@ def contexto_da_home(language=None):
 # As ancoras que a Home desenha, e de que parte cada uma depende.
 # `#parceiros` tem uma condicao a mais: a secao so aparece quando ha
 # parceiro cadastrado (ver `core/home.html`).
+# As ancoras que a Home DESENHA, e de que parte cada uma depende.
+#
+# Conferido nos parciais: `core/secoes/how.html` e
+# `core/secoes/partners.html` sao os dois unicos com `id=`. Uma ancora
+# fora desta lista nao existe na pagina -- nao e "desconhecida", e MORTA.
 ANCORAS_DA_HOME = {
     "#como-funciona": "how",
     "#parceiros": "partners",
@@ -241,11 +246,23 @@ def _menu_sem_ancora_morta(partes, parceiros):
 
     Destino que não é âncora (um caminho ou um endereço externo) passa
     sempre -- quem digitou sabe para onde aponta.
+
+    ÂNCORA QUE NÃO EXISTE TAMBÉM SOME
+    ---------------------------------
+    Até a Etapa 11, um `#promoções` -- que a Home não desenha em lugar
+    nenhum -- caía no caso "não é âncora conhecida" e aparecia na barra
+    levando a lugar nenhum. É o mesmo defeito que a seção desativada já
+    não tinha. O formulário passou a recusar criar assim; isto aqui
+    protege o que já esteja gravado, e o dia em que um `id` sair de um
+    parcial.
     """
     visiveis = []
     for item in MenuItem.objects.publicados():
-        parte = ANCORAS_DA_HOME.get(item.destination)
-        if parte is None:
+        if item.destination.startswith("#"):
+            parte = ANCORAS_DA_HOME.get(item.destination)
+            if parte is None:
+                continue
+        else:
             visiveis.append(item)
             continue
         if parte not in partes:

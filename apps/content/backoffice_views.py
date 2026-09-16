@@ -33,8 +33,14 @@ from django.views.decorators.http import require_POST
 from apps.core.views import exige_permissao
 
 from . import section_schema, services
-from .forms import FormularioDeParceiro, FormularioDeSecao
-from .models import Page, PageSection, PageSectionTranslation, Partner
+from .forms import FormularioDeItemDoMenu, FormularioDeParceiro, FormularioDeSecao
+from .models import (
+    MenuItem,
+    Page,
+    PageSection,
+    PageSectionTranslation,
+    Partner,
+)
 from .services import CHAVE_DA_HOME
 
 # As duas permissões desta seção. Constantes, e não a string solta em
@@ -174,6 +180,7 @@ def backoffice_content_section(request, pk):
     idioma = idioma_pedido(request)
     traducao = _traducao(secao, idioma)
     pode_editar = request.user.has_perm(EDITAR_PERM)
+    declarada = section_schema.secao_declarada(secao)
 
     if not section_schema.editavel(secao):
         messages.error(
@@ -207,12 +214,26 @@ def backoffice_content_section(request, pk):
             "active": "content",
             "bo_title": _("Conteúdo do site"),
             "secao": secao,
+            # O nome amigavel, e nao `secao.key`: chave tecnica na tela e
+            # vazamento de implementacao para quem administra.
+            "nome_da_secao": declarada.nome,
+            "descricao_da_secao": declarada.descricao,
             "form": form,
             "idioma": idioma,
             "idiomas": idiomas_disponiveis(idioma),
             "tem_traducao": bool(traducao and traducao.content),
             "pode_editar": pode_editar,
             "url_da_lista": _url_da_lista(idioma),
+            # O cadastro proprio desta secao, quando ela tem um.
+            "cadastro": declarada.cadastro,
+            "itens_do_menu": (
+                _linhas_com_pontas(MenuItem.objects.all())
+                if declarada.cadastro == "menu"
+                else None
+            ),
+            "url_dos_parceiros": (
+                reverse("backoffice:partners") if declarada.cadastro == "parceiros" else None
+            ),
         },
     )
 
@@ -407,17 +428,9 @@ def backoffice_partners(request):
     parceiro custaria uma consulta a mais.
     """
     parceiros = list(Partner.objects.select_related("logo"))
-
-    # `primeiro`/`ultimo` alimentam os botoes de ordem: quem esta no topo
-    # nao recebe "subir". Botao que nao faz nada e o que esta tela tinha
-    # antes da Etapa I, e nao volta.
     linhas = [
-        {
-            "parceiro": parceiro,
-            "primeiro": indice == 0,
-            "ultimo": indice == len(parceiros) - 1,
-        }
-        for indice, parceiro in enumerate(parceiros)
+        {"parceiro": linha["objeto"], "primeiro": linha["primeiro"], "ultimo": linha["ultimo"]}
+        for linha in _linhas_com_pontas(parceiros)
     ]
 
     return render(
@@ -519,25 +532,11 @@ def backoffice_partner_move(request, pk):
     """
     Sobe ou desce um parceiro na ordem da Home.
 
-    POR QUE RENUMERAR TUDO, E NAO TROCAR DOIS `order`
-    -------------------------------------------------
-    `order` nasce 0 para todo mundo, e a ordem real e desempatada pelo
-    `pk` (ver `Partner.Meta`). Trocar o numero de dois empatados nao
-    mudaria nada -- o botao pareceria quebrado. Renumerar a lista pela
-    POSICAO resolve o empate de uma vez e faz o botao significar o que
-    diz.
+    A renumeracao mora em `_reordenar` -- e a mesma dos itens do menu, e
+    a razao dela esta la.
     """
     parceiro = get_object_or_404(Partner, pk=pk)
-    ordenados = list(Partner.objects.all())
-    atual = next(i for i, p in enumerate(ordenados) if p.pk == parceiro.pk)
-    destino = atual - 1 if request.POST.get("direcao") == "subir" else atual + 1
-
-    if 0 <= destino < len(ordenados):
-        ordenados[atual], ordenados[destino] = ordenados[destino], ordenados[atual]
-        for posicao, p in enumerate(ordenados, start=1):
-            if p.order != posicao:
-                p.order = posicao
-                p.save(update_fields=["order", "updated_at"])
+    if _reordenar(Partner, parceiro, request.POST.get("direcao")):
         messages.success(request, _("Ordem atualizada."))
 
     return redirect(_url_dos_parceiros())
@@ -569,4 +568,185 @@ def backoffice_partner_delete(request, pk):
         request,
         "backoffice/partner_delete.html",
         _contexto_de_parceiros(request, {"parceiro": parceiro}),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Ordem: o que parceiros e itens do menu fazem igual
+# ---------------------------------------------------------------------------
+
+
+def _reordenar(modelo, objeto, direcao):
+    """
+    Sobe ou desce um registro na lista, renumerando tudo pela posição.
+
+    POR QUE RENUMERAR, E NÃO TROCAR DOIS `order`
+    --------------------------------------------
+    `order` nasce 0 para todo mundo nos dois cadastros, e a ordem real é
+    desempatada pelo `pk`. Trocar o número de dois empatados não moveria
+    ninguém -- o botão pareceria quebrado. Renumerar pela POSIÇÃO resolve
+    o empate de uma vez e faz o botão significar o que diz.
+
+    Devolve se houve movimento: nas pontas não há, e a tela nem oferece.
+    """
+    ordenados = list(modelo.objects.all())
+    atual = next((i for i, o in enumerate(ordenados) if o.pk == objeto.pk), None)
+    if atual is None:
+        return False
+
+    destino = atual - 1 if direcao == "subir" else atual + 1
+    if not 0 <= destino < len(ordenados):
+        return False
+
+    ordenados[atual], ordenados[destino] = ordenados[destino], ordenados[atual]
+    for posicao, registro in enumerate(ordenados, start=1):
+        if registro.order != posicao:
+            registro.order = posicao
+            registro.save(update_fields=["order", "updated_at"])
+    return True
+
+
+def _linhas_com_pontas(objetos):
+    """
+    Cada registro sabendo se é o primeiro ou o último.
+
+    É o que permite a tela não desenhar "subir" no topo nem "descer" no
+    fim -- botão que não faz nada é o que estas telas tinham antes da
+    Etapa I, e não volta.
+    """
+    objetos = list(objetos)
+    return [
+        {"objeto": objeto, "primeiro": i == 0, "ultimo": i == len(objetos) - 1}
+        for i, objeto in enumerate(objetos)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Itens da barra superior
+# ---------------------------------------------------------------------------
+#
+# A tela deles é o editor da seção "navbar" (ver `cadastro="menu"` em
+# `section_schema`), então toda ação volta para lá.
+
+
+def _url_do_menu(idioma=None):
+    navbar = PageSection.objects.filter(page__key=CHAVE_DA_HOME, key="navbar").first()
+    if navbar is None:
+        return _url_da_lista(idioma or settings.LANGUAGE_CODE)
+    url = reverse("backoffice:content_section", args=[navbar.pk])
+    return f"{url}?idioma={idioma}" if idioma else url
+
+
+def _contexto_do_item(request, form, item, titulo):
+    return {
+        "active": "content",
+        "bo_title": _("Conteúdo do site"),
+        "form": form,
+        "item": item,
+        "titulo": titulo,
+        "ancoras": sorted(services.ANCORAS_DA_HOME),
+        "url_do_menu": _url_do_menu(idioma_pedido(request)),
+    }
+
+
+@exige_permissao(EDITAR_PERM)
+def backoffice_menu_item_new(request):
+    """Acrescenta um item à barra superior."""
+    if request.method == "POST":
+        form = FormularioDeItemDoMenu(request.POST)
+        if form.is_valid():
+            item = form.save()
+            messages.success(request, _("Item acrescentado: %(rotulo)s.") % {"rotulo": item.label})
+            return redirect(_url_do_menu(idioma_pedido(request)))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDeItemDoMenu()
+
+    return render(
+        request,
+        "backoffice/menu_item_form.html",
+        _contexto_do_item(request, form, None, _("Novo item do menu")),
+    )
+
+
+@exige_permissao(VER_PERM)
+def backoffice_menu_item_edit(request, pk):
+    """
+    Altera um item.
+
+    VER abre a tela; GRAVAR exige `change_pagesection` -- e a checagem do
+    POST é aqui, no servidor, não no botão.
+    """
+    item = get_object_or_404(MenuItem, pk=pk)
+
+    if request.method == "POST":
+        if not request.user.has_perm(EDITAR_PERM):
+            raise PermissionDenied
+        form = FormularioDeItemDoMenu(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Item salvo."))
+            return redirect(_url_do_menu(idioma_pedido(request)))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDeItemDoMenu(instance=item)
+
+    return render(
+        request,
+        "backoffice/menu_item_form.html",
+        _contexto_do_item(request, form, item, item.label),
+    )
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_menu_item_activation(request, pk):
+    """Liga e desliga um item. Desligado, some da barra -- sem apagar nada."""
+    item = get_object_or_404(MenuItem, pk=pk)
+    item.is_active = request.POST.get("ativo") == "1"
+    item.save(update_fields=["is_active", "updated_at"])
+
+    if item.is_active:
+        messages.success(request, _("Item ativado. Volta a aparecer na barra."))
+    else:
+        messages.success(request, _("Item desativado. Deixa de aparecer na barra."))
+    return redirect(_url_do_menu(idioma_pedido(request)))
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_menu_item_move(request, pk):
+    """Sobe ou desce um item na barra."""
+    item = get_object_or_404(MenuItem, pk=pk)
+    if _reordenar(MenuItem, item, request.POST.get("direcao")):
+        messages.success(request, _("Ordem atualizada."))
+    return redirect(_url_do_menu(idioma_pedido(request)))
+
+
+@exige_permissao(EDITAR_PERM)
+def backoffice_menu_item_delete(request, pk):
+    """
+    Apaga um item, depois de confirmar.
+
+    Um item do menu não guarda conteúdo -- é um rótulo e um destino --,
+    então apagar não perde texto de ninguém. Ainda assim pergunta: some
+    da barra do site na hora, e refazer é redigitar.
+    """
+    item = get_object_or_404(MenuItem, pk=pk)
+
+    if request.method == "POST":
+        rotulo = item.label
+        item.delete()
+        messages.success(request, _("Item removido: %(rotulo)s.") % {"rotulo": rotulo})
+        return redirect(_url_do_menu(idioma_pedido(request)))
+
+    return render(
+        request,
+        "backoffice/menu_item_delete.html",
+        {
+            "active": "content",
+            "bo_title": _("Conteúdo do site"),
+            "item": item,
+            "url_do_menu": _url_do_menu(idioma_pedido(request)),
+        },
     )

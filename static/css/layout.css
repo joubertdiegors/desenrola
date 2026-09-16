@@ -965,3 +965,20 @@ img.partner-image { width: 100%; object-fit: contain; }
 @media (max-width: 767px) {
   .bo-parceiro-acoes { justify-content: flex-start; }
 }
+
+/* ---------------------------------------------------------------------------
+   Backoffice · Itens da barra superior do site
+   --------------------------------------------------------------------------- */
+
+.bo-itens-do-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bo-item-do-menu { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 10px; }
+.bo-item-do-menu-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.bo-item-do-menu-texto span { font-size: 13px; word-break: break-all; }
+
+/* Desligado continua legivel -- quem administra precisa ler o que vai
+   religar --, so nao compete com os que estao no ar. */
+.bo-item-do-menu.is-desligado { opacity: .68; }
+
+@media (max-width: 767px) {
+  .bo-item-do-menu { flex-wrap: wrap; }
+}

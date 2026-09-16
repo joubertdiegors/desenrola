@@ -1,0 +1,61 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Conteúdo do site · um item da barra superior.
+
+Serve para criar e para editar: a única diferença é o título e o texto
+do botão.
+
+O DESTINO
+---------
+A lista de âncoras é oferecida por um `<datalist>`: quem digita recebe as
+partes que a página inicial realmente tem, sem ficar preso a elas -- um
+caminho do site ou um endereço externo continuam podendo ser digitados.
+Quem recusa âncora inexistente é o servidor (`FormularioDeItemDoMenu`),
+não esta lista.
+
+Contexto: form, item (None ao criar), titulo, ancoras, url_do_menu.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{{ titulo }}</h1>
+    <p class="text-muted">{% translate "Um link da barra superior do site." %}</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_do_menu }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{{ titulo }}</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "O item" %}</h3>
+      <span class="note d-only">{% translate "Texto e para onde leva" %}</span>
+    </div>
+    {% for campo in form %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+
+    <datalist id="ancoras-da-home">
+      {% for ancora in ancoras %}<option value="{{ ancora }}"></option>{% endfor %}
+    </datalist>
+  </div>
+
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% if item %}{% translate "Salvar item" %}{% else %}{% translate "Acrescentar item" %}{% endif %}</button>
+    <a class="btn btn-ghost" href="{{ url_do_menu }}">{% translate "Cancelar" %}</a>
+  </div>
+</form>
+{% endblock %}

@@ -17,8 +17,8 @@ url_da_lista.
 {% block bo_main %}
 <div class="bo-head d-only">
   <div>
-    <h1>{{ secao.key|default:secao.kind }}</h1>
-    <p class="text-muted">{{ secao.get_kind_display }} · {% translate "página inicial" %}</p>
+    <h1>{{ nome_da_secao }}</h1>
+    <p class="text-muted">{{ descricao_da_secao }}</p>
   </div>
   <span class="push"></span>
   <a class="btn btn-ghost" href="{{ url_da_lista }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
@@ -103,6 +103,84 @@ outro idioma, sem gravar o que estiver na tela.
   </div>
   {% endif %}
 </form>
+
+{% comment %}
+O CADASTRO PROPRIO DESTA PARTE, QUANDO ELA TEM UM.
+
+A barra superior tem itens de menu; a de parceiros tem parceiros. Os dois
+sao REGISTROS, nao textos: a quantidade e a decisao, e por isso nao
+cabem no editor declarativo de textos acima.
+
+Fica FORA do <form> da secao de proposito -- cada acao e um POST proprio,
+e <form> dentro de <form> e HTML invalido.
+{% endcomment %}
+{% if cadastro == "menu" %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Itens do menu" %}</h3>
+    {% if pode_editar %}
+    <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:menu_item_new' %}?idioma={{ idioma }}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo item" %}</a>
+    {% endif %}
+  </div>
+
+  <p class="field-hint">{% translate "Os links de navegação da barra. Um item que aponta para uma parte oculta da página inicial não aparece no site." %}</p>
+
+  <ul class="bo-itens-do-menu">
+    {% for linha in itens_do_menu %}
+    <li class="bo-item-do-menu{% if not linha.objeto.is_active %} is-desligado{% endif %}">
+      <div class="bo-item-do-menu-texto">
+        <strong>{{ linha.objeto.label }}</strong>
+        <span class="cell-muted">{{ linha.objeto.destination }}</span>
+      </div>
+      {% if not linha.objeto.is_active %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}
+      <div class="bo-parceiro-acoes">
+        {% if pode_editar %}
+          {% if not linha.primeiro %}
+          <form method="post" action="{% url 'backoffice:menu_item_move' linha.objeto.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="idioma" value="{{ idioma }}">
+            <input type="hidden" name="direcao" value="subir">
+            <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with rotulo=linha.objeto.label %}Subir {{ rotulo }}{% endblocktranslate %}"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+          </form>
+          {% endif %}
+          {% if not linha.ultimo %}
+          <form method="post" action="{% url 'backoffice:menu_item_move' linha.objeto.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="idioma" value="{{ idioma }}">
+            <input type="hidden" name="direcao" value="descer">
+            <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with rotulo=linha.objeto.label %}Descer {{ rotulo }}{% endblocktranslate %}"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+          </form>
+          {% endif %}
+        {% endif %}
+
+        <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:menu_item_edit' linha.objeto.pk %}?idioma={{ idioma }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
+
+        {% if pode_editar %}
+        <form method="post" action="{% url 'backoffice:menu_item_activation' linha.objeto.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="idioma" value="{{ idioma }}">
+          <input type="hidden" name="ativo" value="{% if linha.objeto.is_active %}0{% else %}1{% endif %}">
+          <button type="submit" class="btn btn-ghost btn-sm">{% if linha.objeto.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+        </form>
+
+        <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:menu_item_delete' linha.objeto.pk %}?idioma={{ idioma }}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+        {% endif %}
+      </div>
+    </li>
+    {% empty %}
+    <li class="cell-muted">{% translate "Nenhum item cadastrado. A barra fica só com a marca e os botões de conta." %}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% elif cadastro == "parceiros" %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{% translate "Os parceiros" %}</h3>
+    <a class="btn btn-secondary btn-sm" href="{{ url_dos_parceiros }}"><i class="ph ph-arrow-right" aria-hidden="true"></i>{% translate "Abrir o cadastro" %}</a>
+  </div>
+  <p class="field-hint">{% translate "Quem aparece nesta seção, com que imagem e em que ordem, se administra na tela de Parceiros. Aqui ficam só os textos que cercam a lista." %}</p>
+</div>
+{% endif %}
 </div>
 
 {% comment %}
