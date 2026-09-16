@@ -29,6 +29,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from apps.core.views import exige_permissao
@@ -250,6 +251,7 @@ def backoffice_content_section(request, pk):
 
 
 @exige_permissao(VER_PERM)
+@xframe_options_sameorigin
 def backoffice_content_preview(request, pk):
     """
     UMA parte da Home, desenhada com o código real.
@@ -266,6 +268,17 @@ def backoffice_content_preview(request, pk):
     Mostra a parte MESMO QUE ELA ESTEJA DESATIVADA: quem administra
     precisa ver o que está prestes a religar. A Home pública continua
     não a mostrando -- são perguntas diferentes.
+
+    POR QUE `xframe_options_sameorigin`
+    -----------------------------------
+    Em produção o projeto manda `X_FRAME_OPTIONS = "DENY"`, que proíbe
+    QUALQUER enquadramento -- inclusive o de mesma origem. Sem esta
+    exceção, a miniatura da Central e o quadro do editor apareceriam
+    vazios no ar, e em lugar nenhum antes: a suíte roda com as
+    configurações de desenvolvimento, onde `DENY` não está ligado.
+
+    A exceção é só desta view. O resto do site continua recusando ser
+    enquadrado, que é a defesa contra clickjacking.
 
     O NAVEGADOR NUNCA ESCOLHE TEMPLATE
     ----------------------------------
