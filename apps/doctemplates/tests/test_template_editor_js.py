@@ -1003,3 +1003,518 @@ class TestApi:
         assert saida["token"] == "TOKEN"
         assert saida["metodo"] == "POST"
         assert saida["corpo"] == {"layout": {"version": 1, "elements": []}}
+
+
+# ---------------------------------------------------------------------------
+# 6. Editores de estrutura: conteúdo misto e tabela (Bloco F)
+# ---------------------------------------------------------------------------
+#
+# Até aqui os dois eram SOMENTE LEITURA -- o painel mostrava "3 trecho(s)"
+# e "Linhas: 2", com o comentário de que editar era etapa seguinte. Esta é
+# a etapa seguinte.
+#
+# O QUE ESTES TESTES EXISTEM PARA IMPEDIR
+# ---------------------------------------
+# 1. **Que a sequência vire uma string.** `texto + campo + texto` tem de
+#    continuar sendo três trechos depois de editar qualquer um deles. Se
+#    alguém trocar o editor por uma caixa de texto simples, os campos
+#    perdem identidade e o documento passa a imprimir o texto literal;
+# 2. **Que uma edição contamine o vizinho.** Mudar o peso de um trecho não
+#    pode mexer no `source` de outro;
+# 3. **Que a tabela fique inválida no meio do caminho.** O servidor cobra
+#    uma célula por coluna em CADA linha: acrescentar coluna tem de
+#    acrescentar célula em todas;
+# 4. **Que o editor produza algo que o servidor recusa.** Por isso a saída
+#    do JavaScript volta para `validate_layout` em Python.
+#
+# OS CONTROLES SÃO ACHADOS POR PAPEL, NÃO POR ÍNDICE
+# --------------------------------------------------
+# Um trecho de campo tem quatro seletores e um de texto tem três, então
+# índice global depende do que veio antes. `trecho(i).campo` continua
+# valendo quando a ordem mudar, e só falha quando o COMPORTAMENTO mudar.
+
+# Ajudantes em JavaScript: acham um controle pelo papel que ele cumpre.
+AJUDANTES_JS = """
+function porPapelNoTrecho(dom, no, i) {
+  var linha = dom.porClasse(no, 'te-trecho')[i];
+  var selects = dom.porTag(linha, 'select');
+  var inputs = dom.porTag(linha, 'input');
+  return {
+    tipo: selects[0],
+    campo: selects.length === 4 ? selects[1] : null,
+    peso: selects[selects.length - 2],
+    estilo: selects[selects.length - 1],
+    texto: inputs[0] || null,
+    botao: function (titulo) {
+      return dom.porTag(linha, 'button').filter(function (b) {
+        return b.attrs.title === titulo;
+      })[0];
+    }
+  };
+}
+
+function botaoPorTexto(dom, no, texto) {
+  return dom.porTag(no, 'button').filter(function (b) {
+    return b.textContent === texto;
+  })[0];
+}
+
+function porPapelNaCelula(dom, no, iLinha, iCelula) {
+  var bloco = dom.porClasse(no, 'te-linha')[iLinha];
+  var celula = dom.porClasse(bloco, 'te-celula')[iCelula];
+  var selects = dom.porTag(celula, 'select');
+  var inputs = dom.porTag(celula, 'input');
+  // O conteudo da celula passa por `controleDeConteudo`, que usa
+  // `textarea` para texto -- nao `input`, como o trecho de `mixed`.
+  var areas = dom.porTag(celula, 'textarea');
+  return {
+    texto: areas[0] || inputs.filter(function (e) {
+      return e.type !== 'checkbox'; })[0] || null,
+    campo: selects.length > 1 ? selects[0] : null,
+    alinhamento: selects[selects.length - 1],
+    negrito: inputs.filter(function (e) { return e.type === 'checkbox'; })[0]
+  };
+}
+
+function botaoDaLinha(dom, no, iLinha, titulo) {
+  var bloco = dom.porClasse(no, 'te-linha')[iLinha];
+  return dom.porTag(bloco, 'button').filter(function (b) {
+    return b.attrs.title === titulo;
+  })[0];
+}
+
+function botaoDaColuna(dom, no, iColuna, titulo) {
+  var bloco = dom.porClasse(no, 'te-coluna')[iColuna];
+  return dom.porTag(bloco, 'button').filter(function (b) {
+    return b.attrs.title === titulo;
+  })[0];
+}
+"""
+
+
+CONTEXTO_MISTO = {
+    "editavel": True,
+    "catalogo": [
+        {
+            "code": "rich_text",
+            "properties": [
+                {"name": "font_weight", "options": ["regular", "bold"]},
+                {"name": "font_style", "options": ["normal", "italic"]},
+            ],
+        }
+    ],
+    "referencias": [
+        {"reference": "convidado.nome", "label": "Nome do convidado"},
+        {"reference": "anfitriao.cidade", "label": "Cidade do anfitrião"},
+    ],
+}
+
+FRASE = [
+    {"kind": "text", "value": "Je soussigné "},
+    {"kind": "field", "source": "anfitriao.cidade", "font_weight": "bold"},
+    {"kind": "text", "value": ", domicilié à "},
+]
+
+
+def _misto(node, acao, partes=None, editavel=True):
+    """Monta o editor de sequência, executa `acao` e devolve o estado."""
+    contexto = dict(CONTEXTO_MISTO, editavel=editavel)
+    return executar(
+        node,
+        f"var dom = require({_caminho(DOM_STUB)!r});"
+        + AJUDANTES_JS +
+        "var doc = {createElement: dom.createElement};"
+        "var saiu = null;"
+        "var no = Props.controleDeMisto(doc, {label: 'Conteúdo'},"
+        "  {kind: 'mixed', parts: PARTES}, function (v) { saiu = v; }, CONTEXTO);"
+        "var trecho = function (i) { return porPapelNoTrecho(dom, no, i); };"
+        "var botao = function (t) { return botaoPorTexto(dom, no, t); };"
+        + acao +
+        "console.log(JSON.stringify({saiu: saiu,"
+        "  trechos: dom.porClasse(no, 'te-trecho').length,"
+        "  botoes: dom.porTag(no, 'button').map(function (b) {"
+        "    return b.attrs.title || b.textContent; }),"
+        "  desabilitados: dom.porTag(no, 'select').concat(dom.porTag(no, 'input'))"
+        "    .filter(function (e) { return e.disabled; }).length}));",
+        {"CONTEXTO": contexto, "PARTES": FRASE if partes is None else partes},
+    )
+
+
+class TestConteudoMisto:
+    def test_cada_trecho_vira_uma_linha_e_nao_uma_contagem(self, node):
+        saida = _misto(node, "")
+
+        assert saida["trechos"] == 3
+
+    def test_editar_um_texto_nao_funde_a_sequencia(self, node):
+        """
+        O defeito que uma caixa de texto simples causaria: três trechos
+        virariam uma string e o campo perderia identidade.
+        """
+        saida = _misto(
+            node,
+            "trecho(0).texto.value = 'Je soussignée ';"
+            "trecho(0).texto.disparar('change');",
+        )
+
+        assert saida["saiu"]["kind"] == "mixed"
+        assert saida["saiu"]["parts"] == [
+            {"kind": "text", "value": "Je soussignée "},
+            {"kind": "field", "source": "anfitriao.cidade", "font_weight": "bold"},
+            {"kind": "text", "value": ", domicilié à "},
+        ]
+
+    def test_trocar_o_campo_nao_toca_nos_textos(self, node):
+        saida = _misto(
+            node,
+            "trecho(1).campo.value = 'convidado.nome';"
+            "trecho(1).campo.disparar('change');",
+        )
+        partes = saida["saiu"]["parts"]
+
+        assert partes[1] == {
+            "kind": "field", "source": "convidado.nome", "font_weight": "bold"
+        }
+        assert partes[0]["value"] == "Je soussigné "
+        assert partes[2]["value"] == ", domicilié à "
+
+    def test_a_enfase_de_um_trecho_nao_alcanca_os_outros(self, node):
+        """Negritar o primeiro trecho não pode mexer no campo do segundo."""
+        saida = _misto(
+            node, "trecho(0).peso.value = 'bold'; trecho(0).peso.disparar('change');"
+        )
+        partes = saida["saiu"]["parts"]
+
+        assert partes[0] == {
+            "kind": "text", "value": "Je soussigné ", "font_weight": "bold"
+        }
+        assert partes[1]["source"] == "anfitriao.cidade"
+        assert partes[1]["font_weight"] == "bold"
+
+    def test_herdar_apaga_a_chave_em_vez_de_gravar_um_valor(self, node):
+        """
+        Herdar é a AUSÊNCIA da chave -- é o que `layout_schema` diz. Gravar
+        `font_weight: "herda"` seria inventar um valor que o validador
+        recusa.
+        """
+        saida = _misto(node, "trecho(1).peso.value = ''; trecho(1).peso.disparar('change');")
+
+        assert "font_weight" not in saida["saiu"]["parts"][1]
+        assert saida["saiu"]["parts"][1]["source"] == "anfitriao.cidade"
+
+    def test_converter_texto_em_campo_preserva_a_enfase(self, node):
+        saida = _misto(
+            node,
+            "trecho(0).tipo.value = 'field'; trecho(0).tipo.disparar('change');",
+            partes=[{"kind": "text", "value": "oi", "font_style": "italic"}],
+        )
+
+        assert saida["saiu"]["parts"][0] == {
+            "kind": "field", "source": "", "font_style": "italic"
+        }
+
+    def test_converter_campo_em_texto_larga_a_referencia(self, node):
+        """
+        Um texto livre não é referência, e uma referência não é texto para
+        se ler: o valor não atravessa a conversão.
+        """
+        saida = _misto(
+            node,
+            "trecho(0).tipo.value = 'text'; trecho(0).tipo.disparar('change');",
+            partes=[{"kind": "field", "source": "convidado.nome"}],
+        )
+
+        assert saida["saiu"]["parts"][0] == {"kind": "text", "value": ""}
+
+    def test_subir_troca_a_ordem_sem_perder_nada(self, node):
+        saida = _misto(node, "trecho(1).botao('Subir').disparar('click');")
+        partes = saida["saiu"]["parts"]
+
+        assert [p["kind"] for p in partes] == ["field", "text", "text"]
+        assert partes[0] == {
+            "kind": "field", "source": "anfitriao.cidade", "font_weight": "bold"
+        }
+        assert partes[1]["value"] == "Je soussigné "
+
+    def test_descer_troca_a_ordem(self, node):
+        saida = _misto(node, "trecho(0).botao('Descer').disparar('click');")
+
+        assert [
+            p.get("value", p.get("source")) for p in saida["saiu"]["parts"]
+        ] == ["anfitriao.cidade", "Je soussigné ", ", domicilié à "]
+
+    def test_remover_tira_so_aquele(self, node):
+        saida = _misto(node, "trecho(1).botao('Remover').disparar('click');")
+
+        assert [p["kind"] for p in saida["saiu"]["parts"]] == ["text", "text"]
+        assert saida["saiu"]["parts"][0]["value"] == "Je soussigné "
+        assert saida["saiu"]["parts"][1]["value"] == ", domicilié à "
+
+    def test_o_primeiro_nao_sobe_e_o_ultimo_nao_desce(self, node):
+        """Botão que não faz nada é o que este projeto tira de tela."""
+        saida = _misto(node, "")
+
+        acoes = [b for b in saida["botoes"] if b in ("Subir", "Descer", "Remover")]
+        assert acoes == [
+            "Descer", "Remover",
+            "Subir", "Descer", "Remover",
+            "Subir", "Remover",
+        ]
+
+    @pytest.mark.parametrize(("rotulo", "esperado"), [("+ Texto", "text"), ("+ Campo", "field")])
+    def test_da_para_acrescentar_trecho(self, node, rotulo, esperado):
+        saida = _misto(node, f"botao({rotulo!r}).disparar('click');")
+
+        assert len(saida["saiu"]["parts"]) == 4
+        assert saida["saiu"]["parts"][3]["kind"] == esperado
+
+    def test_em_leitura_nao_ha_acao_nem_campo_habilitado(self, node):
+        saida = _misto(node, "", editavel=False)
+
+        assert saida["botoes"] == []
+        assert saida["desabilitados"] > 0
+
+    def test_o_que_o_editor_produz_passa_no_validador_do_servidor(self, node, catalogo):
+        """
+        A prova final: o JavaScript não pode produzir algo que o servidor
+        recuse. A saída volta para `validate_layout` em Python.
+        """
+        saida = _misto(
+            node, "trecho(0).texto.value = 'Eu, '; trecho(0).texto.disparar('change');"
+        )
+        elemento = executar(
+            node,
+            "console.log(JSON.stringify(State.criarElemento(CAT, 'rich_text', 'a')));",
+            {"CAT": catalogo},
+        )
+        elemento["properties"]["content"] = saida["saiu"]
+
+        layout_schema.validate_layout({"version": 1, "elements": [elemento]})
+
+
+# ---------------------------------------------------------------------------
+# Tabela
+# ---------------------------------------------------------------------------
+
+TABELA = {
+    "columns": [{"width": 100, "align": "left"}, {"width": 60, "align": "right"}],
+    "rows": [
+        {
+            "min_height": 0,
+            "cells": [
+                {"content": {"kind": "text", "value": "Nome"}, "align": "left", "bold": True},
+                {
+                    "content": {"kind": "field", "source": "convidado.nome"},
+                    "align": "right",
+                    "bold": False,
+                },
+            ],
+        },
+        {
+            "min_height": 12,
+            "cells": [
+                {"content": {"kind": "text", "value": "Cidade"}, "align": "left", "bold": False},
+                {
+                    "content": {"kind": "text", "value": "Bruxelas"},
+                    "align": "right",
+                    "bold": False,
+                },
+            ],
+        },
+    ],
+}
+
+CONTEXTO_TABELA = {
+    "editavel": True,
+    "catalogo": [
+        {
+            "code": "table",
+            "properties": [{"name": "align", "options": ["left", "center", "right"]}],
+        }
+    ],
+    "referencias": [
+        {"reference": "convidado.nome", "label": "Nome"},
+        {"reference": "anfitriao.cidade", "label": "Cidade"},
+    ],
+}
+
+
+def _tabela(node, qual, acao, propriedades=None, editavel=True):
+    props = TABELA if propriedades is None else propriedades
+    contexto = dict(CONTEXTO_TABELA, editavel=editavel)
+    valor = "PROPS.rows" if qual == "linhas" else "PROPS.columns"
+    funcao = "controleDeLinhas" if qual == "linhas" else "controleDeColunas"
+    return executar(
+        node,
+        f"var dom = require({_caminho(DOM_STUB)!r});"
+        + AJUDANTES_JS +
+        "var doc = {createElement: dom.createElement};"
+        "var saiu = null;"
+        "var CTX = Object.assign({}, CONTEXTO, {elemento: {properties: PROPS},"
+        "  aoAlterarPropriedades: function (p) { saiu = p; }});"
+        f"var no = Props.{funcao}(doc, {{label: 'X'}}, {valor}, CTX);"
+        "var celula = function (l, c) { return porPapelNaCelula(dom, no, l, c); };"
+        "var acaoDaLinha = function (l, t) { return botaoDaLinha(dom, no, l, t); };"
+        "var acaoDaColuna = function (c, t) { return botaoDaColuna(dom, no, c, t); };"
+        "var botao = function (t) { return botaoPorTexto(dom, no, t); };"
+        + acao +
+        "console.log(JSON.stringify({saiu: saiu,"
+        "  celulas: dom.porClasse(no, 'te-celula').length,"
+        "  colunas: dom.porClasse(no, 'te-coluna').length,"
+        "  botoes: dom.porTag(no, 'button').map(function (b) {"
+        "    return b.attrs.title || b.textContent; })}));",
+        {"CONTEXTO": contexto, "PROPS": props},
+    )
+
+
+class TestTabela:
+    def test_cada_celula_vira_um_editor_e_nao_uma_contagem(self, node):
+        saida = _tabela(node, "linhas", "")
+
+        assert saida["celulas"] == 4
+
+    def test_editar_uma_celula_nao_toca_nas_outras(self, node):
+        saida = _tabela(
+            node, "linhas",
+            "celula(0, 0).texto.value = 'Convidado';"
+            "celula(0, 0).texto.disparar('change');",
+        )
+        linhas = saida["saiu"]["rows"]
+
+        assert linhas[0]["cells"][0]["content"] == {"kind": "text", "value": "Convidado"}
+        assert linhas[0]["cells"][0]["bold"] is True
+        assert linhas[0]["cells"][1]["content"] == {
+            "kind": "field", "source": "convidado.nome"
+        }
+        assert linhas[1]["cells"][1]["content"]["value"] == "Bruxelas"
+
+    def test_uma_celula_aceita_campo_dinamico(self, node):
+        """
+        O conteúdo da célula passa pelo MESMO controle do resto do painel,
+        então campo dentro de célula funciona sem código novo -- que é o
+        que o contrato do servidor já permitia.
+        """
+        saida = _tabela(
+            node, "linhas",
+            "celula(0, 1).campo.value = 'anfitriao.cidade';"
+            "celula(0, 1).campo.disparar('change');",
+        )
+
+        assert saida["saiu"]["rows"][0]["cells"][1]["content"] == {
+            "kind": "field", "source": "anfitriao.cidade"
+        }
+        assert saida["saiu"]["rows"][0]["cells"][0]["content"]["value"] == "Nome"
+
+    def test_o_negrito_da_celula_e_editavel(self, node):
+        saida = _tabela(
+            node, "linhas",
+            "celula(0, 0).negrito.checked = false;"
+            "celula(0, 0).negrito.disparar('change');",
+        )
+
+        assert saida["saiu"]["rows"][0]["cells"][0]["bold"] is False
+        assert saida["saiu"]["rows"][0]["cells"][1]["bold"] is False
+
+    def test_o_alinhamento_da_celula_e_editavel(self, node):
+        saida = _tabela(
+            node, "linhas",
+            "celula(1, 0).alinhamento.value = 'center';"
+            "celula(1, 0).alinhamento.disparar('change');",
+        )
+
+        assert saida["saiu"]["rows"][1]["cells"][0]["align"] == "center"
+        assert saida["saiu"]["rows"][0]["cells"][0]["align"] == "left"
+
+    def test_subir_linha_reordena(self, node):
+        saida = _tabela(node, "linhas", "acaoDaLinha(1, 'Subir linha').disparar('click');")
+        linhas = saida["saiu"]["rows"]
+
+        assert linhas[0]["cells"][0]["content"]["value"] == "Cidade"
+        assert linhas[1]["cells"][0]["content"]["value"] == "Nome"
+        assert linhas[1]["cells"][1]["content"]["source"] == "convidado.nome"
+
+    def test_acrescentar_linha_cria_uma_celula_por_coluna(self, node):
+        saida = _tabela(node, "linhas", "botao('+ Linha').disparar('click');")
+        linhas = saida["saiu"]["rows"]
+
+        assert len(linhas) == 3
+        assert len(linhas[2]["cells"]) == 2
+
+    def test_remover_linha_tira_so_aquela(self, node):
+        saida = _tabela(node, "linhas", "acaoDaLinha(0, 'Remover linha').disparar('click');")
+        linhas = saida["saiu"]["rows"]
+
+        assert len(linhas) == 1
+        assert linhas[0]["cells"][0]["content"]["value"] == "Cidade"
+
+    def test_acrescentar_coluna_acrescenta_celula_em_toda_linha(self, node):
+        """
+        A invariante que `layout_schema` cobra: uma célula por coluna em
+        CADA linha. Sem isto o layout ficaria inválido e o salvamento
+        seria recusado -- depois de a pessoa já ter mexido.
+        """
+        saida = _tabela(node, "colunas", "botao('+ Coluna').disparar('click');")
+
+        assert len(saida["saiu"]["columns"]) == 3
+        assert [len(linha["cells"]) for linha in saida["saiu"]["rows"]] == [3, 3]
+
+    def test_remover_coluna_remove_a_celula_correspondente(self, node):
+        saida = _tabela(
+            node, "colunas", "acaoDaColuna(0, 'Remover coluna').disparar('click');"
+        )
+        linhas = saida["saiu"]["rows"]
+
+        assert len(saida["saiu"]["columns"]) == 1
+        assert [len(linha["cells"]) for linha in linhas] == [1, 1]
+        # A que ficou é a SEGUNDA célula -- removeu-se a primeira coluna.
+        assert linhas[0]["cells"][0]["content"]["source"] == "convidado.nome"
+        assert linhas[1]["cells"][0]["content"]["value"] == "Bruxelas"
+
+    def test_a_largura_da_coluna_e_editavel(self, node):
+        saida = _tabela(
+            node, "colunas",
+            "var n = dom.porTag(dom.porClasse(no, 'te-coluna')[0], 'input')[0];"
+            "n.value = '150'; n.disparar('change');",
+        )
+
+        assert saida["saiu"]["columns"][0]["width"] == 150
+        assert saida["saiu"]["columns"][1]["width"] == 60
+
+    def test_a_ultima_coluna_nao_pode_ser_removida(self, node):
+        """Tabela sem coluna nenhuma não tem o que mostrar."""
+        uma_so = {
+            "columns": [{"width": 100, "align": "left"}],
+            "rows": [
+                {
+                    "min_height": 0,
+                    "cells": [
+                        {
+                            "content": {"kind": "text", "value": "x"},
+                            "align": "left",
+                            "bold": False,
+                        }
+                    ],
+                }
+            ],
+        }
+        saida = _tabela(node, "colunas", "", propriedades=uma_so)
+
+        assert "Remover coluna" not in saida["botoes"]
+
+    def test_em_leitura_nao_ha_acao(self, node):
+        saida = _tabela(node, "linhas", "", editavel=False)
+
+        assert saida["botoes"] == []
+
+    def test_o_que_o_editor_produz_passa_no_validador_do_servidor(self, node, catalogo):
+        saida = _tabela(node, "colunas", "botao('+ Coluna').disparar('click');")
+
+        elemento = executar(
+            node,
+            "console.log(JSON.stringify(State.criarElemento(CAT, 'table', 'a')));",
+            {"CAT": catalogo},
+        )
+        elemento["properties"]["columns"] = saida["saiu"]["columns"]
+        elemento["properties"]["rows"] = saida["saiu"]["rows"]
+
+        layout_schema.validate_layout({"version": 1, "elements": [elemento]})

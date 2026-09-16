@@ -283,3 +283,76 @@
 
   .te-area { max-height: 70vh; }
 }
+
+/* ---------------------------------------------------------------------------
+   Painel · editores de estrutura (conteudo misto e tabela)
+   ---------------------------------------------------------------------------
+
+   Ate o Bloco F estes dois eram somente leitura: o painel mostrava
+   "3 trecho(s)" e "Linhas: 2". Agora sao editaveis, e a estrutura visual
+   segue a hierarquia do dado -- sequencia de trechos, e tabela como
+   colunas + linhas + celulas.
+
+   `te-tabela-editor` e nao `te-tabela`: esta ultima e a TABELA DESENHADA
+   no canvas, outra coisa. */
+
+.te-misto,
+.te-tabela-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-md);
+  background: #fbfcfe;
+}
+
+.te-misto-titulo {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--mu);
+}
+
+/* Um trecho da sequencia, uma coluna ou uma linha: o numero a esquerda,
+   os campos no meio, as acoes a direita. */
+.te-trecho,
+.te-coluna,
+.te-linha-cabeca {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.te-trecho-numero {
+  flex: 0 0 auto;
+  min-width: 18px;
+  padding-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mu);
+}
+
+.te-trecho-corpo,
+.te-coluna > .te-grade-2 { flex: 1; min-width: 0; }
+
+.te-trecho-acoes { display: flex; gap: 2px; flex: 0 0 auto; }
+
+.te-trecho + .te-trecho,
+.te-coluna + .te-coluna,
+.te-linha + .te-linha { border-top: 1px dashed var(--bd); padding-top: 8px; }
+
+.te-misto-novos { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* A celula recua em relacao a linha: a hierarquia linha > celula fica
+   visivel sem precisar de titulo em cada uma. */
+.te-linha { display: flex; flex-direction: column; gap: 6px; }
+.te-celula {
+  margin-left: 14px;
+  padding-left: 8px;
+  border-left: 2px solid var(--bd);
+}
+.te-celula-rotulo { font-size: 11px; color: var(--mu); }

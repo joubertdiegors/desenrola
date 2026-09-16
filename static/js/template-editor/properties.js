@@ -27,6 +27,11 @@
   // teclado precisa alcanca-las.
   var PASSO_PADRAO = "0.01";
 
+  // As duas propriedades que um TRECHO de conteudo misto pode ter por
+  // conta propria. Ausentes, o trecho herda o peso e o estilo do
+  // elemento -- e o contrato de `layout_schema.ENFASE_DO_TRECHO`.
+  var ENFASE_DO_TRECHO = ["font_weight", "font_style"];
+
   function criarNo(doc, tag, classe) {
     var no = doc.createElement(tag);
     if (classe) {
@@ -103,9 +108,9 @@
 
   /*
    * Uma propriedade declarada no registro vira o controle adequado ao
-   * seu `kind`. `conteudo`, `colunas` e `linhas` sao estruturas: o
-   * conteudo simples e editavel aqui; tabela fica com o que ja da para
-   * mostrar, e o editor de celulas e etapa seguinte.
+   * seu `kind`. `conteudo`, `colunas` e `linhas` sao estruturas, e as
+   * tres tem editor proprio -- inclusive as celulas da tabela, que
+   * aceitam o mesmo conteudo estrutural de qualquer texto do documento.
    */
   function controleDaPropriedade(doc, declaracao, valor, aoMudar, contexto) {
     var habilitado = contexto.editavel;
@@ -177,12 +182,9 @@
 
       case "colunas":
       case "linhas": {
-        // Estrutural: o editor de celulas e etapa seguinte. Aqui o que
-        // interessa e a pessoa ver o que existe, sem ilusao de edicao.
-        var resumo = criarNo(doc, "p", "te-resumo");
-        var quantos = Array.isArray(valor) ? valor.length : 0;
-        resumo.textContent = declaracao.label + ": " + quantos;
-        return resumo;
+        return declaracao.kind === "colunas"
+          ? controleDeColunas(doc, declaracao, valor, contexto)
+          : controleDeLinhas(doc, declaracao, valor, contexto);
       }
 
       default:
@@ -190,11 +192,569 @@
     }
   }
 
+
+  // ---------------------------------------------------------------------
+  // Tabela
+  // ---------------------------------------------------------------------
+
+  function copiarRaso(objeto) {
+    var copia = {};
+    Object.keys(objeto || {}).forEach(function (chave) {
+      copia[chave] = objeto[chave];
+    });
+    return copia;
+  }
+
+  function copiarLinha(linha) {
+    var copia = copiarRaso(linha);
+    copia.cells = (linha && linha.cells ? linha.cells : []).map(copiarRaso);
+    return copia;
+  }
+
+  function celulaVazia() {
+    return { content: { kind: "text", value: "" }, align: "left", bold: false };
+  }
+
+  function propriedadesDaTabela(contexto) {
+    return ((contexto.elemento || {}).properties) || {};
+  }
+
   /*
-   * Conteudo estrutural. Um bloco `text` vira caixa de texto; um `field`
-   * vira seletor de campo; `mixed` fica em leitura -- editar a sequencia
-   * de trechos e etapa seguinte, e uma caixa de texto simples destruiria
-   * a estrutura.
+   * As colunas: largura, alinhamento, acrescentar e remover.
+   *
+   * Acrescentar e remover mexem TAMBEM nas linhas, porque o validador
+   * cobra uma celula por coluna em cada linha. As duas propriedades vao
+   * juntas numa alteracao so.
+   */
+  function controleDeColunas(doc, declaracao, valor, contexto) {
+    var colunas = Array.isArray(valor) ? valor : [];
+    var linhas = propriedadesDaTabela(contexto).rows || [];
+
+    function publicarColunas(novasColunas, novasLinhas) {
+      if (contexto.aoAlterarPropriedades) {
+        contexto.aoAlterarPropriedades({ columns: novasColunas, rows: novasLinhas });
+      }
+    }
+
+    var caixa = criarNo(doc, "div", "te-tabela-editor");
+    var titulo = criarNo(doc, "h4", "te-misto-titulo");
+    titulo.textContent = declaracao.label + " (" + colunas.length + ")";
+    caixa.appendChild(titulo);
+
+    colunas.forEach(function (coluna, indice) {
+      var linha = criarNo(doc, "div", "te-coluna");
+      var numero = criarNo(doc, "span", "te-trecho-numero");
+      numero.textContent = String(indice + 1);
+      linha.appendChild(numero);
+
+      var corpo = criarNo(doc, "div", "te-grade-2");
+      corpo.appendChild(
+        campoComRotulo(
+          doc, "Largura",
+          entradaNumero(doc, coluna.width, function (n) {
+            var novas = colunas.map(copiarRaso);
+            novas[indice].width = n;
+            publicarColunas(novas, linhas);
+          }, PASSO_PADRAO, contexto.editavel)
+        )
+      );
+      corpo.appendChild(
+        campoComRotulo(
+          doc, "Alinhamento",
+          entradaEscolha(
+            doc, coluna.align || "left",
+            opcoesDeclaradas(contexto, "align").map(function (v) {
+              return { value: v, label: v };
+            }),
+            function (v) {
+              var novas = colunas.map(copiarRaso);
+              novas[indice].align = v;
+              publicarColunas(novas, linhas);
+            },
+            contexto.editavel
+          )
+        )
+      );
+      linha.appendChild(corpo);
+
+      if (contexto.editavel && colunas.length > 1) {
+        var acoes = criarNo(doc, "div", "te-trecho-acoes");
+        acoes.appendChild(
+          botaoDeTrecho(doc, "✕", "Remover coluna", function () {
+            var novasColunas = colunas.filter(function (_c, i) {
+              return i !== indice;
+            }).map(copiarRaso);
+            var novasLinhas = linhas.map(function (l) {
+              var copia = copiarLinha(l);
+              copia.cells = copia.cells.filter(function (_c, i) {
+                return i !== indice;
+              });
+              return copia;
+            });
+            publicarColunas(novasColunas, novasLinhas);
+          })
+        );
+        linha.appendChild(acoes);
+      }
+      caixa.appendChild(linha);
+    });
+
+    if (contexto.editavel) {
+      var novos = criarNo(doc, "div", "te-misto-novos");
+      var botao = criarNo(doc, "button", "btn btn-secondary btn-sm");
+      botao.type = "button";
+      botao.textContent = "+ Coluna";
+      botao.addEventListener("click", function () {
+        var novasColunas = colunas.map(copiarRaso);
+        novasColunas.push({ width: 60, align: "left" });
+        var novasLinhas = linhas.map(function (l) {
+          var copia = copiarLinha(l);
+          copia.cells.push(celulaVazia());
+          return copia;
+        });
+        publicarColunas(novasColunas, novasLinhas);
+      });
+      novos.appendChild(botao);
+      caixa.appendChild(novos);
+    }
+
+    return caixa;
+  }
+
+  /*
+   * As linhas e as celulas.
+   *
+   * O conteudo de cada celula passa pelo MESMO `controleDeConteudo` do
+   * resto do painel -- entao uma celula aceita texto, campo dinamico ou
+   * sequencia mista sem nenhum codigo novo, que e exatamente o que o
+   * contrato do servidor ja permitia.
+   */
+  function controleDeLinhas(doc, declaracao, valor, contexto) {
+    var linhas = Array.isArray(valor) ? valor : [];
+    var colunas = propriedadesDaTabela(contexto).columns || [];
+
+    function publicar(novas) {
+      if (contexto.aoAlterarPropriedades) {
+        contexto.aoAlterarPropriedades({ rows: novas });
+      }
+    }
+
+    var caixa = criarNo(doc, "div", "te-tabela-editor");
+    var titulo = criarNo(doc, "h4", "te-misto-titulo");
+    titulo.textContent = declaracao.label + " (" + linhas.length + ")";
+    caixa.appendChild(titulo);
+
+    linhas.forEach(function (linha, iLinha) {
+      var bloco = criarNo(doc, "div", "te-linha");
+
+      var cabeca = criarNo(doc, "div", "te-linha-cabeca");
+      var numero = criarNo(doc, "span", "te-trecho-numero");
+      numero.textContent = "Linha " + (iLinha + 1);
+      cabeca.appendChild(numero);
+      cabeca.appendChild(
+        campoComRotulo(
+          doc, "Altura mín.",
+          entradaNumero(doc, linha.min_height || 0, function (n) {
+            var novas = linhas.map(copiarLinha);
+            novas[iLinha].min_height = n;
+            publicar(novas);
+          }, PASSO_PADRAO, contexto.editavel)
+        )
+      );
+
+      if (contexto.editavel) {
+        var acoes = criarNo(doc, "div", "te-trecho-acoes");
+        if (iLinha > 0) {
+          acoes.appendChild(
+            botaoDeTrecho(doc, "↑", "Subir linha", function () {
+              var novas = linhas.map(copiarLinha);
+              var tirada = novas.splice(iLinha, 1)[0];
+              novas.splice(iLinha - 1, 0, tirada);
+              publicar(novas);
+            })
+          );
+        }
+        if (iLinha < linhas.length - 1) {
+          acoes.appendChild(
+            botaoDeTrecho(doc, "↓", "Descer linha", function () {
+              var novas = linhas.map(copiarLinha);
+              var tirada = novas.splice(iLinha, 1)[0];
+              novas.splice(iLinha + 1, 0, tirada);
+              publicar(novas);
+            })
+          );
+        }
+        acoes.appendChild(
+          botaoDeTrecho(doc, "✕", "Remover linha", function () {
+            publicar(
+              linhas.filter(function (_l, i) {
+                return i !== iLinha;
+              }).map(copiarLinha)
+            );
+          })
+        );
+        cabeca.appendChild(acoes);
+      }
+      bloco.appendChild(cabeca);
+
+      (linha.cells || []).forEach(function (celula, iCelula) {
+        var caixaDaCelula = criarNo(doc, "div", "te-celula");
+        var rotulo = criarNo(doc, "span", "te-celula-rotulo");
+        rotulo.textContent = "Célula " + (iCelula + 1);
+        caixaDaCelula.appendChild(rotulo);
+
+        caixaDaCelula.appendChild(
+          controleDeConteudo(
+            doc, { label: "Conteúdo" },
+            celula.content || { kind: "text", value: "" },
+            function (novoConteudo) {
+              var novas = linhas.map(copiarLinha);
+              novas[iLinha].cells[iCelula].content = novoConteudo;
+              publicar(novas);
+            },
+            contexto
+          )
+        );
+
+        var extras = criarNo(doc, "div", "te-grade-2");
+        extras.appendChild(
+          campoComRotulo(
+            doc, "Alinhamento",
+            entradaEscolha(
+              doc, celula.align || "left",
+              opcoesDeclaradas(contexto, "align").map(function (v) {
+                return { value: v, label: v };
+              }),
+              function (v) {
+                var novas = linhas.map(copiarLinha);
+                novas[iLinha].cells[iCelula].align = v;
+                publicar(novas);
+              },
+              contexto.editavel
+            )
+          )
+        );
+        extras.appendChild(
+          campoComRotulo(
+            doc, "Negrito",
+            entradaBooleano(doc, celula.bold, function (marcado) {
+              var novas = linhas.map(copiarLinha);
+              novas[iLinha].cells[iCelula].bold = marcado;
+              publicar(novas);
+            }, contexto.editavel)
+          )
+        );
+        caixaDaCelula.appendChild(extras);
+        bloco.appendChild(caixaDaCelula);
+      });
+
+      caixa.appendChild(bloco);
+    });
+
+    if (contexto.editavel) {
+      var novos = criarNo(doc, "div", "te-misto-novos");
+      var botao = criarNo(doc, "button", "btn btn-secondary btn-sm");
+      botao.type = "button";
+      botao.textContent = "+ Linha";
+      botao.addEventListener("click", function () {
+        var novas = linhas.map(copiarLinha);
+        // Uma celula por COLUNA -- e a invariante que o servidor cobra.
+        novas.push({
+          min_height: 0,
+          cells: colunas.map(function () {
+            return celulaVazia();
+          })
+        });
+        publicar(novas);
+      });
+      novos.appendChild(botao);
+      caixa.appendChild(novos);
+    }
+
+    return caixa;
+  }
+
+  /*
+   * As opcoes declaradas para uma propriedade, vindas do REGISTRO do
+   * servidor. Peso e estilo de um trecho usam o MESMO vocabulario do
+   * elemento -- e ler do registro evita uma segunda lista para manter
+   * em dia.
+   */
+  function opcoesDeclaradas(contexto, nome) {
+    var achadas = [];
+    (contexto.catalogo || []).forEach(function (tipo) {
+      (tipo.properties || []).forEach(function (propriedade) {
+        if (propriedade.name === nome && achadas.length === 0) {
+          achadas = propriedade.options || [];
+        }
+      });
+    });
+    return achadas;
+  }
+
+  /*
+   * Copia rasa de um trecho. Toda alteracao devolve trechos NOVOS: um
+   * trecho compartilhado entre o antes e o depois faria o desfazer
+   * enxergar o estado ja alterado.
+   */
+  function copiarTrecho(parte) {
+    var copia = {};
+    Object.keys(parte || {}).forEach(function (chave) {
+      copia[chave] = parte[chave];
+    });
+    return copia;
+  }
+
+  /*
+   * Converte um trecho de Texto para Campo, ou o contrario, PRESERVANDO
+   * a enfase. O valor nao atravessa: um texto livre nao e referencia de
+   * campo, e uma referencia nao e texto para se ler.
+   */
+  function converterTrecho(parte, paraKind) {
+    var novo = { kind: paraKind };
+    ENFASE_DO_TRECHO.forEach(function (chave) {
+      if (parte && parte[chave] !== undefined) {
+        novo[chave] = parte[chave];
+      }
+    });
+    if (paraKind === "field") {
+      novo.source = "";
+    } else {
+      novo.value = "";
+    }
+    return novo;
+  }
+
+  /*
+   * O seletor de enfase de um trecho.
+   *
+   * A opcao vazia significa HERDAR do elemento, e herdar e a ausencia da
+   * chave -- nao um valor "herda" gravado. Por isso escolher o vazio
+   * APAGA a chave em vez de grava-la.
+   */
+  function seletorDeEnfase(doc, parte, nome, rotulo, contexto, aoTrocar) {
+    var opcoes = [{ value: "", label: "— herda do elemento —" }];
+    opcoesDeclaradas(contexto, nome).forEach(function (valor) {
+      opcoes.push({ value: valor, label: valor });
+    });
+    return campoComRotulo(
+      doc, rotulo,
+      entradaEscolha(
+        doc, parte[nome] === undefined ? "" : parte[nome], opcoes,
+        function (escolhido) {
+          var novo = copiarTrecho(parte);
+          if (escolhido === "") {
+            delete novo[nome];
+          } else {
+            novo[nome] = escolhido;
+          }
+          aoTrocar(novo);
+        },
+        contexto.editavel
+      )
+    );
+  }
+
+  /*
+   * Uma linha da sequencia: o que o trecho e, o que ele diz, a enfase
+   * dele e o que da para fazer com ele.
+   */
+  function linhaDoTrecho(doc, parte, indice, total, contexto, acoes) {
+    var linha = criarNo(doc, "div", "te-trecho");
+
+    var numero = criarNo(doc, "span", "te-trecho-numero");
+    numero.textContent = String(indice + 1);
+    linha.appendChild(numero);
+
+    var corpo = criarNo(doc, "div", "te-trecho-corpo");
+
+    corpo.appendChild(
+      campoComRotulo(
+        doc, "O que é",
+        entradaEscolha(
+          doc, parte.kind,
+          [{ value: "text", label: "Texto" }, { value: "field", label: "Campo" }],
+          function (escolhido) {
+            if (escolhido !== parte.kind) {
+              acoes.trocar(indice, converterTrecho(parte, escolhido));
+            }
+          },
+          contexto.editavel
+        )
+      )
+    );
+
+    if (parte.kind === "field") {
+      corpo.appendChild(
+        campoComRotulo(
+          doc, "Campo",
+          entradaEscolha(
+            doc, parte.source,
+            [{ value: "", label: "— escolher —" }].concat(
+              (contexto.referencias || []).map(function (r) {
+                return { value: r.reference, label: r.label };
+              })
+            ),
+            function (v) {
+              var novo = copiarTrecho(parte);
+              novo.source = v;
+              acoes.trocar(indice, novo);
+            },
+            contexto.editavel
+          )
+        )
+      );
+    } else {
+      corpo.appendChild(
+        campoComRotulo(
+          doc, "Texto",
+          entradaTexto(
+            doc, parte.value,
+            function (v) {
+              var novo = copiarTrecho(parte);
+              novo.value = v;
+              acoes.trocar(indice, novo);
+            },
+            contexto.editavel, false
+          )
+        )
+      );
+    }
+
+    var enfase = criarNo(doc, "div", "te-grade-2");
+    enfase.appendChild(
+      seletorDeEnfase(doc, parte, "font_weight", "Peso", contexto, function (novo) {
+        acoes.trocar(indice, novo);
+      })
+    );
+    enfase.appendChild(
+      seletorDeEnfase(doc, parte, "font_style", "Estilo", contexto, function (novo) {
+        acoes.trocar(indice, novo);
+      })
+    );
+    corpo.appendChild(enfase);
+
+    linha.appendChild(corpo);
+
+    if (contexto.editavel) {
+      var botoes = criarNo(doc, "div", "te-trecho-acoes");
+      // Quem esta no topo nao recebe "subir": botao que nao faz nada e
+      // o que este projeto tira de tela desde a Etapa I.
+      if (indice > 0) {
+        botoes.appendChild(
+          botaoDeTrecho(doc, "↑", "Subir", function () {
+            acoes.mover(indice, indice - 1);
+          })
+        );
+      }
+      if (indice < total - 1) {
+        botoes.appendChild(
+          botaoDeTrecho(doc, "↓", "Descer", function () {
+            acoes.mover(indice, indice + 1);
+          })
+        );
+      }
+      botoes.appendChild(
+        botaoDeTrecho(doc, "✕", "Remover", function () {
+          acoes.remover(indice);
+        })
+      );
+      linha.appendChild(botoes);
+    }
+
+    return linha;
+  }
+
+  function botaoDeTrecho(doc, simbolo, titulo, aoClicar) {
+    var botao = criarNo(doc, "button", "btn btn-ghost btn-icon-sm");
+    botao.type = "button";
+    botao.textContent = simbolo;
+    botao.setAttribute("title", titulo);
+    botao.setAttribute("aria-label", titulo);
+    botao.addEventListener("click", aoClicar);
+    return botao;
+  }
+
+  /*
+   * O editor da sequencia inteira.
+   *
+   * Toda alteracao monta uma LISTA NOVA e devolve o bloco completo. Nada
+   * e juntado: `texto + campo + texto` continua sendo tres trechos
+   * depois de editar qualquer um deles -- e disso que depende o campo
+   * dinamico nao virar texto solto na hora de gerar o documento.
+   */
+  function controleDeMisto(doc, declaracao, bloco, aoMudar, contexto) {
+    var partes = Array.isArray(bloco.parts) ? bloco.parts : [];
+
+    function publicar(novas) {
+      aoMudar({ kind: "mixed", parts: novas });
+    }
+
+    var acoes = {
+      trocar: function (indice, novo) {
+        var novas = partes.map(copiarTrecho);
+        novas[indice] = novo;
+        publicar(novas);
+      },
+      mover: function (de, para) {
+        var novas = partes.map(copiarTrecho);
+        var tirado = novas.splice(de, 1)[0];
+        novas.splice(para, 0, tirado);
+        publicar(novas);
+      },
+      remover: function (indice) {
+        var novas = partes.map(copiarTrecho);
+        novas.splice(indice, 1);
+        publicar(novas);
+      },
+      acrescentar: function (kind) {
+        var novas = partes.map(copiarTrecho);
+        novas.push(kind === "field" ? { kind: "field", source: "" } : { kind: "text", value: "" });
+        publicar(novas);
+      }
+    };
+
+    var caixa = criarNo(doc, "div", "te-misto");
+
+    var titulo = criarNo(doc, "h4", "te-misto-titulo");
+    titulo.textContent = declaracao.label + " (sequência)";
+    caixa.appendChild(titulo);
+
+    if (partes.length === 0) {
+      var vazio = criarNo(doc, "p", "te-vazio");
+      vazio.textContent = "Nenhum trecho ainda.";
+      caixa.appendChild(vazio);
+    }
+
+    partes.forEach(function (parte, indice) {
+      caixa.appendChild(
+        linhaDoTrecho(doc, parte || {}, indice, partes.length, contexto, acoes)
+      );
+    });
+
+    if (contexto.editavel) {
+      var novos = criarNo(doc, "div", "te-misto-novos");
+      [["text", "+ Texto"], ["field", "+ Campo"]].forEach(function (par) {
+        var botao = criarNo(doc, "button", "btn btn-secondary btn-sm");
+        botao.type = "button";
+        botao.textContent = par[1];
+        botao.addEventListener("click", function () {
+          acoes.acrescentar(par[0]);
+        });
+        novos.appendChild(botao);
+      });
+      caixa.appendChild(novos);
+    }
+
+    return caixa;
+  }
+
+  /*
+   * Conteudo estrutural. Um bloco `text` vira caixa de texto, um `field`
+   * vira seletor de campo, um `asset` vira seletor de imagem -- e
+   * `mixed` vira o editor de SEQUENCIA acima, porque uma caixa de texto
+   * unica faria `texto + campo + texto` virar uma string so e os campos
+   * perderiam identidade.
    */
   function controleDeConteudo(doc, declaracao, valor, aoMudar, contexto) {
     var bloco = valor || { kind: "text", value: "" };
@@ -237,10 +797,7 @@
     }
 
     if (bloco.kind === "mixed") {
-      var resumo = criarNo(doc, "p", "te-resumo");
-      var partes = (bloco.parts || []).length;
-      resumo.textContent = declaracao.label + ": " + partes + " trecho(s)";
-      return resumo;
+      return controleDeMisto(doc, declaracao, bloco, aoMudar, contexto);
     }
 
     return campoComRotulo(
@@ -305,6 +862,12 @@
     });
     alvo.appendChild(geometria);
 
+    // A tabela precisa enxergar `columns` e `rows` ao mesmo tempo para
+    // manter `len(cells) == len(columns)`. Entregar o elemento e mais
+    // honesto do que fazer o controle adivinhar pelo irmao.
+    var contextoDoElemento = Object.create(contexto);
+    contextoDoElemento.elemento = elemento;
+
     (declarado ? declarado.properties : []).forEach(function (declaracao) {
       var controle = controleDaPropriedade(
         doc, declaracao,
@@ -312,7 +875,7 @@
         function (v) {
           contexto.aoAlterarPropriedade(declaracao.name, v);
         },
-        contexto
+        contextoDoElemento
       );
       if (controle) {
         alvo.appendChild(controle);
@@ -347,6 +910,10 @@
     PASSO_PADRAO: PASSO_PADRAO,
     controleDaPropriedade: controleDaPropriedade,
     controleDeConteudo: controleDeConteudo,
+    controleDeMisto: controleDeMisto,
+    controleDeColunas: controleDeColunas,
+    controleDeLinhas: controleDeLinhas,
+    converterTrecho: converterTrecho,
     desenharPainel: desenharPainel
   };
 });

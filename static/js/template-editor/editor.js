@@ -238,6 +238,22 @@
           )
         );
       },
+      /*
+       * Varias propriedades numa alteracao so.
+       *
+       * A tabela precisa disto: acrescentar uma coluna muda `columns` E
+       * `rows` (uma celula nova em cada linha), e o validador do
+       * servidor cobra `len(cells) == len(columns)`. Em duas alteracoes
+       * o layout ficaria invalido no meio, e o desfazer pararia nesse
+       * meio.
+       */
+      aoAlterarPropriedades: function (props) {
+        aplicar(
+          State.atualizar(
+            layout(), estado.selecionado, { properties: props }, config.layoutVersion
+          )
+        );
+      },
       aoAcao: executarAcao
     });
   }
