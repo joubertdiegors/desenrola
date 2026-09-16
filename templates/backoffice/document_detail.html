@@ -31,7 +31,7 @@ para ele, e desativar resolve o caso real sem perder histórico.
 
 <div class="bo-panel">
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Identidade" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Identidade" %}</h2></div>
     <dl class="bo-dados">
       <dt>{% translate "Nome" %}</dt><dd>{{ modelo.name }}</dd>
       <dt>{% translate "Identificador" %}</dt><dd>{{ modelo.slug }}</dd>
@@ -48,7 +48,7 @@ para ele, e desativar resolve o caso real sem perder histórico.
   </div>
 
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Estrutura" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Estrutura" %}</h2></div>
     <dl class="bo-dados">
       <dt>{% translate "Elementos no layout" %}</dt><dd>{{ estrutura.elementos }}</dd>
       <dt>{% translate "Campos do formulário" %}</dt><dd>{{ estrutura.campos_do_formulario }}</dd>
@@ -60,7 +60,7 @@ para ele, e desativar resolve o caso real sem perder histórico.
   </div>
 
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Imagens usadas" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Imagens usadas" %}</h2></div>
     {% if assets %}
     <dl class="bo-dados">
       {% for asset in assets %}
@@ -75,7 +75,7 @@ para ele, e desativar resolve o caso real sem perder histórico.
   </div>
 
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Origem" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Origem" %}</h2></div>
     {% if modelo.duplicated_from %}
       <dl class="bo-dados">
         <dt>{% translate "Duplicado de" %}</dt>
@@ -97,7 +97,7 @@ para ele, e desativar resolve o caso real sem perder histórico.
 </div>
 
 <div class="card bo-card">
-  <div class="bo-card-head"><h3>{% translate "Ações" %}</h3></div>
+  <div class="bo-card-head"><h2>{% translate "Ações" %}</h2></div>
 
   {% if motivo_da_leitura %}
   <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{{ motivo_da_leitura }}</span></div>

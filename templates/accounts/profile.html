@@ -37,7 +37,7 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
   ficou, aqui em cima. No celular nada muda: o indice continua sendo
   `.profile-home`, que e como se navega numa tela estreita.
   {% endcomment %}
-  <header class="profile-topo d-only">
+  <header class="profile-topo">
     <span class="avatar avatar-lg">{{ user.get_initials }}</span>
     <div>
       <h1>{{ user.full_name }}</h1>
@@ -46,10 +46,12 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
   </header>
 
   <div class="profile-home m-only">
-    <div class="profile-avatar-row">
-      <span class="avatar avatar-xl">{{ user.get_initials }}</span>
-      <div><h1>{{ user.full_name }}</h1><p class="text-muted">{{ user.email }}</p></div>
-    </div>
+    {% comment %}
+    O nome e o e-mail saem daqui: o cabecalho da pagina, logo acima, ja
+    os diz -- e ele agora aparece nas duas larguras. Dois `h1` no mesmo
+    documento (um `d-only`, outro `m-only`) sao um so na TELA e dois
+    para quem a le em voz alta.
+    {% endcomment %}
     <div class="notice profile-notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Estes dados são usados como <strong>dados do anfitrião</strong> em todas as cartas.{% endblocktranslate %}</span></div>
     <div class="list">
       <a class="list-item" href="?secao=dados"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>

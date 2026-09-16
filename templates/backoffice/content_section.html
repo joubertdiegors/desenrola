@@ -81,7 +81,7 @@ outro idioma, sem gravar o que estiver na tela.
   {% if form.campos_da_parte %}
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Desenho e imagem" %}</h3>
+      <h2>{% translate "Desenho e imagem" %}</h2>
       <span class="note d-only">{% translate "Valem em todos os idiomas" %}</span>
     </div>
     {% for campo in form.campos_da_parte %}
@@ -97,7 +97,7 @@ outro idioma, sem gravar o que estiver na tela.
 
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Textos" %}</h3>
+      <h2>{% translate "Textos" %}</h2>
     </div>
     {% for campo in form.campos_soltos %}
     <div class="field">
@@ -114,7 +114,7 @@ outro idioma, sem gravar o que estiver na tela.
   {% for grupo in form.grupos_de_itens %}
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{{ grupo.rotulo }}</h3>
+      <h2>{{ grupo.rotulo }}</h2>
       <span class="note d-only">{% translate "A quantidade e os ícones vêm do desenho da página" %}</span>
     </div>
     {% for item in grupo.itens %}
@@ -152,7 +152,7 @@ e <form> dentro de <form> e HTML invalido.
 {% if cadastro == "menu" %}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Itens do menu" %}</h3>
+    <h2>{% translate "Itens do menu" %}</h2>
     {% if pode_editar %}
     <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:menu_item_new' %}?idioma={{ idioma }}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo item" %}</a>
     {% endif %}
@@ -210,7 +210,7 @@ e <form> dentro de <form> e HTML invalido.
 {% elif cadastro == "parceiros" %}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Os parceiros" %}</h3>
+    <h2>{% translate "Os parceiros" %}</h2>
     {% comment %}
     O link só para quem pode entrar: a tela de Parceiros cobra
     `content.view_partner`, que quem edita conteúdo não tem por padrão.
@@ -234,7 +234,7 @@ para uma lista igual envelheceria em direcoes diferentes.
 {% endcomment %}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "As perguntas" %}</h3>
+    <h2>{% translate "As perguntas" %}</h2>
     {% if pode_editar %}
     <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:faq_item_new' %}?idioma={{ idioma }}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Nova pergunta" %}</a>
     {% endif %}

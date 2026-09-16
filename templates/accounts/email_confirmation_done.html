@@ -37,7 +37,7 @@ Contexto: confirmou, ja_estava, pessoa.
     {% if confirmou %}
     <div class="auth-title">
       <span class="tint auth-selo" aria-hidden="true"><i class="ph-fill ph-check-circle"></i></span>
-      <h2>{% translate "E-mail confirmado" %}</h2>
+      <h1>{% translate "E-mail confirmado" %}</h1>
       {% if ja_estava %}
       <p>{% translate "Este endereço já estava confirmado. Não há mais nada a fazer." %}</p>
       {% else %}
@@ -52,7 +52,7 @@ Contexto: confirmou, ja_estava, pessoa.
     {% else %}
     <div class="auth-title">
       <span class="tint auth-selo is-aviso" aria-hidden="true"><i class="ph-fill ph-warning-circle"></i></span>
-      <h2>{% translate "Este link não vale mais" %}</h2>
+      <h1>{% translate "Este link não vale mais" %}</h1>
       <p>{% translate "Links de confirmação valem por 3 dias e podem ser usados uma vez. Entre na sua conta e peça outro — leva um segundo." %}</p>
     </div>
     {% if user.is_authenticated %}

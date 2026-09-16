@@ -30,7 +30,7 @@ campo para elas.
 
 <div class="bo-panel">
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Dados" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Dados" %}</h2></div>
     <dl class="bo-dados">
       <dt>{% translate "Nome completo" %}</dt><dd>{{ alvo.full_name|default:"—" }}</dd>
       {% comment %}
@@ -56,7 +56,7 @@ campo para elas.
   </div>
 
   <div class="card bo-card">
-    <div class="bo-card-head"><h3>{% translate "Situação" %}</h3></div>
+    <div class="bo-card-head"><h2>{% translate "Situação" %}</h2></div>
     {% if alvo.is_active %}
       <p class="text-muted">{% translate "Esta pessoa consegue entrar no site normalmente." %}</p>
     {% else %}
@@ -84,7 +84,7 @@ campo para elas.
 <form class="card bo-card" method="post" action="{% url 'backoffice:user_permissions' alvo.pk %}">
   {% csrf_token %}
   <div class="bo-card-head">
-    <h3>{% translate "Permissões administrativas" %}</h3>
+    <h2>{% translate "Permissões administrativas" %}</h2>
     <span class="note d-only">{% translate "Só o que o produto verifica de verdade" %}</span>
   </div>
 
@@ -124,7 +124,7 @@ campo para elas.
 {% if ultimas_cartas %}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Últimas cartas" %}</h3>
+    <h2>{% translate "Últimas cartas" %}</h2>
     {% if perms.letters.view_all_letters %}<a class="note d-only" href="{% url 'backoffice:letters' %}?user={{ alvo.pk }}">{% translate "Ver todas" %}</a>{% endif %}
   </div>
   <dl class="bo-dados">

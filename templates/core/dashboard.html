@@ -100,7 +100,7 @@ nesta tela. Uma porta so.
     {% for card in cards %}
     <div class="card letter-card">
       <div class="letter-card-head">
-        <h3>{{ card.guest_name|default:"—" }}</h3>
+        <h2>{{ card.guest_name|default:"—" }}</h2>
         {% include "letters/_status_tag.html" with card=card %}
       </div>
       <p>{{ card.letter.created_at|date:"d/m/Y" }} · {{ card.language_name }}</p>

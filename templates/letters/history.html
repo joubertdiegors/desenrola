@@ -40,7 +40,7 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
   {% if not cards %}
     <div class="card letters-empty">
       <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
-      <h3>{% translate "Você ainda não tem cartas" %}</h3>
+      <h2>{% translate "Você ainda não tem cartas" %}</h2>
       <p>{% translate "Quando gerar sua primeira Carta Convite, ela aparece aqui." %}</p>
       <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
     </div>
@@ -82,7 +82,7 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
     {% for card in cards %}
     <div class="card letter-card">
       <div class="letter-card-head">
-        <h3>{{ card.guest_name|default:"—" }}</h3>
+        <h2>{{ card.guest_name|default:"—" }}</h2>
         {% include "letters/_status_tag.html" with card=card %}
       </div>
       <p>{{ card.letter.created_at|date:"d/m/Y" }} · {{ card.language_name }}</p>

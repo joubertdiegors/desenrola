@@ -43,7 +43,7 @@ config (EmailSettings), pode_editar (bool).
 {# --------------------------------------------------------------------- #}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Situação do envio" %}</h3>
+    <h2>{% translate "Situação do envio" %}</h2>
     {% if config.is_active %}
       <span class="tag tag-success">{% translate "Ativo" %}</span>
     {% else %}
@@ -93,7 +93,7 @@ config (EmailSettings), pode_editar (bool).
 
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Servidor" %}</h3>
+      <h2>{% translate "Servidor" %}</h2>
       <span class="note d-only">{% translate "Onde o sistema se conecta para enviar" %}</span>
     </div>
     <div class="form-grid">
@@ -123,7 +123,7 @@ config (EmailSettings), pode_editar (bool).
 
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Senha" %}</h3>
+      <h2>{% translate "Senha" %}</h2>
       {% if config.tem_senha %}
         <span class="tag tag-neutral">{% translate "Cadastrada" %}</span>
       {% else %}
@@ -156,7 +156,7 @@ config (EmailSettings), pode_editar (bool).
 
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Remetente" %}</h3>
+      <h2>{% translate "Remetente" %}</h2>
       <span class="note d-only">{% translate "O que o destinatário vê no campo De:" %}</span>
     </div>
     <div class="form-grid">
@@ -188,7 +188,7 @@ config (EmailSettings), pode_editar (bool).
 {% if pode_editar %}
 <div class="card bo-card">
   <div class="bo-card-head">
-    <h3>{% translate "Enviar um teste" %}</h3>
+    <h2>{% translate "Enviar um teste" %}</h2>
   </div>
   <p class="text-muted">{% translate "Usa o que está salvo agora, mesmo com o envio desativado — testar antes de ligar é a ordem certa. O resultado aparece aqui em cima e nunca mostra a senha." %}</p>
   <form method="post" action="{% url 'backoffice:email_settings_test' %}" class="bo-actions">

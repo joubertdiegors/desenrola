@@ -687,6 +687,10 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .auth-card { width: 460px; max-width: 100%; padding: 36px; display: flex; flex-direction: column; gap: 20px; }
 .auth-card-wide { width: 520px; }
 .auth-card .logo { margin-bottom: 2px; }
+/* O titulo das telas de conta e `h1` -- e o titulo DA PAGINA, e toda
+   pagina tem de ter um. A medida continua a mesma de quando ele era
+   `h2`: a etiqueta mudou, o desenho nao. */
+.auth-title h1 { font-size: 22px; }
 .auth-title p { color: var(--mu); margin-top: 4px; }
 /* O selo redondo das telas de resultado (e-mail confirmado, link
    vencido). Mesma metrica do icone do Mini Banner, para as duas telas
@@ -731,7 +735,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
    este botao e o avatar, e deixar o botao espremer mudaria a area de
    toque em vez de deixar o logotipo ceder. */
 .app-nav .nav-backoffice { flex: none; }
-.user-menu > summary { gap: 8px; font-size: 14px; font-weight: 600; color: var(--navy); }
+.user-menu > summary { gap: 8px; min-height: 40px; font-size: 14px; font-weight: 600; color: var(--navy); }
 .user-menu .ph-caret-down { color: var(--mu); }
 
 @media (max-width: 767px) {
@@ -799,7 +803,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .letters-cards { display: flex; flex-direction: column; gap: 10px; }
 .letter-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .letter-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.letter-card h3 { font-size: 16px; }
+.letter-card h2, .letter-card h3 { font-size: 16px; }
 .letter-card p { font-size: 13px; color: var(--mu); }
 .letter-card .btn { min-height: 42px; font-size: 14px; flex: 1; }
 .letter-card-actions { display: flex; gap: 8px; margin-top: 6px; }
@@ -815,7 +819,9 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 
 .letters-empty { padding: 40px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .letters-empty-icon { font-size: 40px; color: var(--mu); line-height: 1; }
-.letters-empty h3 { font-size: 18px; }
+/* O titulo do estado vazio e `h2`: vem logo depois do `h1` da pagina.
+   O seletor casa `h3` para nada mudar de tamanho na tela. */
+.letters-empty h2, .letters-empty h3 { font-size: 18px; }
 .letters-empty p { font-size: 14px; color: var(--mu); max-width: 42ch; }
 .letters-empty .btn { margin-top: 8px; }
 
@@ -1103,6 +1109,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .profile-topo { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
 .profile-topo h1 { font-size: 24px; }
 .profile-topo p { font-size: 13.5px; margin-top: 2px; }
+.profile-topo .avatar { flex: none; }
 .profile-user { display: flex; align-items: center; gap: 12px; padding: 8px 8px 16px; }
 .profile-user-name { font-weight: 700; color: var(--navy); }
 .profile-user-sub { font-size: 12px; color: var(--mu); }
@@ -1138,6 +1145,11 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 
 @media (max-width: 767px) {
   .profile { display: flex; flex-direction: column; padding: 16px 20px 0; gap: 20px; flex: 1; max-width: none; }
+  /* O cabecalho tambem no celular: e onde o nome e o e-mail ficam
+     agora, no lugar do bloco que os repetia. */
+  .profile-topo { margin-bottom: 4px; }
+  .profile-topo h1 { font-size: 20px; }
+  .profile-topo p { font-size: 13px; }
   .profile-user { padding: 0; gap: 14px; }
   .profile-user h1 { font-size: 20px; }
   .profile-user-sub { font-size: 13px; }
@@ -1261,7 +1273,11 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
    cartas). O .bo-head ja serve quando o botao fica no cabecalho; esta
    e para quando ele fecha o formulario, embaixo. */
 .bo-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-.bo-card-head h3 { font-size: 16px; }
+/* `h2` e `h3`: o titulo de cartao e `h2` -- vem logo depois do `h1` da
+   pagina, e pular o nivel do meio confunde quem navega por titulos.
+   O seletor casa os dois para um cabecalho ainda nao convertido nao
+   mudar de tamanho na tela. */
+.bo-card-head h2, .bo-card-head h3 { font-size: 16px; }
 .bo-card-head .note { font-size: 12px; color: var(--mu); }
 
 .bo-preview { padding: 0; overflow: hidden; align-self: start; }
@@ -1294,7 +1310,9 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 
 /* Segmentado (idioma do conteudo editavel) */
 .seg { display: inline-flex; overflow: hidden; border: 1px solid var(--bd); border-radius: var(--radius-md); align-self: flex-start; }
-.seg-opt { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; position: relative; }
+/* 40px de alvo -- media 28. O `padding` vertical sobe de 8 para os
+   12 que fecham a conta com a altura da linha, sem mover nada ao lado. */
+.seg-opt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 14px; font-size: 13px; cursor: pointer; position: relative; }
 .seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
 .seg-opt + .seg-opt { border-left: 1px solid var(--bd); }
 .seg-opt:has(input:checked) { color: var(--p); background: var(--p10); font-weight: 600; }

@@ -46,7 +46,7 @@ Contexto: form, imagem (None ao enviar), titulo, pode_salvar, usos.
   {% if imagem %}
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "Agora" %}</h3>
+      <h2>{% translate "Agora" %}</h2>
     </div>
     <img class="bo-imagem-previa" src="{{ imagem.file.url }}" alt="{{ imagem.alt_text }}">
   </div>
@@ -54,7 +54,7 @@ Contexto: form, imagem (None ao enviar), titulo, pode_salvar, usos.
 
   <div class="card bo-card">
     <div class="bo-card-head">
-      <h3>{% translate "A imagem" %}</h3>
+      <h2>{% translate "A imagem" %}</h2>
       <span class="note d-only">{% translate "PNG, JPEG, GIF ou WEBP, até 3 MB" %}</span>
     </div>
     {% for campo in form %}
