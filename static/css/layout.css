@@ -71,6 +71,18 @@ body { display: flex; flex-direction: column; }
 .hero-alt { font-size: 14px; color: var(--mu); }
 .hero-art { position: relative; height: 380px; }
 
+/* A imagem real ocupa o MESMO espaco que a moldura vazia ocupava -- as
+   alturas continuam sendo as de `.hero-art` / `.hero-cheio-art`, para os
+   dois estados nao mudarem o resto da pagina de lugar. `cover` porque a
+   altura e fixa e a fotografia nao tem por que ter a mesma proporcao. */
+.hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
 /* Banner · desenho "Imagem completa". A imagem ocupa a largura inteira;
    nada de texto por cima. Mesmo fundo e mesmo respiro do banner padrao,
    para os tres desenhos pertencerem a mesma pagina. */
@@ -982,3 +994,8 @@ img.partner-image { width: 100%; object-fit: contain; }
 @media (max-width: 767px) {
   .bo-item-do-menu { flex-wrap: wrap; }
 }
+
+/* A imagem em tamanho de conferencia, no formulario da biblioteca. Teto
+   de altura para uma foto grande nao empurrar o formulario para fora da
+   tela. */
+.bo-imagem-previa { max-width: 100%; max-height: 240px; object-fit: contain; display: block; }

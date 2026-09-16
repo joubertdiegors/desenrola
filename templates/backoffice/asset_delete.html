@@ -1,0 +1,72 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Imagens · confirmação de remoção.
+
+QUEM RECUSA É O BANCO, NÃO ESTA TELA
+------------------------------------
+`template_references` e `letter_references` apontam para cá com PROTECT:
+uma imagem de que um modelo ou uma carta finalizada dependa não é
+apagável por caminho nenhum -- nem por aqui, nem por queryset, nem pelo
+admin. Esta tela avisa antes; se ainda assim for tentado, a recusa vem
+do banco e a lista explica.
+
+Parte da página e parceiro são outra coisa: apagar a imagem apenas os
+deixa sem ela (SET_NULL). Por isso aparecem como aviso, não como
+impedimento.
+
+Contexto: imagem, usos, url_das_imagens.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Remover imagem" %}</h1>
+    <p class="text-muted">{% translate "Esta ação não tem volta." %}</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_das_imagens }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{% translate "Esta ação não tem volta." %}</p>
+
+{% if usos %}
+<div class="notice notice-error">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{% blocktranslate trimmed with onde=usos|join:", " %}
+    Esta imagem está em uso em: {{ onde }}. Se um modelo de documento ou uma carta já finalizada depender dela, o sistema vai recusar a remoção -- nesse caso, desative-a para não ser mais oferecida.
+  {% endblocktranslate %}</span>
+</div>
+{% else %}
+<div class="notice">
+  <i class="ph-fill ph-info" aria-hidden="true"></i>
+  <span>{% translate "Esta imagem não está em uso em lugar nenhum." %}</span>
+</div>
+{% endif %}
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{{ imagem }}</h3>
+  </div>
+  <img class="bo-imagem-previa" src="{{ imagem.file.url }}" alt="{{ imagem.alt_text }}">
+  <dl class="bo-dados">
+    <dt>{% translate "Tipo" %}</dt><dd>{{ imagem.get_kind_display }}</dd>
+    <dt>{% translate "Texto alternativo" %}</dt><dd>{{ imagem.alt_text|default:"—" }}</dd>
+  </dl>
+</div>
+
+<div class="bo-actions">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover definitivamente" %}</button>
+  </form>
+
+  {% if imagem.is_active %}
+  <form method="post" action="{% url 'backoffice:asset_activation' imagem.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativa" value="0">
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Só desativar" %}</button>
+  </form>
+  {% endif %}
+
+  <a class="btn btn-ghost" href="{{ url_das_imagens }}">{% translate "Cancelar" %}</a>
+</div>
+{% endblock %}

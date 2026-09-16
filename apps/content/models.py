@@ -269,6 +269,27 @@ class PageSection(TimeStampedModel):
         default="",
         help_text=_("Qual variação visual esta seção usa. Vazio = a única que existe."),
     )
+    # A imagem da parte, quando ela tem uma (hoje: o banner superior).
+    #
+    # FK, e nao um id dentro do JSON da traducao: referencia de dentro de
+    # JSON o banco nao enxerga -- e o proprio `Asset` explica o custo
+    # disso, que e manter uma tabela de vinculo so para o PROTECT
+    # funcionar. Aqui nao ha esse custo.
+    #
+    # Na SECAO, e nao na traducao: imagem nao e texto, e trocar o idioma
+    # do conteudo nao troca a fotografia do banner.
+    #
+    # SET_NULL: apagar uma imagem da biblioteca nao derruba a Home -- o
+    # banner volta a moldura vazia, que e um estado valido.
+    image = models.ForeignKey(
+        Asset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="page_sections",
+        verbose_name=_("imagem"),
+        help_text=_("A imagem desta parte. Sem ela, aparece a moldura vazia."),
+    )
     is_active = models.BooleanField(_("ativa"), default=True)
 
     class Meta:

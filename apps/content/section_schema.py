@@ -153,6 +153,13 @@ class Secao:
     # A seção administra registros próprios, além de textos?
     # "parceiros" e "menu" têm tela de cadastro dentro do editor.
     cadastro: str = ""
+    # A seção tem uma imagem própria (`PageSection.image`)?
+    #
+    # Declarado aqui, e não deduzido do desenho escolhido: o banner
+    # guarda a imagem mesmo enquanto está em "Somente texto", e voltar
+    # para um desenho com imagem a traz de volta inteira. Trocar de
+    # desenho nunca apaga dado -- é a mesma regra dos textos.
+    imagem: bool = False
 
     def layout_ou_padrao(self, escolhido):
         """O layout escolhido, ou o primeiro declarado."""
@@ -262,6 +269,7 @@ SECOES = {
         descricao=_("A primeira área da página, com o título e a chamada principal."),
         grupo=TOPO,
         layouts=(BANNER_IMAGEM_TEXTO, BANNER_IMAGEM_COMPLETA, BANNER_SOMENTE_TEXTO),
+        imagem=True,
     ),
     "trust": Secao(
         chave="trust",

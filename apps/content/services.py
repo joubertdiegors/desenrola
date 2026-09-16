@@ -64,6 +64,9 @@ class ParteDaPagina:
     conteudo: dict
     desenho: str
     ordem: int
+    # O `Asset` desta parte, ou None. O template pergunta
+    # `partes.hero.imagem.file.url` -- mesma forma do parceiro.
+    imagem: object = None
 
 
 def partes_da_pagina(page_key, language=None):
@@ -89,9 +92,9 @@ def partes_da_pagina(page_key, language=None):
             # seis consultas a mais.
             Prefetch(
                 "sections",
-                queryset=PageSection.objects.filter(is_active=True).prefetch_related(
-                    "translations"
-                ),
+                queryset=PageSection.objects.filter(is_active=True)
+                .select_related("image")
+                .prefetch_related("translations"),
             )
         )
         .first()
@@ -109,6 +112,7 @@ def partes_da_pagina(page_key, language=None):
             conteudo=conteudo if isinstance(conteudo, dict) else {},
             desenho=secao.layout or "",
             ordem=secao.order,
+            imagem=secao.image,
         )
     return resultado
 
@@ -132,6 +136,7 @@ def parte_avulsa(secao, language=None):
         conteudo=conteudo if isinstance(conteudo, dict) else {},
         desenho=secao.layout or "",
         ordem=secao.order,
+        imagem=secao.image,
     )
 
 

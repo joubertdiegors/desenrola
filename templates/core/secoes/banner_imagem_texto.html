@@ -5,7 +5,14 @@ E o desenho que a Home ja tinha antes da Etapa 11, movido para ca sem
 uma virgula de diferenca: texto a esquerda, moldura da imagem a direita.
 Continua sendo o PADRAO e a referencia visual do produto.
 
-Contexto: secoes.hero (o texto), cartas_emitidas (o contador real).
+A IMAGEM
+--------
+Vem de `partes.hero.imagem` -- um `content.Asset` escolhido no
+Backoffice. Sem imagem escolhida, sai a moldura vazia de sempre: e o
+estado em que o banner esteve ate a Etapa 11, e continua valido.
+
+Contexto: secoes.hero (o texto), partes.hero.imagem (o Asset),
+cartas_emitidas (o contador real).
 {% endcomment %}
 <section class="hero container">
   <div>
@@ -33,7 +40,11 @@ Contexto: secoes.hero (o texto), cartas_emitidas (o contador real).
     </div>
     <p class="hero-alt m-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></p>
   </div>
-  <div class="hero-art" aria-hidden="true">
-    <div class="img-slot"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+  <div class="hero-art">
+    {% if partes.hero.imagem %}
+    <img class="hero-image" src="{{ partes.hero.imagem.file.url }}" alt="{{ partes.hero.imagem.alt_text|default:secoes.hero.art_caption }}">
+    {% else %}
+    <div class="img-slot" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+    {% endif %}
   </div>
 </section>

@@ -1,0 +1,77 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Imagens · enviar ou alterar.
+
+`enctype="multipart/form-data"`: sem isso o navegador manda só o NOME do
+arquivo e o campo chega vazio no servidor, sem erro nenhum -- é a falha
+mais silenciosa que um formulário de upload pode ter.
+
+TROCAR O ARQUIVO PODE SER RECUSADO
+----------------------------------
+Se uma carta já finalizada depende deste arquivo, o modelo recusa a
+substituição: mudar o arquivo mudaria um documento histórico em
+silêncio. A recusa chega aqui como erro do campo, com a razão escrita.
+
+Contexto: form, imagem (None ao enviar), titulo, pode_salvar, usos.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{{ titulo }}</h1>
+    <p class="text-muted">{% translate "Uma imagem da biblioteca do site." %}</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_das_imagens }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{{ titulo }}</p>
+
+{% if not pode_salvar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar esta imagem, mas não tem permissão para alterá-la." %}</span></div>
+{% endif %}
+
+{% if usos %}
+<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed with onde=usos|join:", " %}
+  Esta imagem está em uso em: {{ onde }}. Trocar o arquivo muda onde ela aparece.
+{% endblocktranslate %}</span></div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  {% if imagem %}
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "Agora" %}</h3>
+    </div>
+    <img class="bo-imagem-previa" src="{{ imagem.file.url }}" alt="{{ imagem.alt_text }}">
+  </div>
+  {% endif %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h3>{% translate "A imagem" %}</h3>
+      <span class="note d-only">{% translate "PNG, JPEG, GIF ou WEBP, até 3 MB" %}</span>
+    </div>
+    {% for campo in form %}
+    <div class="field">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% if campo.help_text %}<span class="field-hint">{{ campo.help_text }}</span>{% endif %}
+      {% for erro in campo.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if pode_salvar %}
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% if imagem %}{% translate "Salvar imagem" %}{% else %}{% translate "Enviar imagem" %}{% endif %}</button>
+    <a class="btn btn-ghost" href="{{ url_das_imagens }}">{% translate "Cancelar" %}</a>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

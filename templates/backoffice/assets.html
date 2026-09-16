@@ -1,0 +1,86 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Imagens.
+
+A BIBLIOTECA DO SITE INTEIRO
+----------------------------
+Logotipo, favicon, banner, marca de parceiro: toda imagem administrável
+do projeto mora em `content.Asset`. Não há `ImageField` espalhado pelos
+modelos -- quem precisa de imagem aponta para cá. É o que permite trocar
+uma marca num lugar só, e é onde está a proteção contra substituir o
+arquivo de que uma carta finalizada depende.
+
+A COLUNA "EM USO"
+-----------------
+Diz onde cada imagem está sendo usada ANTES de alguém tentar apagá-la.
+Modelo e carta finalizada IMPEDEM a exclusão (o banco recusa, por
+PROTECT); parte da página e parceiro apenas perdem a imagem. A tela
+mostra os quatro porque quem administra quer saber o que vai mudar, não
+só o que vai falhar.
+
+Contexto: linhas (imagem, usos), pode_criar, pode_editar, pode_excluir.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Imagens" %}</h1>
+    <p class="text-muted">{% translate "A biblioteca de imagens do site." %}</p>
+  </div>
+  {% if pode_criar %}
+  <a class="btn btn-primary" href="{% url 'backoffice:asset_new' %}"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Nova imagem" %}</a>
+  {% endif %}
+</div>
+<p class="m-only text-muted">{% translate "A biblioteca de imagens do site." %}</p>
+{% if pode_criar %}
+<p class="m-only"><a class="btn btn-primary" href="{% url 'backoffice:asset_new' %}"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Nova imagem" %}</a></p>
+{% endif %}
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{% translate "Imagem" %}</th>
+        <th>{% translate "Tipo" %}</th>
+        <th>{% translate "Texto alternativo" %}</th>
+        <th>{% translate "Em uso" %}</th>
+        <th>{% translate "Oferecida" %}</th>
+        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for linha in linhas %}
+      <tr>
+        <td><img class="bo-parceiro-logo" src="{{ linha.imagem.file.url }}" alt="{{ linha.imagem.alt_text }}"></td>
+        <td class="cell-name">{{ linha.imagem.get_kind_display }}{% if linha.imagem.key %}<br><span class="cell-muted">{{ linha.imagem.key }}</span>{% endif %}</td>
+        <td class="cell-muted">{{ linha.imagem.alt_text|default:"—" }}</td>
+        <td class="cell-muted">
+          {% for uso in linha.usos %}{{ uso }}{% if not forloop.last %}, {% endif %}{% empty %}{% translate "Não está em uso" %}{% endfor %}
+        </td>
+        <td>{% if linha.imagem.is_active %}<span class="tag tag-success">{% translate "Sim" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Não" %}</span>{% endif %}</td>
+        <td>
+          <div class="bo-parceiro-acoes">
+            <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:asset_edit' linha.imagem.pk %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
+
+            {% if pode_editar %}
+            <form method="post" action="{% url 'backoffice:asset_activation' linha.imagem.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="ativa" value="{% if linha.imagem.is_active %}0{% else %}1{% endif %}">
+              <button type="submit" class="btn btn-ghost btn-sm">{% if linha.imagem.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+            </form>
+            {% endif %}
+
+            {% if pode_excluir %}
+            <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:asset_delete' linha.imagem.pk %}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="cell-muted">{% translate "Nenhuma imagem enviada ainda. Enquanto não houver, as partes que usam imagem mostram a moldura vazia." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

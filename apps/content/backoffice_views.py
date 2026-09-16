@@ -24,6 +24,7 @@ lista antes de virar consulta, nunca usado como veio.
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db.models import ProtectedError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -33,8 +34,15 @@ from django.views.decorators.http import require_POST
 from apps.core.views import exige_permissao
 
 from . import section_schema, services
-from .forms import FormularioDeItemDoMenu, FormularioDeParceiro, FormularioDeSecao
+from .forms import (
+    FormularioDeImagem,
+    FormularioDeItemDoMenu,
+    FormularioDeParceiro,
+    FormularioDeSecao,
+)
 from .models import (
+    Asset,
+    AssetFileImmutableError,
     MenuItem,
     Page,
     PageSection,
@@ -201,6 +209,9 @@ def backoffice_content_section(request, pk):
                 language=idioma,
                 defaults={"content": form.conteudo()},
             )
+            # Desenho e imagem sao da SECAO, nao da traducao: gravados
+            # aqui, valem em todos os idiomas.
+            form.aplicar_na_secao(secao)
             messages.success(request, _("Conteúdo salvo."))
             return redirect(_url_da_lista(idioma))
         messages.error(request, _("Corrija os campos destacados antes de salvar."))
@@ -327,7 +338,18 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados):
         return contexto
 
     proposto = services.ParteDaPagina(
-        chave=chave, conteudo=form.conteudo(), desenho=desenho, ordem=parte.ordem
+        chave=chave,
+        conteudo=form.conteudo(),
+        desenho=desenho,
+        ordem=parte.ordem,
+        # A imagem proposta, quando esta secao tem campo de imagem --
+        # senao a da secao, como esta gravada. O formulario ja resolveu o
+        # id em objeto e recusou o que nao existe ou esta desativado.
+        imagem=(
+            form.cleaned_data.get("imagem")
+            if "imagem" in form.fields
+            else parte.imagem
+        ),
     )
     contexto = dict(contexto)
     contexto["partes"] = {**contexto["partes"], chave: proposto}
@@ -749,4 +771,206 @@ def backoffice_menu_item_delete(request, pk):
             "item": item,
             "url_do_menu": _url_do_menu(idioma_pedido(request)),
         },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Biblioteca de imagens
+# ---------------------------------------------------------------------------
+#
+# As quatro que o Django ja gera para `Asset`. Nenhuma permissao
+# inventada: sao as mesmas que a administração do Django cobra neste
+# cadastro, agora cobradas tambem aqui.
+VER_IMAGEM = "content.view_asset"
+CRIAR_IMAGEM = "content.add_asset"
+EDITAR_IMAGEM = "content.change_asset"
+EXCLUIR_IMAGEM = "content.delete_asset"
+
+
+def _url_das_imagens():
+    return reverse("backoffice:assets")
+
+
+def _contexto_de_imagens(request, extra=None):
+    contexto = {
+        "active": "assets",
+        "bo_title": _("Imagens"),
+        "pode_criar": request.user.has_perm(CRIAR_IMAGEM),
+        "pode_editar": request.user.has_perm(EDITAR_IMAGEM),
+        "pode_excluir": request.user.has_perm(EXCLUIR_IMAGEM),
+        "url_das_imagens": _url_das_imagens(),
+    }
+    contexto.update(extra or {})
+    return contexto
+
+
+def _onde_esta_em_uso(imagem):
+    """
+    Onde esta imagem está sendo usada, em português.
+
+    Quem vai apagar precisa saber o que vai quebrar ANTES de tentar --
+    e, quando o banco recusar, precisa entender por quê. As duas
+    primeiras são as que o PROTECT defende; as outras duas somem
+    sozinhas (SET_NULL) e por isso são aviso, não impedimento.
+    """
+    usos = []
+    if imagem.referenciado_por_carta_finalizada():
+        usos.append(_("uma carta já finalizada"))
+    if imagem.referenciado_por_modelo():
+        usos.append(_("um modelo de documento"))
+    if imagem.page_sections.exists():
+        usos.append(_("uma parte da página inicial"))
+    if imagem.partners.exists():
+        usos.append(_("um parceiro"))
+    return usos
+
+
+@exige_permissao(VER_IMAGEM)
+def backoffice_assets(request):
+    """
+    A biblioteca de imagens do site.
+
+    Toda imagem administrável do projeto mora aqui: logotipo, favicon,
+    banner, marca de parceiro. Não há `ImageField` espalhado pelos
+    modelos -- quem precisa de imagem aponta para cá.
+    """
+    imagens = Asset.objects.prefetch_related(
+        "page_sections", "partners", "letter_references", "template_references"
+    )
+    linhas = [{"imagem": imagem, "usos": _onde_esta_em_uso(imagem)} for imagem in imagens]
+
+    return render(
+        request,
+        "backoffice/assets.html",
+        _contexto_de_imagens(request, {"linhas": linhas}),
+    )
+
+
+@exige_permissao(CRIAR_IMAGEM)
+def backoffice_asset_new(request):
+    """Envia uma imagem para a biblioteca."""
+    if request.method == "POST":
+        form = FormularioDeImagem(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Imagem enviada."))
+            return redirect(_url_das_imagens())
+        messages.error(request, _("Corrija os campos destacados antes de enviar."))
+    else:
+        form = FormularioDeImagem()
+
+    return render(
+        request,
+        "backoffice/asset_form.html",
+        _contexto_de_imagens(
+            request,
+            {"form": form, "imagem": None, "titulo": _("Nova imagem"), "pode_salvar": True},
+        ),
+    )
+
+
+@exige_permissao(VER_IMAGEM)
+def backoffice_asset_edit(request, pk):
+    """
+    Altera uma imagem.
+
+    TROCAR O ARQUIVO PODE SER RECUSADO
+    ----------------------------------
+    `Asset.save()` levanta `AssetFileImmutableError` quando uma carta já
+    finalizada depende daquele arquivo -- trocá-lo mudaria um documento
+    histórico em silêncio. Aqui isso vira erro de formulário, não erro
+    500: é uma regra do produto, e quem administra tem de LER a razão.
+    """
+    imagem = get_object_or_404(Asset, pk=pk)
+    pode_salvar = request.user.has_perm(EDITAR_IMAGEM)
+
+    if request.method == "POST":
+        if not pode_salvar:
+            raise PermissionDenied
+        form = FormularioDeImagem(request.POST, request.FILES, instance=imagem)
+        if form.is_valid():
+            try:
+                form.save()
+            except AssetFileImmutableError as recusa:
+                form.add_error("file", str(recusa))
+            else:
+                messages.success(request, _("Imagem salva."))
+                return redirect(_url_das_imagens())
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDeImagem(instance=imagem)
+
+    return render(
+        request,
+        "backoffice/asset_form.html",
+        _contexto_de_imagens(
+            request,
+            {
+                "form": form,
+                "imagem": imagem,
+                "titulo": str(imagem),
+                "pode_salvar": pode_salvar,
+                "usos": _onde_esta_em_uso(imagem),
+            },
+        ),
+    )
+
+
+@exige_permissao(EDITAR_IMAGEM)
+@require_POST
+def backoffice_asset_activation(request, pk):
+    """
+    Liga e desliga uma imagem.
+
+    Desligada, ela deixa de ser OFERECIDA para novas escolhas -- mas
+    continua aparecendo onde já foi escolhida. Tirar do ar o que já está
+    publicado é decisão de cada tela, não desta.
+    """
+    imagem = get_object_or_404(Asset, pk=pk)
+    imagem.is_active = request.POST.get("ativa") == "1"
+    imagem.save(update_fields=["is_active", "updated_at"])
+
+    if imagem.is_active:
+        messages.success(request, _("Imagem ativada."))
+    else:
+        messages.success(
+            request, _("Imagem desativada. Deixa de ser oferecida para novas escolhas.")
+        )
+    return redirect(_url_das_imagens())
+
+
+@exige_permissao(EXCLUIR_IMAGEM)
+def backoffice_asset_delete(request, pk):
+    """
+    Apaga uma imagem, depois de confirmar.
+
+    O banco tem a última palavra: `ProtectedError` quando um modelo ou
+    uma carta finalizada dependem dela. A tela avisa antes, e explica
+    depois -- mas quem recusa é o PROTECT, não o aviso.
+    """
+    imagem = get_object_or_404(Asset, pk=pk)
+
+    if request.method == "POST":
+        nome = str(imagem)
+        try:
+            imagem.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                _(
+                    "Esta imagem não pode ser apagada: um modelo de documento ou uma "
+                    "carta já finalizada depende dela. Desative-a para não ser mais "
+                    "oferecida."
+                ),
+            )
+            return redirect(_url_das_imagens())
+        messages.success(request, _("Imagem removida: %(nome)s.") % {"nome": nome})
+        return redirect(_url_das_imagens())
+
+    return render(
+        request,
+        "backoffice/asset_delete.html",
+        _contexto_de_imagens(
+            request, {"imagem": imagem, "usos": _onde_esta_em_uso(imagem)}
+        ),
     )

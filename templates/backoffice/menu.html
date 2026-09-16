@@ -48,7 +48,22 @@ lateral; no celular vai dentro do dropdown do botao de menu
   {% if perms.content.view_pagesection %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'content' %}is-current{% endif %}" href="{% url 'backoffice:content' %}"{% if active == "content" %} aria-current="page"{% endif %}><i class="ph ph-article" aria-hidden="true"></i>{% translate "Conteúdo do site" %}</a>
   {% endif %}
+  {% comment %}
+  "Parceiros" exige `content.view_partner` desde a Etapa 11, quando a
+  tela deixou de ser leitura e virou o cadastro. Antes disso abria para
+  qualquer pessoa do Backoffice -- e o link ficou aqui sem filtro por um
+  momento, oferecendo uma porta que bateria na cara de quem entrasse.
+  {% endcomment %}
+  {% if perms.content.view_partner %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'partners' %}is-current{% endif %}" href="{% url 'backoffice:partners' %}"{% if active == "partners" %} aria-current="page"{% endif %}><i class="ph ph-handshake" aria-hidden="true"></i>{% translate "Parceiros" %}</a>
+  {% endif %}
+  {% comment %}
+  "Imagens" exige `content.view_asset` -- a mesma permissão que a
+  biblioteca cobra no servidor.
+  {% endcomment %}
+  {% if perms.content.view_asset %}
+  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'assets' %}is-current{% endif %}" href="{% url 'backoffice:assets' %}"{% if active == "assets" %} aria-current="page"{% endif %}><i class="ph ph-image" aria-hidden="true"></i>{% translate "Imagens" %}</a>
+  {% endif %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %}" href="{% url 'backoffice:languages' %}"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'appearance' %}is-current{% endif %}" href="{% url 'backoffice:appearance' %}"{% if active == "appearance" %} aria-current="page"{% endif %}><i class="ph ph-palette" aria-hidden="true"></i>{% translate "Aparência" %}</a>
   {% comment %}

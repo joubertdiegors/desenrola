@@ -192,6 +192,43 @@ CATALOGO = (
                 ),
                 aplicada_em="content.backoffice_views.backoffice_partner_delete",
             ),
+            PermissaoAdministrativa(
+                chave="content.view_asset",
+                rotulo=_("Ver a biblioteca de imagens"),
+                descricao=_(
+                    "Abre a biblioteca e vê as imagens do site, onde cada uma "
+                    "está sendo usada e quais estão disponíveis."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_assets / _edit",
+            ),
+            PermissaoAdministrativa(
+                chave="content.add_asset",
+                rotulo=_("Enviar imagens"),
+                descricao=_(
+                    "Acrescenta uma imagem à biblioteca, para ser usada no banner, "
+                    "nos parceiros ou na identidade do site."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_asset_new",
+            ),
+            PermissaoAdministrativa(
+                chave="content.change_asset",
+                rotulo=_("Editar as imagens"),
+                descricao=_(
+                    "Altera o texto alternativo, o tipo e a situação de uma imagem, "
+                    "e pode trocar o arquivo -- exceto o de imagem usada por uma "
+                    "carta já finalizada."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_asset_edit / _activation",
+            ),
+            PermissaoAdministrativa(
+                chave="content.delete_asset",
+                rotulo=_("Remover imagens"),
+                descricao=_(
+                    "Apaga uma imagem da biblioteca. O sistema recusa apagar imagem "
+                    "de que um modelo ou uma carta finalizada dependa."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_asset_delete",
+            ),
         ),
     ),
     GrupoDePermissoes(

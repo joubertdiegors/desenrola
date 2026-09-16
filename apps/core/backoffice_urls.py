@@ -158,6 +158,20 @@ urlpatterns = [
         content_backoffice.backoffice_menu_item_delete,
         name="menu_item_delete",
     ),
+    # Biblioteca de imagens: toda imagem administravel do projeto.
+    path("imagens/", content_backoffice.backoffice_assets, name="assets"),
+    path("imagens/nova/", content_backoffice.backoffice_asset_new, name="asset_new"),
+    path("imagens/<int:pk>/", content_backoffice.backoffice_asset_edit, name="asset_edit"),
+    path(
+        "imagens/<int:pk>/situacao/",
+        content_backoffice.backoffice_asset_activation,
+        name="asset_activation",
+    ),
+    path(
+        "imagens/<int:pk>/excluir/",
+        content_backoffice.backoffice_asset_delete,
+        name="asset_delete",
+    ),
     # Parceiros: o cadastro inteiro, no produto. Ate a Etapa 11 esta
     # tela era so leitura e mandava para a administracao do Django.
     path("partners/", content_backoffice.backoffice_partners, name="partners"),
