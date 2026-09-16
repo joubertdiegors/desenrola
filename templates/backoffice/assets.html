@@ -37,7 +37,7 @@ Contexto: linhas (imagem, usos), pode_criar, pode_editar, pode_excluir.
 <p class="m-only"><a class="btn btn-primary" href="{% url 'backoffice:asset_new' %}"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Nova imagem" %}</a></p>
 {% endif %}
 
-<div class="card table-wrap">
+<div class="card table-wrap d-only">
   <table class="table">
     <thead>
       <tr>
@@ -82,5 +82,26 @@ Contexto: linhas (imagem, usos), pode_criar, pode_editar, pode_excluir.
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+{% comment %}
+NO CELULAR, UMA LISTA -- NAO A TABELA. Mesma convencao de `users.html`:
+seis colunas nao cabem em 390px, e a pagina inteira passaria a rolar para
+o lado. Cada item leva a tela de edicao, onde ficam as acoes.
+{% endcomment %}
+<div class="list m-only">
+  {% for linha in linhas %}
+  <a class="list-item{% if not linha.imagem.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:asset_edit' linha.imagem.pk %}">
+    <img class="bo-parceiro-logo" src="{{ linha.imagem.file.url }}" alt="">
+    <div class="list-body">
+      <div class="list-title">{{ linha.imagem.get_kind_display }}</div>
+      <div class="list-sub">{{ linha.imagem.alt_text|default:"—" }}</div>
+    </div>
+    {% if linha.usos %}<span class="tag tag-neutral">{% translate "Em uso" %}</span>{% endif %}
+    <i class="ph ph-caret-right list-caret" aria-hidden="true"></i>
+  </a>
+  {% empty %}
+  <div class="list-item"><span class="cell-muted">{% translate "Nenhuma imagem enviada ainda." %}</span></div>
+  {% endfor %}
 </div>
 {% endblock %}

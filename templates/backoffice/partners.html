@@ -42,7 +42,7 @@ pode_editar, pode_excluir.
 <p class="m-only"><a class="btn btn-primary" href="{% url 'backoffice:partner_new' %}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</a></p>
 {% endif %}
 
-<div class="card table-wrap">
+<div class="card table-wrap d-only">
   <table class="table">
     <thead>
       <tr>
@@ -112,5 +112,32 @@ pode_editar, pode_excluir.
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+{% comment %}
+NO CELULAR, UMA LISTA -- NAO A TABELA.
+
+Convencao do projeto (ver `users.html`, `letters.html`): seis colunas nao
+cabem em 390px, e uma tabela que nao cabe faz a PAGINA INTEIRA rolar para
+o lado. Cada item leva a tela de edicao, que e onde ficam as acoes.
+{% endcomment %}
+<div class="list m-only">
+  {% for linha in linhas %}
+  <a class="list-item{% if not linha.parceiro.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}">
+    {% if linha.parceiro.logo %}
+      <img class="bo-parceiro-logo" src="{{ linha.parceiro.logo.file.url }}" alt="">
+    {% else %}
+      <i class="ph ph-image" aria-hidden="true"></i>
+    {% endif %}
+    <div class="list-body">
+      <div class="list-title">{{ linha.parceiro.name }}</div>
+      <div class="list-sub">{{ linha.parceiro.description|default:linha.parceiro.url|default:"—" }}</div>
+    </div>
+    {% if linha.parceiro.is_active %}<span class="tag tag-success">{% translate "Aparece" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}
+    <i class="ph ph-caret-right list-caret" aria-hidden="true"></i>
+  </a>
+  {% empty %}
+  <div class="list-item"><span class="cell-muted">{% translate "Nenhum parceiro cadastrado." %}</span></div>
+  {% endfor %}
 </div>
 {% endblock %}

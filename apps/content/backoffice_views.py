@@ -307,6 +307,7 @@ def backoffice_content_preview(request, pk):
         {
             "parcial": parcial,
             "secao": secao,
+            "nome_da_secao": section_schema.nome_amigavel(secao),
             "viewport": _viewport_pedido(request),
         }
     )

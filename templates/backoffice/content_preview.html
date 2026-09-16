@@ -24,7 +24,13 @@
   dispararia o CSS de celular e a miniatura mostraria a pagina errada.
   {% endcomment %}
   {% if viewport == "miniatura" %}<meta name="viewport" content="width=1280">{% else %}<meta name="viewport" content="width=device-width, initial-scale=1">{% endif %}
-  <title>{{ secao.key }}</title>
+  {% comment %}
+  O nome amigavel, e nao `secao.key`. O quadro vive dentro de um
+  `<iframe>` e este titulo raramente e visto -- mas chave tecnica
+  continua sendo chave tecnica, e o proximo lugar onde alguem a
+  copiar sera visivel.
+  {% endcomment %}
+  <title>{{ nome_da_secao }}</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">

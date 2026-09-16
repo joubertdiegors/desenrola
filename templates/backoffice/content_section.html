@@ -211,7 +211,17 @@ e <form> dentro de <form> e HTML invalido.
 <div class="card bo-card">
   <div class="bo-card-head">
     <h3>{% translate "Os parceiros" %}</h3>
+    {% comment %}
+    O link só para quem pode entrar: a tela de Parceiros cobra
+    `content.view_partner`, que quem edita conteúdo não tem por padrão.
+    Oferecer a porta a quem levaria um 403 é promessa quebrada.
+
+    O cartão continua valendo sem o link -- dizer ONDE se administra a
+    lista é útil mesmo para quem não pode ir lá.
+    {% endcomment %}
+    {% if perms.content.view_partner %}
     <a class="btn btn-secondary btn-sm" href="{{ url_dos_parceiros }}"><i class="ph ph-arrow-right" aria-hidden="true"></i>{% translate "Abrir o cadastro" %}</a>
+    {% endif %}
   </div>
   <p class="field-hint">{% translate "Quem aparece nesta seção, com que imagem e em que ordem, se administra na tela de Parceiros. Aqui ficam só os textos que cercam a lista." %}</p>
 </div>

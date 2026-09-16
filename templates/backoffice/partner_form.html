@@ -60,4 +60,27 @@ url_dos_parceiros.
   </div>
   {% endif %}
 </form>
+
+{% if parceiro %}
+{% comment %}
+AS ACOES DO REGISTRO, FORA DO FORMULARIO DE EDICAO.
+
+Cada uma e um POST proprio -- <form> dentro de <form> e HTML invalido.
+Existem aqui, e nao so na lista, porque no celular a lista leva para ca:
+sem elas, trocar a situacao de um parceiro pelo telefone seria
+impossivel.
+{% endcomment %}
+<div class="bo-actions">
+  {% if pode_salvar %}
+  <form method="post" action="{% url 'backoffice:partner_activation' parceiro.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="{% if parceiro.is_active %}0{% else %}1{% endif %}">
+    <button type="submit" class="btn btn-ghost">{% if parceiro.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+  </form>
+  {% endif %}
+  {% if pode_excluir %}
+  <a class="btn btn-ghost" href="{% url 'backoffice:partner_delete' parceiro.pk %}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}

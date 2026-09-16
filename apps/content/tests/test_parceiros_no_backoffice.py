@@ -682,3 +682,60 @@ class TestCatalogo:
 
         assert "Cadastrar parceiros" in corpo
         assert "Remover parceiros" in corpo
+
+
+# ===========================================================================
+# 9. O celular
+# ===========================================================================
+
+
+class TestCelular:
+    """
+    A tela tinha SÓ a tabela, e seis colunas não cabem em 390px -- a
+    página inteira rolava para o lado. A convenção do projeto (ver
+    `users.html`) é tabela no desktop e lista de cartões no celular.
+    """
+
+    def test_a_tabela_e_so_do_desktop(self, cliente):
+        criar("Padaria")
+
+        corpo = cliente.get(LISTA).content.decode()
+
+        assert 'class="card table-wrap d-only"' in corpo
+
+    def test_ha_uma_lista_para_o_celular(self, cliente):
+        criar("Padaria")
+
+        corpo = cliente.get(LISTA).content.decode()
+
+        assert 'class="list m-only"' in corpo
+        assert corpo.count("Padaria") >= 2  # uma na tabela, uma na lista
+
+    def test_a_lista_do_celular_leva_a_edicao(self, cliente):
+        parceiro = criar("Padaria")
+
+        corpo = cliente.get(LISTA).content.decode()
+
+        assert reverse("backoffice:partner_edit", args=[parceiro.pk]) in corpo
+
+    def test_a_edicao_oferece_as_acoes_que_a_lista_movel_nao_tem(self, cliente):
+        """
+        No celular a lista leva para a edição -- e é lá que precisam
+        estar ativar/desativar e remover. Sem isso, trocar a situação de
+        um parceiro pelo telefone seria impossível.
+        """
+        parceiro = criar("Padaria")
+
+        corpo = cliente.get(
+            reverse("backoffice:partner_edit", args=[parceiro.pk])
+        ).content.decode()
+
+        assert reverse("backoffice:partner_activation", args=[parceiro.pk]) in corpo
+        assert reverse("backoffice:partner_delete", args=[parceiro.pk]) in corpo
+
+    def test_o_cadastro_novo_nao_oferece_acao_de_registro(self, cliente):
+        """Não há o que desativar nem remover antes de existir."""
+        corpo = cliente.get(NOVO).content.decode()
+
+        assert "Desativar" not in corpo
+        assert "Remover" not in corpo

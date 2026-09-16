@@ -594,3 +594,41 @@ class TestCatalogo:
 
         assert "Enviar imagens" in corpo
         assert "Remover imagens" in corpo
+
+
+# ===========================================================================
+# 7. O celular
+# ===========================================================================
+
+
+class TestCelular:
+    """Mesma correção da tela de Parceiros -- ver o docstring de lá."""
+
+    def test_a_tabela_e_so_do_desktop(self, cliente):
+        criar_imagem()
+
+        assert 'class="card table-wrap d-only"' in cliente.get(LISTA).content.decode()
+
+    def test_ha_uma_lista_para_o_celular(self, cliente):
+        criar_imagem(alt_text="Fachada")
+
+        corpo = cliente.get(LISTA).content.decode()
+
+        assert 'class="list m-only"' in corpo
+        assert corpo.count("Fachada") >= 2
+
+    def test_a_edicao_oferece_as_acoes_que_a_lista_movel_nao_tem(self, cliente):
+        imagem = criar_imagem()
+
+        corpo = cliente.get(
+            reverse("backoffice:asset_edit", args=[imagem.pk])
+        ).content.decode()
+
+        assert reverse("backoffice:asset_activation", args=[imagem.pk]) in corpo
+        assert reverse("backoffice:asset_delete", args=[imagem.pk]) in corpo
+
+    def test_o_envio_novo_nao_oferece_acao_de_registro(self, cliente):
+        corpo = cliente.get(NOVA).content.decode()
+
+        assert "Desativar" not in corpo
+        assert "Remover" not in corpo

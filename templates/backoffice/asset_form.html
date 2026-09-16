@@ -74,4 +74,23 @@ Contexto: form, imagem (None ao enviar), titulo, pode_salvar, usos.
   </div>
   {% endif %}
 </form>
+
+{% if imagem %}
+{% comment %}
+AS ACOES DA IMAGEM, FORA DO FORMULARIO. Mesma razao da tela de parceiro:
+cada uma e um POST proprio, e no celular a lista leva para ca.
+{% endcomment %}
+<div class="bo-actions">
+  {% if pode_editar %}
+  <form method="post" action="{% url 'backoffice:asset_activation' imagem.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativa" value="{% if imagem.is_active %}0{% else %}1{% endif %}">
+    <button type="submit" class="btn btn-ghost">{% if imagem.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
+  </form>
+  {% endif %}
+  {% if pode_excluir %}
+  <a class="btn btn-ghost" href="{% url 'backoffice:asset_delete' imagem.pk %}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}

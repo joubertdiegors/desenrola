@@ -488,12 +488,34 @@ class TestEditorDaBarra:
         assert reverse("backoffice:menu_item_new") not in corpo
         assert "Remover" not in corpo
 
-    def test_a_secao_de_parceiros_leva_ao_cadastro_deles(self, cliente):
-        corpo = cliente.get(
+    def test_a_secao_de_parceiros_leva_ao_cadastro_deles(self, db):
+        """
+        O link só para quem pode entrar: a tela de Parceiros cobra
+        `content.view_partner`, que quem edita conteúdo não tem por
+        padrão.
+        """
+        quem_pode = Client()
+        quem_pode.force_login(
+            _com_permissoes(
+                "view_pagesection", "change_pagesection", "view_partner",
+                email="tambem-parceiros@mail.com",
+            )
+        )
+
+        corpo = quem_pode.get(
             reverse("backoffice:content_section", args=[secao("partners").pk])
         ).content.decode()
 
         assert reverse("backoffice:partners") in corpo
+
+    def test_quem_nao_pode_ver_parceiros_nao_recebe_o_link(self, cliente):
+        """O espelho: oferecer a porta a quem levaria um 403 é promessa quebrada."""
+        corpo = cliente.get(
+            reverse("backoffice:content_section", args=[secao("partners").pk])
+        ).content.decode()
+
+        assert "Os parceiros" in corpo
+        assert "Abrir o cadastro" not in corpo
 
     def test_secao_sem_cadastro_nao_mostra_nenhum(self, cliente):
         corpo = cliente.get(

@@ -788,6 +788,17 @@ img.partner-image { width: 100%; object-fit: contain; }
 .seg-opt.is-on { color: var(--p); background: var(--p10); font-weight: 600; }
 .seg-opt:focus-visible { outline: 2px solid var(--p); outline-offset: -2px; }
 
+/* No celular o controle QUEBRA LINHA em vez de cortar.
+   `.seg` tem `overflow: hidden`, entao o que nao cabia ficava
+   invisivel -- com quatro idiomas a 390px, o quarto era
+   inalcancavel e nao havia como editar o conteudo em ingles pelo
+   telefone. Quebrando linha, nada fica fora da caixa e o clipping
+   deixa de ser necessario. */
+@media (max-width: 767px) {
+  .seg { flex-wrap: wrap; overflow: visible; }
+  .seg-opt { flex: 1 1 auto; justify-content: center; }
+}
+
 /* ---------------------------------------------------------------------
    Central de Conteudo: as partes da Home, agrupadas em Topo/Meio/Final.
    --------------------------------------------------------------------- */
