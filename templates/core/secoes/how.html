@@ -8,10 +8,17 @@ Contexto: secoes.how.
   <p class="section-lead">{{ secoes.how.lead }}</p>
   <div class="how-grid">
     {% for card in secoes.how.cards %}
+    {% comment %}
+    O texto fica num bloco proprio para o cartao poder deitar no
+    celular -- icone a esquerda, texto a direita -- sem que titulo e
+    paragrafo virem colunas ao lado do icone.
+    {% endcomment %}
     <div class="card how-card">
       <span class="tint how-card-icon"><i class="ph {{ card.icon }}" aria-hidden="true"></i></span>
-      <h3>{{ card.title }}</h3>
-      <p class="text-muted">{{ card.text }}</p>
+      <div class="how-card-texto">
+        <h3>{{ card.title }}</h3>
+        <p class="text-muted">{{ card.text }}</p>
+      </div>
     </div>
     {% endfor %}
   </div>

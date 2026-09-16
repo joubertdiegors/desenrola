@@ -1,0 +1,45 @@
+{% load i18n humanize %}{% comment %}
+Banner superior · desenho "Assimetrico" (referencia 1a do cliente).
+
+Grade de duas colunas fora de esquadro: o texto fica na coluna larga e a
+foto SANGRA na borda direita da tela, com um veu de transicao que a
+funde no fundo da pagina. O contador vira uma pilula abaixo dos botoes.
+
+A PILULA MOSTRA O NUMERO REAL
+-----------------------------
+`cartas_emitidas` -- contagem de cartas finalizadas. `badge_label` e
+`badge_note` sao so os textos ao redor dele.
+
+SEM FOTO, A COLUNA DA DIREITA NAO FICA VAZIA
+--------------------------------------------
+Sai a moldura de sempre, na mesma posicao. O desenho continua de pe.
+
+Contexto: secoes.hero, partes.hero.imagem, cartas_emitidas.
+{% endcomment %}
+<section class="hero-assimetrico">
+  <div class="hero-assimetrico-grade container">
+    <div class="hero-assimetrico-texto">
+      <h1>{{ secoes.hero.title }}</h1>
+      <p class="hero-lead">{{ secoes.hero.lead }}</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+        <span class="hero-alt d-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></span>
+      </div>
+      {% if secoes.hero.badge_label or secoes.hero.badge_note %}
+      <p class="hero-pilula">
+        <i class="ph-fill ph-circle hero-pilula-ponto" aria-hidden="true"></i>
+        <span><strong>{{ cartas_emitidas|intcomma }}</strong> {{ secoes.hero.badge_label }}{% if secoes.hero.badge_note %} · {{ secoes.hero.badge_note }}{% endif %}</span>
+      </p>
+      {% endif %}
+      <p class="hero-alt m-only">{{ secoes.hero.login_prompt }} <a href="{% url 'accounts:login' %}">{{ secoes.hero.login_link }}</a></p>
+    </div>
+  </div>
+  <div class="hero-assimetrico-art">
+    {% if partes.hero.imagem %}
+    <img class="hero-image" src="{{ partes.hero.imagem.file.url }}" alt="{{ partes.hero.imagem.alt_text|default:secoes.hero.art_caption }}">
+    {% else %}
+    <div class="img-slot" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+    {% endif %}
+    <span class="hero-assimetrico-veu" aria-hidden="true"></span>
+  </div>
+</section>

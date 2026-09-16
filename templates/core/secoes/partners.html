@@ -1,18 +1,38 @@
 {% load i18n %}{% comment %}
-Nossos Parceiros.
+Nossos Parceiros -- modelo 2a, o que o cliente escolheu.
+
+Cabecalho da secao (titulo e apoio) sobre uma linha, e abaixo dela a
+grade de cartoes altos: imagem ocupando o alto do cartao, veu que a
+funde no fundo, nome, e o botao ocupando a largura inteira no pe.
 
 Sem parceiro cadastrado a secao inteira sai do ar -- titulo e grade
 vazios seriam uma promessa nao cumprida. O item "Parceiros" do menu some
 junto (ver `content.services._menu_sem_ancora_morta`), senao a ancora
 levaria a lugar nenhum.
 
+A GRADE ACOMPANHA QUANTOS PARCEIROS EXISTEM
+-------------------------------------------
+Quatro colunas e o desenho cheio da referencia. Com menos de quatro
+cadastrados, a classe extra reduz a grade -- sem ela, dois parceiros
+virariam dois cartoes de 600px espichados ao lado de duas colunas
+vazias. A contagem sai do banco, nunca de um numero escrito aqui.
+
+O "VER TODOS" DA REFERENCIA NAO ENTROU
+--------------------------------------
+No arquivo do cliente ele ja e opcional (`showHeaderLink`). Aqui nao ha
+para onde ele levar: nao existe pagina de listagem de parceiros, e a
+Home mostra todos os que estao ativos. Um link para lugar nenhum e
+justamente o que o projeto proibe.
+
 Contexto: secoes.partners, parceiros.
 {% endcomment %}
 {% if parceiros %}
 <section class="section container" id="parceiros">
-  <h2>{{ secoes.partners.title }}</h2>
-  <p class="section-lead">{{ secoes.partners.lead }}</p>
-  <div class="partners-grid">
+  <div class="parceiros-cabeca">
+    <h2>{{ secoes.partners.title }}</h2>
+    {% if secoes.partners.lead %}<p class="section-lead">{{ secoes.partners.lead }}</p>{% endif %}
+  </div>
+  <div class="partners-grid{% if parceiros|length < 4 %} partners-grid-{{ parceiros|length }}{% endif %}">
     {% for parceiro in parceiros %}
     {% comment %}
     Sem endereço, a âncora fica sem `href`: continua sendo o mesmo
@@ -20,16 +40,25 @@ Contexto: secoes.partners, parceiros.
     leva a lugar nenhum seria pior.
     {% endcomment %}
     <a class="card partner-card"{% if parceiro.url %} href="{{ parceiro.url }}" target="_blank" rel="noopener"{% endif %}>
-      {% if parceiro.logo %}
-        <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
-      {% else %}
-        <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
-      {% endif %}
-      <div>
+      <div class="partner-media">
+        {% if parceiro.logo %}
+          {% comment %}
+          `contain`, e não `cover`: o que está guardado aqui é uma
+          LOGOMARCA. Recortá-la para preencher o cartão cortaria o
+          nome da empresa -- o que a referência recorta são
+          fotografias.
+          {% endcomment %}
+          <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+        {% else %}
+          <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+        {% endif %}
+        <span class="partner-veu" aria-hidden="true"></span>
+      </div>
+      <div class="partner-corpo">
         <h3>{{ parceiro.name }}</h3>
         {% if parceiro.description %}<p>{{ parceiro.description }}</p>{% endif %}
+        {% if parceiro.url %}<span class="btn btn-primary btn-block">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>{% endif %}
       </div>
-      {% if parceiro.url %}<span class="btn btn-primary">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>{% endif %}
     </a>
     {% endfor %}
   </div>

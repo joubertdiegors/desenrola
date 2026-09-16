@@ -245,6 +245,148 @@ BANNER_SOMENTE_TEXTO = Layout(
 
 
 # ---------------------------------------------------------------------------
+# Os quatro desenhos vindos da referência visual do cliente
+# ---------------------------------------------------------------------------
+#
+# CAMPO NOVO NASCE VAZIO, E ISSO É DE PROPÓSITO
+# ---------------------------------------------
+# `title`, `lead`, `cta` e os rótulos do contador são os MESMOS nomes
+# que os três desenhos antigos já usam -- o conteúdo é um dicionário só
+# por seção, então trocar para qualquer desenho daqui de baixo já chega
+# com o texto principal escrito. O que nasce em branco são apenas os
+# adornos de cada desenho (selo, palavra em destaque, segundo botão,
+# passos), e cada template os esconde enquanto não houver texto. Banner
+# incompleto nunca aparece pela metade.
+
+BANNER_DESTAQUE = Layout(
+    chave="destaque",
+    nome=_("Destaque"),
+    descricao=_(
+        "Selo, título com palavra realçada e dois botões à esquerda; "
+        "foto à direita com etiquetas flutuantes."
+    ),
+    campos=(
+        Texto(
+            "kicker",
+            _("Selo acima do título"),
+            ajuda=_("Uma linha curta, dentro de uma pílula. Em branco, não aparece."),
+        ),
+        Texto("title", _("Título principal")),
+        Texto(
+            "title_realce",
+            _("Palavra em destaque"),
+            ajuda=_("Sai logo depois do título, na cor principal do site."),
+        ),
+        Texto("lead", _("Texto de apoio"), longo=True),
+        Texto("cta", _("Botão principal")),
+        Texto(
+            "cta_secundario",
+            _("Botão secundário"),
+            ajuda=_("Leva para a tela de entrar. Em branco, não aparece."),
+        ),
+        Texto(
+            "badge_label",
+            _("Rótulo do contador"),
+            ajuda=_("Sai ao lado do número real de cartas já geradas."),
+        ),
+        Texto("selo_1", _("Etiqueta sobre a foto (1)")),
+        Texto("selo_2", _("Etiqueta sobre a foto (2)")),
+        Texto(
+            "art_caption",
+            _("Legenda da imagem"),
+            ajuda=_("Texto dentro da moldura, enquanto não houver foto."),
+        ),
+    ),
+)
+
+BANNER_ASSIMETRICO = Layout(
+    chave="assimetrico",
+    nome=_("Assimétrico"),
+    descricao=_(
+        "Texto à esquerda e foto sangrando na borda direita, com véu "
+        "de transição. O contador vira uma pílula abaixo dos botões."
+    ),
+    campos=(
+        Texto("title", _("Título principal")),
+        Texto("lead", _("Texto de apoio"), longo=True),
+        Texto("cta", _("Botão")),
+        Texto("login_prompt", _("Antes do link de entrar")),
+        Texto("login_link", _("Texto do link de entrar")),
+        Texto(
+            "badge_label",
+            _("Rótulo do contador"),
+            ajuda=_("Sai depois do número real de cartas já geradas."),
+        ),
+        Texto(
+            "badge_note",
+            _("Nota do contador"),
+            ajuda=_("Sai depois do rótulo, separada por um ponto."),
+        ),
+        Texto(
+            "art_caption",
+            _("Legenda da imagem"),
+            ajuda=_("Texto dentro da moldura, enquanto não houver foto."),
+        ),
+    ),
+)
+
+BANNER_FOTO_AMPLA = Layout(
+    chave="foto_ampla",
+    nome=_("Foto ampla"),
+    descricao=_(
+        "A foto ocupa o banner inteiro e o texto fica sobre ela, à "
+        "esquerda, protegido por um véu escuro."
+    ),
+    campos=(
+        Texto(
+            "kicker",
+            _("Linha acima do título"),
+            ajuda=_("Sai em maiúsculas e espaçada. Em branco, não aparece."),
+        ),
+        Texto("title", _("Título principal")),
+        Texto("lead", _("Texto de apoio"), longo=True),
+        Texto("cta", _("Botão")),
+        Texto(
+            "art_caption",
+            _("Legenda da imagem"),
+            ajuda=_("Texto dentro da moldura, enquanto não houver foto."),
+        ),
+    ),
+)
+
+BANNER_EDITORIAL = Layout(
+    chave="editorial",
+    nome=_("Editorial"),
+    descricao=_(
+        "Título e três passos numerados à esquerda; foto em retrato à "
+        "direita, com legenda por baixo."
+    ),
+    campos=(
+        Texto("kicker", _("Linha acima do título")),
+        Texto("title", _("Título principal")),
+        Texto("lead", _("Texto de apoio"), longo=True),
+        Texto("cta", _("Botão")),
+        Texto("passo1_title", _("Passo 1 · título")),
+        Texto("passo1_text", _("Passo 1 · texto"), longo=True),
+        Texto("passo2_title", _("Passo 2 · título")),
+        Texto("passo2_text", _("Passo 2 · texto"), longo=True),
+        Texto("passo3_title", _("Passo 3 · título")),
+        Texto("passo3_text", _("Passo 3 · texto"), longo=True),
+        Texto(
+            "art_legenda",
+            _("Legenda por baixo da foto"),
+            ajuda=_("Ex.: as cidades atendidas. Em branco, não aparece."),
+        ),
+        Texto(
+            "art_caption",
+            _("Legenda da imagem"),
+            ajuda=_("Texto dentro da moldura, enquanto não houver foto."),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
 # As partes da Home
 # ---------------------------------------------------------------------------
 
@@ -268,7 +410,15 @@ SECOES = {
         nome=_("Banner superior"),
         descricao=_("A primeira área da página, com o título e a chamada principal."),
         grupo=TOPO,
-        layouts=(BANNER_IMAGEM_TEXTO, BANNER_IMAGEM_COMPLETA, BANNER_SOMENTE_TEXTO),
+        layouts=(
+            BANNER_IMAGEM_TEXTO,
+            BANNER_DESTAQUE,
+            BANNER_ASSIMETRICO,
+            BANNER_FOTO_AMPLA,
+            BANNER_EDITORIAL,
+            BANNER_IMAGEM_COMPLETA,
+            BANNER_SOMENTE_TEXTO,
+        ),
         imagem=True,
     ),
     "trust": Secao(

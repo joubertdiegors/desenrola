@@ -1,0 +1,58 @@
+{% load i18n conteudo %}{% comment %}
+Banner superior · desenho "Editorial" (referencia 1c do cliente).
+
+Titulo e ate tres passos numerados a esquerda; foto em retrato a
+direita, com legenda por baixo.
+
+OS PASSOS SAO TRES CAMPOS, NAO UMA LISTA
+----------------------------------------
+Uma `Lista` do schema so mostra na tela os itens que JA existem no
+conteudo gravado -- num desenho novo, nunca existe nenhum, e o
+administrador ficaria sem onde escrever. Tres pares de campos fixos
+resolvem isso e sao exatamente o que a referencia pede: 01, 02, 03.
+
+O PASSO VAZIO NAO E DESENHADO, E A NUMERACAO NAO PULA
+-----------------------------------------------------
+Quem preencher so dois passos ve "01" e "02", nao "01" e "03": a
+numeracao sai do `forloop` sobre os passos que tem texto, e nao da
+posicao do campo no formulario.
+
+E ISTO NAO E O "COMO FUNCIONA"
+------------------------------
+Aquela secao continua existindo, com os seus proprios textos. Estes
+passos sao o resumo dentro do banner -- quem escolher este desenho
+decide se quer os dois ou se desliga o outro na Central.
+
+Contexto: secoes.hero, partes.hero.imagem.
+{% endcomment %}
+<section class="hero-editorial container">
+  <div class="hero-editorial-texto">
+    {% if secoes.hero.kicker %}<p class="hero-amplo-kicker">{{ secoes.hero.kicker }}</p>{% endif %}
+    <h1>{{ secoes.hero.title }}</h1>
+    <p class="hero-lead">{{ secoes.hero.lead }}</p>
+    <ol class="hero-passos">
+      {% for passo in secoes.hero|passos_do_banner %}
+      <li class="hero-passo">
+        <span class="hero-passo-numero" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
+        <div>
+          {% if passo.title %}<h2 class="hero-passo-titulo">{{ passo.title }}</h2>{% endif %}
+          {% if passo.text %}<p>{{ passo.text }}</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if secoes.hero.cta %}
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="{% url 'accounts:signup' %}">{{ secoes.hero.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    {% endif %}
+  </div>
+  <figure class="hero-editorial-art">
+    {% if partes.hero.imagem %}
+    <img class="hero-image" src="{{ partes.hero.imagem.file.url }}" alt="{{ partes.hero.imagem.alt_text|default:secoes.hero.art_caption }}">
+    {% else %}
+    <div class="img-slot" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i><span>{{ secoes.hero.art_caption }}</span></div>
+    {% endif %}
+    {% if secoes.hero.art_legenda %}<figcaption>{{ secoes.hero.art_legenda }}</figcaption>{% endif %}
+  </figure>
+</section>

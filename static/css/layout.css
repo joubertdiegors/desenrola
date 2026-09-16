@@ -106,6 +106,181 @@ body { display: flex; flex-direction: column; }
 .hero-texto .hero-actions { justify-content: center; }
 .hero-texto .hero-alt { margin-top: 14px; }
 
+/* ---------------------------------------------------------------------------
+   Os quatro desenhos vindos da referencia visual do cliente.
+
+   A REFERENCIA VEIO EM TEMA ESCURO; O SITE NAO MUDOU DE COR
+   ---------------------------------------------------------
+   O arquivo do cliente desenha em fundo quase preto com acento roxo.
+   O que se aproveita dele e a COMPOSICAO -- onde entra a foto, o que
+   flutua por cima, como o texto se organiza. As cores continuam vindo
+   de `--p`, que o administrador troca na tela Aparencia: um banner com
+   paleta propria deixaria de responder a essa escolha, e brigaria com
+   o resto do site, com o backoffice e com os e-mails.
+   --------------------------------------------------------------------------- */
+
+/* Banner · desenho "Destaque". Selo, titulo com realce e dois botoes a
+   esquerda; foto a direita com etiquetas flutuando por cima dela. */
+.hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  border: 1px solid var(--p20);
+  border-radius: 999px;
+  background: var(--p10);
+  color: var(--p);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hero-destaque h1 { max-width: 15ch; }
+.hero-realce { color: var(--p); }
+.hero-destaque-art { height: 420px; }
+
+/* As etiquetas nao recebem clique: sao legenda da foto, nao controles.
+   Sem `pointer-events: none` elas roubariam o cursor de uma foto que um
+   dia pode virar link. */
+.hero-selos {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px;
+  pointer-events: none;
+}
+.hero-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 9px 14px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hero-selo .ph-fill { color: var(--p); font-size: 15px; }
+.hero-selo strong { color: var(--p); }
+.hero-selos > :last-child { align-self: flex-end; }
+
+/* Banner · desenho "Assimetrico". A foto sangra na borda direita da
+   janela -- por isso a secao inteira e o retangulo de referencia, e o
+   texto e que fica preso a largura do `.container`. */
+.hero-assimetrico {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff, var(--bg));
+}
+.hero-assimetrico-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44%;
+  padding: 56px 48px 48px;
+}
+.hero-assimetrico-texto { grid-column: 1; }
+.hero-assimetrico-texto h1 { font-size: 54px; max-width: 13ch; margin-bottom: 18px; }
+.hero-assimetrico-art {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 44%;
+}
+.hero-assimetrico-art .hero-image,
+.hero-assimetrico-art .img-slot { height: 100%; border-radius: 0; }
+
+/* O veu cobre so o inicio da foto: e o que costura a fotografia ao fundo
+   da pagina, sem escurecer a imagem inteira. */
+.hero-assimetrico-veu {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 45%, transparent) 45%, transparent 100%);
+}
+.hero-pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 9px 16px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--mu);
+  font-size: 13.5px;
+}
+.hero-pilula strong { color: var(--navy); }
+.hero-pilula-ponto { color: var(--s); font-size: 9px; }
+
+/* Banner · desenho "Foto ampla". Texto SOBRE a foto -- so este desenho
+   faz isso, e so porque tem o veu que garante o contraste. */
+.hero-amplo {
+  position: relative;
+  min-height: 440px;
+  display: flex;
+  align-items: center;
+  background: var(--navy);
+}
+.hero-amplo-art { position: absolute; inset: 0; }
+.hero-amplo-art .hero-image,
+.hero-amplo-art .img-slot { height: 100%; border-radius: 0; }
+.hero-amplo-veu {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(11, 26, 51, 0.9) 0%, rgba(11, 26, 51, 0.72) 42%, rgba(11, 26, 51, 0.15) 100%);
+}
+.hero-amplo-texto { position: relative; padding: 56px 48px; }
+.hero-amplo-texto > div { max-width: 46ch; }
+.hero-amplo-texto h1 { color: #fff; font-size: 50px; margin-bottom: 16px; }
+.hero-amplo-texto .hero-lead { color: rgba(255, 255, 255, 0.86); margin-bottom: 26px; }
+.hero-amplo-kicker {
+  margin-bottom: 14px;
+  color: color-mix(in srgb, var(--p) 45%, #fff);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Banner · desenho "Editorial". Passos numerados a esquerda, foto em
+   retrato a direita. */
+.hero-editorial {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.72fr);
+  gap: 56px;
+  padding: 56px 48px 48px;
+  align-items: start;
+  background: linear-gradient(180deg, #fff, var(--bg));
+}
+.hero-editorial h1 { font-size: 46px; max-width: 16ch; margin-bottom: 16px; }
+.hero-editorial .hero-amplo-kicker { color: var(--p); }
+.hero-passos { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 18px; }
+.hero-passo { display: flex; gap: 16px; align-items: flex-start; }
+.hero-passo + .hero-passo { border-top: 1px solid var(--bd); padding-top: 18px; }
+.hero-passo-numero {
+  flex: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--p);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+.hero-passo-titulo { font-size: 16px; color: var(--navy); }
+.hero-passo p { font-size: 14.5px; color: var(--mu); margin-top: 3px; }
+.hero-editorial .hero-actions { margin-top: 28px; }
+.hero-editorial-art { margin: 0; }
+.hero-editorial-art .hero-image,
+.hero-editorial-art .img-slot { height: auto; aspect-ratio: 3 / 4; max-width: 100%; }
+.hero-editorial-art figcaption {
+  margin-top: 12px;
+  color: var(--mu);
+  font-size: 13px;
+  text-align: center;
+}
+
 .trust-bar {
   padding: 0 48px 48px;
 }
@@ -130,19 +305,61 @@ body { display: flex; flex-direction: column; }
 .section h2 { font-size: 30px; }
 .section-lead { color: var(--mu); margin: 6px 0 22px; }
 
-.partners-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-.partner-card { padding: 12px; display: flex; flex-direction: column; gap: 12px; text-decoration: none; color: inherit; }
+/* Nossos Parceiros · modelo 2a. Cabecalho sobre uma linha, e cartoes
+   altos de altura igual com o botao ancorado no pe. */
+.parceiros-cabeca {
+  border-bottom: 1px solid var(--bd);
+  padding-bottom: 16px;
+  margin-bottom: 22px;
+}
+.parceiros-cabeca .section-lead { margin: 6px 0 0; }
+
+.partners-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+/* Menos de quatro cadastrados: a grade encolhe em vez de espichar os
+   cartoes por colunas vazias. A contagem vem do banco. */
+.partners-grid-1 { grid-template-columns: minmax(0, 320px); }
+.partners-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 660px; }
+.partners-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1000px; }
+
+.partner-card {
+  position: relative;
+  min-height: 360px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
 .partner-card:hover { color: inherit; }
-.partner-image { height: 120px; }
-/* Logomarca de verdade no lugar da moldura: cabe inteira na mesma
-   altura, sem distorcer, e nao ultrapassa a largura do cartao. */
-img.partner-image { width: 100%; object-fit: contain; }
-.partner-card h3 { font-size: 16px; }
+/* A imagem toma o alto do cartao; o corpo empurra o botao para o pe, e
+   por isso todos os botoes da fileira ficam na mesma linha. */
+.partner-media { position: relative; flex: 1; min-height: 0; }
+.partner-image { height: 100%; width: 100%; }
+img.partner-image { object-fit: contain; padding: 22px 22px 0; }
+/* O veu funde o pe da imagem no fundo do cartao -- e o que costura os
+   dois blocos, como na referencia. */
+.partner-veu {
+  position: absolute;
+  inset: auto 0 0;
+  height: 56%;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, #fff 92%, transparent) 55%, #fff 100%);
+}
+.partner-corpo {
+  position: relative;
+  padding: 0 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.partner-card h3 { font-size: 17px; }
 .partner-card p { font-size: 13px; color: var(--mu); margin-top: 2px; }
-.partner-card .btn { min-height: 40px; font-size: 14px; align-self: flex-start; padding: 0 16px; }
+.partner-card .btn { min-height: 44px; font-size: 14px; }
 
 .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .how-card { padding: 24px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.how-card-texto { min-width: 0; }
+.how-card-texto h3 + p { margin-top: 6px; }
 .how-card-icon { width: 52px; height: 52px; display: grid; place-items: center; color: var(--p); font-size: 26px; border-radius: var(--radius-md); }
 
 .cta-banner {
@@ -208,8 +425,20 @@ img.partner-image { width: 100%; object-fit: contain; }
   .hero { grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 24px 32px 0; background: none; }
   .hero h1 { font-size: 44px; max-width: none; }
   .hero-art { height: 300px; }
+  .hero-destaque-art { height: 340px; }
+  .hero-assimetrico-grade { padding: 24px 32px 32px; }
+  .hero-assimetrico-texto h1 { font-size: 44px; max-width: none; }
+  .hero-amplo { min-height: 380px; }
+  .hero-amplo-texto { padding: 32px; }
+  .hero-amplo-texto h1 { font-size: 40px; }
+  .hero-editorial { gap: 32px; padding: 24px 32px 32px; }
+  .hero-editorial h1 { font-size: 38px; }
   .trust-bar { padding: 28px 32px 0; }
   .section { padding: 0 32px; margin-top: 40px; }
+  /* Duas colunas no tablet: quatro cartoes 2a em 834px dariam 180px de
+     largura, e o botao de largura inteira quebraria em duas linhas. */
+  .partners-grid,
+  .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
   .partners-grid { gap: 14px; }
   .how-grid { gap: 14px; }
   .cta-banner { margin: 32px; padding: 30px 32px; }
@@ -233,6 +462,44 @@ img.partner-image { width: 100%; object-fit: contain; }
   .hero-texto .hero-lead { font-size: 16px; max-width: none; margin-bottom: 22px; }
   .hero-texto .hero-actions { display: block; }
   .hero-texto .hero-actions .btn { width: 100%; }
+
+  /* Os quatro desenhos novos, no celular. Todos viram UMA coluna: no
+     telefone nao ha "esquerda e direita", e insistir na grade so
+     produziria colunas de sete caracteres. */
+  .hero-destaque { display: block; padding: 8px 20px 0; background: none; }
+  .hero-kicker { margin: 18px 0 12px; }
+  .hero-destaque h1 { max-width: none; }
+  .hero-destaque-art { height: 240px; }
+  .hero-selos { padding: 12px; gap: 8px; }
+  .hero-selo { padding: 7px 12px; font-size: 12px; }
+
+  .hero-assimetrico { background: none; }
+  .hero-assimetrico-grade { display: block; padding: 8px 20px 0; }
+  .hero-assimetrico-texto h1 { font-size: 36px; max-width: none; margin: 24px 0 12px; }
+  /* A foto deixa de sangrar: no celular ela vai para baixo do texto, no
+     fluxo normal, com a mesma altura da moldura dos outros desenhos. */
+  .hero-assimetrico-art { position: static; width: auto; height: 190px; margin-top: 22px; }
+  .hero-assimetrico-art .hero-image,
+  .hero-assimetrico-art .img-slot { border-radius: var(--radius-md); }
+  .hero-assimetrico-veu { display: none; }
+  .hero-pilula { margin-top: 18px; font-size: 12.5px; }
+
+  .hero-amplo { min-height: 0; }
+  .hero-amplo-texto { padding: 32px 20px; }
+  .hero-amplo-texto > div { max-width: none; }
+  .hero-amplo-texto h1 { font-size: 32px; }
+  .hero-amplo-texto .hero-lead { font-size: 16px; }
+  .hero-amplo-texto .hero-actions { display: block; }
+  .hero-amplo-texto .hero-actions .btn { width: 100%; }
+
+  .hero-editorial { display: block; padding: 8px 20px 0; background: none; }
+  .hero-editorial h1 { font-size: 34px; max-width: none; margin: 18px 0 12px; }
+  .hero-editorial .hero-actions { display: block; }
+  .hero-editorial .hero-actions .btn { width: 100%; }
+  .hero-editorial-art { margin-top: 24px; }
+  .hero-editorial-art .hero-image,
+  .hero-editorial-art .img-slot { aspect-ratio: 4 / 3; }
+
   .stat-badge { display: flex; padding: 14px; }
   .stat-badge-row { display: flex; gap: 10px; align-items: baseline; }
   .stat-badge-live { margin-top: 4px; }
@@ -244,20 +511,52 @@ img.partner-image { width: 100%; object-fit: contain; }
 
   .section { padding: 30px 20px 0; }
   .section h2 { font-size: 24px; }
-  .partners-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
-  .partner-image { height: 92px; }
-  .how-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .how-card { padding: 14px 10px; gap: 6px; }
-  .how-card h3 { font-size: 14px; }
-  .how-card p { font-size: 11.5px; }
-  .how-card-icon { width: auto; height: auto; background: none !important; border-radius: 0; font-size: 28px; }
+  /* Uma coluna: o cartao 2a tem imagem, nome, descricao e um botao de
+     largura inteira. Espremido em meia tela de celular, "Conheça" e a
+     seta quebrariam em duas linhas dentro do botao. */
+  .partners-grid,
+  .partners-grid-1,
+  .partners-grid-2,
+  .partners-grid-3 { grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: none; }
+  .partner-card { min-height: 280px; }
+  img.partner-image { padding: 18px 18px 0; }
+  .partner-corpo { padding: 0 16px 16px; }
+  /* UMA coluna, icone ao lado do texto.
+     Tres colunas em 390px davam 89px de largura util por cartao -- sete
+     caracteres por linha, medido no navegador. O texto cabia, e por
+     isso nao havia rolagem horizontal nenhuma para denunciar; so
+     abrindo a pagina se ve que ninguem consegue ler aquilo. Deitado, o
+     cartao ganha a largura inteira e continua ocupando pouca altura. */
+  .how-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .how-card { padding: 14px; gap: 12px; flex-direction: row; align-items: flex-start; }
+  .how-card h3 { font-size: 15px; }
+  .how-card p { font-size: 13px; }
+  .how-card-icon { width: 40px; height: 40px; flex: none; font-size: 22px; }
 
-  .cta-banner { margin: 22px 20px 26px; padding: 24px; gap: 16px; }
-  .cta-banner h2 { font-size: 19px; }
-  .cta-banner p { font-size: 13.5px; }
+  /* Mini Banner sangrando de ponta a ponta no celular: sem margem
+     lateral e sem cantos arredondados, ele deixa de ser um cartao
+     dentro da pagina e vira uma faixa da propria pagina. O respiro
+     lateral volta por dentro, no `padding`. */
+  .cta-banner {
+    /* -20px cancela EXATAMENTE o `padding` lateral de `.section` no
+       celular: a faixa fica com a largura da janela, nem um pixel a
+       mais -- o que faria a pagina rolar de lado. */
+    margin: 22px -20px 26px;
+    padding: 26px 20px;
+    gap: 14px;
+    border-radius: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .cta-banner h2 { font-size: 20px; }
+  .cta-banner p { font-size: 14px; }
   .cta-banner-icon { font-size: 36px; }
-  .cta-banner .btn { display: none; }
-  .cta-banner-deco { font-size: 150px; bottom: -50px; }
+  /* O botao FICA. Ele era escondido aqui, e uma chamada para acao sem a
+     acao e exatamente o "botao sem funcao" que o projeto proibe -- no
+     celular ele passa a ocupar a largura inteira, como os outros. */
+  .cta-banner .btn { width: 100%; min-height: 52px; font-size: 16px; }
+  .cta-banner-deco { font-size: 150px; bottom: -50px; right: -40px; }
 
   .site-footer { margin-top: auto; padding: 20px 20px 30px; flex-direction: column; align-items: flex-start; gap: 8px; }
   .site-footer-contato { padding: 0 20px 24px; flex-direction: column; gap: 8px; }

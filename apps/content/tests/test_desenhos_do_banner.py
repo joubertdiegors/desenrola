@@ -266,10 +266,18 @@ class TestAtivacao:
 
 
 class TestDeclaracao:
-    def test_os_tres_existem(self):
+    def test_os_tres_continuam_declarados(self):
+        """
+        A lista CRESCEU: os quatro desenhos da referência visual do
+        cliente entraram ao lado destes (ver
+        `test_banners_da_referencia`). O que este teste guarda é que
+        nenhum dos três originais saiu no caminho -- trocar de desenho
+        tem de continuar podendo voltar para qualquer um deles.
+        """
         chaves = [layout.chave for layout in section_schema.SECOES["hero"].layouts]
 
-        assert chaves == [IMAGEM_TEXTO, IMAGEM_COMPLETA, SOMENTE_TEXTO]
+        assert set(chaves) >= {IMAGEM_TEXTO, IMAGEM_COMPLETA, SOMENTE_TEXTO}
+        assert len(set(chaves)) == len(chaves)
 
     def test_cada_desenho_tem_o_seu_template(self):
         import pathlib
