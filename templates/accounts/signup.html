@@ -36,28 +36,50 @@ desktop, bloco recolhivel "Telefone e endereço" no celular.
 
       <div class="field{% if form.full_name.errors %} is-invalid{% endif %}">
         <label for="id_full_name">{% translate "Nome completo" %} <span class="required">*</span></label>
-        <input class="input" id="id_full_name" name="full_name" type="text" autocomplete="name" required maxlength="150" value="{{ form.full_name.value|default:'' }}">
+        <input class="input" id="id_full_name" name="full_name" type="text" autocomplete="name" required maxlength="150" placeholder="{% translate 'Nome e sobrenome, como no documento' %}" value="{{ form.full_name.value|default:'' }}">
         {% include "components/field_errors.html" with errors=form.full_name.errors %}
       </div>
 
       <div class="field">
         <label for="id_email">{% translate "E-mail" %} <span class="required">*</span></label>
         <div class="input-wrap">
-          <input class="input{% if form.email.errors %} is-invalid{% elif form.is_bound %} is-valid{% endif %}" type="email" id="id_email" name="email" autocomplete="email" required value="{{ form.email.value|default:'' }}">
+          <input class="input{% if form.email.errors %} is-invalid{% elif form.is_bound %} is-valid{% endif %}" type="email" id="id_email" name="email" autocomplete="email" required placeholder="seuemail@email.com" value="{{ form.email.value|default:'' }}">
           {% if form.is_bound and not form.email.errors %}<i class="ph-fill ph-check-circle input-icon is-valid" aria-hidden="true"></i>{% endif %}
         </div>
         {% include "components/field_errors.html" with errors=form.email.errors %}
       </div>
 
       <div class="form-grid">
+        {% comment %}
+        O olho e o mesmo componente do login (`pw-wrap` + `pw-toggle`,
+        ligados em static/js/app.js) -- nao uma segunda maneira de
+        mostrar senha. Sem JavaScript o campo continua sendo um campo de
+        senha comum; so o botao deixa de fazer efeito.
+        {% endcomment %}
         <div class="field{% if form.password1.errors %} is-invalid{% endif %}">
           <label for="id_password1">{% translate "Senha" %} <span class="required">*</span></label>
-          <input class="input" id="id_password1" name="password1" type="password" autocomplete="new-password" required>
+          <div class="pw-wrap">
+            <input class="input" id="id_password1" name="password1" type="password" autocomplete="new-password" required>
+            <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+          </div>
           {% if form.password1.errors %}{% include "components/field_errors.html" with errors=form.password1.errors %}{% else %}<div class="field-hint">{% translate "Mínimo 8 caracteres." %}</div>{% endif %}
         </div>
         <div class="field{% if form.password2.errors %} is-invalid{% endif %}">
           <label for="id_password2">{% translate "Confirmar senha" %} <span class="required">*</span></label>
-          <input class="input" id="id_password2" name="password2" type="password" autocomplete="new-password" required{% if form.password2.errors %} aria-invalid="true"{% endif %}>
+          <div class="pw-wrap">
+            <input class="input" id="id_password2" name="password2" type="password" autocomplete="new-password" required data-pw-confirm="id_password1"{% if form.password2.errors %} aria-invalid="true"{% endif %}>
+            <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+          </div>
+          {% comment %}
+          O aviso que responde enquanto se digita. Quem recusa senhas
+          diferentes continua sendo o servidor -- isto so evita
+          descobrir o engano depois de a pagina recarregar.
+          {% endcomment %}
+          <span class="field-hint"
+                data-pw-confirm-aviso="id_password1"
+                data-igual="{% translate 'As senhas conferem.' %}"
+                data-diferente="{% translate 'As senhas não coincidem.' %}"
+                aria-live="polite"></span>
           {% include "components/field_errors.html" with errors=form.password2.errors %}
         </div>
       </div>
@@ -66,11 +88,15 @@ desktop, bloco recolhivel "Telefone e endereço" no celular.
         <summary>{% translate "Telefone e endereço" %} <span class="disclosure-hint">{% translate "opcional" %} <i class="ph ph-caret-down" aria-hidden="true"></i></span></summary>
         <div class="disclosure-body">
           <div class="field{% if form.phone.errors %} is-invalid{% endif %}">
-            <label for="id_phone">{% translate "Telefone" %} <span class="optional">({% translate "opcional" %})</span></label>
-            <div class="phone-field">
-              <span class="input dial-code" aria-hidden="true"><span class="flag-be"></span>+32</span>
-              <input class="input" id="id_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="{% translate 'Ex.: 470 12 34 56' %}" value="{{ form.phone.value|default:'' }}">
-            </div>
+            <label for="{{ form.phone.auto_id }}_1">{% translate "Telefone" %} <span class="optional">({% translate "opcional" %})</span></label>
+            {% comment %}
+            O codigo do pais deixou de ser um `<span>` fixo em +32: e um
+            `<select>` de verdade, e o mesmo campo aparece no Perfil
+            (`accounts.telefone.CampoDeTelefone`). Quem mora na Belgica
+            com celular portugues ou brasileiro passa a conseguir gravar
+            o proprio numero.
+            {% endcomment %}
+            {{ form.phone }}
             {% include "components/field_errors.html" with errors=form.phone.errors %}
           </div>
           <div class="field{% if form.address_line1.errors %} is-invalid{% endif %}">
@@ -81,12 +107,18 @@ desktop, bloco recolhivel "Telefone e endereço" no celular.
           <div class="disclosure-row">
             <div class="field{% if form.postal_code.errors %} is-invalid{% endif %}">
               <label for="id_postal_code">{% translate "Código postal" %}</label>
-              <input class="input" id="id_postal_code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" value="{{ form.postal_code.value|default:'' }}">
+              {% comment %}
+              `type="text"` com `inputmode="numeric"`, e nunca
+              `type="number"`: um codigo postal pode comecar por zero, e
+              o campo numerico o descarta -- alem de oferecer setinhas de
+              incremento, que nao significam nada num endereco.
+              {% endcomment %}
+              <input class="input" id="id_postal_code" name="postal_code" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="20" placeholder="1000" value="{{ form.postal_code.value|default:'' }}">
               {% include "components/field_errors.html" with errors=form.postal_code.errors %}
             </div>
             <div class="field{% if form.city.errors %} is-invalid{% endif %}">
               <label for="id_city">{% translate "Cidade" %}</label>
-              <input class="input" id="id_city" name="city" type="text" autocomplete="address-level2" maxlength="120" value="{{ form.city.value|default:'' }}">
+              <input class="input" id="id_city" name="city" type="text" autocomplete="address-level2" maxlength="120" placeholder="{% translate 'Bruxelas' %}" value="{{ form.city.value|default:'' }}">
               {% include "components/field_errors.html" with errors=form.city.errors %}
             </div>
           </div>
@@ -102,15 +134,24 @@ desktop, bloco recolhivel "Telefone e endereço" no celular.
         quando tem texto publicado, e continua texto puro
         enquanto não tem -- nunca um `#` que não abre nada.
         {% endcomment %}
+        {% comment %}
+        `target="_blank"`: quem clica para ler os termos NAO PODE perder
+        o formulario meio preenchido -- e o unico lugar do site onde
+        abrir noutra aba e a coisa certa, justamente porque se pede a
+        leitura no meio de um preenchimento.
+
+        `rel="noopener"` junto, sempre: sem ele a pagina aberta recebe
+        `window.opener` e pode mexer nesta.
+        {% endcomment %}
         <span>
           {% if paginas_legais.termos_de_uso %}{% url 'core:legal_termos' as url_termos %}{% endif %}
           {% if paginas_legais.privacidade %}{% url 'core:legal_privacidade' as url_privacidade %}{% endif %}
           {% if url_termos and url_privacidade %}
-            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}">Termos de uso</a> e a <a href="{{ url_privacidade }}">Política de privacidade</a>.{% endblocktranslate %}
+            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}" target="_blank" rel="noopener">Termos de uso</a> e a <a href="{{ url_privacidade }}" target="_blank" rel="noopener">Política de privacidade</a>.{% endblocktranslate %}
           {% elif url_termos %}
-            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}">Termos de uso</a> e a Política de privacidade.{% endblocktranslate %}
+            {% blocktranslate trimmed %}Li e aceito os <a href="{{ url_termos }}" target="_blank" rel="noopener">Termos de uso</a> e a Política de privacidade.{% endblocktranslate %}
           {% elif url_privacidade %}
-            {% blocktranslate trimmed %}Li e aceito os Termos de uso e a <a href="{{ url_privacidade }}">Política de privacidade</a>.{% endblocktranslate %}
+            {% blocktranslate trimmed %}Li e aceito os Termos de uso e a <a href="{{ url_privacidade }}" target="_blank" rel="noopener">Política de privacidade</a>.{% endblocktranslate %}
           {% else %}
             {% translate "Li e aceito os Termos de uso e a Política de privacidade." %}
           {% endif %}

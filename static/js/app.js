@@ -6,7 +6,11 @@
  *     pressionar Esc e quando outro dropdown abre.
  *   - Dialogos: [data-dialog-open="id"] mostra o backdrop com esse id;
  *     [data-dialog-close] ou Esc fecham.
- *   - Senha: [data-pw-toggle] alterna mostrar/ocultar o campo ao lado.
+ *   - Senha: [data-pw-toggle] alterna mostrar/ocultar o campo ao lado;
+ *     [data-pw-confirm] avisa, enquanto se digita, se a confirmacao
+ *     bate com a senha.
+ *   - Telefone: [data-telefone] formata o numero conforme o pais
+ *     escolhido no seletor ao lado.
  *   - Avisos legais (etapa 4 do assistente): [data-gate] desabilita o
  *     botao ate que todos os campos com [data-gate-check] dentro dele
  *     estejam marcados.
@@ -91,6 +95,8 @@
       icon.classList.toggle("ph-eye", !show);
       icon.classList.toggle("ph-eye-slash", show);
     }
+    // Quem le a tela precisa saber o ESTADO, nao so que ha um botao.
+    toggle.setAttribute("aria-pressed", show ? "true" : "false");
   });
 
   /* Interruptor (components/switch.html) ---------------------------------- */
@@ -565,6 +571,132 @@
       avisarQueBaixou(trigger);
       baixarPeloLink(trigger.getAttribute("data-download-url"));
     });
+  });
+
+  /* Telefone: mascara por pais ------------------------------------------
+
+     O seletor de pais traz a mascara em `data-mascara` (`#` = digito) e
+     um exemplo em `data-exemplo`. Quem monta os dois e o Python
+     (`accounts.telefone`): a lista de paises fica em UM lugar, e este
+     arquivo nao guarda copia nenhuma dela.
+
+     O QUE ELA NAO FAZ
+     -----------------
+     Nao recusa nada. Quem valida e o servidor, que aceita o numero com
+     ou sem a formatacao -- um pais sem mascara declarada continua
+     aceitando o que a pessoa digitar, e e assim de proposito: mascara
+     errada atrapalha mais do que mascara nenhuma. */
+
+  function aplicarMascara(digitos, mascara) {
+    var saida = "";
+    var i = 0;
+    for (var j = 0; j < mascara.length && i < digitos.length; j++) {
+      if (mascara[j] === "#") {
+        saida += digitos[i];
+        i++;
+      } else {
+        saida += mascara[j];
+      }
+    }
+    // O que passar do tamanho da mascara continua entrando: numero de
+    // ramal, ou um pais cujo formato mudou. Cortar seria apagar o que a
+    // pessoa digitou.
+    return saida + digitos.slice(i);
+  }
+
+  function paisEscolhido(campo) {
+    var seletor = campo.querySelector("select");
+    if (!seletor) { return null; }
+    return seletor.options[seletor.selectedIndex] || null;
+  }
+
+  function formatarTelefone(campo) {
+    var entrada = campo.querySelector("input");
+    var opcao = paisEscolhido(campo);
+    if (!entrada || !opcao) { return; }
+
+    var exemplo = opcao.getAttribute("data-exemplo") || "";
+    entrada.setAttribute("placeholder", exemplo);
+
+    var mascara = opcao.getAttribute("data-mascara") || "";
+    if (!mascara || !entrada.value) { return; }
+
+    var digitos = entrada.value.replace(/\D/g, "");
+    if (!digitos) { return; }
+    entrada.value = aplicarMascara(digitos, mascara);
+  }
+
+  document.addEventListener("input", function (event) {
+    var campo = event.target.closest("[data-telefone]");
+    if (campo && event.target.tagName === "INPUT") { formatarTelefone(campo); }
+  });
+
+  document.addEventListener("change", function (event) {
+    var campo = event.target.closest("[data-telefone]");
+    if (campo && event.target.tagName === "SELECT") { formatarTelefone(campo); }
+  });
+
+  // No carregamento: o exemplo do pais ja escolhido entra no campo, e o
+  // que veio gravado ganha a formatacao daquele pais.
+  document.addEventListener("DOMContentLoaded", function () {
+    var campos = document.querySelectorAll("[data-telefone]");
+    for (var i = 0; i < campos.length; i++) { formatarTelefone(campos[i]); }
+  });
+
+
+  /* Senha: a confirmacao responde enquanto se digita --------------------
+
+     `[data-pw-confirm="id-do-campo-original"]` compara os dois campos e
+     escreve o resultado num `[data-pw-confirm-aviso]` proximo.
+
+     ISTO NAO SUBSTITUI A VALIDACAO
+     ------------------------------
+     Quem recusa senhas diferentes continua sendo o servidor
+     (`SignupForm`). Isto e so o aviso que chega ANTES de enviar, para
+     ninguem descobrir o engano depois de a pagina recarregar.
+
+     `aria-live="polite"` faz o leitor de tela anunciar a mudanca sem
+     interromper quem esta digitando. */
+
+  function avisarDaConfirmacao(campo) {
+    var original = document.getElementById(campo.getAttribute("data-pw-confirm"));
+    var aviso = document.querySelector(
+      "[data-pw-confirm-aviso='" + campo.getAttribute("data-pw-confirm") + "']"
+    );
+    if (!original || !aviso) { return; }
+
+    if (!campo.value) {
+      aviso.textContent = "";
+      aviso.className = "field-hint";
+      campo.removeAttribute("aria-invalid");
+      return;
+    }
+
+    var igual = campo.value === original.value;
+    aviso.textContent = igual
+      ? aviso.getAttribute("data-igual")
+      : aviso.getAttribute("data-diferente");
+    aviso.className = igual ? "field-ok" : "field-error";
+    if (igual) {
+      campo.removeAttribute("aria-invalid");
+    } else {
+      campo.setAttribute("aria-invalid", "true");
+    }
+  }
+
+  document.addEventListener("input", function (event) {
+    var campo = event.target.closest("[data-pw-confirm]");
+    if (campo) { avisarDaConfirmacao(campo); return; }
+
+    // Digitar na senha ORIGINAL tambem tem de atualizar o aviso: quem
+    // corrige a primeira depois de confirmar a segunda veria um aviso
+    // velho ate tocar na confirmacao de novo.
+    if (event.target.id) {
+      var confirmacao = document.querySelector(
+        "[data-pw-confirm='" + event.target.id + "']"
+      );
+      if (confirmacao && confirmacao.value) { avisarDaConfirmacao(confirmacao); }
+    }
   });
 
   window.Desenrola = window.Desenrola || {};

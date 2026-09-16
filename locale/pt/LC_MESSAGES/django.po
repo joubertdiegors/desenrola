@@ -58,14 +58,26 @@ msgstr[2] "Esta senha é muito curta. Ela precisa conter pelo menos %d caractere
 # com "Esta palavra-passe e muito comum".
 #
 # Traducoes copiadas do catalogo oficial pt_BR do Django
-# (django/contrib/auth/locale/pt_BR/LC_MESSAGES/django.mo), verbatim --
-# incluindo a falta de ponto final na ultima, que e como o Django a
-# distribui.
+# (django/contrib/auth/locale/pt_BR/LC_MESSAGES/django.mo).
 msgid "This password is too common."
 msgstr "Esta senha é muito comum."
 
 msgid "This password is entirely numeric."
 msgstr "Esta senha é inteiramente numérica."
 
+# A ULTIMA NAO E MAIS VERBATIM, E E DE PROPOSITO.
+#
+# O catalogo do Django traz "A senha é muito parecida com
+# %(verbose_name)s" -- sem artigo e sem ponto final. Com o unico
+# %(verbose_name)s que este projeto produz, sai na tela:
+#
+#     A senha é muito parecida com e-mail
+#
+# que nao e portugues. O artigo entra, e o ponto final tambem.
+#
+# "o seu" serve para os dois campos que o validador pode alcancar neste
+# modelo -- "o seu e-mail" e "o seu nome completo". O `User` do
+# Desenrola nao tem username, first_name nem last_name, que sao os
+# outros atributos que o `UserAttributeSimilarityValidator` procura.
 msgid "The password is too similar to the %(verbose_name)s."
-msgstr "A senha é muito parecida com %(verbose_name)s"
+msgstr "A senha é muito parecida com o seu %(verbose_name)s."

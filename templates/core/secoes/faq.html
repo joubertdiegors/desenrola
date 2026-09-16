@@ -1,0 +1,70 @@
+{% load i18n %}{% comment %}
+Perguntas frequentes -- desenho 1a no desktop, 2a no celular.
+
+Coluna estreita a esquerda com titulo, chamada e bloco de contato;
+sanfona a direita. No celular vira uma coluna so, com o bloco de
+contato no fim.
+
+A SANFONA E `<details>`, E FUNCIONA SEM JAVASCRIPT
+--------------------------------------------------
+Abrir e fechar e comportamento NATIVO do navegador: teclado, leitor de
+tela e busca do Ctrl+F ja sabem lidar com ele, de graca. Um acordeao
+escrito a mao precisaria de `role`, `aria-expanded`, `aria-controls`,
+tratamento de Enter e Espaco -- e continuaria quebrado com o
+JavaScript desligado.
+
+`name="faq"` e o que deixa UMA aberta de cada vez, como na referencia.
+Onde o navegador ainda nao entende o atributo, varias ficam abertas ao
+mesmo tempo: o pior caso e a secao inteira legivel, o que nao e
+defeito nenhum.
+
+SEM PERGUNTA CADASTRADA, A SECAO INTEIRA SOME
+---------------------------------------------
+Titulo e sanfona vazia seriam uma promessa nao cumprida -- mesma regra
+dos parceiros. O item "#faq" do menu some junto (ver
+`content.services._menu_sem_ancora_morta`).
+
+A QUANTIDADE NAO E FIXA
+-----------------------
+A sanfona desenha o que estiver cadastrado, de uma a quantas forem.
+
+Contexto: secoes.faq, perguntas, site_config.
+{% endcomment %}
+{% if perguntas %}
+<section class="section container faq" id="faq">
+  <div class="faq-coluna">
+    <h2>{{ secoes.faq.title }}</h2>
+    {% if secoes.faq.lead %}<p class="section-lead">{{ secoes.faq.lead }}</p>{% endif %}
+  </div>
+  <div class="faq-lista">
+    {% for pergunta in perguntas %}
+    <details class="faq-item" name="faq">
+      <summary class="faq-pergunta">
+        <span>{{ pergunta.question }}</span>
+        <span class="faq-sinal" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-resposta">{{ pergunta.answer|linebreaks }}</div>
+    </details>
+    {% endfor %}
+  </div>
+  {% comment %}
+  O bloco de contato so existe se houver texto E e-mail cadastrado em
+  Sistema: um botao "Falar com o suporte" sem endereço não abriria
+  nada.
+
+  Fica FORA da coluna do titulo porque muda de lugar: no desktop
+  desce por baixo do titulo, no celular vai para o fim da secao,
+  depois das perguntas -- e e a grade que decide isso, nao dois
+  blocos repetidos com `d-only` e `m-only`.
+  {% endcomment %}
+  {% if secoes.faq.cta_title and site_config.contact.email %}
+  <div class="card faq-contato">
+    <h3>{{ secoes.faq.cta_title }}</h3>
+    {% if secoes.faq.cta_text %}<p>{{ secoes.faq.cta_text }}</p>{% endif %}
+    {% if secoes.faq.cta %}
+    <a class="btn btn-secondary" href="mailto:{{ site_config.contact.email }}">{{ secoes.faq.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}

@@ -39,11 +39,13 @@ from .forms import (
     FormularioDeImagem,
     FormularioDeItemDoMenu,
     FormularioDeParceiro,
+    FormularioDePergunta,
     FormularioDeSecao,
 )
 from .models import (
     Asset,
     AssetFileImmutableError,
+    FaqItem,
     MenuItem,
     Page,
     PageSection,
@@ -245,6 +247,11 @@ def backoffice_content_section(request, pk):
             ),
             "url_dos_parceiros": (
                 reverse("backoffice:partners") if declarada.cadastro == "parceiros" else None
+            ),
+            "perguntas": (
+                _linhas_com_pontas(FaqItem.objects.all())
+                if declarada.cadastro == "faq"
+                else None
             ),
         },
     )
@@ -987,4 +994,139 @@ def backoffice_asset_delete(request, pk):
         _contexto_de_imagens(
             request, {"imagem": imagem, "usos": _onde_esta_em_uso(imagem)}
         ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Perguntas frequentes
+# ---------------------------------------------------------------------------
+#
+# A tela delas é o editor da seção "faq" (ver `cadastro="faq"` em
+# `section_schema`), então toda ação volta para lá -- mesma forma dos
+# itens do menu, e pela mesma razão: título e chamada da seção são texto
+# da seção, e as perguntas são cadastro.
+
+
+def _url_do_faq(idioma=None):
+    secao = PageSection.objects.filter(page__key=CHAVE_DA_HOME, key="faq").first()
+    if secao is None:
+        return _url_da_lista(idioma or settings.LANGUAGE_CODE)
+    url = reverse("backoffice:content_section", args=[secao.pk])
+    return f"{url}?idioma={idioma}" if idioma else url
+
+
+def _contexto_da_pergunta(request, form, pergunta, titulo):
+    return {
+        "active": "content",
+        "bo_title": _("Conteúdo do site"),
+        "form": form,
+        "pergunta": pergunta,
+        "titulo": titulo,
+        "url_do_faq": _url_do_faq(idioma_pedido(request)),
+    }
+
+
+@exige_permissao(EDITAR_PERM)
+def backoffice_faq_item_new(request):
+    """Acrescenta uma pergunta à seção."""
+    if request.method == "POST":
+        form = FormularioDePergunta(request.POST)
+        if form.is_valid():
+            pergunta = form.save()
+            messages.success(
+                request,
+                _("Pergunta acrescentada: %(texto)s.") % {"texto": pergunta.question},
+            )
+            return redirect(_url_do_faq(idioma_pedido(request)))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDePergunta()
+
+    return render(
+        request,
+        "backoffice/faq_item_form.html",
+        _contexto_da_pergunta(request, form, None, _("Nova pergunta")),
+    )
+
+
+@exige_permissao(VER_PERM)
+def backoffice_faq_item_edit(request, pk):
+    """
+    Altera uma pergunta.
+
+    VER abre a tela; GRAVAR exige `change_pagesection` -- e a checagem do
+    POST é aqui, no servidor, não no botão.
+    """
+    pergunta = get_object_or_404(FaqItem, pk=pk)
+
+    if request.method == "POST":
+        if not request.user.has_perm(EDITAR_PERM):
+            raise PermissionDenied
+        form = FormularioDePergunta(request.POST, instance=pergunta)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Pergunta salva."))
+            return redirect(_url_do_faq(idioma_pedido(request)))
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = FormularioDePergunta(instance=pergunta)
+
+    return render(
+        request,
+        "backoffice/faq_item_form.html",
+        _contexto_da_pergunta(request, form, pergunta, pergunta.question),
+    )
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_faq_item_activation(request, pk):
+    """Liga e desliga uma pergunta. Desligada, some da Home -- sem apagar nada."""
+    pergunta = get_object_or_404(FaqItem, pk=pk)
+    pergunta.is_active = request.POST.get("ativo") == "1"
+    pergunta.save(update_fields=["is_active", "updated_at"])
+
+    if pergunta.is_active:
+        messages.success(request, _("Pergunta ativada. Volta a aparecer na página."))
+    else:
+        messages.success(request, _("Pergunta desativada. Deixa de aparecer na página."))
+    return redirect(_url_do_faq(idioma_pedido(request)))
+
+
+@exige_permissao(EDITAR_PERM)
+@require_POST
+def backoffice_faq_item_move(request, pk):
+    """Sobe ou desce uma pergunta na lista."""
+    pergunta = get_object_or_404(FaqItem, pk=pk)
+    if _reordenar(FaqItem, pergunta, request.POST.get("direcao")):
+        messages.success(request, _("Ordem atualizada."))
+    return redirect(_url_do_faq(idioma_pedido(request)))
+
+
+@exige_permissao(EDITAR_PERM)
+def backoffice_faq_item_delete(request, pk):
+    """
+    Apaga uma pergunta, depois de confirmar.
+
+    Aqui SE PERDE TEXTO -- a resposta inteira --, e por isso a tela de
+    confirmação mostra a resposta antes de perguntar. Quem só quer tirar
+    a pergunta do ar tem o botão de desativar, que não apaga nada.
+    """
+    pergunta = get_object_or_404(FaqItem, pk=pk)
+
+    if request.method == "POST":
+        texto = pergunta.question
+        pergunta.delete()
+        messages.success(request, _("Pergunta removida: %(texto)s.") % {"texto": texto})
+        return redirect(_url_do_faq(idioma_pedido(request)))
+
+    return render(
+        request,
+        "backoffice/faq_item_delete.html",
+        {
+            "active": "content",
+            "bo_title": _("Conteúdo do site"),
+            "pergunta": pergunta,
+            "url_do_faq": _url_do_faq(idioma_pedido(request)),
+        },
     )

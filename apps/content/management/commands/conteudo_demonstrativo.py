@@ -48,7 +48,13 @@ belga. Tudo aqui existe para ser apagado pelo cliente.
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.content.models import ContentBlock, ContentTranslation, Partner, SiteSettings
+from apps.content.models import (
+    ContentBlock,
+    ContentTranslation,
+    FaqItem,
+    Partner,
+    SiteSettings,
+)
 
 AVISO = (
     "CONTEÚDO DE DEMONSTRAÇÃO — SUBSTITUIR PELO TEXTO JURÍDICO "
@@ -130,6 +136,45 @@ na administração do sistema, no bloco de conteúdo `legal.privacy_policy`.
 """
 
 
+# Perguntas de demonstração. Descrevem o que o produto REALMENTE faz --
+# nada de prazo, preço ou promessa que o sistema não cumpra.
+PERGUNTAS = (
+    (
+        "O que é a Carta Convite?",
+        "É o documento em que alguém que mora na Bélgica convida formalmente "
+        "um visitante. Ela acompanha o pedido de visto de curta duração e "
+        "descreve quem convida, quem é convidado e o período da visita.",
+        1,
+    ),
+    (
+        "Em quais idiomas a carta pode ser gerada?",
+        "Nos idiomas oferecidos na etapa de idioma do assistente. A escolha "
+        "muda o texto inteiro do documento, não apenas o cabeçalho.",
+        2,
+    ),
+    (
+        "Preciso assinar o documento?",
+        "Sim. O sistema entrega o PDF pronto para impressão com o espaço da "
+        "assinatura; assinar e apresentar o documento continua sendo com "
+        "você.",
+        3,
+    ),
+    (
+        "Posso corrigir uma carta depois de gerar?",
+        "Enquanto a carta está em rascunho, você volta a qualquer etapa e "
+        "altera o que quiser. Depois de finalizada ela fica preservada como "
+        "está -- e você pode criar uma nova a partir dela.",
+        4,
+    ),
+    (
+        "Meus dados ficam guardados?",
+        "Os dados do seu perfil ficam, para você não redigitar a cada carta. "
+        "Você pode alterá-los no Perfil a qualquer momento.",
+        5,
+    ),
+)
+
+
 class Command(BaseCommand):
     help = "Preenche o CMS com conteúdo de demonstração (não usar em produção)."
 
@@ -146,6 +191,7 @@ class Command(BaseCommand):
 
         self._identidade(forcar)
         self._parceiros()
+        self._perguntas()
         self._paginas_legais(forcar)
         self._lembretes()
 
@@ -205,6 +251,31 @@ class Command(BaseCommand):
                 f'Parceiro "{parceiro.name}" não veio daqui e foi mantido. '
                 "Apague-o na administração do Django se não for para a demonstração."
             )
+
+    # -- perguntas frequentes ------------------------------------------
+
+    def _perguntas(self):
+        """
+        As perguntas de demonstração da Home.
+
+        Sem nenhuma pergunta a seção não aparece -- que é o estado certo
+        de uma instalação nova, e por isso a migration não semeia
+        nenhuma. Aqui, onde o conteúdo É de demonstração, elas entram.
+        As respostas descrevem o produto de verdade: são o texto que o
+        cliente vai ajustar, não invenção sobre prazos ou preços.
+        """
+        criadas = 0
+        for pergunta, resposta, ordem in PERGUNTAS:
+            _item, criada = FaqItem.objects.get_or_create(
+                question=pergunta,
+                defaults={"answer": resposta, "order": ordem, "is_active": True},
+            )
+            criadas += int(criada)
+
+        if criadas:
+            self._ok(f"Perguntas frequentes: {criadas} cadastrada(s)")
+        else:
+            self._pular(f"Perguntas frequentes: as {len(PERGUNTAS)} já existem")
 
     # -- páginas legais ------------------------------------------------
 

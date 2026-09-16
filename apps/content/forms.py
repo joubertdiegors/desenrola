@@ -27,7 +27,7 @@ import copy
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Asset, MenuItem, Partner
+from .models import Asset, FaqItem, MenuItem, Partner
 from .section_schema import Lista, campos_da_secao, secao_declarada
 from .services import ANCORAS_DA_HOME
 
@@ -310,6 +310,45 @@ class FormularioDeItemDoMenu(forms.ModelForm):
                 % {"ancoras": ", ".join(sorted(ANCORAS_DA_HOME))}
             )
         return destino
+
+
+class FormularioDePergunta(forms.ModelForm):
+    """
+    Uma pergunta frequente da Home.
+
+    PERGUNTA E RESPOSTA SÃO TEXTO SIMPLES
+    -------------------------------------
+    A resposta é `<textarea>`, e o template a desenha com
+    `|linebreaks`: parágrafos saem de linhas em branco, e nada mais. Não
+    há editor de formatação aqui, e é de propósito -- HTML digitado por
+    quem administra seria HTML cru dentro da Home, que é exatamente o
+    que o projeto não aceita sem sanitização.
+
+    A ORDEM NÃO SE DIGITA NA PRÁTICA
+    --------------------------------
+    O campo existe e funciona, mas quem administra usa as setas da
+    lista, que renumeram tudo pela posição (ver `_reordenar`). Deixá-lo
+    na tela é o que permite pôr uma pergunta no meio sem subir seis
+    vezes.
+
+    NÃO HÁ `clean_question` NEM `clean_answer` AQUI
+    -----------------------------------------------
+    Havia, e eram código morto: `forms.CharField` já apara os espaços
+    das pontas antes de conferir o preenchimento, então `"   "` chega
+    ao `clean_` como vazio -- e o campo obrigatório já o recusou. Os
+    dois métodos nunca chegavam a rodar, e uma mutação deliberada
+    mostrou isso: apagá-los não mudou resposta nenhuma da tela. O que
+    guarda a regra são os testes, não um método que nunca executa.
+    """
+
+    class Meta:
+        model = FaqItem
+        fields = ("question", "answer", "is_active", "order")
+        widgets = {
+            "question": forms.TextInput(attrs={"class": "input"}),
+            "answer": forms.Textarea(attrs={"class": "input", "rows": 6}),
+            "order": forms.NumberInput(attrs={"class": "input", "min": 0}),
+        }
 
 
 # O limite de tamanho de uma imagem enviada pelo Backoffice.

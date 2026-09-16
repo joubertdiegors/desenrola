@@ -174,24 +174,43 @@ textarea.input { height: auto; min-height: 96px; padding-top: 12px; padding-bott
   align-items: center;
   color: var(--error-dark);
 }
+/* O contrario de `.field-error`: o aviso de que esta certo. Hoje so a
+   confirmacao de senha o usa, enquanto se digita (static/js/app.js).
+   Mesma metrica do erro, para os dois ocuparem o mesmo espaco e a linha
+   nao pular quando um vira o outro. */
+.field-ok {
+  font-size: 12.5px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--s);
+}
 .field-note { font-size: 12px; color: var(--mu); margin-left: auto; }
 
 /* Senha com botao de mostrar/ocultar */
 .pw-wrap { position: relative; }
-.pw-wrap .input { padding-right: 46px; }
+.pw-wrap .input { padding-right: 52px; }
 .pw-toggle {
   position: absolute;
-  right: 12px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  padding: 4px;
+  /* 40x40 de ALVO, com o icone de 18px centrado dentro. Medido no
+     navegador, o botao tinha 28px de altura: passa no minimo da norma
+     (24px), mas erra o polegar com facilidade num celular. */
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
   border: 0;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--mu);
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
 }
+.pw-toggle:hover { color: var(--p); }
 
 select.input {
   appearance: none;
@@ -252,6 +271,11 @@ select.input {
 .toggle.is-on { background: var(--p); }
 .toggle.is-on::after { left: 20px; }
 .toggle:focus-visible { outline: 3px solid var(--p20); outline-offset: 2px; }
+/* O alvo de toque, e nao o desenho: a faixa invisivel leva os 22px de
+   altura do interruptor aos 44px do polegar, sem mudar um pixel do que
+   se ve. `inset` negativo so na vertical -- na horizontal os 40px ja
+   bastam, e alargar invadiria o texto ao lado. */
+.toggle::before { content: ""; position: absolute; inset: -11px 0; }
 .toggle-sm { width: 32px; height: 18px; }
 .toggle-sm::after { width: 14px; height: 14px; }
 .toggle-sm.is-on::after { left: 16px; }
@@ -285,9 +309,20 @@ select.input {
 .disclosure-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
 
 /* Telefone com bandeira decorativa */
-.phone-field { display: grid; grid-template-columns: 96px 1fr; gap: 10px; }
-.flag-be { width: 18px; height: 13px; border-radius: 2px; background: linear-gradient(90deg, #000 33%, #fae042 33% 66%, #ed2939 66%); flex: none; }
-.dial-code { display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+/* Telefone: o codigo do pais e o numero.
+
+   A COLUNA DO CODIGO CRESCEU, E MESMO ASSIM CORTA NOME LONGO
+   ----------------------------------------------------------
+   Deixou de ser o texto "+32" desenhado e virou um `<select>` com
+   dezenas de paises. 150px cabem "+351 Portugal", "+32 Belgica" e a
+   maioria; nomes muito longos ficam cortados na caixa FECHADA -- e um
+   `<select>` nativo nao sabe mostrar um texto curto fechado e outro
+   longo aberto. O codigo, que e o que importa quando esta fechado,
+   aparece sempre inteiro; o nome aparece inteiro na lista aberta, que
+   e onde se escolhe. */
+.phone-field { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; }
+.dial-code { padding: 0 8px; }
+.dial-code option { font-size: 14px; }
 
 
 /* --------------------------------------------------------------------------
@@ -634,7 +669,9 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 38px;
+  /* 40px, como todo controle do projeto. Media 38 -- dois pixels de
+     diferenca que ninguem ve e que o polegar sente. */
+  min-height: 40px;
   padding: 6px 10px;
   font: inherit;
   font-size: 14px;
@@ -760,8 +797,10 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  /* 40x40 de alvo com o icone centrado -- media 34. O campo tem 48px de
+     altura, entao ha folga de sobra para o botao crescer dentro dele. */
+  width: 40px;
+  height: 40px;
   background: none;
   border: 0;
   padding: 0;

@@ -461,6 +461,34 @@ SECOES = {
             ),
         ),
     ),
+    "faq": Secao(
+        chave="faq",
+        nome=_("Perguntas frequentes"),
+        descricao=_(
+            "As dúvidas mais comuns, em sanfona. Sem nenhuma pergunta "
+            "cadastrada, a seção inteira não aparece."
+        ),
+        grupo=MEIO,
+        campos=(
+            Texto("title", _("Título da seção")),
+            Texto("lead", _("Texto de apoio"), longo=True),
+            Texto(
+                "cta_title",
+                _("Bloco de contato · título"),
+                ajuda=_("Em branco, o bloco inteiro não aparece."),
+            ),
+            Texto("cta_text", _("Bloco de contato · texto"), longo=True),
+            Texto(
+                "cta",
+                _("Bloco de contato · botão"),
+                ajuda=_(
+                    "Abre o e-mail de contato cadastrado em Sistema. "
+                    "Sem e-mail cadastrado, o botão não aparece."
+                ),
+            ),
+        ),
+        cadastro="faq",
+    ),
     "cta": Secao(
         chave="cta",
         nome=_("Mini Banner"),

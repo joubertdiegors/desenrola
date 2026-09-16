@@ -639,3 +639,59 @@ class MenuItem(TimeStampedModel):
 
     def __str__(self):
         return self.label
+
+
+class FaqItemQuerySet(models.QuerySet):
+    def publicadas(self):
+        """As perguntas que a Home mostra: ativas, na ordem definida."""
+        return self.filter(is_active=True)
+
+
+class FaqItem(TimeStampedModel):
+    """
+    Uma pergunta frequente da Home.
+
+    POR QUE UM MODELO, E NAO UMA LISTA DENTRO DO JSON DA SECAO
+    ----------------------------------------------------------
+    Mesma razao de `MenuItem` e `Partner`: a QUANTIDADE e a decisao. O
+    editor declarativo de secao edita os textos dos itens que ja
+    existem -- nele nao ha como acrescentar nem remover um --, e uma
+    secao de perguntas frequentes existe justamente para crescer.
+
+    O QUE ELE NAO GUARDA
+    --------------------
+    Titulo e chamada da secao continuam sendo texto da `PageSection`,
+    como em qualquer outra parte da Home. Aqui ficam so as perguntas.
+
+    E O IDIOMA?
+    -----------
+    Pergunta e resposta sao campos simples, sem tabela de traducao --
+    exatamente como `Partner.name`/`description` e `MenuItem.label`, que
+    sao o precedente do projeto para cadastro administrado no produto.
+    Num site de quatro idiomas isso e uma limitacao conhecida, e esta
+    registrada no relatorio: resolve-la e dar tabela de traducao aos
+    TRES cadastros de uma vez, nao inventar um formato so para este.
+    """
+
+    question = models.CharField(_("pergunta"), max_length=200)
+    answer = models.TextField(
+        _("resposta"),
+        help_text=_("Texto simples. Quebras de linha são respeitadas."),
+    )
+    is_active = models.BooleanField(_("ativa"), default=True)
+    order = models.PositiveIntegerField(
+        _("ordem"), default=0, help_text=_("Menor aparece primeiro.")
+    )
+
+    objects = FaqItemQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("pergunta frequente")
+        verbose_name_plural = _("perguntas frequentes")
+        ordering = ["order", "pk"]
+        # Governada por `content.change_pagesection`, como o resto da
+        # Central de Conteudo -- ver a mesma decisao em `MenuItem`.
+        default_permissions = ()
+
+    def __str__(self):
+        return self.question

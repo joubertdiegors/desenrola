@@ -117,6 +117,7 @@ def mundo(db, modelos_oficiais_prontos, user, other_user):
         Asset,
         ContentBlock,
         ContentTranslation,
+        FaqItem,
         MenuItem,
         PageSection,
         Partner,
@@ -146,6 +147,9 @@ def mundo(db, modelos_oficiais_prontos, user, other_user):
         "secao": PageSection.objects.get(page__key="home", key="hero"),
         "parceiro": Partner.objects.create(name="Padaria", url="https://exemplo.test/"),
         "item": MenuItem.objects.first(),
+        "pergunta": FaqItem.objects.create(
+            question="Quanto tempo leva?", answer="Minutos.", order=1
+        ),
         "imagem": Asset.objects.filter(kind=Asset.Kind.LOGO).first()
         or Asset.objects.first(),
         "modelo": DocumentTemplate.objects.filter(is_system=True).first(),
@@ -164,6 +168,8 @@ def _argumento(tipo, nome, mundo):
         return mundo["parceiro"].pk
     if "menu_item" in nome:
         return mundo["item"].pk
+    if "faq_item" in nome:
+        return mundo["pergunta"].pk
     if "asset" in nome:
         return mundo["imagem"].pk
     if "content" in nome:

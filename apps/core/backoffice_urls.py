@@ -158,6 +158,34 @@ urlpatterns = [
         content_backoffice.backoffice_menu_item_delete,
         name="menu_item_delete",
     ),
+    # Perguntas frequentes da Home. Mesma forma dos itens do menu: a
+    # tela delas e o editor da secao "faq" (ver `cadastro="faq"` em
+    # `content.section_schema`), entao nao ha rota de lista propria.
+    path(
+        "conteudo/faq/nova/",
+        content_backoffice.backoffice_faq_item_new,
+        name="faq_item_new",
+    ),
+    path(
+        "conteudo/faq/<int:pk>/",
+        content_backoffice.backoffice_faq_item_edit,
+        name="faq_item_edit",
+    ),
+    path(
+        "conteudo/faq/<int:pk>/situacao/",
+        content_backoffice.backoffice_faq_item_activation,
+        name="faq_item_activation",
+    ),
+    path(
+        "conteudo/faq/<int:pk>/ordem/",
+        content_backoffice.backoffice_faq_item_move,
+        name="faq_item_move",
+    ),
+    path(
+        "conteudo/faq/<int:pk>/excluir/",
+        content_backoffice.backoffice_faq_item_delete,
+        name="faq_item_delete",
+    ),
     # Biblioteca de imagens: toda imagem administravel do projeto.
     path("imagens/", content_backoffice.backoffice_assets, name="assets"),
     path("imagens/nova/", content_backoffice.backoffice_asset_new, name="asset_new"),

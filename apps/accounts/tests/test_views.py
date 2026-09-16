@@ -18,7 +18,11 @@ DADOS_CADASTRO = {
     "email": "sofia@exemplo.be",
     "password1": "Correto-Cavalo-Bateria-7",
     "password2": "Correto-Cavalo-Bateria-7",
-    "phone": "+32 470 11 22 33",
+    # O telefone e UM valor no banco e DUAS caixas na tela desde a
+    # revisao final de UX: o codigo do pais deixou de ser um `<span>`
+    # fixo em +32 e virou um `<select>` (`accounts.telefone`).
+    "phone_0": "+32",
+    "phone_1": "470 11 22 33",
     "address_line1": "Rue des Exemple 25",
     "postal_code": "1200",
     "city": "Woluwe-Saint-Lambert",
@@ -252,7 +256,8 @@ def test_perfil_salva_os_dados_do_proprio_usuario(auth_client, user, other_user)
             "action": "dados",
             "full_name": "Claire D. Martin",
             "email": "claire.martin@exemplo.be",
-            "phone": "",
+            "phone_0": "+32",
+            "phone_1": "",
             "address_line1": "Avenue Louise 1",
             "postal_code": "1050",
             "city": "Bruxelles",
@@ -291,18 +296,48 @@ def test_perfil_volta_para_a_secao_do_celular(auth_client, user):
 
 
 @pytest.mark.django_db
-def test_menu_lateral_do_perfil_aponta_para_as_secoes_da_pagina(auth_client):
+def test_as_tres_secoes_do_perfil_continuam_alcancaveis(auth_client):
     """
-    No desktop as três seções ficam empilhadas na mesma página: o item do
-    menu precisa levar direto para a seção (âncora), não só recarregar a
-    página do topo -- era o que faltava e deixava o clique parecendo não
-    fazer nada.
+    A BARRA LATERAL SAIU, AS SEÇÕES FICARAM.
+
+    Ela repetia navegação: no desktop as três seções já aparecem TODAS
+    na mesma página, e os links dela apenas rolavam até cada uma. O que
+    não podia sumir são as âncoras -- o índice do celular aponta para
+    elas, e um link externo para `#senha` tem de continuar chegando no
+    lugar certo.
     """
     html = auth_client.get(reverse("accounts:profile")).content.decode()
 
     for secao in ("dados", "senha", "comunicacoes"):
         assert f'id="{secao}"' in html
-        assert f'href="{reverse("accounts:profile")}?secao={secao}#{secao}"' in html
+
+
+@pytest.mark.django_db
+def test_o_perfil_nao_tem_mais_barra_lateral(auth_client):
+    html = auth_client.get(reverse("accounts:profile")).content.decode()
+
+    assert "profile-side" not in html
+    assert "side-menu" not in html
+
+
+@pytest.mark.django_db
+def test_quem_e_a_pessoa_continua_na_tela(auth_client, user):
+    """A lateral dizia nome e desde quando; isso ficou, no cabeçalho."""
+    html = auth_client.get(reverse("accounts:profile")).content.decode()
+
+    assert "profile-topo" in html
+    assert user.full_name in html
+
+
+@pytest.mark.django_db
+def test_sair_continua_a_um_clique(auth_client):
+    """
+    O "Sair" da lateral saiu -- mas ele era o SEGUNDO: a barra da área
+    logada já tem o dele, e é o que sobra.
+    """
+    html = auth_client.get(reverse("accounts:profile")).content.decode()
+
+    assert reverse("accounts:logout") in html
 
 
 def test_alteracao_de_senha(auth_client, user):

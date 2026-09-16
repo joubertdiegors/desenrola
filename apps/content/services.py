@@ -31,7 +31,7 @@ from django.db.models import Prefetch
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
-from .models import ContentTranslation, MenuItem, Page, PageSection, Partner
+from .models import ContentTranslation, FaqItem, MenuItem, Page, PageSection, Partner
 
 # A página que a landing pública consome.
 CHAVE_DA_HOME = "home"
@@ -198,6 +198,7 @@ def contexto_da_home(language=None):
 
     partes = partes_da_pagina(CHAVE_DA_HOME, language)
     parceiros = list(Partner.objects.publicados())
+    perguntas = list(FaqItem.objects.publicadas())
 
     # Qual desenho o Banner usa. Resolvido AQUI, e nao no template: um
     # valor invalido na coluna nao pode virar um `{% include %}` de um
@@ -218,8 +219,9 @@ def contexto_da_home(language=None):
         # `secoes` continua no contexto: e o que os templates ja leem, e
         # trocar tudo de uma vez seria mexer em marcacao que funciona.
         "secoes": {chave: parte.conteudo for chave, parte in partes.items()},
-        "menu_itens": _menu_sem_ancora_morta(partes, parceiros),
+        "menu_itens": _menu_sem_ancora_morta(partes, parceiros, perguntas),
         "parceiros": parceiros,
+        "perguntas": perguntas,
         "cartas_emitidas": statistics.cartas_emitidas(),
     }
 
@@ -235,16 +237,26 @@ def contexto_da_home(language=None):
 ANCORAS_DA_HOME = {
     "#como-funciona": "how",
     "#parceiros": "partners",
+    "#faq": "faq",
+}
+
+# As ancoras cuja secao some quando o CADASTRO dela esta vazio -- nao
+# basta a parte estar ativa na pagina. O valor e o nome da lista que
+# `contexto_da_home` carrega para aquela secao.
+ANCORAS_QUE_DEPENDEM_DE_CADASTRO = {
+    "partners": "parceiros",
+    "faq": "perguntas",
 }
 
 
-def _menu_sem_ancora_morta(partes, parceiros):
+def _menu_sem_ancora_morta(partes, parceiros, perguntas=()):
     """
     Os itens do menu, menos os que levariam a lugar nenhum.
 
     Um item que aponta para `#parceiros` some quando a seção de
     parceiros não está na página -- desativada, ou sem nenhum parceiro
-    cadastrado. Era o comportamento do template antes de o menu virar
+    cadastrado. `#faq` segue a mesma regra, com as perguntas. Era o
+    comportamento do template antes de o menu virar
     cadastro (`{% if parceiros %}`), e ele não podia se perder: âncora
     que não leva a lugar nenhum é o defeito que este projeto remove
     desde a Etapa G.
@@ -272,7 +284,8 @@ def _menu_sem_ancora_morta(partes, parceiros):
             continue
         if parte not in partes:
             continue
-        if parte == "partners" and not parceiros:
+        cadastro = ANCORAS_QUE_DEPENDEM_DE_CADASTRO.get(parte)
+        if cadastro and not {"parceiros": parceiros, "perguntas": perguntas}[cadastro]:
             continue
         visiveis.append(item)
     return visiveis

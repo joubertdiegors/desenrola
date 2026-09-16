@@ -24,24 +24,26 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
 {% block content %}
 {% with current=section|default:"dados" %}
 <div class="container profile{% if section %} has-section{% endif %}">
-  <aside class="profile-side d-only card">
-    <div class="profile-user">
-      <span class="avatar avatar-lg">{{ user.get_initials }}</span>
-      <div>
-        <div class="profile-user-name">{{ user.full_name }}</div>
-        <div class="profile-user-sub">{% blocktranslate with date=user.date_joined|date:"b. Y" %}Conta desde {{ date }}{% endblocktranslate %}</div>
-      </div>
+  {% comment %}
+  A barra lateral saiu na revisao final de UX.
+
+  No desktop as tres seces do perfil ja aparecem TODAS na mesma
+  pagina, uma embaixo da outra -- os links dela apenas rolavam ate
+  cada uma, e o "Sair" repetia o que o menu da conta, no alto, ja
+  faz. Sobrava largura ocupada por navegacao que nao levava a lugar
+  nenhum novo.
+
+  O que a lateral dizia de util -- quem e a pessoa e desde quando --
+  ficou, aqui em cima. No celular nada muda: o indice continua sendo
+  `.profile-home`, que e como se navega numa tela estreita.
+  {% endcomment %}
+  <header class="profile-topo d-only">
+    <span class="avatar avatar-lg">{{ user.get_initials }}</span>
+    <div>
+      <h1>{{ user.full_name }}</h1>
+      <p class="text-muted">{% blocktranslate with date=user.date_joined|date:"b. Y" %}Conta desde {{ date }}{% endblocktranslate %} · {{ user.email }}</p>
     </div>
-    <nav class="side-menu" aria-label="{% translate 'Seções do perfil' %}">
-      <a class="{% if current == 'dados' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=dados#dados"{% if current == "dados" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}</a>
-      <a class="{% if current == 'senha' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=senha#senha"{% if current == "senha" %} aria-current="page"{% endif %}><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Senha" %}</a>
-      <a class="{% if current == 'comunicacoes' %}is-current{% endif %}" href="{% url 'accounts:profile' %}?secao=comunicacoes#comunicacoes"{% if current == "comunicacoes" %} aria-current="page"{% endif %}><i class="ph ph-bell" aria-hidden="true"></i>{% translate "Comunicações" %}</a>
-      <form method="post" action="{% url 'accounts:logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="hr-item"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair" %}</button>
-      </form>
-    </nav>
-  </aside>
+  </header>
 
   <div class="profile-home m-only">
     <div class="profile-avatar-row">
@@ -88,17 +90,24 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
         <div class="form-grid">
           <div class="field span-2{% if profile_form.full_name.errors %} is-invalid{% endif %}">
             <label for="p_name">{% translate "Nome completo" %}</label>
-            <input class="input" id="p_name" name="full_name" type="text" autocomplete="name" required maxlength="150" value="{{ profile_form.full_name.value|default:'' }}">
+            <input class="input" id="p_name" name="full_name" type="text" autocomplete="name" required maxlength="150" placeholder="{% translate 'Nome e sobrenome, como no documento' %}" value="{{ profile_form.full_name.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.full_name.errors %}
           </div>
           <div class="field{% if profile_form.email.errors %} is-invalid{% endif %}">
             <label for="p_email">{% translate "E-mail" %}</label>
-            <input class="input" id="p_email" name="email" type="email" autocomplete="email" required value="{{ profile_form.email.value|default:'' }}">
+            <input class="input" id="p_email" name="email" type="email" autocomplete="email" required placeholder="seuemail@email.com" value="{{ profile_form.email.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.email.errors %}
           </div>
           <div class="field{% if profile_form.phone.errors %} is-invalid{% endif %}">
-            <label for="p_phone">{% translate "Telefone" %}</label>
-            <input class="input" id="p_phone" name="phone" type="tel" autocomplete="tel" maxlength="32" value="{{ profile_form.phone.value|default:'' }}">
+            {% comment %}
+            O MESMO campo do cadastro: seletor de pais + numero
+            (`accounts.telefone.CampoDeTelefone`). Antes o `+32` nao
+            aparecia sequer aqui -- quem tinha telefone de outro pais
+            tinha de digitar o codigo dentro do campo, e o numero ficava
+            sem forma nenhuma.
+            {% endcomment %}
+            <label for="{{ profile_form.phone.auto_id }}_1">{% translate "Telefone" %}</label>
+            {{ profile_form.phone }}
             {% include "components/field_errors.html" with errors=profile_form.phone.errors %}
           </div>
           <div class="field{% if profile_form.birth_date.errors %} is-invalid{% endif %}">
@@ -128,22 +137,27 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
           </div>
           <div class="field{% if profile_form.document_number.errors %} is-invalid{% endif %}">
             <label for="p_document">{% translate "Número do documento de identidade" %}</label>
-            <input class="input" id="p_document" name="document_number" type="text" maxlength="64" value="{{ profile_form.document_number.value|default:'' }}">
+            <input class="input" id="p_document" name="document_number" type="text" maxlength="64" placeholder="{% translate 'Número do documento de identidade' %}" value="{{ profile_form.document_number.value|default:'' }}">
             <div class="field-hint">{% translate "Usado na sua Carta Convite. Assim você não precisa digitá-lo a cada carta." %}</div>
             {% include "components/field_errors.html" with errors=profile_form.document_number.errors %}
           </div>
           <div class="field span-2" id="endereco">
             <label for="p_address">{% translate "Endereço completo na Bélgica" %}</label>
-            <input class="input" id="p_address" name="address_line1" type="text" autocomplete="street-address" maxlength="255" value="{{ profile_form.address_line1.value|default:'' }}">
+            <input class="input" id="p_address" name="address_line1" type="text" autocomplete="street-address" maxlength="255" placeholder="{% translate 'Rua, número, complemento' %}" value="{{ profile_form.address_line1.value|default:'' }}">
           </div>
           <div class="field{% if profile_form.postal_code.errors %} is-invalid{% endif %}">
             <label for="p_postal_code">{% translate "Código postal" %}</label>
-            <input class="input" id="p_postal_code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" value="{{ profile_form.postal_code.value|default:'' }}">
+            {% comment %}
+            `type="text"` com `inputmode="numeric"`: um codigo postal
+            belga comeca por zero em boa parte do pais, e `type="number"`
+            o descartaria.
+            {% endcomment %}
+            <input class="input" id="p_postal_code" name="postal_code" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="20" placeholder="1000" value="{{ profile_form.postal_code.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.postal_code.errors %}
           </div>
           <div class="field{% if profile_form.city.errors %} is-invalid{% endif %}">
             <label for="p_city">{% translate "Cidade" %}</label>
-            <input class="input" id="p_city" name="city" type="text" autocomplete="address-level2" maxlength="120" value="{{ profile_form.city.value|default:'' }}">
+            <input class="input" id="p_city" name="city" type="text" autocomplete="address-level2" maxlength="120" placeholder="{% translate 'Bruxelas' %}" value="{{ profile_form.city.value|default:'' }}">
             {% include "components/field_errors.html" with errors=profile_form.city.errors %}
           </div>
         </div>
@@ -162,19 +176,37 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
         <input type="hidden" name="secao" value="{% if section %}{{ section }}{% endif %}">
         {% if return_to %}<input type="hidden" name="next" value="{{ return_to }}">{% endif %}
         <div class="form-grid">
+          {% comment %}
+          Os tres campos ganham o olho -- o mesmo componente do login e
+          do cadastro --, e a confirmacao avisa enquanto se digita.
+          {% endcomment %}
           <div class="field span-2{% if password_form.old_password.errors %} is-invalid{% endif %}">
             <label for="p_pw0">{% translate "Senha atual" %}</label>
-            <input class="input" id="p_pw0" name="old_password" type="password" autocomplete="current-password" required placeholder="••••••••">
+            <div class="pw-wrap">
+              <input class="input" id="p_pw0" name="old_password" type="password" autocomplete="current-password" required placeholder="••••••••">
+              <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+            </div>
             {% include "components/field_errors.html" with errors=password_form.old_password.errors %}
           </div>
           <div class="field{% if password_form.new_password1.errors %} is-invalid{% endif %}">
             <label for="p_pw1">{% translate "Nova senha" %}</label>
-            <input class="input" id="p_pw1" name="new_password1" type="password" autocomplete="new-password" required placeholder="{% translate 'Mínimo 8 caracteres' %}">
+            <div class="pw-wrap">
+              <input class="input" id="p_pw1" name="new_password1" type="password" autocomplete="new-password" required placeholder="{% translate 'Mínimo 8 caracteres' %}">
+              <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+            </div>
             {% include "components/field_errors.html" with errors=password_form.new_password1.errors %}
           </div>
           <div class="field{% if password_form.new_password2.errors %} is-invalid{% endif %}">
             <label for="p_pw2">{% translate "Confirmar nova senha" %}</label>
-            <input class="input" id="p_pw2" name="new_password2" type="password" autocomplete="new-password" required placeholder="{% translate 'Repita a nova senha' %}">
+            <div class="pw-wrap">
+              <input class="input" id="p_pw2" name="new_password2" type="password" autocomplete="new-password" required placeholder="{% translate 'Repita a nova senha' %}" data-pw-confirm="p_pw1">
+              <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+            </div>
+            <span class="field-hint"
+                  data-pw-confirm-aviso="p_pw1"
+                  data-igual="{% translate 'As senhas conferem.' %}"
+                  data-diferente="{% translate 'As senhas não coincidem.' %}"
+                  aria-live="polite"></span>
             {% include "components/field_errors.html" with errors=password_form.new_password2.errors %}
           </div>
         </div>

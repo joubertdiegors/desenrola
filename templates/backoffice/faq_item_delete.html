@@ -1,0 +1,57 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Conteúdo do site · remover pergunta frequente.
+
+Aqui SE PERDE TEXTO: a resposta inteira. Por isso ela aparece na tela
+antes da pergunta final -- ninguém deve apagar um parágrafo que não
+está vendo. E a alternativa fica ao lado: desativar tira da página e
+mantém o texto.
+
+Contexto: pergunta, url_do_faq.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Remover pergunta" %}</h1>
+    <p class="text-muted">{% translate "Esta ação não tem volta." %}</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_do_faq }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{% translate "Esta ação não tem volta." %}</p>
+
+<div class="notice notice-error">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{% blocktranslate trimmed with texto=pergunta.question %}
+    Remover <strong>{{ texto }}</strong> apaga também a resposta escrita. Se a intenção é só tirá-la do site por ora, desative-a.
+  {% endblocktranslate %}</span>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h3>{{ pergunta.question }}</h3>
+  </div>
+  <div class="bo-resposta-apagada">{{ pergunta.answer|linebreaks }}</div>
+  <dl class="bo-dados">
+    <dt>{% translate "Na página" %}</dt><dd>{% if pergunta.is_active %}{% translate "Aparece" %}{% else %}{% translate "Oculta" %}{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="bo-actions">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover definitivamente" %}</button>
+  </form>
+
+  {% if pergunta.is_active %}
+  <form method="post" action="{% url 'backoffice:faq_item_activation' pergunta.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="0">
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Só desativar" %}</button>
+  </form>
+  {% endif %}
+
+  <a class="btn btn-ghost" href="{{ url_do_faq }}">{% translate "Cancelar" %}</a>
+</div>
+{% endblock %}

@@ -303,9 +303,24 @@ class TestPreserva:
             ).exists(), permissao.chave
 
     def test_o_conteudo_da_pagina_inicial(self):
+        """
+        TODAS as partes declaradas continuam de pé.
+
+        O número sai do schema, e não escrito aqui: sete era a
+        quantidade do dia em que este teste nasceu, não a regra. A regra
+        é que preparar para produção não apaga parte nenhuma da Home --
+        e ela tem de continuar valendo na próxima parte que alguém
+        acrescentar.
+        """
+        from apps.content import section_schema
         from apps.content.models import PageSection, PageSectionTranslation
 
-        assert PageSection.objects.filter(page__key="home").count() == 7
+        declaradas = set(section_schema.SECOES)
+        no_banco = set(
+            PageSection.objects.filter(page__key="home").values_list("key", flat=True)
+        )
+
+        assert no_banco == declaradas
         assert PageSectionTranslation.objects.exists()
 
     def test_os_itens_do_menu(self):

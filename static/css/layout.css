@@ -362,6 +362,87 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .how-card-texto h3 + p { margin-top: 6px; }
 .how-card-icon { width: 52px; height: 52px; display: grid; place-items: center; color: var(--p); font-size: 26px; border-radius: var(--radius-md); }
 
+/* ---------------------------------------------------------------------------
+   Perguntas frequentes · desenho 1a (desktop) e 2a (celular).
+
+   A sanfona e `<details>`/`<summary>` nativo. O unico trabalho do CSS e
+   trocar o marcador padrao do navegador -- um triangulinho que muda de
+   tamanho em cada sistema -- pelo circulo com "+" e "−" da referencia.
+   --------------------------------------------------------------------------- */
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  /* Areas nomeadas, e nao ordem do HTML: o bloco de contato fica por
+     baixo do titulo no desktop e no FIM da secao no celular, e a grade
+     resolve isso sem duplicar o bloco com `d-only`/`m-only`. */
+  grid-template-areas:
+    "cabeca lista"
+    "contato lista";
+  grid-template-rows: auto 1fr;
+  gap: 0 64px;
+  align-items: start;
+}
+.faq-coluna { grid-area: cabeca; }
+.faq-lista { grid-area: lista; }
+.faq-contato { grid-area: contato; }
+.faq-coluna .section-lead { margin: 8px 0 0; max-width: 42ch; }
+.faq-contato { margin-top: 26px; padding: 20px; display: grid; gap: 8px; justify-items: start; }
+.faq-contato h3 { font-size: 16px; }
+.faq-contato p { font-size: 14px; color: var(--mu); }
+.faq-contato .btn { margin-top: 6px; }
+
+.faq-lista { display: flex; flex-direction: column; }
+.faq-item { border-top: 1px solid var(--bd); }
+.faq-item:last-child { border-bottom: 1px solid var(--bd); }
+
+.faq-pergunta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  /* 56px de alvo de toque: e a altura minima que a referencia usa no
+     celular, e nao ha razao para o desktop ser menor. */
+  min-height: 56px;
+  padding: 14px 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--navy);
+  /* Fora o triangulo padrao, nos dois motores. */
+  list-style: none;
+}
+.faq-pergunta::-webkit-details-marker { display: none; }
+.faq-pergunta:hover { color: var(--p); }
+.faq-item:focus-within .faq-pergunta { color: var(--p); }
+
+/* O "+" que vira "−": duas barras cruzadas, e a vertical some quando a
+   pergunta esta aberta. */
+.faq-sinal {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  background: #fff;
+}
+.faq-sinal::before,
+.faq-sinal::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 12px;
+  height: 2px;
+  background: var(--p);
+  transform: translate(-50%, -50%);
+}
+.faq-sinal::after { transform: translate(-50%, -50%) rotate(90deg); }
+.faq-item[open] .faq-sinal { background: var(--p10); border-color: var(--p20); }
+.faq-item[open] .faq-sinal::after { opacity: 0; }
+
+.faq-resposta { padding: 0 46px 20px 0; color: var(--mu); font-size: 15px; line-height: 1.65; }
+.faq-resposta p { margin: 0 0 10px; }
+.faq-resposta p:last-child { margin-bottom: 0; }
+
 .cta-banner {
   border-radius: 18px;
   background: linear-gradient(120deg, var(--navy), color-mix(in srgb, var(--navy) 70%, var(--p)));
@@ -435,6 +516,8 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .hero-editorial h1 { font-size: 38px; }
   .trust-bar { padding: 28px 32px 0; }
   .section { padding: 0 32px; margin-top: 40px; }
+  .faq { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeca" "lista" "contato"; grid-template-rows: none; gap: 28px; }
+  .faq-coluna .section-lead { max-width: none; }
   /* Duas colunas no tablet: quatro cartoes 2a em 834px dariam 180px de
      largura, e o botao de largura inteira quebraria em duas linhas. */
   .partners-grid,
@@ -500,6 +583,11 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .hero-editorial-art .hero-image,
   .hero-editorial-art .img-slot { aspect-ratio: 4 / 3; }
 
+  /* No celular as duas caixas do telefone empilham: lado a lado, o
+     seletor cortaria o nome do pais em quatro letras, e sobraria pouco
+     para o numero. Empilhado, cada um fica com a largura inteira. */
+  .phone-field { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+
   .stat-badge { display: flex; padding: 14px; }
   .stat-badge-row { display: flex; gap: 10px; align-items: baseline; }
   .stat-badge-live { margin-top: 4px; }
@@ -521,6 +609,24 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
   .partner-card { min-height: 280px; }
   img.partner-image { padding: 18px 18px 0; }
   .partner-corpo { padding: 0 16px 16px; }
+  /* Perguntas frequentes · desenho 2a. Cada pergunta vira um cartao
+     com borda propria, em vez de linhas separadas por filete: na
+     largura do celular o filete sozinho nao separa o suficiente. */
+  .faq { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeca" "lista" "contato"; grid-template-rows: none; gap: 20px; }
+  .faq-coluna .section-lead { max-width: none; }
+  .faq-lista { gap: 10px; }
+  .faq-item {
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-md);
+    background: #fff;
+    padding: 0 14px;
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--bd); }
+  .faq-pergunta { font-size: 15px; gap: 12px; }
+  .faq-resposta { padding: 0 0 16px; font-size: 14.5px; }
+  .faq-contato { margin-top: 0; }
+  .faq-contato .btn { width: 100%; }
+
   /* UMA coluna, icone ao lado do texto.
      Tres colunas em 390px davam 89px de largura util por cartao -- sete
      caracteres por linha, medido no navegador. O texto cabia, e por
@@ -867,21 +973,23 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 /* Aviso curto dentro do cartao de carta no celular (ex.: expirada). */
 .letter-card-note { color: var(--error-dark); font-size: 13px; margin: 4px 0 8px; }
 
-.profile { display: grid; grid-template-columns: 260px 1fr; gap: 40px; padding: 36px 48px 60px; max-width: 1100px; }
-/* `align-self: start` (e nao o `stretch` padrao do grid) da ao item a
-   altura do proprio conteudo -- sem isso o sticky nao teria folga para
-   deslizar. O cabecalho da area logada nao e fixo nem sticky: rola
-   junto, entao o `top` aqui e so uma margem de respiro, nao compensacao
-   de header. Abaixo de 768px o menu e `.d-only` (display:none), entao
-   isto nao alcanca o celular. */
-.profile-side { padding: 14px; align-self: start; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 2px; }
+/* UMA coluna. A barra lateral saiu: no desktop as tres seces ja
+   apareciam todas na mesma pagina, e os links dela so rolavam ate elas.
+   Sem a coluna de 260px, a coluna de leitura fica no centro, com a
+   mesma largura maxima de antes. */
+.profile { display: block; padding: 36px 48px 60px; max-width: 900px; margin: 0 auto; }
+.profile-topo { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+.profile-topo h1 { font-size: 24px; }
+.profile-topo p { font-size: 13.5px; margin-top: 2px; }
 .profile-user { display: flex; align-items: center; gap: 12px; padding: 8px 8px 16px; }
 .profile-user-name { font-weight: 700; color: var(--navy); }
 .profile-user-sub { font-size: 12px; color: var(--mu); }
 
 .profile-main { display: flex; flex-direction: column; gap: 22px; }
-/* As ancoras do menu lateral (#dados/#senha/#comunicacoes) param no topo
-   da viewport; a folga evita o titulo da secao colado na borda. */
+/* As ancoras (#dados/#senha/#comunicacoes) param no topo da viewport;
+   a folga evita o titulo da secao colado na borda. Elas continuam
+   valendo mesmo sem a barra lateral: a tela de celular as usa, e um
+   link externo para `#senha` tem de continuar chegando no lugar. */
 .profile-section { padding: 28px; scroll-margin-top: 24px; }
 .profile-section h2 { font-size: 22px; }
 .profile-section .section-sub { font-size: 13.5px; color: var(--mu); margin: 4px 0 18px; }
@@ -907,7 +1015,7 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 .pref .pref-help { display: block; font-size: 12.5px; color: var(--mu); }
 
 @media (max-width: 767px) {
-  .profile { display: flex; flex-direction: column; padding: 16px 20px 0; gap: 20px; flex: 1; }
+  .profile { display: flex; flex-direction: column; padding: 16px 20px 0; gap: 20px; flex: 1; max-width: none; }
   .profile-user { padding: 0; gap: 14px; }
   .profile-user h1 { font-size: 20px; }
   .profile-user-sub { font-size: 13px; }
@@ -1301,3 +1409,9 @@ img.partner-image { object-fit: contain; padding: 22px 22px 0; }
 /* O seletor de cor nativo. Largura propria: com a largura de um campo de
    texto, alguns navegadores desenham uma faixa enorme de cor solida. */
 .input-cor { width: 72px; height: 40px; padding: 4px; cursor: pointer; }
+
+/* A resposta que a tela de remocao mostra antes de perguntar: ninguem
+   deve apagar um paragrafo que nao esta vendo. */
+.bo-resposta-apagada { color: var(--mu); font-size: 14px; line-height: 1.6; margin: 0 0 4px; }
+.bo-resposta-apagada p { margin: 0 0 8px; }
+.bo-resposta-apagada p:last-child { margin-bottom: 0; }

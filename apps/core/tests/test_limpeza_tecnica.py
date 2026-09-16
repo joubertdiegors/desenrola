@@ -126,12 +126,21 @@ class TestDependencias:
 # ===========================================================================
 
 # Templates que nenhum código cita pelo nome -- e por quê.
+# Os desenhos do Banner superior são alcançados por caminho MONTADO em
+# `content.section_schema` (`PASTA_DOS_DESENHOS` + a chave do desenho),
+# então o nome do arquivo não aparece escrito em lugar nenhum.
+#
+# REGRA, E NÃO LISTA DE NOMES
+# ---------------------------
+# Era uma lista, e ela ficava desatualizada a cada desenho novo -- os
+# quatro da referência visual do cliente entraram de uma vez. O que
+# impede esta exceção de esconder um arquivo faltando é o outro teste,
+# `test_os_desenhos_do_banner_existem_mesmo`: cada desenho DECLARADO tem
+# de ter arquivo. Um arquivo a mais aqui é morto; um a menos derruba
+# aquele teste.
+PREFIXO_DOS_DESENHOS = "core/secoes/banner_"
+
 TEMPLATES_SEM_CITACAO = {
-    # Alcançados por caminho MONTADO em `content.section_schema`
-    # (`PASTA_DOS_DESENHOS` + a chave do desenho), então o nome do arquivo
-    # não aparece escrito em lugar nenhum.
-    "core/secoes/banner_imagem_completa.html": "desenho do banner, resolvido por section_schema",
-    "core/secoes/banner_somente_texto.html": "desenho do banner, resolvido por section_schema",
     # Guardados de propósito: "ocultar não é apagar -- a interface
     # multilíngue tem de poder voltar" (decisão da Etapa 4.1, com teste
     # próprio em `test_etapa41`).
@@ -154,6 +163,8 @@ class TestSemOrfaos:
         for caminho in TEMPLATES.rglob("*.html"):
             relativo = caminho.relative_to(TEMPLATES).as_posix()
             if relativo in TEMPLATES_SEM_CITACAO:
+                continue
+            if relativo.startswith(PREFIXO_DOS_DESENHOS):
                 continue
             if relativo not in texto:
                 orfaos.append(relativo)
