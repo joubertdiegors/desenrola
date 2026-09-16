@@ -41,12 +41,13 @@ NOMES = {
     "trust": "Destaques abaixo do Banner superior",
     "partners": "Nossos Parceiros",
     "how": "Como funciona",
+    "faq": "Perguntas frequentes",
     "cta": "Mini Banner",
     "footer": "Rodapé",
 }
 GRUPOS = {
     "topo": ["navbar", "hero", "trust"],
-    "meio": ["partners", "how"],
+    "meio": ["partners", "how", "faq"],
     "final": ["cta", "footer"],
 }
 
@@ -131,12 +132,23 @@ class TestAgrupamento:
         assert [g["chave"] for g in resposta.context["grupos"]] == ["topo", "meio"]
         assert "<h2>Final</h2>" not in resposta.content.decode()
 
-    def test_as_sete_partes_aparecem(self, cliente):
+    def test_TODAS_as_partes_declaradas_aparecem(self, cliente):
+        """
+        TODAS, e não um número.
+
+        Eram sete quando este teste nasceu, e viraram oito com as
+        Perguntas frequentes. A regra é que a Central mostre tudo o que
+        o schema declara -- a contagem do dia é consequência.
+        """
+        from apps.content import section_schema
+
         resposta = cliente.get(CENTRAL)
 
         mostradas = [
             p["secao"].key for g in resposta.context["grupos"] for p in g["partes"]
         ]
+
+        assert set(mostradas) == set(section_schema.SECOES)
         assert set(mostradas) == set(NOMES)
 
 

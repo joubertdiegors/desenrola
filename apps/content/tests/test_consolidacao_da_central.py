@@ -36,10 +36,12 @@ pytestmark = pytest.mark.django_db
 
 CENTRAL = reverse("backoffice:content")
 
-# As sete partes, na estrutura que o produto declara -- e que é a mesma
-# que o Bloco E exige. Escrita à mão de propósito: derivá-la de
-# `section_schema` faria o teste concordar com qualquer coisa que o
-# schema viesse a dizer.
+# As partes da Home, na estrutura que o produto declara -- e que é a
+# mesma que o Bloco E exige. Eram sete; as Perguntas frequentes entraram
+# no grupo do meio.
+#
+# Escrita à mão de propósito: derivá-la de `section_schema` faria o teste
+# concordar com qualquer coisa que o schema viesse a dizer.
 ESTRUTURA = {
     "topo": [
         ("navbar", "Barra superior"),
@@ -49,6 +51,7 @@ ESTRUTURA = {
     "meio": [
         ("partners", "Nossos Parceiros"),
         ("how", "Como funciona"),
+        ("faq", "Perguntas frequentes"),
     ],
     "final": [
         ("cta", "Mini Banner"),
@@ -113,7 +116,7 @@ class TestEstrutura:
     def test_nao_ha_parte_a_mais_nem_a_menos(self):
         assert set(section_schema.SECOES) == set(CHAVES)
 
-    def test_a_central_mostra_as_sete_com_o_nome_combinado(self, cliente):
+    def test_a_central_mostra_TODAS_com_o_nome_combinado(self, cliente):
         corpo = cliente.get(CENTRAL).content.decode()
 
         for _chave, nome in [p for ps in ESTRUTURA.values() for p in ps]:
@@ -202,7 +205,7 @@ class TestNenhumaAcaoFalsa:
         com_cadastro = {
             chave for chave, s in section_schema.SECOES.items() if s.cadastro
         }
-        assert com_cadastro == {"navbar", "partners", "footer"}
+        assert com_cadastro == {"navbar", "partners", "faq", "footer"}
 
         corpo_navbar = cliente.get(
             reverse("backoffice:content_section", args=[secao("navbar").pk])

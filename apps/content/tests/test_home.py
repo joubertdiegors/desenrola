@@ -392,6 +392,7 @@ class TestConteudoDoCms:
             "trust",
             "partners",
             "how",
+            "faq",
             "cta",
             "footer",
         }
@@ -486,8 +487,33 @@ class TestCusto:
         with CaptureQueriesContext(connection) as capturadas:
             client.get(HOME)
 
-        # seções + traduções + parceiros + contador + configuração do site
-        assert len(capturadas) <= 8, [c["sql"] for c in capturadas]
+        # seções + traduções + parceiros + PERGUNTAS + contador +
+        # configuração do site. Subiu de 8 para 9 quando as Perguntas
+        # frequentes entraram: é UMA consulta a mais, e o teste seguinte
+        # prova que ela não cresce com o número de perguntas.
+        assert len(capturadas) <= 9, [c["sql"] for c in capturadas]
+
+    def test_uma_pergunta_a_mais_nao_custa_uma_consulta_a_mais(self, client):
+        """
+        O mesmo N+1 que os parceiros já não têm. As perguntas não
+        carregam objeto relacionado nenhum -- este teste é o que garante
+        que continue assim se um dia carregarem.
+        """
+        from apps.content.models import FaqItem
+
+        def consultas(quantas):
+            FaqItem.objects.all().delete()
+            for numero in range(quantas):
+                FaqItem.objects.create(
+                    question=f"Pergunta {numero}?", answer="Resposta.", order=numero
+                )
+            cache.clear()
+            client.get(HOME)  # aquece o contador de cartas
+            with CaptureQueriesContext(connection) as capturadas:
+                client.get(HOME)
+            return len(capturadas)
+
+        assert consultas(1) == consultas(12)
 
 
 # ===========================================================================

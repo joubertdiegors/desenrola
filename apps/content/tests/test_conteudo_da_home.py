@@ -167,7 +167,10 @@ class TestDeclaracao:
     def test_secao_sem_declaracao_nao_e_editavel(self):
         pagina = Page.objects.get(key="home")
         estranha = PageSection.objects.create(
-            page=pagina, key="inventada", kind=PageSection.Kind.FAQ, order=99
+            # `contact`, e nao `faq`: desde as Perguntas frequentes, `faq`
+            # e chave DECLARADA -- e `secao_declarada` cai no tipo quando
+            # nao acha a chave, entao esta secao passaria a ser editavel.
+            page=pagina, key="inventada", kind=PageSection.Kind.CONTACT, order=99
         )
 
         assert section_schema.editavel(estranha) is False
@@ -181,9 +184,9 @@ class TestDeclaracao:
 class TestServico:
     def test_devolve_as_secoes_pela_chave(self):
         """
-        Sete desde a Etapa 11: a barra superior e o rodapé deixaram de
-        ser marcação fixa e viraram seções de verdade, com ativação e
-        conteúdo próprios.
+        A barra superior e o rodapé deixaram de ser marcação fixa na
+        Etapa 11 e viraram seções de verdade, com ativação e conteúdo
+        próprios; as Perguntas frequentes entraram na revisão final.
         """
         conteudo = services.secoes_da_pagina("home")
 
@@ -193,6 +196,7 @@ class TestServico:
             "trust",
             "partners",
             "how",
+            "faq",
             "cta",
             "footer",
         }
@@ -403,7 +407,10 @@ class TestEdicao:
     def test_secao_sem_declaracao_nao_abre(self, cliente):
         pagina = Page.objects.get(key="home")
         estranha = PageSection.objects.create(
-            page=pagina, key="inventada", kind=PageSection.Kind.FAQ, order=99
+            # `contact`, e nao `faq`: desde as Perguntas frequentes, `faq`
+            # e chave DECLARADA -- e `secao_declarada` cai no tipo quando
+            # nao acha a chave, entao esta secao passaria a ser editavel.
+            page=pagina, key="inventada", kind=PageSection.Kind.CONTACT, order=99
         )
 
         resposta = cliente.get(

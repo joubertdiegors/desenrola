@@ -266,12 +266,20 @@ class TestColunaDeAcoes:
         A regra geral da tabela dá `padding: 0 12px` a todo botão, o que
         deixaria o botão de ícone mais largo que alto. Ele precisa da sua
         própria medida.
+
+        QUADRADO, e o número não está escrito aqui: a auditoria final de
+        acessibilidade subiu estas ações de 38 para 40px (a tabela
+        aparece também no tablet, que é toque). O que este teste guarda
+        é que largura e altura continuem IGUAIS -- se um dia mudarem de
+        novo, mudam juntas.
         """
         css = (CSS / "layout.css").read_text(encoding="utf-8")
         regra = re.search(r"^\.letters-table td \.btn-icon-sm \{[^}]*\}", css, re.M).group(0)
+        largura = int(re.search(r"width: (\d+)px", regra).group(1))
+        altura = int(re.search(r"min-height: (\d+)px", regra).group(1))
 
-        assert "width: 38px" in regra
-        assert "min-height: 38px" in regra
+        assert largura == altura, regra
+        assert largura >= 40, f"{largura}px -- abaixo do alvo mínimo do projeto"
         assert "padding: 0" in regra
 
     def test_as_acoes_ficam_a_direita_e_centralizadas(self):

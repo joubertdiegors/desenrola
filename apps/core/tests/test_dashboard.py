@@ -175,9 +175,12 @@ class TestListagem:
 
         assert response.context["letters_total"] == 0
         assert response.context["cards"] == []
-        assert "Você ainda não tem cartas" in corpo
-        # a ação de sair do estado vazio tem de estar ali
-        assert reverse("letters:new") in corpo
+        assert "Você não tem cartas ainda." in corpo
+        # A ação de sair do estado vazio tem de estar na tela -- e agora
+        # ela está UMA vez: é o cartão de chamada no alto. O botão que
+        # ficava dentro do estado vazio era o segundo, quarenta pixels
+        # abaixo do primeiro.
+        assert corpo.count(reverse("letters:new")) == 1
 
     def test_com_cartas_o_estado_vazio_some(self, auth_client, user):
         _criar_carta(user, data={"guest_name": "Alguém"})
