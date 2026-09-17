@@ -1,12 +1,13 @@
 {% load i18n %}{% comment %}
-Destaques abaixo do Banner superior.
+Destaques abaixo da chamada do Banner.
 
-UMA LINHA DE TEXTO, E NÃO UM CARTÃO
------------------------------------
-A referência visual desta rodada põe os pontos fortes numa linha curta
-logo abaixo da chamada: texto pequeno, cinza, separado por pontos. Era
-um cartão com moldura e ícones -- que competia com o banner logo acima
-e repetia a moldura que as seções seguintes já têm.
+UMA LINHA DE TEXTO DENTRO DA FAIXA DO BANNER
+--------------------------------------------
+A referência visual põe os pontos fortes numa linha curta logo abaixo
+dos botões do hero: texto pequeno, cinza, separado por pontos, na MESMA
+faixa com degradê. Por isso este parcial não abre faixa própria -- quem
+o inclui é a faixa do Banner, em `core/home.html` (e a prévia do
+Backoffice, sozinha).
 
 Os ícones saíram do desenho (a referência não os tem), mas continuam
 gravados em cada item: quem administra não perde nada, e voltar a
@@ -15,13 +16,9 @@ desenhá-los é uma linha.
 Contexto: secoes.trust.
 {% endcomment %}
 {% if secoes.trust.cards %}
-<section class="home-secao home-secao-branca home-secao-selos">
-  <div class="home-largura">
-    <ul class="home-selos">
-      {% for card in secoes.trust.cards %}
-      <li>{{ card.title }}</li>
-      {% endfor %}
-    </ul>
-  </div>
-</section>
+<ul class="home-selos">
+  {% for card in secoes.trust.cards %}
+  <li>{{ card.title }}</li>
+  {% endfor %}
+</ul>
 {% endif %}

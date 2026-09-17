@@ -82,18 +82,62 @@ body.publico {
    inteiro, e estreita-lo mudaria o painel, o assistente e o perfil. */
 body.publico .container,
 .home-largura { width: 100%; max-width: 960px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-/* Os sete desenhos do Banner trazem o respiro lateral no proprio
-   `padding` (48px). Na coluna de 960px isso deixaria a chamada 24px
-   mais para dentro do que as secoes de baixo -- entao aqui, e SO aqui,
-   o lateral acompanha a coluna. O vertical nao se mexe: e ele que
-   reserva o lugar da capsula do contador. */
+/* A FAIXA DO BANNER
+   -----------------
+   O fundo (degrade claro que termina em branco), a largura e o respiro
+   sao da FAIXA -- `.home-secao-hero`, em `core/home.html` --, como na
+   referencia visual. Os sete desenhos do Backoffice ficam dentro dela
+   sem fundo e sem respiro proprio: o desenho decide a composicao
+   (grade, foto, texto), a faixa decide onde ele senta. Antes cada
+   desenho trazia o proprio degrade dentro da coluna, e o Banner parecia
+   um quadro de outra cor posto sobre a pagina. */
+.home-secao-hero { background: linear-gradient(180deg, color-mix(in srgb, var(--p) 5%, #fff), #fff); }
+.home-secao-hero > .home-largura { padding-top: 52px; padding-bottom: 44px; }
 body.publico .hero,
 body.publico .hero-texto,
 body.publico .hero-cheio,
 body.publico .hero-destaque,
+body.publico .hero-assimetrico,
 body.publico .hero-assimetrico-grade,
-body.publico .hero-amplo-texto,
-body.publico .hero-editorial { padding-left: 24px; padding-right: 24px; }
+body.publico .hero-editorial { background: none; padding: 0; }
+body.publico .hero-amplo-texto { padding: 42px 24px 40px; }
+/* O CONTADOR EM CIMA reserva a altura dele acima do titulo (capsula de
+   26px + 16px de respiro = 42px), e so quando esta em cima: a faixa
+   sabe a posicao pelo `data-contador`. Em baixo, o mesmo respiro vai
+   para o pe. No meio, nada a reservar. */
+.home-secao-hero[data-contador^="superior"] .hero,
+.home-secao-hero[data-contador^="superior"] .hero-texto,
+.home-secao-hero[data-contador^="superior"] .hero-cheio,
+.home-secao-hero[data-contador^="superior"] .hero-destaque,
+.home-secao-hero[data-contador^="superior"] .hero-assimetrico-grade,
+.home-secao-hero[data-contador^="superior"] .hero-editorial { padding-top: 42px; }
+.home-secao-hero[data-contador^="inferior"] .hero,
+.home-secao-hero[data-contador^="inferior"] .hero-texto,
+.home-secao-hero[data-contador^="inferior"] .hero-cheio,
+.home-secao-hero[data-contador^="inferior"] .hero-destaque,
+.home-secao-hero[data-contador^="inferior"] .hero-assimetrico-grade,
+.home-secao-hero[data-contador^="inferior"] .hero-editorial { padding-bottom: 42px; }
+.home-secao-hero .banner-contador.pos-superior-esquerda,
+.home-secao-hero .banner-contador.pos-superior-centro,
+.home-secao-hero .banner-contador.pos-superior-direita { top: 0; }
+.home-secao-hero .banner-contador.pos-inferior-esquerda,
+.home-secao-hero .banner-contador.pos-inferior-centro,
+.home-secao-hero .banner-contador.pos-inferior-direita { bottom: 0; }
+.home-secao-hero .banner-contador.pos-superior-esquerda,
+.home-secao-hero .banner-contador.pos-centro-esquerda,
+.home-secao-hero .banner-contador.pos-inferior-esquerda { left: 0; }
+.home-secao-hero .banner-contador.pos-superior-direita,
+.home-secao-hero .banner-contador.pos-centro-direita,
+.home-secao-hero .banner-contador.pos-inferior-direita { right: 0; }
+/* A tipografia da chamada e' a da referencia: o desenho decide onde o
+   titulo fica, a identidade decide como ele e' escrito. */
+body.publico .hero h1,
+body.publico .hero-texto h1,
+body.publico .hero-cheio h1,
+body.publico .hero-destaque h1,
+body.publico .hero-assimetrico-texto h1,
+body.publico .hero-editorial h1 { font-size: 46px; font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; }
+body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
 .home-largura-estreita { max-width: 760px; }
 
 /* Uma FAIXA: fundo de ponta a ponta, conteudo no meio. E ela que
@@ -458,13 +502,9 @@ body.publico .hero-editorial { padding-left: 24px; padding-right: 24px; }
    pontos. O ponto e desenhado pelo CSS -- assim ele nao aparece antes
    do primeiro item nem depois do ultimo, e nao ha caractere solto no
    meio do texto para um leitor de tela anunciar. */
-/* 18px no topo porque o Banner nem sempre deixa respiro embaixo: no
-   tablet o desenho padrao termina com `padding-bottom: 0`, e a linha de
-   selos encostava na chamada. */
-.home-secao-selos > .home-largura { padding-top: 18px; padding-bottom: 28px; }
 .home-selos {
   list-style: none;
-  margin: 0;
+  margin: 22px 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -734,8 +774,16 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   .home-pagina-cabeca h1 { font-size: 26px; }
   .home-pagina-cabeca p { font-size: 15px; }
 
-  .home-secao-selos > .home-largura { padding-bottom: 22px; }
-  .home-selos { gap: 6px 14px; font-size: 12.5px; }
+  .home-secao-hero > .home-largura { padding-top: 34px; padding-bottom: 30px; }
+  body.publico .hero-amplo-texto { padding: 42px 20px 32px; }
+  body.publico .hero h1,
+  body.publico .hero-texto h1,
+  body.publico .hero-cheio h1,
+  body.publico .hero-destaque h1,
+  body.publico .hero-assimetrico-texto h1,
+  body.publico .hero-editorial h1 { font-size: 31px; line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 14px; }
+  body.publico .hero-lead { font-size: 15.5px; margin-bottom: 14px; }
+  .home-selos { margin-top: 16px; gap: 6px 14px; font-size: 12.5px; }
   .home-selos li { gap: 14px; }
 
   .section { padding: 30px 20px 0; }

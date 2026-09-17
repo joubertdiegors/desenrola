@@ -18,13 +18,22 @@ Conteúdo renderizar UMA parte isolada, com o mesmo código e o mesmo
 CSS, para a miniatura e a pré-visualização. Uma segunda implementação
 visual da Home envelheceria no primeiro ajuste.
 
-A ORDEM É A DA REFERÊNCIA VISUAL
---------------------------------
-Banner → destaques → Como funciona → Parceiros → Perguntas → Mini
-Banner → Rodapé. É essa ordem que faz a alternância de fundos (branco,
-azul claro, branco, azul claro, faixa azul, branco) cair certa: cada
-parcial declara o fundo da sua faixa, e duas faixas iguais em sequência
-apagariam a divisão entre as seções.
+A ORDEM E OS FUNDOS SÃO OS DA REFERÊNCIA VISUAL
+-----------------------------------------------
+Banner (faixa com degradê claro, que também abriga a linha de
+destaques) → Como funciona (azul claro) → Parceiros (branco) →
+Perguntas (azul claro) → Mini Banner (faixa azul) → Rodapé (branco).
+Cada parcial declara o fundo da sua faixa; o Banner e os destaques
+dividem uma, porque na referência os destaques ficam DENTRO do hero.
+
+O BANNER É UMA PARTE DA FAIXA, NÃO UM QUADRO SOBRE ELA
+------------------------------------------------------
+Os sete desenhos do Backoffice continuam sendo os sete desenhos: o que
+mudou é o lado de fora deles. A faixa (`.home-secao-hero`) é quem tem o
+fundo e o respiro da referência; o desenho, dentro dela, fica
+transparente (ver `body.publico .hero*` em layout.css). `data-contador`
+diz à faixa ONDE o contador vai ficar -- é o que reserva, só quando ele
+está em cima, o espaço da cápsula acima do título.
 
 ATIVAÇÃO
 --------
@@ -33,7 +42,7 @@ desativada não é incluída -- some o elemento inteiro, e as demais
 sobem. Nada de seção vazia ocupando espaço.
 
 Contexto: partes, secoes, template_do_banner, parceiros,
-cartas_emitidas, menu_itens, blocos_do_rodape.
+cartas_emitidas, menu_itens.
 {% endcomment %}
 
 {% block title %}{{ site_config.name }} · {{ secoes.hero.title }}{% endblock %}
@@ -48,17 +57,14 @@ continua com a tipografia do produto.
 {% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
-{% comment %}
-Banner superior. Qual DESENHO -- entre os sete de
-`content.section_schema` -- e resolvido em Python (`contexto_da_home`),
-com queda para "imagem_texto" quando o valor gravado e vazio ou
-desconhecido. Aqui so se inclui o que foi escolhido.
-
-O sistema de modelos do Banner NAO muda com a identidade nova: o que
-mudou por fora e a largura da faixa e a capsula do contador.
-{% endcomment %}
-{% if template_do_banner %}{% include template_do_banner %}{% endif %}
-{% if partes.trust %}{% include "core/secoes/trust.html" %}{% endif %}
+{% if template_do_banner or partes.trust %}
+<section class="home-secao home-secao-hero"{% if partes.hero.contador_ativo and secoes.hero.badge_label %} data-contador="{{ partes.hero.contador_posicao }}"{% endif %}>
+  <div class="home-largura">
+    {% if template_do_banner %}{% include template_do_banner %}{% endif %}
+    {% if partes.trust %}{% include "core/secoes/trust.html" %}{% endif %}
+  </div>
+</section>
+{% endif %}
 {% if partes.how %}{% include "core/secoes/how.html" %}{% endif %}
 {% if partes.partners %}{% include "core/secoes/partners.html" %}{% endif %}
 {% if partes.faq %}{% include "core/secoes/faq.html" %}{% endif %}
