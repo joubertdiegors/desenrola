@@ -16,7 +16,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 from django.utils.translation import gettext as _
-from django.utils.translation import gettext_lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
@@ -28,17 +27,19 @@ from .confirmacao import token_de_email
 from .forms import LoginForm, PasswordChangeForm, ProfileForm, SetPasswordForm, SignupForm
 from .models import User
 
-# Secoes do perfil e o titulo usado no cabecalho do celular.
+# As secoes do perfil -- hoje ANCORAS, e nao mais paginas.
+#
+# O celular tinha um indice que abria `?secao=...` mostrando uma secao e
+# escondendo as outras. O Perfil e uma pagina so agora: `?secao=` ficou
+# valendo apenas para devolver a pessoa ao ponto onde ela estava depois
+# de salvar (ver `_profile_url`), e esta lista e o que impede um valor
+# qualquer de virar fragmento de URL.
 #
 # Nao ha secao "idioma": a interface e so em portugues (Fase 5, Etapa
 # 4.1) e o idioma da carta e escolhido na etapa 5 do assistente. Um
 # `?secao=idioma` antigo cai no `else` de `profile()` e abre o perfil
 # inteiro -- melhor do que um 404 para quem tinha o link guardado.
-PROFILE_SECTIONS = {
-    "dados": gettext_lazy("Dados pessoais"),
-    "senha": gettext_lazy("Alterar senha"),
-    "comunicacoes": gettext_lazy("Comunicações"),
-}
+PROFILE_SECTIONS = ("dados", "senha", "comunicacoes")
 
 
 def _safe_next(request):
@@ -100,9 +101,10 @@ def profile(request):
     """
     Perfil (layouts 1h e 1q).
 
-    Uma pagina, dois formularios: dados pessoais (action=dados) e troca de
-    senha (action=senha). No celular, ?secao= abre uma secao por vez; o
-    campo oculto `secao` devolve o usuario a mesma secao apos salvar.
+    Uma pagina em qualquer largura, dois formularios: dados pessoais
+    (action=dados) e troca de senha (action=senha). O campo oculto
+    `secao` nao esconde mais nada -- ele so devolve a pessoa ao ponto da
+    pagina onde ela estava quando salvou.
     """
     user = request.user
     section = request.GET.get("secao")
@@ -161,7 +163,6 @@ def profile(request):
             "profile_form": profile_form,
             "password_form": password_form,
             "section": section,
-            "section_title": PROFILE_SECTIONS.get(section, ""),
             "return_to": voltar_para,
             "active_nav": "profile",
         },

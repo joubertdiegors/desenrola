@@ -1220,17 +1220,13 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
 .profile-actions { display: flex; gap: 10px; margin-top: 18px; }
 .profile-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; }
 
-.profile-home .list { margin-bottom: 0; }
-.profile-home .list + .card { margin-top: 20px; }
 .profile-notice { font-size: 12.5px; margin-bottom: 16px; }
 .profile-avatar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .profile-avatar-row h1 { font-size: 20px; }
 .profile-avatar-row p { font-size: 13px; }
-.profile-comm-kicker { padding: 14px 16px 4px; }
 .profile-signout-form { margin-top: 20px; }
 .profile-foot { text-align: center; font-size: 12px; margin-top: 16px; }
 
-.list-sub-block { display: block; }
 .list-item strong { color: var(--navy); }
 
 .prefs-stack { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
@@ -1248,13 +1244,15 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   .profile-user { padding: 0; gap: 14px; }
   .profile-user h1 { font-size: 20px; }
   .profile-user-sub { font-size: 13px; }
-  .profile:not(.has-section) .profile-main { display: none; }
-  .profile.has-section .profile-home { display: none; }
-  .profile-main .profile-section:not(.is-current) { display: none; }
-  .profile-section { padding: 0; border: 0; box-shadow: none; }
+  /* As secoes ficam TODAS na pagina, empilhadas -- nao ha mais indice
+     nem `?secao=` escondendo o resto (ver `accounts/profile.html`).
+     Cada uma continua sendo um cartao: com `padding: 0` elas viravam
+     um texto corrido so, sem onde uma acabar e a outra comecar. */
+  .profile-section { padding: 18px 16px; }
+  .profile-section h2 { font-size: 18px; }
+  .profile-conta { text-align: center; }
+  .profile-conta .profile-foot { margin-top: 12px; }
   .profile-columns { grid-template-columns: 1fr; gap: 20px; }
-  .m-head { display: flex; align-items: center; gap: 12px; padding: 12px 20px; }
-  .m-head .btn-icon { margin-left: -8px; }
 }
 
 

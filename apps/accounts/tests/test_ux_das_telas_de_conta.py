@@ -373,12 +373,33 @@ class TestPerfilSemLateral:
         for secao in ("dados", "senha", "comunicacoes"):
             assert f'id="{secao}"' in html
 
-    def test_o_indice_do_celular_continua(self, auth_client):
-        """No telefone a navegação por seções é o que faz sentido."""
+    def test_no_celular_tambem_e_uma_pagina_so(self, auth_client):
+        """
+        O índice do celular SAIU.
+
+        Ele levava a `?secao=dados`, `?secao=senha` e afins -- cada toque
+        recarregava a página mostrando um pedaço. Agora o Perfil é uma
+        página só em qualquer largura: tudo está ali, basta rolar.
+        """
         html = auth_client.get(PERFIL).content.decode()
 
-        assert "profile-home" in html
-        assert "?secao=dados" in html
+        assert "profile-home" not in html
+        assert "?secao=" not in html
+
+    def test_uma_pagina_so_traz_tudo_o_que_o_indice_levava(self, auth_client):
+        """
+        Uma página só é inútil se metade dela continuar escondida.
+
+        A lista abaixo é a do índice que saiu: cada destino dele tem de
+        estar nesta mesma resposta.
+        """
+        html = auth_client.get(PERFIL).content.decode()
+
+        for ancora in ("dados", "endereco", "senha", "comunicacoes", "conta"):
+            assert f'id="{ancora}"' in html
+
+        for campo in ("full_name", "email", "phone", "birth_date", "nationality"):
+            assert f'name="{campo}"' in html or f'_{campo}' in html
 
     def test_o_cabecalho_novo_traz_quem_e_a_pessoa(self, auth_client, user):
         html = auth_client.get(PERFIL).content.decode()
@@ -386,3 +407,62 @@ class TestPerfilSemLateral:
         assert "profile-topo" in html
         assert user.full_name in html
         assert user.email in html
+
+    def test_o_sair_continua_ao_alcance_no_celular(self, auth_client):
+        """
+        No desktop o "Sair" mora no menu das iniciais, que é `d-only`.
+        No celular esse menu não existe -- sem a seção "Conta" a pessoa
+        ficaria sem porta de saída nesta tela.
+        """
+        html = auth_client.get(PERFIL).content.decode()
+        conta = html[html.index('id="conta"') :]
+
+        assert reverse("accounts:logout") in conta
+
+    def test_nada_ficou_duplicado_ao_empilhar_as_secoes(self, auth_client):
+        """
+        O índice do celular repetia rótulos que as seções já traziam.
+        Empilhar tudo sem tirar o índice teria deixado cada título duas
+        vezes na mesma página.
+        """
+        html = auth_client.get(PERFIL).content.decode()
+
+        for titulo in ("Dados pessoais", "Alterar senha", "Comunicações"):
+            assert html.count(f"<h2>{titulo}</h2>") <= 1
+
+    def test_salvar_devolve_a_pessoa_ao_ponto_onde_estava(self, auth_client, user):
+        """
+        `?secao=` deixou de esconder o resto da página, mas continua
+        sendo a âncora de volta depois de salvar.
+        """
+        resposta = auth_client.post(
+            PERFIL,
+            {
+                "action": "dados",
+                "secao": "dados",
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone_0": "+32",
+                "phone_1": "",
+            },
+        )
+
+        assert resposta.status_code == 302
+        assert resposta.url.endswith("?secao=dados#dados")
+
+    def test_uma_secao_inventada_nao_vira_ancora(self, auth_client, user):
+        """O valor chega por POST, e POST é coisa do cliente."""
+        resposta = auth_client.post(
+            PERFIL,
+            {
+                "action": "dados",
+                "secao": "javascript:alert(1)",
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone_0": "+32",
+                "phone_1": "",
+            },
+        )
+
+        assert resposta.status_code == 302
+        assert resposta.url == PERFIL

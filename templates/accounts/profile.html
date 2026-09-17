@@ -1,10 +1,22 @@
 {% extends "app_base.html" %}
 {% load i18n %}
 {% comment %}
-Perfil do usuario autenticado (layout 2h desktop, 4l celular). Desktop:
-menu lateral e secoes numa coluna. Celular: lista de atalhos; cada item
-abre a secao correspondente (?secao=...), que reusa a secao do desktop.
-Contexto: profile_form, password_form, section (ou None), section_title.
+Perfil do usuario autenticado -- UMA PAGINA, nas duas larguras.
+
+O QUE MUDOU, E POR QUE
+----------------------
+O celular tinha um INDICE: tres atalhos que abriam `?secao=...`, cada
+um mostrando uma secao e escondendo as outras. Eram paginas do proprio
+Perfil dentro do Perfil -- a mesma navegacao que a barra lateral do
+desktop tinha e que ja havia saido por nao levar a lugar nenhum novo.
+Agora as secoes vem empilhadas, na ordem em que se leem: identificacao,
+dados pessoais, seguranca, comunicacoes e as acoes da conta.
+
+`?secao=` continua valendo como ANCORA (e o que `_profile_url` devolve
+depois de salvar, para a pessoa voltar ao ponto onde estava) -- so
+deixou de esconder o resto da pagina.
+
+Contexto: profile_form, password_form, section (ou None), return_to.
 Nao ha seccao de idioma: a interface e so em portugues (Fase 5,
 Etapa 4.1) e o idioma da CARTA e escolhido na etapa 5 do assistente.
 Comunicacoes ainda sao ilustrativas (sem campo no modelo).
@@ -12,30 +24,13 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
 
 {% block title %}{% translate "Perfil" %} · {{ site_config.name }}{% endblock %}
 
-{% block mobile_header %}
-{% if section %}
-<div class="m-head m-only">
-  <a class="btn btn-ghost btn-icon-sm" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Voltar' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i></a>
-  <span class="logo-name">{{ section_title }}</span>
-</div>
-{% endif %}
-{% endblock %}
-
 {% block content %}
-{% with current=section|default:"dados" %}
-<div class="container profile{% if section %} has-section{% endif %}">
+<div class="container profile">
   {% comment %}
-  A barra lateral saiu na revisao final de UX.
-
-  No desktop as tres seces do perfil ja aparecem TODAS na mesma
-  pagina, uma embaixo da outra -- os links dela apenas rolavam ate
-  cada uma, e o "Sair" repetia o que o menu da conta, no alto, ja
-  faz. Sobrava largura ocupada por navegacao que nao levava a lugar
-  nenhum novo.
-
-  O que a lateral dizia de util -- quem e a pessoa e desde quando --
-  ficou, aqui em cima. No celular nada muda: o indice continua sendo
-  `.profile-home`, que e como se navega numa tela estreita.
+  Nem barra lateral (desktop) nem indice de atalhos (celular): as duas
+  eram navegacao DENTRO da propria pagina. O que a lateral dizia de
+  util -- quem e a pessoa e desde quando -- ficou aqui em cima, nas
+  duas larguras.
   {% endcomment %}
   <header class="profile-topo">
     <span class="avatar avatar-lg">{{ user.get_initials }}</span>
@@ -45,37 +40,10 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
     </div>
   </header>
 
-  <div class="profile-home m-only">
-    {% comment %}
-    O nome e o e-mail saem daqui: o cabecalho da pagina, logo acima, ja
-    os diz -- e ele agora aparece nas duas larguras. Dois `h1` no mesmo
-    documento (um `d-only`, outro `m-only`) sao um so na TELA e dois
-    para quem a le em voz alta.
-    {% endcomment %}
-    <div class="notice profile-notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Estes dados são usados como <strong>dados do anfitrião</strong> em todas as cartas.{% endblocktranslate %}</span></div>
-    <div class="list">
-      <a class="list-item" href="?secao=dados"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Dados pessoais" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-      <a class="list-item" href="?secao=dados#endereco"><i class="ph ph-map-pin" aria-hidden="true"></i>{% translate "Endereço na Bélgica" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-      <a class="list-item" href="?secao=senha"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Alterar senha" %}<i class="ph ph-caret-right list-caret" aria-hidden="true"></i></a>
-    </div>
-    <div class="card">
-      <div class="profile-comm-kicker"><span class="kicker">{% translate "Comunicações" %}</span></div>
-      <label class="list-item"><span><strong>{% translate "Avisos sobre minhas cartas" %}</strong><span class="list-sub list-sub-block">{% translate "Geração e lembretes." %}</span></span>{% include "components/switch.html" with checked=True label=_("Avisos sobre minhas cartas") %}</label>
-      <label class="list-item"><span><strong>{% translate "Novidades e parceiros" %}</strong><span class="list-sub list-sub-block">{% translate "Até um e-mail por mês." %}</span></span>{% include "components/switch.html" with label=_("Novidades e parceiros") %}</label>
-    </div>
-    <form method="post" action="{% url 'accounts:logout' %}" class="profile-signout-form">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-ghost btn-block"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
-    </form>
-    {% comment %}
-    O link de Privacidade só existe quando o documento tem texto
-    publicado. Antes da Etapa G era um `#`.
-    {% endcomment %}
-    <p class="text-muted profile-foot">{{ site_config.name }}{% if paginas_legais.privacidade %} · <a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}</p>
-  </div>
+  <div class="notice profile-notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% blocktranslate trimmed %}Estes dados são usados como <strong>dados do anfitrião</strong> em todas as cartas.{% endblocktranslate %}</span></div>
 
   <div class="profile-main">
-    <section class="card profile-section{% if section == 'dados' %} is-current{% endif %}" id="dados">
+    <section class="card profile-section" id="dados">
       <h2>{% translate "Dados pessoais" %}</h2>
       <p class="section-sub">{% translate "Usados como dados do anfitrião em cada nova carta — por isso a etapa 3 só os exibe." %}</p>
       {% if return_to %}
@@ -170,7 +138,7 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       </form>
     </section>
 
-    <section class="card profile-section{% if section == 'senha' %} is-current{% endif %}" id="senha">
+    <section class="card profile-section" id="senha">
       <h2>{% translate "Alterar senha" %}</h2>
       <form method="post" action="{% url 'accounts:profile' %}#senha" novalidate>
         {% csrf_token %}
@@ -218,14 +186,34 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
       </form>
     </section>
 
-    <section class="card profile-section{% if section == 'comunicacoes' %} is-current{% endif %}" id="comunicacoes">
+    <section class="card profile-section" id="comunicacoes">
       <h2>{% translate "Comunicações" %}</h2>
       <div class="prefs-stack">
         <label class="pref"><span><strong>{% translate "Avisos sobre minhas cartas" %}</strong><span class="pref-help">{% translate "Confirmação de geração e lembretes." %}</span></span>{% include "components/switch.html" with checked=True label=_("Avisos sobre minhas cartas") %}</label>
         <label class="pref"><span><strong>{% translate "Novidades e parceiros" %}</strong><span class="pref-help">{% translate "No máximo um e-mail por mês." %}</span></span>{% include "components/switch.html" with label=_("Novidades e parceiros") %}</label>
       </div>
     </section>
+
+    {% comment %}
+    AS ACOES DA CONTA, SO NO CELULAR.
+
+    No desktop "Sair" ja esta no menu das iniciais, no alto da tela --
+    repeti-lo aqui seriam duas portas para a mesma acao. No celular
+    aquele menu nao existe (a barra de cima tem so a marca), e sem esta
+    secao nao haveria de onde sair.
+    {% endcomment %}
+    <section class="card profile-section profile-conta m-only" id="conta">
+      <h2>{% translate "Conta" %}</h2>
+      <form method="post" action="{% url 'accounts:logout' %}" class="profile-signout-form">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-block"><i class="ph ph-sign-out" aria-hidden="true"></i>{% translate "Sair da conta" %}</button>
+      </form>
+      {% comment %}
+      O link de Privacidade só existe quando o documento tem texto
+      publicado. Antes da Etapa G era um `#`.
+      {% endcomment %}
+      <p class="text-muted profile-foot">{{ site_config.name }}{% if paginas_legais.privacidade %} · <a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}</p>
+    </section>
   </div>
 </div>
-{% endwith %}
 {% endblock %}
