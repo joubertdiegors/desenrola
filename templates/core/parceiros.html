@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+Todos os parceiros -- a página para onde o "Ver todos" da Home leva.
+
+MESMOS DADOS, MESMO CARTÃO
+--------------------------
+`content.Partner`, na mesma ordem da Home, com o MESMO
+`core/secoes/_partner_card.html`. A Home mostra os quatro primeiros
+numa fileira; aqui saem todos, numa grade que quebra em quantas linhas
+precisar -- é justamente o que a Home não faz.
+
+Nenhum cadastro próprio, nenhum texto novo: o título e o texto de apoio
+saem da mesma seção "Nossos Parceiros" do CMS que a Home lê.
+
+Sem parceiro publicado, a view responde 404 antes de chegar aqui.
+
+Contexto: parceiros, secoes.partners, partes, menu_itens,
+blocos_do_rodape.
+{% endcomment %}
+
+{% block title %}{{ secoes.partners.title|default:_("Parceiros") }} · {{ site_config.name }}{% endblock %}
+
+{% block body_class %}publico{% endblock %}
+
+{% block header %}{% include "components/site_nav.html" %}{% endblock %}
+
+{% block content %}
+<section class="home-secao home-secao-branca">
+  <div class="home-largura">
+    <div class="home-pagina-cabeca">
+      <h1>{{ secoes.partners.title|default:_("Parceiros") }}</h1>
+      {% if secoes.partners.lead %}<p>{{ secoes.partners.lead }}</p>{% endif %}
+    </div>
+    <ul class="partners-grid">
+      {% for parceiro in parceiros %}
+      <li class="partner-item">{% include "core/secoes/_partner_card.html" with parte=partes.partners %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}
+
+{% block footer %}{% include "components/site_footer.html" %}{% endblock %}

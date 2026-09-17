@@ -146,6 +146,28 @@ def home(request):
     return render(request, "core/home.html", content.contexto_da_home())
 
 
+def parceiros(request):
+    """
+    A pagina publica com TODOS os parceiros.
+
+    Existe porque a Home mostra no maximo quatro (uma fileira, nunca
+    duas, nunca carrossel): o "Ver todos" precisa de um lugar de
+    verdade para levar, e nao de um link que nao leva a lugar nenhum.
+
+    Mesmos dados do `content.Partner`, mesma ordem, mesmo cartao da
+    Home -- nenhum cadastro proprio, nenhuma copia.
+
+    Sem nenhum parceiro publicado a pagina responde 404: uma lista
+    vazia anunciada como "nossos parceiros" e pior do que pagina
+    nenhuma, e e a mesma regra que ja tira a secao da Home.
+    """
+    contexto = content.contexto_dos_parceiros()
+    if not contexto["parceiros"]:
+        raise Http404("nenhum parceiro publicado")
+
+    return render(request, "core/parceiros.html", contexto)
+
+
 def legal(request, chave, titulo):
     """
     Uma pagina legal: Termos de uso ou Privacidade.

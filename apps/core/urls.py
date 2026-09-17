@@ -27,6 +27,8 @@ def _titulo(slug):
 urlpatterns = [
     path("", views.home, name="home"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    # Todos os parceiros. A Home mostra quatro; o "Ver todos" vem para ca.
+    path("parceiros/", views.parceiros, name="parceiros"),
     # Paginas legais. Os slugs sao LITERAIS e a chave do ContentBlock vai
     # fixa em cada rota: nenhuma parte da URL vira consulta ao banco.
     #

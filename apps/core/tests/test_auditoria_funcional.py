@@ -53,6 +53,9 @@ FORA = ("admin",)
 # vez de com o que se decidiu.
 PUBLICAS = {
     "core:home",
+    # A vitrine inteira e publica: quem ainda nao tem conta precisa poder
+    # ler quem sao os parceiros antes de criar uma.
+    "core:parceiros",
     "core:legal_termos",
     "core:legal_privacidade",
     "accounts:login",

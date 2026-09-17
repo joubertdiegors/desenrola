@@ -209,6 +209,34 @@ def contexto_do_rodape(language=None):
     }
 
 
+def contexto_dos_parceiros(language=None):
+    """
+    O que a pagina publica de parceiros precisa.
+
+    Os MESMOS parceiros da Home, do mesmo modelo e na mesma ordem -- a
+    Home mostra os quatro primeiros, esta pagina mostra todos. Nao ha
+    segunda fonte de dados nem cadastro proprio.
+
+    Leva a barra e o rodape junto porque a pagina e publica: sem eles a
+    casca simplesmente nao desenharia (mesma razao de
+    `contexto_do_rodape`).
+    """
+    partes = partes_da_pagina(CHAVE_DA_HOME, language)
+    parceiros = list(Partner.objects.publicados())
+    perguntas = list(FaqItem.objects.publicadas())
+
+    from .section_schema import blocos_do_rodape
+
+    rodape = partes.get("footer")
+    return {
+        "partes": partes,
+        "secoes": {chave: parte.conteudo for chave, parte in partes.items()},
+        "blocos_do_rodape": blocos_do_rodape(rodape.conteudo) if rodape else [],
+        "menu_itens": _menu_sem_ancora_morta(partes, parceiros, perguntas),
+        "parceiros": parceiros,
+    }
+
+
 def contexto_da_home(language=None):
     """
     Tudo o que `core/home.html` precisa para desenhar a Home.
