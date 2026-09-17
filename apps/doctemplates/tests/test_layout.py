@@ -662,6 +662,8 @@ class TestFontesDeDados:
 class TestRegistroDeTipos:
     ESPERADOS = (
         "text", "rich_text", "number", "image", "qr_code", "table", "line", "rectangle",
+        # Etapa 3.7 (editor rico): a quebra de pagina.
+        "page_break",
     )
 
     @pytest.mark.parametrize("code", ESPERADOS)
@@ -680,8 +682,13 @@ class TestRegistroDeTipos:
         t = elements.tipo(code)
 
         assert t.label
-        assert t.categoria in (elements.CONTEUDO, elements.GRAFICO)
-        assert t.propriedades
+        assert t.categoria in (elements.CONTEUDO, elements.GRAFICO, elements.ESTRUTURA)
+        # A quebra de pagina e so uma posicao: nao tem propriedade nenhuma.
+        assert t.propriedades or code == elements.PAGE_BREAK
+
+    def test_a_quebra_de_pagina_e_estrutura(self):
+        assert elements.tipo("page_break").categoria == elements.ESTRUTURA
+        assert elements.tipo("page_break").propriedades == ()
 
     def test_categorias(self):
         conteudo = {t.code for t in elements.tipos() if t.categoria == elements.CONTEUDO}

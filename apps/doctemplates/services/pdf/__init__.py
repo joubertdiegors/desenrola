@@ -31,7 +31,7 @@ import io
 
 from django.core.exceptions import ValidationError
 
-from ...layout_schema import referencias_usadas, validate_layout
+from ...layout_schema import documento, referencias_usadas, validate_layout
 from . import elementos
 from .contexto import (
     CampoDesconhecidoError,
@@ -48,6 +48,7 @@ __all__ = [
     "ValorAusenteError",
     "campos_do_layout",
     "carregar_assets",
+    "distribuir_por_pagina",
     "render_layout",
     "render_template",
 ]
@@ -125,21 +126,63 @@ def render_layout(layout, pagina, contexto=None, *, assets=None, validar=True):
     pagina_pdf.setTitle("")
 
     recursos = {"assets": dict(assets or {})}
-    relatorio = {"elementos": 0, "desenhados": 0, "por_tipo": {}}
+    relatorio = {"elementos": 0, "desenhados": 0, "por_tipo": {}, "paginas": 0}
+    opcoes = documento(layout)
 
-    # A ORDEM da lista e a ordem de desenho: o primeiro fica ao fundo. E
-    # o contrato da Etapa 3.1 -- nao ha z_index para consultar.
-    for elemento in (layout or {}).get("elements", []):
-        tipo = elemento.get("type")
-        desenhar = elementos.desenhador(tipo)
-        relatorio["elementos"] += 1
-        quantos = desenhar(pagina_pdf, elemento, contexto, dimensoes, recursos)
-        relatorio["desenhados"] += 1 if quantos else 0
-        relatorio["por_tipo"][tipo] = relatorio["por_tipo"].get(tipo, 0) + 1
+    paginas = distribuir_por_pagina(layout, altura)
+    relatorio["paginas"] = len(paginas)
 
-    pagina_pdf.showPage()
+    for numero, (deslocamento, nesta_pagina) in enumerate(paginas, start=1):
+        # A ORDEM da lista e a ordem de desenho: o primeiro fica ao fundo.
+        # E o contrato da Etapa 3.1 -- nao ha z_index para consultar.
+        for elemento in nesta_pagina:
+            tipo = elemento.get("type")
+            desenhar = elementos.desenhador(tipo)
+            relatorio["elementos"] += 1
+            local = elemento if not deslocamento else {
+                **elemento, "y": float(elemento.get("y", 0.0)) - deslocamento,
+            }
+            quantos = desenhar(pagina_pdf, local, contexto, dimensoes, recursos)
+            relatorio["desenhados"] += 1 if quantos else 0
+            relatorio["por_tipo"][tipo] = relatorio["por_tipo"].get(tipo, 0) + 1
+        if opcoes["page_numbers"]:
+            elementos.desenhar_numero_de_pagina(pagina_pdf, numero, len(paginas), dimensoes)
+        pagina_pdf.showPage()
+
     pagina_pdf.save()
     return saida.getvalue(), relatorio
+
+
+def distribuir_por_pagina(layout, altura_da_pagina):
+    """
+    Os elementos agrupados por pagina, na ordem da lista dentro de cada
+    uma: `[(deslocamento_em_y, [elementos]), ...]`.
+
+    A regra e a do contrato: um elemento cai na pagina `k` quando ha `k`
+    quebras (`page_break`) ACIMA dele, e o seu `y` e contado no espaco
+    do documento -- a pagina `k` comeca em `k * altura`. Sem quebra
+    nenhuma ha uma pagina so e o deslocamento e zero: nada muda para um
+    layout anterior ao editor rico.
+
+    A quebra em si nao e desenhada, mas continua na lista (e no relatorio)
+    para o despacho por tipo permanecer completo.
+    """
+    todos = [e for e in (layout or {}).get("elements", []) if isinstance(e, dict)]
+    quebras = sorted(
+        float(e.get("y", 0.0)) for e in todos if e.get("type") == "page_break"
+    )
+    paginas = [[] for _ in range(len(quebras) + 1)]
+    for elemento in todos:
+        y = float(elemento.get("y", 0.0))
+        if elemento.get("type") == "page_break":
+            # A quebra pertence a pagina que ela FECHA.
+            indice = sum(1 for q in quebras if q < y)
+        else:
+            indice = sum(1 for q in quebras if q <= y)
+        paginas[min(indice, len(paginas) - 1)].append(elemento)
+    return [
+        (indice * altura_da_pagina, nesta) for indice, nesta in enumerate(paginas)
+    ]
 
 
 def render_template(modelo, dados=None, *, estrito=True, validar=True):

@@ -59,6 +59,44 @@ solto quem manda e a propriedade do proprio elemento, e aceitar os dois
 caminhos criaria ambiguidade sobre qual vence.
 
 
+TEXTO RICO (Etapa 3.7 -- o editor rico)
+---------------------------------------
+O editor rico formata a SELECAO, nao so o elemento. Por isso um trecho de
+`mixed` pode declarar, alem de `font_weight` e `font_style`:
+
+    text_decoration  -- "underline" | "line-through"
+    color            -- "#rrggbb"
+    highlight        -- "#rrggbb" (fundo do trecho, o "Realçar")
+    font_size        -- pontos
+    font_family      -- uma de `elements.FONT_FAMILIES`
+    link             -- URL http(s)/mailto:/tel: (o trecho vira link no PDF)
+
+Tudo opcional e por trecho (`ESTILO_DO_TRECHO`); ausente, herda do
+elemento. `\n` dentro de um `value` e quebra de linha dentro do bloco.
+`link` e a UNICA porta de URL do layout e aceita so esquemas seguros:
+`javascript:`, `data:` e afins sao recusados aqui, antes de gravar -- e o
+texto dos trechos e sempre TEXTO (o editor o escreve com textContent, o
+renderer o desenha como glifos), entao nao ha HTML a sanitizar.
+
+Um bloco de texto pode ainda ter `indent` (recuo em pt), `list_marker`
+("1.", "•" -- o marcador desenhado no recuo) e `block_style` (p/h1/h2, o
+que o editor mostra no seletor de estilo). Ver `elements.PARAGRAFO`.
+
+O elemento `page_break` (sem propriedades) diz que o que vem ABAIXO dele
+pertence a pagina seguinte: o `y` dos elementos e contado no "espaco do
+documento" (pagina 2 comeca em `y = altura_da_pagina`), e o renderer
+subtrai a altura das paginas anteriores ao desenhar. Sem quebra, tudo e
+pagina 1 -- exatamente o comportamento de sempre.
+
+Ha ainda um objeto OPCIONAL na raiz:
+
+    "document": {"margin": 70.87, "page_numbers": true}
+
+`margin` e a margem do documento em pontos (o editor a usa para o painel
+"Margens"); `page_numbers` liga a numeracao "n / N" no pe de cada pagina
+do PDF. Ausente, nada muda em relacao a um layout anterior a esta etapa.
+
+
 CAMADAS
 -------
 Nao ha `z_index`. A ORDEM da lista `elements` e a ordem de desenho: o
@@ -95,6 +133,16 @@ MAX_PARTS = 100
 MAX_TABLE_ROWS = 200
 MAX_TABLE_COLUMNS = 20
 MAX_ID_LENGTH = 64
+MAX_LINK_LENGTH = 2000
+# Tamanho de fonte por trecho: acima disto e erro de dado, nao tipografia.
+MAX_FONT_SIZE = 200.0
+
+# Os esquemas de URL que um trecho-link pode ter. Lista fechada: e a
+# unica porta de URL do layout, e "javascript:" nao passa por ela.
+LINK_SCHEMES = ("http://", "https://", "mailto:", "tel:")
+
+# Chaves aceitas em `layout["document"]`.
+DOCUMENT_KEYS = ("margin", "page_numbers")
 
 LADOS_DA_CAIXA = ("top", "right", "bottom", "left")
 
@@ -183,17 +231,43 @@ def _escolha(valor, opcoes, descricao):
 
 
 # Estilo que um TRECHO de `mixed` pode sobrepor ao do elemento. Mesmos
-# vocabularios de `elements.py`.
-ENFASE_DO_TRECHO = ("font_weight", "font_style")
+# vocabularios de `elements.py`. `ENFASE_DO_TRECHO` e o nome historico
+# (Etapa 3.3, so peso e estilo); o editor rico ampliou a lista.
+ESTILO_DO_TRECHO = (
+    "font_weight", "font_style", "text_decoration", "color", "highlight",
+    "font_size", "font_family", "link",
+)
+ENFASE_DO_TRECHO = ESTILO_DO_TRECHO
+
+
+def link_aceito(valor):
+    """
+    `valor` e uma URL que um trecho pode carregar? Devolve a URL limpa ou
+    None.
+
+    Espacos e caracteres de controle saem antes da conferencia ("java
+    script:" e o truque classico); o que sobra tem de comecar por um dos
+    `LINK_SCHEMES`. Nada de caminho relativo nem ancora: o link de um
+    documento impresso so faz sentido absoluto.
+    """
+    if not isinstance(valor, str):
+        return None
+    limpo = "".join(c for c in valor if c > " " and c != "\x7f").strip()
+    if not limpo or len(limpo) > MAX_LINK_LENGTH:
+        return None
+    if not limpo.lower().startswith(LINK_SCHEMES):
+        return None
+    return limpo
 
 
 def _validar_enfase(parte, descricao):
     """
-    A enfase opcional de um trecho de `mixed`.
+    O estilo opcional de um trecho de `mixed`.
 
     Ausente significa "herda do elemento" -- por isso nada aqui e
     obrigatorio. Presente, tem de ser um valor do vocabulario, senao um
-    "font_weight": "negrito" passaria batido e sumiria na geracao.
+    "font_weight": "negrito" passaria batido e sumiria na geracao. O
+    `link` passa por `link_aceito`: e a sanitizacao de URL do layout.
     """
     if not isinstance(parte, dict):
         return
@@ -201,6 +275,28 @@ def _validar_enfase(parte, descricao):
         _escolha(parte["font_weight"], elements.FONT_WEIGHTS, f"{descricao} (peso)")
     if "font_style" in parte:
         _escolha(parte["font_style"], elements.FONT_STYLES, f"{descricao} (estilo)")
+    if "text_decoration" in parte:
+        _escolha(
+            parte["text_decoration"], elements.TEXT_DECORATIONS, f"{descricao} (decoração)"
+        )
+    if "color" in parte:
+        _cor(parte["color"], f"{descricao} (cor)")
+    if "highlight" in parte:
+        _cor(parte["highlight"], f"{descricao} (realce)")
+    if "font_size" in parte:
+        tamanho = _numero(parte["font_size"], f"{descricao} (tamanho)")
+        if not 0 < tamanho <= MAX_FONT_SIZE:
+            raise ValidationError(
+                _("%(desc)s tem tamanho de fonte fora do razoável.") % {"desc": descricao}
+            )
+    if "font_family" in parte:
+        _escolha(parte["font_family"], elements.FONT_FAMILIES, f"{descricao} (fonte)")
+    if "link" in parte:
+        if link_aceito(parte["link"]) is None:
+            raise ValidationError(
+                _("%(desc)s tem um link que não é aceito: só http(s), mailto: e tel:.")
+                % {"desc": descricao}
+            )
 
 
 def validar_conteudo(bloco, descricao, *, permite_misto=False, profundidade=0):
@@ -501,6 +597,37 @@ def validar_elemento(elemento, indice=0):
     return tipo_do_elemento
 
 
+def _validar_documento(valor):
+    """As opcoes de documento da raiz (`layout["document"]`), se vierem."""
+    if not isinstance(valor, dict):
+        raise ValidationError(_('"document" deve ser um objeto.'))
+    desconhecidas = sorted(set(valor) - set(DOCUMENT_KEYS))
+    if desconhecidas:
+        raise ValidationError(
+            _('"document" tem chaves desconhecidas: %(nomes)s.')
+            % {"nomes": ", ".join(desconhecidas)}
+        )
+    if "margin" in valor:
+        margem = _numero(valor["margin"], _('"margin" do documento'))
+        if margem < 0:
+            raise ValidationError(_('"margin" do documento não pode ser negativa.'))
+    if "page_numbers" in valor and not isinstance(valor["page_numbers"], bool):
+        raise ValidationError(_('"page_numbers" do documento deve ser verdadeiro ou falso.'))
+    return valor
+
+
+def documento(layout):
+    """
+    As opcoes de documento com os padroes preenchidos: `margin` (None
+    quando o layout nao declara) e `page_numbers` (False).
+    """
+    opcoes = (layout or {}).get("document") or {}
+    return {
+        "margin": opcoes.get("margin"),
+        "page_numbers": bool(opcoes.get("page_numbers", False)),
+    }
+
+
 def validate_layout(layout):
     """
     Levanta `ValidationError` se `layout` nao seguir o contrato.
@@ -520,6 +647,9 @@ def validate_layout(layout):
             _('O layout está na versão de formato "%(tem)s"; esperada "%(esperada)s".')
             % {"tem": versao, "esperada": VERSION}
         )
+
+    if "document" in layout:
+        _validar_documento(layout["document"])
 
     elementos = layout.get("elements")
     if not isinstance(elementos, list):

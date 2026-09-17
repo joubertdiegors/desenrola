@@ -1,8 +1,9 @@
 """
 Dados de exemplo por modelo oficial (Etapa 3.4).
 
-Servem a DOIS consumidores: o teste de integracao do renderer e o
-comando `previa_documento`, que gera o PDF para conferencia visual. Ter
+Servem a TRES consumidores: o teste de integracao do renderer, o
+comando `previa_documento`, que gera o PDF para conferencia visual, e o
+editor de modelos ("Ver com dados de exemplo" e o botao Visualizar). Ter
 um lugar so evita a armadilha obvia -- a previa mostrar uma coisa e o
 teste afirmar outra.
 
@@ -62,3 +63,30 @@ POR_SLUG = {
 def para(slug):
     """Os dados de exemplo daquele modelo, ou `{}` se nao houver."""
     return dict(POR_SLUG.get(slug, {}))
+
+
+# O que o EDITOR mostra para um modelo sem entrada propria (uma copia
+# renomeada, um tipo de documento novo): a mesma pessoa ficticia, mais
+# os dois campos de "documento" que a carta oficial nao imprime. Sao
+# valores de amostra para se ver o desenho -- nenhum vai para o banco.
+GENERICOS = {
+    **CARTA_CONVITE_FR,
+    "documento.numero": "CC-2026-0001",
+    "documento.data": "09/09/2026",
+    "anfitriao.email": "claire.dubois@exemplo.be",
+}
+
+
+def genericos():
+    """Os dados de amostra do editor para um modelo qualquer."""
+    return dict(GENERICOS)
+
+
+def para_o_editor(slug):
+    """
+    Os dados de amostra que o editor usa para `slug`: os proprios do
+    modelo, completados pelos genericos -- assim um campo que o modelo
+    oficial nao usa (documento.numero) ainda tem valor de amostra quando
+    o administrador o insere.
+    """
+    return {**GENERICOS, **POR_SLUG.get(slug, {})}

@@ -47,11 +47,20 @@
     return { version: versao || 1, elements: [] };
   }
 
+  /*
+   * A forma minima do layout. `document` (as opcoes do editor rico:
+   * margem, numeracao) acompanha quando existe -- e uma chave do
+   * contrato, nao estado de sessao.
+   */
   function normalizar(layout, versao) {
     if (!layout || !layout.elements) {
       return layoutVazio(versao);
     }
-    return { version: layout.version || versao || 1, elements: layout.elements.slice() };
+    var novo = { version: layout.version || versao || 1, elements: layout.elements.slice() };
+    if (layout.document) {
+      novo.document = clonar(layout.document);
+    }
+    return novo;
   }
 
   // --- fila de ids vinda do servidor ---------------------------------------
@@ -301,6 +310,20 @@
     return { estados: estados, indice: estados.length - 1, limite: historico.limite };
   }
 
+  /*
+   * Troca o estado ATUAL por outro sem abrir um passo novo: e como
+   * teclas seguidas no mesmo bloco viram um so "desfazer". Sem passo
+   * anterior nao ha o que substituir -- registra.
+   */
+  function substituir(historico, estado) {
+    if (historico.indice <= 0) {
+      return registrar(historico, estado);
+    }
+    var estados = historico.estados.slice(0, historico.indice);
+    estados.push(estado);
+    return { estados: estados, indice: estados.length - 1, limite: historico.limite };
+  }
+
   function podeDesfazer(historico) {
     return historico.indice > 0;
   }
@@ -349,6 +372,7 @@
     criarHistorico: criarHistorico,
     atual: atual,
     registrar: registrar,
+    substituir: substituir,
     podeDesfazer: podeDesfazer,
     podeRefazer: podeRefazer,
     desfazer: desfazer,

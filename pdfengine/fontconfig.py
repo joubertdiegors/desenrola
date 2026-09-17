@@ -48,13 +48,19 @@ from reportlab.pdfbase.ttfonts import TTFont
 FONTS_DIR = Path(__file__).parent / "fonts"
 
 # Nomes com que as fontes ficam registradas no reportlab. O layout
-# (pdfengine/layouts/) referencia estes nomes, nunca os arquivos.
+# referencia estes nomes, nunca os arquivos. As faces italicas entraram
+# com o editor rico (Etapa 3.7): antes delas, italico era recusado --
+# desenhar italico com a face regular seria mentir sobre a tipografia.
 REGULAR = "LiberationSans"
 BOLD = "LiberationSans-Bold"
+ITALIC = "LiberationSans-Italic"
+BOLD_ITALIC = "LiberationSans-BoldItalic"
 
 _FILES = {
     REGULAR: "LiberationSans-Regular.ttf",
     BOLD: "LiberationSans-Bold.ttf",
+    ITALIC: "LiberationSans-Italic.ttf",
+    BOLD_ITALIC: "LiberationSans-BoldItalic.ttf",
 }
 
 _registered = False

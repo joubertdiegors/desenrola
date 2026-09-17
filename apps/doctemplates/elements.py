@@ -40,11 +40,17 @@ QR_CODE = "qr_code"
 TABLE = "table"
 LINE = "line"
 RECTANGLE = "rectangle"
+# Marca "o que vem depois comeca na pagina seguinte" (editor rico). Nao
+# desenha nada: o renderer conta as quebras para saber quantas paginas
+# ha e em qual delas cada elemento cai (ver services/pdf).
+PAGE_BREAK = "page_break"
 
 # --- categorias -------------------------------------------------------------
 
 CONTEUDO = "conteudo"
 GRAFICO = "grafico"
+# Nem conteudo nem desenho: organiza o documento (quebra de pagina).
+ESTRUTURA = "estrutura"
 
 # --- vocabularios fechados --------------------------------------------------
 
@@ -60,10 +66,28 @@ LINE_STYLES = ("solid", "dashed", "dotted")
 IMAGE_FITS = ("contain", "cover", "fill")
 QR_ERROR_LEVELS = ("L", "M", "Q", "H")
 
-# Fontes que o motor de PDF sabe embutir. Deliberadamente curto: uma
+# Fontes que o motor de PDF sabe desenhar. Deliberadamente curto: uma
 # fonte que o renderer nao tem viraria substituicao silenciosa no
 # documento final.
-FONT_FAMILIES = ("LiberationSans",)
+#
+#   LiberationSans -- embutida (pdfengine/fonts/), clone metrico da Arial,
+#                     nas quatro faces: regular, bold, italico e
+#                     bold-italico.
+#   Times, Courier -- as 14 fontes padrao do PDF (Times-Roman, Courier e
+#                     suas variantes), que todo leitor de PDF renderiza.
+#                     Sao o equivalente de "Times New Roman" e "Courier
+#                     New" do editor.
+#
+# Georgia e Manrope NAO estao aqui de proposito: nao ha equivalente livre
+# que o motor possa embutir, e oferece-las no editor seria prometer uma
+# tipografia que o documento nao tem.
+FONT_FAMILIES = ("LiberationSans", "Times", "Courier")
+
+# O estilo semantico de um bloco de texto no editor rico: paragrafo,
+# titulo do documento ou subtitulo. O renderer nao le isto -- o que ele
+# desenha vem de font_size/font_weight/align --; e o editor que o usa para
+# mostrar no seletor "Estilo do bloco" o que o bloco e.
+BLOCK_STYLES = ("p", "h1", "h2")
 
 
 @dataclass(frozen=True)
@@ -130,6 +154,17 @@ PARAGRAFO = (
     # Idioma do trecho -- interessa a hifenizacao e a formatos de data.
     # Vazio significa "o idioma do documento".
     Propriedade("language", "Idioma", "texto", padrao=""),
+    # --- editor rico (Etapa 3.7) ---
+    # Recuo do texto a partir da borda esquerda da caixa, em pontos. E o
+    # que uma lista usa para abrir espaco ao marcador, e o que os botoes
+    # "Aumentar/Diminuir recuo" mexem.
+    Propriedade("indent", "Recuo", "nao_neg", padrao=0.0),
+    # Marcador desenhado no recuo ("1.", "•"). Texto explicito, e nao um
+    # "tipo de lista" calculado na hora: o que o editor mostra e
+    # exatamente o que o PDF escreve, sem duas numeracoes para divergir.
+    Propriedade("list_marker", "Marcador de lista", "texto", padrao=""),
+    Propriedade("block_style", "Estilo do bloco", "escolha", padrao="p",
+                opcoes=BLOCK_STYLES),
 )
 
 
@@ -271,6 +306,14 @@ TIPOS_PADRAO = (
                         opcoes=ALIGNMENTS),
             Propriedade("line_height", "Entrelinha", "positivo", padrao=1.25),
         ),
+    ),
+    # Sem propriedades: a quebra e so uma posicao. `x`/`width` sao os da
+    # pagina e `height` e zero; o que importa e o `y` -- tudo o que vier
+    # abaixo dele pertence a pagina seguinte.
+    TipoDeElemento(
+        code=PAGE_BREAK,
+        label="Quebra de página",
+        categoria=ESTRUTURA,
     ),
 )
 

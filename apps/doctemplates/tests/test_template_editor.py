@@ -219,8 +219,13 @@ class TestContextoDaPagina:
     def test_o_html_carrega_os_modulos_do_editor_novo(self, cliente, modelo):
         html = cliente.get(_url("template_editor", modelo)).content.decode()
 
-        for modulo in ("geometry", "state", "canvas", "properties", "api", "editor"):
+        for modulo in (
+            "geometry", "state", "runs", "document", "canvas", "panels", "api", "editor",
+        ):
             assert f"template-editor/{modulo}.js" in html
+        # O painel de propriedades da Etapa 3.2 saiu: a barra de
+        # ferramentas e a barra contextual o substituem (Etapa 3.7).
+        assert "template-editor/properties.js" not in html
         assert "css/template-editor.css" in html
 
     def test_nenhum_comentario_django_vaza_para_a_pagina(self, cliente, modelo):
@@ -379,7 +384,8 @@ class TestValidacaoNoServidor:
 class TestMetadadosProtegidos:
     def test_o_endpoint_ignora_tudo_que_nao_seja_layout(self, cliente, modelo, tipo):
         """
-        A proteção vem de o endpoint só LER `layout`. Não há lista de
+        A proteção vem de o endpoint só LER `layout` (e `language`, o
+        painel "Idioma do modelo" do editor rico). Não há lista de
         campos proibidos que alguém possa esquecer de atualizar.
         """
         outro_tipo = DocumentType.objects.create(code="x", name="X", page={"unit": "pt"})
@@ -390,7 +396,6 @@ class TestMetadadosProtegidos:
             data=json.dumps({
                 "layout": layout_schema.layout_vazio(),
                 "type": outro_tipo.pk,
-                "language": "fr",
                 "is_system": True,
                 "is_locked": True,
                 "slug": "invadido",
@@ -409,6 +414,30 @@ class TestMetadadosProtegidos:
             "duplicated_from_id", "created_by_id", "field_schema",
         ):
             assert depois[campo] == antes[campo], campo
+
+    def test_o_idioma_do_painel_e_gravado_quando_valido(self, cliente, modelo):
+        """O único metadado que o editor grava: o idioma, do painel Documento."""
+        resposta = cliente.post(
+            _url("template_editor_save", modelo),
+            data=json.dumps({"layout": layout_schema.layout_vazio(), "language": "fr"}),
+            content_type="application/json",
+        )
+
+        assert resposta.status_code == 200
+        assert resposta.json()["language"] == "fr"
+        modelo.refresh_from_db()
+        assert modelo.language == "fr"
+
+    def test_um_idioma_desconhecido_e_recusado(self, cliente, modelo):
+        resposta = cliente.post(
+            _url("template_editor_save", modelo),
+            data=json.dumps({"layout": layout_schema.layout_vazio(), "language": "xx"}),
+            content_type="application/json",
+        )
+
+        assert resposta.status_code == 400
+        modelo.refresh_from_db()
+        assert modelo.language == "pt"
 
     def test_so_o_layout_e_o_updated_at_mudam(self, cliente, modelo):
         antes = DocumentTemplate.objects.filter(pk=modelo.pk).values().first()

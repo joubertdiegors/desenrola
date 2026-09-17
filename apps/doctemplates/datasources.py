@@ -59,13 +59,26 @@ class Campo:
     KINDS = ("texto", "data", "numero")
 
 
+# Cor com que uma fonte SEM cor propria aparece no editor.
+COR_PADRAO = "#7c8aa6"
+
+
 @dataclass(frozen=True)
 class FonteDeDados:
-    """Um namespace de campos (`convidado`, `anfitriao`, ...)."""
+    """
+    Um namespace de campos (`convidado`, `anfitriao`, ...).
+
+    `color` e a cor que identifica o grupo no editor de modelos (o ponto
+    ao lado do nome do grupo, o ponto de cada chip de "Campos no
+    documento"). Mora aqui, e nao no JavaScript, para uma fonte nova
+    registrada por `registrar_fonte()` nascer com a sua cor -- ou com a
+    padrao, se nao declarar nenhuma.
+    """
 
     code: str
     label: str
     campos: tuple = field(default_factory=tuple)
+    color: str = COR_PADRAO
 
     @property
     def chaves(self):
@@ -93,6 +106,7 @@ FONTES_PADRAO = (
     FonteDeDados(
         code="documento",
         label="Documento",
+        color="#1d4ed8",
         campos=(
             Campo("numero", "Número do documento"),
             Campo("data", "Data do documento", kind="data"),
@@ -101,6 +115,7 @@ FONTES_PADRAO = (
     FonteDeDados(
         code="convidado",
         label="Convidado",
+        color="#0f9d70",
         campos=(
             Campo("nome", "Nome completo"),
             Campo("nacionalidade", "Nacionalidade"),
@@ -111,6 +126,7 @@ FONTES_PADRAO = (
     FonteDeDados(
         code="anfitriao",
         label="Anfitrião",
+        color="#8a5cf6",
         campos=(
             Campo("nome", "Nome completo"),
             Campo("nacionalidade", "Nacionalidade"),
@@ -128,6 +144,7 @@ FONTES_PADRAO = (
     FonteDeDados(
         code="estadia",
         label="Estadia",
+        color="#e08a1e",
         campos=(
             Campo("chegada", "Data de chegada", kind="data"),
             Campo("partida", "Data de partida", kind="data"),
@@ -136,6 +153,7 @@ FONTES_PADRAO = (
     FonteDeDados(
         code="calculado",
         label="Calculado",
+        color="#7c8aa6",
         campos=(
             Campo("data_documento", "Data de emissão", kind="data"),
             # Sempre recalculada a partir de chegada/partida, nunca lida
@@ -238,6 +256,7 @@ def para_o_editor():
         {
             "code": origem.code,
             "label": origem.label,
+            "color": origem.color,
             "fields": [
                 {
                     "reference": f"{origem.code}{SEPARADOR}{campo.key}",

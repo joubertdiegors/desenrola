@@ -1,185 +1,619 @@
 /* --------------------------------------------------------------------------
-   Editor visual dos modelos da biblioteca (Etapa 3.2)
+   Editor rico dos modelos da biblioteca (Etapa 3.7)
 
-   Arquivo proprio, carregado so nesta tela (bloco extra_css).
+   Arquivo proprio, carregado so nesta tela (bloco extra_css). As medidas,
+   cores e tipografia sao as do arquivo de design "Editor Carta Estatico":
+   Manrope na interface; cabecalho 34px; barra de 32px; colunas
+   262 / 1fr / 288; folha A4 de 794px com sombra; painel escuro de notas.
 
-   A pagina NAO encolhe para caber no celular: uma folha espremida em
-   360px nao serve para posicionar nada com precisao. Em tela estreita a
-   area rola na horizontal e a pagina mantem a proporcao -- decisao
-   deliberada, nao falha de responsividade.
+   Duas telas no mesmo DOM. Ate 1023px e a versao do celular do design:
+   cabecalho compacto, abas Texto / Campos / Documento, barra de uma linha
+   rolavel, documento como cartao corrido e barra inferior. A partir de
+   1024px, as tres colunas. O que so existe numa delas leva
+   `.te-so-desktop` / `.te-so-celular`.
    -------------------------------------------------------------------------- */
 
-.bo-main-editor { padding: 0; }
+/* A tela inteira tem altura DEFINIDA: e o que permite a folha rolar
+   dentro da area e os paineis dentro de si, com o cabecalho e a barra
+   sempre a vista. Sem altura fixa o editor cresceria com o documento e
+   o rodape do celular sumiria abaixo da tela. */
+.te-body { overflow: hidden; height: 100vh; height: 100dvh; min-height: 0; }
+.te-main { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; padding: 0; }
 
 .te {
+  --te-azul: #1d4ed8;
+  --te-navy: #10275c;
+  --te-cinza: #5b6b8c;
+  --te-cinza-claro: #93a2be;
+  --te-cinza-medio: #7c8aa6;
+  --te-borda: #dfe8f5;
+  --te-borda-forte: #d3ddec;
+  --te-fundo: #eef3fb;
+  --te-fundo-suave: #f7faff;
+  --te-fundo-area: #e7edf7;
+  --te-linha: rgba(16, 39, 92, .1);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--te-fundo);
+  font-family: Manrope, "Inter", system-ui, sans-serif;
+  color: var(--te-navy);
 }
 
-/* --- Barra superior ------------------------------------------------------ */
+/* So o corpo cresce; cabecalho, avisos, barra e rodape tem a altura
+   propria. Assim a folha rola dentro da area, nunca a pagina inteira. */
+.te > * { flex: none; }
+.te > .te-corpo { flex: 1 1 auto; min-height: 0; }
 
-.te-topo {
+.te button, .te select, .te input, .te textarea { font-family: inherit; }
+.te button:focus-visible, .te select:focus-visible, .te input:focus-visible,
+.te textarea:focus-visible, .te [contenteditable]:focus-visible { outline: 2px solid var(--te-azul); outline-offset: 1px; }
+
+.te-so-celular { display: none; }
+
+/* --- Cabecalho ----------------------------------------------------------- */
+
+.te-cabecalho {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 11px 18px;
   background: #fff;
-  border: 1px solid var(--bd);
-  border-radius: 12px;
+  border-bottom: 1px solid var(--te-linha);
 }
 
-.te-identidade { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.te-cabecalho-esq { display: flex; align-items: center; gap: 14px; flex: 1 1 auto; min-width: 0; }
+.te-cabecalho-dir { display: flex; align-items: center; gap: 9px; flex: none; }
 
-.te-acoes {
-  display: flex;
+/* A saída do editor. Sempre visível: esta tela ocupa a janela inteira e
+   não tem o menu do Backoffice para servir de volta. */
+.te-voltar {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--te-navy);
+  text-decoration: none;
+}
+.te-voltar:hover { background: #f6f8fc; border-color: var(--te-azul); color: var(--te-azul); }
+
+.te-icone-doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--te-azul);
+  flex: none;
 }
 
-.te-sep { width: 1px; height: 20px; background: var(--bd); }
+.te-titulos { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 
-.te-zoom {
-  min-width: 52px;
-  text-align: center;
+.te-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--te-cinza-claro);
+  text-decoration: none;
+}
+.te-kicker-desktop:hover { color: var(--te-azul); }
+.te-kicker-celular { display: none; }
+
+.te-titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.022em;
+  color: var(--te-navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.te-pilula {
+  flex: none;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--te-fundo);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--te-cinza);
+}
+.te-pilula.is-ok { background: #e8f5ec; color: #177a45; }
+.te-pilula.is-oficial { background: #e5edfb; color: var(--te-azul); }
+
+.te-exemplo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  height: 34px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--te-navy);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.te-exemplo input { width: 15px; height: 15px; margin: 0; accent-color: var(--te-azul); }
+
+.te-estado { font-size: 12.5px; color: var(--te-cinza-claro); white-space: nowrap; }
+.te-estado.is-sujo { color: #8a6d00; }
+
+.te-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--te-cinza);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.te-btn-contorno { border-color: var(--te-azul); color: var(--te-azul); font-weight: 700; }
+.te-btn-contorno:hover { background: #f4f7fd; }
+.te-btn-neutro:hover { background: #f6f8fc; color: var(--te-navy); }
+.te-btn-primario {
+  padding: 0 16px;
+  border: none;
+  background: var(--te-azul);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(29, 78, 216, .28);
+}
+.te-btn-primario:hover { background: #1a45c2; }
+.te-btn-pequeno { height: 30px; padding: 0 12px; font-size: 12.5px; }
+
+/* --- Abas (celular) ----------------------------------------------------- */
+
+.te-abas { display: none; }
+
+/* --- Avisos --------------------------------------------------------------- */
+
+.te-nota {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 18px;
+  background: #fff8e6;
+  border-bottom: 1px solid #f1e2b6;
   font-size: 13px;
-  color: var(--mu);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Indicador de alteracoes por salvar: discreto, mas presente. */
-.te-estado {
-  font-size: 12px;
   color: #8a6d00;
-  background: rgba(255, 193, 7, .15);
-  padding: 3px 8px;
-  border-radius: 6px;
 }
 
 .te-aviso {
   margin: 0;
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 7px 18px;
   background: #eef4ff;
-  color: var(--p);
+  border-bottom: 1px solid #dbe6ff;
+  color: var(--te-azul);
   font-size: 13px;
 }
+.te-aviso.is-erro { background: #fdecec; border-color: #f5c2c2; color: #b4262a; }
 
-.te-aviso.is-erro { background: #fdecec; color: var(--e, #c0392b); }
+/* --- Barra de ferramentas ------------------------------------------------ */
 
-/* --- Corpo: paleta | pagina | propriedades -------------------------------- */
+.te-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 14px;
+  background: var(--te-fundo-suave);
+  border-bottom: 1px solid #e0e8f4;
+}
+
+.te-barra-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.te-grupo-botoes { display: flex; gap: 2px; }
+.te-sep { width: 1px; height: 24px; background: var(--te-borda); }
+.te-sep-curto { width: 1px; height: 16px; background: var(--te-borda); }
+
+.tb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: 1px solid var(--te-borda);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--te-cinza);
+  cursor: pointer;
+}
+.tb:hover:not(:disabled) { background: var(--te-fundo); }
+.tb:disabled { opacity: .45; cursor: not-allowed; }
+.tb.is-ativo { background: #e5edfb; border-color: #b9cdf3; color: var(--te-azul); }
+.tb-icone { width: 32px; padding: 0; }
+.tb-texto { padding: 0 11px; color: var(--te-navy); }
+.tb-texto-cinza { color: var(--te-cinza); }
+.tb-letra { width: 32px; padding: 0; font-size: 14px; font-weight: 700; color: var(--te-navy); }
+.tb-letra.is-negrito { font-weight: 800; }
+.tb-letra.is-italico { font-style: italic; }
+.tb-letra.is-sublinhado { text-decoration: underline; }
+.tb-letra.is-riscado { text-decoration: line-through; }
+.tb-select { padding: 0 8px; font-size: 13px; color: var(--te-navy); }
+
+.te-cores {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--te-borda);
+  border-radius: 8px;
+  background: #fff;
+}
+.te-cores-rotulo { font-size: 11.5px; font-weight: 700; color: var(--te-cinza-claro); }
+.te-cor {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(16, 39, 92, .2);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.te-realce {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: #fff6c9;
+  font-size: 11px;
+  font-weight: 800;
+  color: #8a6d00;
+  cursor: pointer;
+}
+
+/* As caixas de link e de HTML, sob a barra. */
+.te-caixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--te-borda);
+  border-radius: 10px;
+  background: #fff;
+}
+.te-caixa[hidden] { display: none; }
+.te-caixa-campo { display: flex; flex-direction: column; gap: 4px; flex: 1 1 160px; font-size: 12px; font-weight: 700; }
+.te-caixa-campo-longo { flex: 1.6 1 240px; }
+.te-caixa-campo input, .te-caixa textarea {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--te-navy);
+  background: var(--te-fundo-suave);
+}
+.te-caixa-campo input.is-invalido { border-color: #b4262a; background: #fdecec; }
+.te-caixa-html { flex-direction: column; align-items: stretch; }
+.te-caixa-html textarea { height: auto; padding: 8px 10px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; resize: vertical; }
+.te-caixa-rotulo { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--te-cinza-claro); }
+.te-caixa-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.te-caixa-dica { font-size: 11.5px; color: var(--te-cinza-medio); }
+
+/* --- Corpo: campos | folha | documento ----------------------------------- */
 
 .te-corpo {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) 280px;
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: 262px minmax(0, 1fr) 288px;
+  min-height: 0;
 }
 
-.te-paleta,
-.te-painel {
-  background: #fff;
-  border: 1px solid var(--bd);
-  border-radius: 12px;
-  padding: 12px;
-  position: sticky;
-  top: 12px;
-  max-height: calc(100vh - 24px);
-  overflow-y: auto;
-}
-
-.te-paleta h2,
-.te-painel h3 {
-  margin: 0 0 10px;
-  font-size: 12px;
+.te-kicker-secao {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--mu);
+  color: var(--te-cinza-claro);
 }
 
-.te-paleta h2 + .te-tipos { margin-bottom: 16px; }
+/* Campos do banco */
+.te-lateral {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border-right: 1px solid var(--te-linha);
+}
+.te-lateral-topo { display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 10px; }
+.te-busca { position: relative; display: flex; }
+.te-busca svg { position: absolute; left: 10px; top: 10px; }
+.te-busca input {
+  flex: 1;
+  height: 35px;
+  padding: 0 10px 0 31px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  font-size: 13.5px;
+  color: var(--te-navy);
+  background: var(--te-fundo-suave);
+  min-width: 0;
+}
+.te-dica { font-size: 11.5px; line-height: 1.45; color: var(--te-cinza-medio); }
+.te-lateral-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 0 10px 14px; }
 
-.te-ferramenta {
-  display: block;
+.te-grupo { margin-bottom: 6px; }
+.te-grp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
+  padding: 8px 9px;
+  border: none;
   border-radius: 8px;
   background: none;
-  font: inherit;
-  font-size: 13px;
-  color: inherit;
   text-align: left;
   cursor: pointer;
 }
-
-.te-ferramenta:hover:not(:disabled) { background: var(--bg); border-color: var(--bd); }
-.te-ferramenta:disabled { opacity: .45; cursor: not-allowed; }
-
-.te-fonte { margin-bottom: 6px; }
-
-.te-fonte > summary {
-  cursor: pointer;
-  padding: 7px 10px;
+.te-grp:hover { background: #f4f7fd; }
+.te-grp-nome { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--te-navy); }
+.te-ponto { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.te-ponto-redondo { width: 6px; height: 6px; border-radius: 999px; }
+.te-grp-seta { font-size: 11px; font-weight: 700; color: var(--te-cinza-claro); }
+.te-grp-campos { display: flex; flex-direction: column; gap: 3px; padding: 2px 2px 6px; }
+.te-fld {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  background: var(--te-fundo-suave);
+  text-align: left;
+  cursor: pointer;
 }
+.te-fld:hover:not(:disabled) { background: #e7eefb; border-color: #b9cdf3; }
+.te-fld:disabled { cursor: default; opacity: .7; }
+.te-fld-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.te-fld-rotulo { font-size: 12.5px; font-weight: 600; color: var(--te-navy); }
+.te-fld-chave { font-size: 11px; color: var(--te-cinza-claro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.te-fld-mais { display: none; }
+.te-vazio { margin: 0; padding: 8px 9px; font-size: 12.5px; color: var(--te-cinza-medio); }
 
-.te-fonte > summary:hover { background: var(--bg); }
-
-.te-ferramenta-campo {
-  font-size: 12.5px;
-  padding-left: 22px;
-  color: var(--mu);
+/* A folha */
+.te-centro { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--te-fundo-area); position: relative; }
+.te-centro-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #dae3f0;
 }
-
-/* --- Pagina --------------------------------------------------------------- */
-
-.te-area {
-  overflow: auto;
-  padding: 20px;
-  background: #e9edf4;
-  border-radius: 12px;
-  /* A altura acompanha a janela: a pagina rola dentro de si, sem empurrar
-     a barra de ferramentas para fora da tela. */
-  max-height: calc(100vh - 24px);
-}
-
-.te-pagina {
-  position: relative;
-  margin: 0 auto;
+.te-info-pagina { font-size: 12px; color: var(--te-cinza-medio); }
+.te-zoom { display: flex; align-items: center; gap: 8px; }
+.te-zoom-botao {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 7px;
   background: #fff;
-  box-shadow: 0 2px 14px rgba(16, 32, 64, .16);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--te-cinza);
+  cursor: pointer;
 }
+.te-zoom-valor { min-width: 44px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--te-navy); font-variant-numeric: tabular-nums; }
 
+.te-area { flex: 1; min-height: 0; overflow: auto; padding: 22px; }
+.te-paginas { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.te-folha {
+  position: relative;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(13, 35, 87, .14);
+  border-radius: 2px;
+}
 .te-camada { position: absolute; inset: 0; }
 
-/* --- Elementos ------------------------------------------------------------ */
-
-.te-elemento {
-  position: absolute;
-  box-sizing: border-box;
-  cursor: move;
-  outline: 1px solid transparent;
+/* A barra contextual do elemento selecionado (imagem, QR, tabela...). */
+.te-ctx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #fff;
+  border-bottom: 1px solid #dae3f0;
+  font-size: 12px;
 }
+.te-ctx[hidden] { display: none; }
+.te-ctx-titulo { font-weight: 800; color: var(--te-navy); margin-right: 4px; }
+.te-ctx-rotulo { font-weight: 700; color: var(--te-cinza-claro); }
+.te-ctx-select, .te-ctx-input {
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--te-borda);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  color: var(--te-navy);
+}
+.te-ctx-input { width: 72px; }
+.te-ctx-input-texto { width: 200px; }
+.te-ctx-check { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--te-cinza); }
+.te-ctx-check input { accent-color: var(--te-azul); margin: 0; }
+.te-ctx-acoes { display: flex; gap: 4px; margin-left: auto; }
+.te-ctx-botao {
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--te-borda);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--te-navy);
+  cursor: pointer;
+}
+.te-ctx-botao:hover { background: var(--te-fundo); }
+.te-ctx-botao.is-perigo { color: #b4262a; }
 
-/* Em edicao, todo elemento mostra os proprios limites. Sem isso um
-   retangulo sem borda ou um texto curto ficam impossiveis de encontrar e
-   de clicar com precisao. */
-.te:not(.is-preview) .te-elemento { outline-color: rgba(26, 95, 214, .28); }
+/* Documento (direita) */
+.te-direita {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  background: #fff;
+  border-left: 1px solid var(--te-linha);
+}
+.te-secao { display: flex; flex-direction: column; gap: 11px; }
+.te-ajuste { display: flex; flex-direction: column; gap: 5px; }
+.te-ajuste > span { font-size: 12px; font-weight: 700; color: var(--te-navy); }
+.te-ajuste select {
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13.5px;
+  color: var(--te-navy);
+}
+.te-ajuste select:disabled { color: var(--te-cinza); background: var(--te-fundo-suave); }
+.te-ajuste-linha { display: none; }
+.te-marcado { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--te-cinza); cursor: pointer; line-height: 1.3; }
+.te-marcado input { flex: none; width: 15px; height: 15px; margin: 0; accent-color: var(--te-azul); }
 
-.te-elemento:hover { outline-color: rgba(26, 95, 214, .55); }
-.te-elemento.is-selecionado { outline: 1.5px solid var(--p); }
+.te-usos {
+  gap: 8px;
+  padding: 13px;
+  background: var(--te-fundo-suave);
+  border: 1px solid #e3eaf6;
+  border-radius: 11px;
+}
+.te-usos-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.te-usos-titulo { font-size: 12.5px; font-weight: 800; color: var(--te-navy); }
+.te-usos-contagem { font-size: 11.5px; font-weight: 700; color: var(--te-azul); }
+.te-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.te-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--te-borda);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--te-navy);
+}
+.te-usos-nota { font-size: 11px; line-height: 1.45; color: var(--te-cinza-claro); }
+.te-usos .te-vazio { padding: 0; }
 
-/* Falta escolher o campo ou a imagem: tem de saltar aos olhos, porque o
-   servidor recusa publicar assim. */
-.te-elemento.is-incompleto {
+.te-notas {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  background: #0f1b33;
+  border-radius: 11px;
+}
+.te-notas-titulo { font-size: 13px; font-weight: 800; color: #fff; }
+.te-notas ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.5; color: #a9bfe4; }
+.te-notas b { color: #fff; font-weight: 700; }
+
+.te-restaurar {
+  min-height: 46px;
+  border: 1px solid var(--te-borda-forte);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--te-cinza);
+  cursor: pointer;
+}
+.te-restaurar:hover { border-color: var(--te-azul); color: var(--te-azul); }
+
+/* --- O documento em si ------------------------------------------------- */
+
+.te-elemento { box-sizing: border-box; }
+[data-modo="pagina"] .te-elemento { position: absolute; }
+
+.te-text, .te-rich_text { cursor: text; }
+.te-marcador { position: absolute; white-space: nowrap; pointer-events: none; }
+.te-bloco {
+  min-height: 1em;
+  outline: none;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.te-bloco:empty::before { content: "\00a0"; }
+
+.te .te-run { white-space: pre-wrap; }
+
+/* O chip de um campo dinamico (o do design). */
+.te .te-campo {
+  display: inline;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #e7eefb;
+  box-shadow: inset 0 0 0 1px #b9cdf3;
+  color: #17408f;
+  font-family: Manrope, sans-serif;
+  font-size: .86em;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+.te .te-campo.is-exemplo { background: transparent; box-shadow: none; color: inherit; font-family: inherit; font-size: 1em; }
+.te .te-campo.is-incompleto { background: rgba(255, 193, 7, .2); box-shadow: inset 0 0 0 1px #e0a800; color: #8a6d00; }
+
+/* Em edicao, um bloco mostra os proprios limites quando o cursor esta
+   nele ou o ponteiro passa por ele -- sem isso um texto curto fica
+   impossivel de encontrar. */
+[data-modo="pagina"] .te-text, [data-modo="pagina"] .te-rich_text,
+[data-modo="pagina"] .te-table { outline: 1px solid transparent; outline-offset: 2px; border-radius: 2px; }
+[data-modo="pagina"] .te-text:hover, [data-modo="pagina"] .te-rich_text:hover,
+[data-modo="pagina"] .te-table:hover { outline-color: rgba(29, 78, 216, .28); }
+.te-elemento.is-ativo { outline-color: rgba(29, 78, 216, .55) !important; }
+
+.te-image, .te-qr_code, .te-line, .te-rectangle { cursor: move; outline: 1px solid transparent; }
+.te-image:hover, .te-qr_code:hover, .te-line:hover, .te-rectangle:hover { outline-color: rgba(29, 78, 216, .45); }
+.te-elemento.is-selecionado { outline: 1.5px solid var(--te-azul) !important; }
+
+.te-elemento.is-incompleto:not(.te-text):not(.te-rich_text) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px;
   outline-color: #e0a800;
   background: rgba(255, 193, 7, .12);
   font-size: 11px;
@@ -187,29 +621,53 @@
 }
 
 .te-qr {
-  display: flex;
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--mu);
-  color: var(--mu);
-  font-size: 11px;
-  letter-spacing: .1em;
+  gap: 4px;
+  border: 1px dashed #7f93b5;
+  border-radius: 4px;
+  color: #7f93b5;
+  font-family: Manrope, sans-serif;
+  font-size: 8pt;
+  text-align: center;
+  overflow: hidden;
 }
+.te-qr-legenda { font-size: 7pt; padding: 0 3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .te-tabela { font-size: inherit; }
-.te-tabela td { vertical-align: top; word-break: break-word; }
+.te-tabela td { word-break: break-word; }
+.te-celula { min-height: 1em; outline: none; }
+.te-celula:focus { background: rgba(29, 78, 216, .05); }
 
-/* Alcas de redimensionamento. */
+.te-quebra {
+  height: 0 !important;
+  border-top: 1px dashed var(--te-azul);
+  cursor: pointer;
+}
+.te-quebra-etiqueta {
+  position: absolute;
+  right: 0;
+  top: -8px;
+  padding: 0 6px;
+  background: #fff;
+  font-family: Manrope, sans-serif;
+  font-size: 7.5pt;
+  color: var(--te-azul);
+  white-space: nowrap;
+}
+
+/* Alcas de redimensionamento dos elementos graficos. */
 .te-alca {
   position: absolute;
   width: 9px;
   height: 9px;
   background: #fff;
-  border: 1.5px solid var(--p);
+  border: 1.5px solid var(--te-azul);
   border-radius: 2px;
-  z-index: 2;
+  box-sizing: border-box;
 }
-
 .te-alca-nw { top: -5px; left: -5px; cursor: nwse-resize; }
 .te-alca-ne { top: -5px; right: -5px; cursor: nesw-resize; }
 .te-alca-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
@@ -219,140 +677,195 @@
 .te-alca-w { left: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
 .te-alca-e { right: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
 
-/* --- Painel de propriedades ----------------------------------------------- */
-
-.te-campo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: var(--mu);
-}
-
-.te-campo .input { font-size: 13px; min-height: 34px; padding: 4px 8px; }
-.te-campo textarea.input { min-height: 62px; padding: 6px 8px; }
-
-.te-campo-check { flex-direction: row; align-items: center; gap: 8px; }
-.te-campo-check input { width: auto; min-height: 0; }
-
-.te-grade-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
-.te-grade-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.te-grade-4 .input { min-height: 30px; font-size: 12px; padding: 2px 4px; }
-
-.te-resumo {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--mu);
-  padding: 6px 8px;
-  background: var(--bg);
-  border-radius: 6px;
-}
-
-.te-acoes-elemento {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--bd);
-}
-
-.te-vazio { font-size: 13px; color: var(--mu); margin: 0; }
-
 .te-csrf { display: none; }
 
-/* --- Telas estreitas ------------------------------------------------------ */
+/* --- Rodape (celular) ----------------------------------------------------- */
 
-@media (max-width: 1100px) {
-  /* As laterais passam para cima e para baixo da pagina; a pagina
-     continua no tamanho real, rolando na horizontal. */
-  .te-corpo { grid-template-columns: minmax(0, 1fr); }
+.te-rodape { display: none; }
 
-  .te-paleta,
-  .te-painel {
-    position: static;
-    max-height: none;
+/* --- Larguras intermediarias ------------------------------------------- */
+
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .te-corpo { grid-template-columns: 224px minmax(0, 1fr) 248px; }
+  .te-cabecalho { gap: 12px; padding: 10px 14px; }
+  .te-cabecalho-esq { gap: 10px; }
+  .te-cabecalho-dir { gap: 7px; }
+  .te-titulo { font-size: 16px; }
+  .te-exemplo { padding: 0 9px; }
+  .te-btn { padding: 0 11px; }
+  .te-direita { padding: 12px; }
+  .te-marcado { font-size: 12px; }
+}
+
+/* --- Celular e tablet: a versao do design ------------------------------- */
+
+@media (max-width: 1023px) {
+  .te-so-desktop { display: none !important; }
+  .te-so-celular { display: initial; }
+  .te-kicker-desktop { display: none; }
+  .te-kicker-celular { display: block; font-size: 10px; }
+
+  .te { grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; }
+
+  .te-cabecalho { gap: 10px; padding: 12px 14px; }
+  .te-cabecalho-esq { flex: 1; gap: 10px; justify-content: center; }
+  .te-icone-doc, .te-pilula { display: none; }
+  /* No celular a saída é o botão de seta do arquivo de referência. */
+  .te-voltar { justify-content: center; width: 36px; height: 36px; padding: 0; }
+  .te-voltar-texto { display: none; }
+  .te-titulos { align-items: center; flex: 1; }
+  .te-titulo { font-size: 14.5px; letter-spacing: -.02em; max-width: 200px; }
+  .te-exemplo, .te-estado-cabecalho { display: none; }
+  .te-cabecalho-dir { gap: 7px; }
+  .te-btn { height: 36px; padding: 0 13px; }
+  .te-btn .te-btn-texto { display: none; }
+  .te-btn-primario .te-btn-texto { display: inline; }
+  .te-btn-primario svg { display: none; }
+  .te-btn-contorno { width: 36px; padding: 0; justify-content: center; }
+
+  .te-abas { display: flex; gap: 4px; padding: 8px 14px; background: #fff; border-bottom: 1px solid #e0e8f4; }
+  .te-aba {
+    flex: 1;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: var(--te-fundo-suave);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--te-cinza);
+    cursor: pointer;
+  }
+  .te-aba.is-ativa { background: #e5edfb; color: var(--te-azul); }
+
+  /* Uma linha rolavel, botoes de 40px, na ordem do design: enfase,
+     listas, alinhamento, insercoes, desfazer. As duas linhas e os grupos
+     dissolvem-se (`display: contents`) para o `order` valer entre todos. */
+  .te-barra { flex-direction: row; gap: 6px; padding: 9px 14px; overflow-x: auto; scrollbar-width: none; }
+  .te-barra::-webkit-scrollbar { display: none; }
+  .te-barra-linha, .te-grupo-botoes { display: contents; }
+  .te-barra > .te-caixa { display: none; }
+  .tb { flex: none; width: 40px; height: 40px; border-radius: 10px; }
+  .tb-letra { font-size: 15px; }
+  .tb-texto { padding: 0; }
+  .te-sep { display: inline-block; flex: none; width: 1px; height: auto; align-self: stretch; }
+  .te-sep.te-so-desktop { display: none !important; }
+  [data-cmd="bold"] { order: 1; }
+  [data-cmd="italic"] { order: 2; }
+  [data-cmd="underline"] { order: 3; }
+  [data-cmd="lista"][data-valor="marcadores"] { order: 5; }
+  [data-cmd="lista"][data-valor="numerada"] { order: 6; }
+  [data-cmd="alinhar"][data-valor="center"] { order: 8; }
+  [data-cmd="alinhar"][data-valor="justify"] { order: 9; }
+  [data-cmd="tabela"] { order: 11; }
+  [data-cmd="qr"] { order: 12; }
+  [data-cmd="imagem"] { order: 13; }
+  [data-cmd="linha"] { order: 14; }
+  [data-cmd="undo"] { order: 16; }
+
+  .te-corpo { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .te-corpo > [data-painel] { display: none; flex: 1 1 auto; min-height: 0; }
+  [data-aba="texto"] .te-corpo > [data-painel="texto"] { display: flex; }
+  [data-aba="campos"] .te-corpo > [data-painel="campos"] { display: flex; }
+  [data-aba="documento"] .te-corpo > [data-painel="documento"] { display: flex; }
+  [data-aba="campos"] .te-barra, [data-aba="documento"] .te-barra { display: none; }
+
+  .te-centro-topo, .te-ctx { display: none; }
+  .te-area { padding: 14px; }
+  .te-paginas {
+    display: block;
+    min-height: 100%;
+    padding: 20px 18px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(13, 35, 87, .1);
+  }
+  .te-fluxo-linha { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; margin-bottom: 11px; }
+  .te-fluxo-linha .te-elemento { position: relative; max-width: 100%; }
+  .te-fluxo-linha .te-rectangle { height: 7px !important; }
+  .te-fluxo-linha .te-tabela { table-layout: auto; }
+  .te-fluxo-linha .te-campo { white-space: normal; }
+  /* No cartao o marcador fica ao lado do texto, como na folha. */
+  .te-fluxo-linha .te-text, .te-fluxo-linha .te-rich_text { flex-direction: row !important; align-items: flex-start; }
+  .te-fluxo-linha .te-marcador { position: static; flex: none; margin-right: 6px; }
+  .te-fluxo-linha .te-bloco { flex: 1 1 auto; min-width: 0; padding-left: 0 !important; }
+  .te-fluxo-linha .te-quebra { height: 0 !important; margin: 8px 0; }
+  .te-fluxo-linha .te-quebra-etiqueta { top: -8px; }
+
+  .te-lateral { border-right: none; }
+  .te-lateral-topo { gap: 9px; padding: 12px 14px; background: #fff; border-bottom: 1px solid #e0e8f4; }
+  .te-busca svg { left: 11px; top: 13px; }
+  .te-busca input { height: 42px; padding: 0 12px 0 33px; border-radius: 10px; font-size: 15px; }
+  .te-dica { font-size: 12px; }
+  .te-lateral-lista { padding: 10px 14px 18px; }
+  .te-grupo { margin-bottom: 8px; }
+  .te-grp { min-height: 46px; padding: 10px 12px; border: 1px solid #e3eaf6; border-radius: 10px; background: #fff; }
+  .te-grp-nome { font-size: 14.5px; gap: 8px; }
+  .te-ponto { width: 8px; height: 8px; }
+  .te-grp-seta { font-size: 12px; }
+  .te-grp-campos { gap: 6px; padding: 8px 0 2px; }
+  .te-fld { min-height: 52px; padding: 10px 13px; border: 1px solid #e3eaf6; border-radius: 10px; }
+  .te-fld-rotulo { font-size: 14px; }
+  .te-fld-chave { font-size: 11.5px; }
+  .te-fld-mais {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #e5edfb;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--te-azul);
   }
 
-  .te-tipos {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 4px;
+  .te-direita { gap: 12px; padding: 14px; background: var(--te-fundo); border-left: none; }
+  .te-secao { padding: 14px; background: #fff; border: 1px solid #e3eaf6; border-radius: 12px; }
+  .te-ajuste-linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--te-navy);
   }
+  .te-ajuste-linha input { width: 20px; height: 20px; margin: 0; accent-color: var(--te-azul); }
+  .te-ajuste { gap: 6px; }
+  .te-ajuste > span { font-size: 12.5px; }
+  .te-ajuste select { height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; }
+  .te-marcado { min-height: 32px; font-size: 14px; }
+  .te-usos { background: #fff; gap: 9px; }
+  .te-usos-titulo { font-size: 13.5px; }
+  .te-usos-contagem { font-size: 12px; }
+  .te-chip { padding: 5px 9px; background: var(--te-fundo-suave); font-size: 11.5px; }
+  .te-chips { gap: 6px; }
+  .te-usos-nota { font-size: 11.5px; }
+  .te-notas { display: none; }
 
-  .te-area { max-height: 70vh; }
+  .te-rodape {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    background: #fff;
+    border-top: 1px solid rgba(16, 39, 92, .12);
+    box-shadow: 0 -4px 14px rgba(16, 39, 92, .06);
+  }
+  .te-rodape .te-estado {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .te-rodape .te-btn { height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; }
+  .te-rodape .te-btn-contorno { width: auto; }
+  .te-rodape .te-btn-primario { padding: 0 18px; }
+  .te-rodape .te-btn .te-btn-texto { display: inline; }
+
+  .te-nota, .te-aviso { padding: 8px 14px; }
 }
-
-/* ---------------------------------------------------------------------------
-   Painel · editores de estrutura (conteudo misto e tabela)
-   ---------------------------------------------------------------------------
-
-   Ate o Bloco F estes dois eram somente leitura: o painel mostrava
-   "3 trecho(s)" e "Linhas: 2". Agora sao editaveis, e a estrutura visual
-   segue a hierarquia do dado -- sequencia de trechos, e tabela como
-   colunas + linhas + celulas.
-
-   `te-tabela-editor` e nao `te-tabela`: esta ultima e a TABELA DESENHADA
-   no canvas, outra coisa. */
-
-.te-misto,
-.te-tabela-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 10px 0 14px;
-  padding: 10px;
-  border: 1px solid var(--bd);
-  border-radius: var(--radius-md);
-  background: #fbfcfe;
-}
-
-.te-misto-titulo {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--mu);
-}
-
-/* Um trecho da sequencia, uma coluna ou uma linha: o numero a esquerda,
-   os campos no meio, as acoes a direita. */
-.te-trecho,
-.te-coluna,
-.te-linha-cabeca {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.te-trecho-numero {
-  flex: 0 0 auto;
-  min-width: 18px;
-  padding-top: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mu);
-}
-
-.te-trecho-corpo,
-.te-coluna > .te-grade-2 { flex: 1; min-width: 0; }
-
-.te-trecho-acoes { display: flex; gap: 2px; flex: 0 0 auto; }
-
-.te-trecho + .te-trecho,
-.te-coluna + .te-coluna,
-.te-linha + .te-linha { border-top: 1px dashed var(--bd); padding-top: 8px; }
-
-.te-misto-novos { display: flex; gap: 6px; flex-wrap: wrap; }
-
-/* A celula recua em relacao a linha: a hierarquia linha > celula fica
-   visivel sem precisar de titulo em cada uma. */
-.te-linha { display: flex; flex-direction: column; gap: 6px; }
-.te-celula {
-  margin-left: 14px;
-  padding-left: 8px;
-  border-left: 2px solid var(--bd);
-}
-.te-celula-rotulo { font-size: 11px; color: var(--mu); }

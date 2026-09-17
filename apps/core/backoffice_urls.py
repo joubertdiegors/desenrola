@@ -134,6 +134,11 @@ urlpatterns = [
         doc_editor_views.template_editor_ids,
         name="template_editor_ids",
     ),
+    path(
+        "modelos/<int:pk>/previa/",
+        doc_editor_views.template_editor_preview,
+        name="template_editor_preview",
+    ),
     # Conteudo do site: as secoes da Home, editadas por tipo. As views
     # ficam em apps.content (junto dos modelos que leem); so a rota mora
     # aqui.

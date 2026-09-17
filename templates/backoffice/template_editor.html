@@ -1,116 +1,299 @@
 {% extends "backoffice/base.html" %}
 {% load i18n static %}
 {% comment %}
-Editor visual dos modelos da biblioteca (Etapa 3.2).
+Editor rico dos modelos da biblioteca (Etapa 3.7).
 
-Quatro areas: barra no topo, paleta a esquerda (tipos de elemento e
-campos de dados), pagina no meio, propriedades a direita.
+A tela e a do arquivo de design "Editor Carta Estatico": cabecalho com a
+identidade do modelo e as acoes; barra de ferramentas em duas linhas;
+tres colunas -- campos do banco, a folha A4, as opcoes do documento.
+No celular, o cabecalho compacto, as abas Texto / Campos / Documento e a
+barra inferior. E uma ferramenta de tela inteira: a casca do Backoffice
+(menu lateral, barra de abas) nao aparece aqui; o caminho de volta e o
+"Backoffice · Modelos" do cabecalho e a seta do celular.
 
 O estado inicial vai para o navegador pelo filtro |json_script, que
 serializa E escapa. NUNCA interpolar dados dentro de <script>: o conteudo
 vem do banco e um `</script>` no meio de uma string viraria execucao de
 codigo.
 
-As listas de tipos e de campos NAO sao escritas aqui: vem dos registros
-`elements.py` e `datasources.py`, montadas pelo JavaScript. Repetir as
-listas no template seria uma segunda fonte de verdade.
+As listas de tipos, de campos e de valores de amostra NAO sao escritas
+aqui: vem dos registros `elements.py`, `datasources.py` e
+`dados_de_exemplo.py`, montadas pelo JavaScript. Repetir as listas no
+template seria uma segunda fonte de verdade.
 
-Contexto: modelo, editavel, motivo_da_leitura, voltar_url, layout_json,
-pagina_json, tipos_json, fontes_json, ids_json, config_json.
+Contexto: modelo, editavel, motivo_da_leitura, voltar_url, previa_url,
+pode_restaurar, layout_json, layout_padrao_json, pagina_json,
+tipos_json, fontes_json, exemplo_json, idiomas_json, ids_json,
+assets_json, config_json.
 {% endcomment %}
 
+{% block body_class %}te-body{% endblock %}
+{% block main_class %}te-main{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/template-editor.css' %}">{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
 
-{% block bo_main_class %}bo-main-editor{% endblock %}
+{% block content %}
+<div class="te" data-editor data-modo="pagina" data-aba="texto">
 
-{% block bo_main %}
-<div class="te" data-editor>
-
-  {# ---- Barra superior ------------------------------------------------- #}
-  <header class="te-topo">
-    <a class="btn btn-ghost btn-sm" href="{{ voltar_url }}">
-      <i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}
-    </a>
-
-    <div class="te-identidade">
-      <strong>{{ modelo.name }}</strong>
-      <span class="tag tag-primary">{{ modelo.get_language_display }}</span>
-      <span class="text-muted">{{ modelo.type.name }}</span>
-      {% if modelo.is_system %}<span class="tag">{% translate "Oficial" %}</span>{% endif %}
-      {% if modelo.is_locked %}<span class="tag">{% translate "Travado" %}</span>{% endif %}
+  <header class="te-cabecalho">
+    <div class="te-cabecalho-esq">
+      {% comment %}
+      A SAÍDA do editor. No celular é o botão de seta do arquivo de
+      referência; no desktop ele ganha o rótulo "Voltar", porque ali a
+      referência só tinha o kicker como caminho de volta -- e um link de
+      texto pequeno não é saída clara de uma ferramenta de tela inteira.
+      Os dois levam a URLs nomeadas de verdade: o modelo (de onde se
+      entrou) e a biblioteca (a listagem).
+      {% endcomment %}
+      <a class="te-voltar" href="{{ voltar_url }}" aria-label="{% translate 'Voltar ao modelo' %}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6l-6 6 6 6"></path></svg>
+        <span class="te-voltar-texto">{% translate "Voltar" %}</span>
+      </a>
+      <span class="te-icone-doc" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+      </span>
+      <div class="te-titulos">
+        <a class="te-kicker te-kicker-desktop" href="{{ biblioteca_url }}">Backoffice · {% translate "Modelos" %}</a>
+        <span class="te-kicker te-kicker-celular">{% translate "Modelo" %} · {{ modelo.language|upper }}</span>
+        <h1 class="te-titulo">{{ modelo.name }}</h1>
+      </div>
+      {% if modelo.is_system %}<span class="te-pilula is-oficial">{% translate "Oficial" %}</span>{% endif %}
+      {% if modelo.is_active %}<span class="te-pilula is-ok">{% translate "Ativo" %}</span>{% else %}<span class="te-pilula">{% translate "Inativo" %}</span>{% endif %}
+      {% if modelo.is_locked %}<span class="te-pilula">{% translate "Travado" %}</span>{% endif %}
     </div>
-
-    <div class="te-acoes">
-      {% if editavel %}
-      <button type="button" class="btn btn-ghost btn-sm" data-acao="desfazer"
-              title="{% translate 'Desfazer (Ctrl+Z)' %}">
-        <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>
+    <div class="te-cabecalho-dir">
+      <label class="te-exemplo">
+        <input type="checkbox" data-exemplo>{% translate "Ver com dados de exemplo" %}
+      </label>
+      <span class="te-estado te-estado-cabecalho" data-estado>{% translate "Tudo salvo" %}</span>
+      <button type="button" class="te-btn te-btn-contorno" data-acao="visualizar" title="{% translate 'Visualizar o PDF com dados de exemplo' %}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg><span class="te-btn-texto">{% translate "Visualizar" %}</span>
       </button>
-      <button type="button" class="btn btn-ghost btn-sm" data-acao="refazer"
-              title="{% translate 'Refazer (Ctrl+Y)' %}">
-        <i class="ph ph-arrow-clockwise" aria-hidden="true"></i>
-      </button>
-      <span class="te-sep" aria-hidden="true"></span>
-      {% endif %}
-
-      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-menos"
-              aria-label="{% translate 'Reduzir' %}"><i class="ph ph-minus" aria-hidden="true"></i></button>
-      <span class="te-zoom" data-zoom-valor>100%</span>
-      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-mais"
-              aria-label="{% translate 'Ampliar' %}"><i class="ph ph-plus" aria-hidden="true"></i></button>
-      <button type="button" class="btn btn-ghost btn-sm" data-acao="zoom-caber">{% translate "Ajustar" %}</button>
-
       {% if editavel %}
-      <span class="te-estado" data-estado hidden></span>
-      <button type="button" class="btn btn-primary btn-sm" data-acao="salvar">
-        <i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar" %}
+      {% comment %}
+      "Descartar" sai do editor SEM salvar: com alteração pendente
+      pergunta antes e joga fora o que não foi salvo; sem alteração
+      pendente é só a saída. Ver `descartar()` em editor.js.
+      {% endcomment %}
+      <button type="button" class="te-btn te-btn-neutro te-so-desktop" data-acao="descartar">{% translate "Descartar" %}</button>
+      <button type="button" class="te-btn te-btn-primario" data-acao="salvar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"></path><path d="M9 4v5h6"></path></svg><span class="te-btn-texto">{% translate "Salvar" %}<span class="te-so-desktop"> {% translate "modelo" %}</span></span>
       </button>
       {% endif %}
     </div>
   </header>
 
+  <div class="te-abas" role="tablist" aria-label="{% translate 'Partes do editor' %}">
+    <button type="button" class="te-aba is-ativa" role="tab" data-aba="texto" aria-selected="true">{% translate "Texto" %}</button>
+    <button type="button" class="te-aba" role="tab" data-aba="campos" aria-selected="false">{% translate "Campos" %}</button>
+    <button type="button" class="te-aba" role="tab" data-aba="documento" aria-selected="false">{% translate "Documento" %}</button>
+  </div>
+
   {% if not editavel %}
-  <div class="notice notice-warning" role="status">
+  <div class="te-nota" role="status">
     <i class="ph-fill ph-lock" aria-hidden="true"></i>
     <span>{{ motivo_da_leitura }}</span>
   </div>
   {% endif %}
-
   <p class="te-aviso" data-aviso hidden role="status"></p>
 
-  <div class="te-corpo">
+  {% comment %}A barra de ferramentas: duas linhas no desktop, uma linha rolavel no celular.{% endcomment %}
+  <div class="te-barra" data-barra role="toolbar" aria-label="{% translate 'Formatação' %}">
+    <div class="te-barra-linha">
+      <button type="button" class="tb tb-icone" data-cmd="undo" title="{% translate 'Desfazer' %}" aria-label="{% translate 'Desfazer' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a5 5 0 0 1 0 10H8"></path><path d="M7 5L4 8l3 3"></path></svg></button>
+      <button type="button" class="tb tb-icone te-so-desktop" data-cmd="redo" title="{% translate 'Refazer' %}" aria-label="{% translate 'Refazer' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8h-9a5 5 0 0 0 0 10h5"></path><path d="M17 5l3 3-3 3"></path></svg></button>
+      <span class="te-sep te-so-desktop" aria-hidden="true"></span>
 
-    {# ---- Paleta: tipos e campos, vindos dos registros ------------------ #}
-    <aside class="te-paleta" aria-label="{% translate 'Elementos e dados' %}">
-      <h2>{% translate "Documento" %}</h2>
-      <div class="te-tipos" data-paleta-tipos></div>
+      <select class="tb tb-select te-so-desktop" data-cmd="estilo" data-so-bloco title="{% translate 'Estilo do bloco' %}" aria-label="{% translate 'Estilo do bloco' %}">
+        <option value="p">{% translate "Parágrafo" %}</option>
+        <option value="h1">{% translate "Título do documento" %}</option>
+        <option value="h2">{% translate "Subtítulo" %}</option>
+      </select>
+      {% comment %}As familias sao as de `elements.FONT_FAMILIES` (config.fontFamilies); o rotulo diz a fonte que cada uma representa.{% endcomment %}
+      <select class="tb tb-select te-so-desktop" data-cmd="fonte" data-so-bloco title="{% translate 'Fonte' %}" aria-label="{% translate 'Fonte' %}">
+        {% for familia in config_json.fontFamilies %}
+        <option value="{{ familia }}">{% if familia == "LiberationSans" %}Arial{% elif familia == "Times" %}Times New Roman{% elif familia == "Courier" %}Courier New{% else %}{{ familia }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      <select class="tb tb-select te-so-desktop" data-cmd="tamanho" data-so-bloco title="{% translate 'Corpo do texto' %}" aria-label="{% translate 'Corpo do texto' %}">
+        <option value="8">8 pt</option>
+        <option value="9">9 pt</option>
+        <option value="10">10 pt</option>
+        <option value="11">11 pt</option>
+        <option value="12">12 pt</option>
+        <option value="14">14 pt</option>
+        <option value="18">18 pt</option>
+      </select>
 
-      <h2>{% translate "Dados" %}</h2>
-      <div class="te-fontes" data-paleta-fontes></div>
-    </aside>
+      <span class="te-sep te-so-desktop" aria-hidden="true"></span>
+      <div class="te-grupo-botoes">
+        <button type="button" class="tb tb-letra is-negrito" data-cmd="bold" title="{% translate 'Negrito' %}" aria-label="{% translate 'Negrito' %}">B</button>
+        <button type="button" class="tb tb-letra is-italico" data-cmd="italic" title="{% translate 'Itálico' %}" aria-label="{% translate 'Itálico' %}">I</button>
+        <button type="button" class="tb tb-letra is-sublinhado" data-cmd="underline" title="{% translate 'Sublinhado' %}" aria-label="{% translate 'Sublinhado' %}">S</button>
+        <button type="button" class="tb tb-letra is-riscado te-so-desktop" data-cmd="strikeThrough" title="{% translate 'Riscado' %}" aria-label="{% translate 'Riscado' %}">S</button>
+      </div>
 
-    {# ---- Pagina ------------------------------------------------------- #}
-    {% comment %}
-    Rolagem horizontal em tela estreita e proposital: a pagina mantem a
-    proporcao em vez de ser espremida para caber no celular.
-    {% endcomment %}
-    <div class="te-area">
-      <div class="te-pagina" data-pagina>
-        <div class="te-camada" data-camada></div>
+      <div class="te-cores te-so-desktop">
+        <span class="te-cores-rotulo">{% translate "Cor" %}</span>
+        <button type="button" class="te-cor" data-cmd="cor" data-valor="#15181f" style="background:#15181f" title="{% translate 'Preto documento' %}" aria-label="{% translate 'Preto documento' %}"></button>
+        <button type="button" class="te-cor" data-cmd="cor" data-valor="#5b6b8c" style="background:#5b6b8c" title="{% translate 'Cinza' %}" aria-label="{% translate 'Cinza' %}"></button>
+        <button type="button" class="te-cor" data-cmd="cor" data-valor="#1d4ed8" style="background:#1d4ed8" title="{% translate 'Azul' %}" aria-label="{% translate 'Azul' %}"></button>
+        <button type="button" class="te-cor" data-cmd="cor" data-valor="#b4262a" style="background:#b4262a" title="{% translate 'Vermelho' %}" aria-label="{% translate 'Vermelho' %}"></button>
+        <span class="te-sep-curto" aria-hidden="true"></span>
+        <button type="button" class="te-realce" data-cmd="realce" title="{% translate 'Realçar' %}" aria-label="{% translate 'Realçar' %}">A</button>
+      </div>
+
+      <span class="te-sep te-so-desktop" aria-hidden="true"></span>
+      <div class="te-grupo-botoes">
+        <button type="button" class="tb tb-icone te-so-desktop" data-cmd="alinhar" data-valor="left" data-so-bloco title="{% translate 'Esquerda' %}" aria-label="{% translate 'Alinhar à esquerda' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"></path></svg></button>
+        <button type="button" class="tb tb-icone" data-cmd="alinhar" data-valor="center" data-so-bloco title="{% translate 'Centro' %}" aria-label="{% translate 'Centralizar' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M6 18h12"></path></svg></button>
+        <button type="button" class="tb tb-icone te-so-desktop" data-cmd="alinhar" data-valor="right" data-so-bloco title="{% translate 'Direita' %}" aria-label="{% translate 'Alinhar à direita' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M10 12h10M7 18h13"></path></svg></button>
+        <button type="button" class="tb tb-icone" data-cmd="alinhar" data-valor="justify" data-so-bloco title="{% translate 'Justificado' %}" aria-label="{% translate 'Justificar' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
       </div>
     </div>
 
-    {# ---- Propriedades -------------------------------------------------- #}
-    <aside class="te-painel" aria-label="{% translate 'Propriedades' %}" data-propriedades></aside>
+    <div class="te-barra-linha">
+      <div class="te-grupo-botoes">
+        <button type="button" class="tb tb-icone" data-cmd="lista" data-valor="marcadores" data-so-bloco title="{% translate 'Lista com marcadores' %}" aria-label="{% translate 'Lista com marcadores' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"></path><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"></circle><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"></circle><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"></circle></svg></button>
+        <button type="button" class="tb tb-icone" data-cmd="lista" data-valor="numerada" data-so-bloco title="{% translate 'Lista numerada' %}" aria-label="{% translate 'Lista numerada' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 5v3M3.4 5.2 4.2 4.6M3.3 12h1.6l-1.6 2.2h1.7M3.3 16.8h1.6v1.5H3.4v1.5h1.5"></path></svg></button>
+        <button type="button" class="tb tb-icone te-so-desktop" data-cmd="recuo" data-valor="menos" data-so-bloco title="{% translate 'Diminuir recuo' %}" aria-label="{% translate 'Diminuir recuo' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h10M7 9l-3 3 3 3"></path></svg></button>
+        <button type="button" class="tb tb-icone te-so-desktop" data-cmd="recuo" data-valor="mais" data-so-bloco title="{% translate 'Aumentar recuo' %}" aria-label="{% translate 'Aumentar recuo' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h10M4 9l3 3-3 3"></path></svg></button>
+      </div>
+      <select class="tb tb-select te-so-desktop" data-cmd="entrelinha" data-so-bloco title="{% translate 'Entrelinha' %}" aria-label="{% translate 'Entrelinha' %}">
+        <option value="1.25">{% translate "Entrelinha normal" %}</option>
+        <option value="1.1">{% translate "Compacta" %}</option>
+        <option value="1.5">{% translate "Ampla" %}</option>
+      </select>
+
+      <span class="te-sep te-so-desktop" aria-hidden="true"></span>
+      <button type="button" class="tb tb-texto te-so-desktop" data-cmd="link" data-so-bloco><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6"></path><path d="M14 11a4 4 0 0 0-5.7 0L5.5 13.8a4 4 0 0 0 5.7 5.7L12.5 18"></path></svg>{% translate "Link" %}</button>
+      <button type="button" class="tb tb-texto" data-cmd="imagem" title="{% translate 'Imagem' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M4.5 17l4.5-4 3.5 3 2.5-2.2 4.5 4"></path></svg><span class="te-so-desktop">{% translate "Imagem" %}</span></button>
+      <button type="button" class="tb tb-texto" data-cmd="qr" title="QR Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.2"></rect><rect x="14" y="4" width="6" height="6" rx="1.2"></rect><rect x="4" y="14" width="6" height="6" rx="1.2"></rect><path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2"></path></svg><span class="te-so-desktop">QR Code</span></button>
+      <button type="button" class="tb tb-texto" data-cmd="tabela" title="{% translate 'Tabela' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M3.5 10h17M3.5 15h17M9.5 5v14M15 5v14"></path></svg><span class="te-so-desktop">{% translate "Tabela" %}</span></button>
+
+      <span class="te-sep te-so-desktop" aria-hidden="true"></span>
+      <button type="button" class="tb tb-icone" data-cmd="linha" title="{% translate 'Linha divisória' %}" aria-label="{% translate 'Linha divisória' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 12h18"></path></svg></button>
+      <button type="button" class="tb tb-texto tb-texto-cinza te-so-desktop" data-cmd="quebra"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v6H6zM6 14h12v6H6z"></path><path d="M3 12h4M10 12h4M17 12h4"></path></svg>{% translate "Quebra de página" %}</button>
+      <button type="button" class="tb tb-texto tb-texto-cinza te-so-desktop" data-cmd="assinatura"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18c3-1 4.5-9 7-9s1 6 3 6 3-3 6-3"></path><path d="M3 21h18"></path></svg>{% translate "Assinatura" %}</button>
+      <button type="button" class="tb tb-texto tb-texto-cinza te-so-desktop" data-cmd="limpar" data-so-bloco><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M10 6l-1 13M16 6l1 13"></path><path d="M4 10l6 6M10 10l-6 6"></path></svg>{% translate "Limpar" %}</button>
+      <button type="button" class="tb tb-texto tb-texto-cinza te-so-desktop" data-cmd="html" data-so-bloco><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5"></path></svg>HTML</button>
+    </div>
+
+    <div class="te-caixa" data-caixa="link" hidden>
+      <label class="te-caixa-campo"><span>{% translate "Texto do link" %}</span><input type="text" data-link-texto placeholder="{% translate 'Só quando não há seleção' %}"></label>
+      <label class="te-caixa-campo te-caixa-campo-longo"><span>{% translate "Endereço" %}</span><input type="text" data-link-endereco placeholder="https://… , mailto:… ou tel:…"></label>
+      <button type="button" class="te-btn te-btn-primario te-btn-pequeno" data-cmd="link-aplicar">{% translate "Inserir link" %}</button>
+      <button type="button" class="te-btn te-btn-neutro te-btn-pequeno" data-cmd="link-remover" data-link-remover hidden>{% translate "Remover link" %}</button>
+      <button type="button" class="te-btn te-btn-neutro te-btn-pequeno" data-cmd="link-fechar">{% translate "Cancelar" %}</button>
+    </div>
+
+    <div class="te-caixa te-caixa-html" data-caixa="html" hidden>
+      <span class="te-caixa-rotulo">{% translate "HTML do bloco" %}</span>
+      <textarea data-html-fonte rows="6" spellcheck="false"></textarea>
+      <div class="te-caixa-acoes">
+        <button type="button" class="te-btn te-btn-primario te-btn-pequeno" data-cmd="html-aplicar">{% translate "Aplicar HTML" %}</button>
+        <button type="button" class="te-btn te-btn-neutro te-btn-pequeno" data-cmd="html-fechar">{% translate "Fechar" %}</button>
+        <span class="te-caixa-dica">{% translate "Só texto, ênfase, cor, tamanho, links e campos sobrevivem: o resto é descartado." %}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="te-corpo">
+
+    <aside class="te-lateral" data-painel="campos" aria-label="{% translate 'Campos do banco' %}">
+      <div class="te-lateral-topo">
+        <span class="te-kicker-secao">{% translate "Campos do banco" %}</span>
+        <label class="te-busca">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9fadc6" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+          <input type="search" data-busca placeholder="{% translate 'Buscar campo…' %}" aria-label="{% translate 'Buscar campo' %}">
+        </label>
+        <span class="te-dica te-so-desktop">{% translate "Clique para inserir na posição do cursor. O valor real vem do cadastro ao emitir a carta." %}</span>
+        <span class="te-dica te-so-celular">{% translate "Toque para inserir no ponto onde você parou de escrever." %}</span>
+      </div>
+      <div class="te-lateral-lista" data-campos></div>
+    </aside>
+
+    <main class="te-centro" data-painel="texto">
+      <div class="te-centro-topo">
+        <span class="te-info-pagina" data-info-pagina></span>
+        <div class="te-zoom">
+          <button type="button" class="te-zoom-botao" data-acao="zoom-menos" aria-label="{% translate 'Reduzir' %}">−</button>
+          <span class="te-zoom-valor" data-zoom-valor>90%</span>
+          <button type="button" class="te-zoom-botao" data-acao="zoom-mais" aria-label="{% translate 'Ampliar' %}">+</button>
+        </div>
+      </div>
+      <div class="te-ctx" data-ctx hidden></div>
+      <div class="te-area" data-area>
+        <div class="te-paginas" data-paginas></div>
+      </div>
+    </main>
+
+    <aside class="te-direita" data-painel="documento" aria-label="{% translate 'Documento' %}">
+      <section class="te-secao">
+        <span class="te-kicker-secao"><span class="te-so-desktop">{% translate "Documento" %}</span><span class="te-so-celular">{% translate "Ajustes" %}</span></span>
+        <label class="te-ajuste-linha te-so-celular">{% translate "Ver com dados de exemplo" %}<input type="checkbox" data-exemplo></label>
+        <label class="te-ajuste"><span>{% translate "Idioma do modelo" %}</span>
+          <select data-idioma {% if not editavel %}disabled{% endif %}>
+            {% for idioma in idiomas_json %}<option value="{{ idioma.code }}">{{ idioma.label }} ({{ idioma.code|upper }})</option>{% endfor %}
+          </select>
+        </label>
+        <label class="te-ajuste"><span><span class="te-so-desktop">{% translate "Margens" %}</span><span class="te-so-celular">{% translate "Margens do PDF" %}</span></span>
+          <select data-margens {% if not editavel %}disabled{% endif %}>
+            {% for margem in config_json.margins %}<option value="{{ margem.key }}">{% if margem.key == "normal" %}{% translate "Normais" %}{% elif margem.key == "estreita" %}{% translate "Estreitas" %}{% else %}{% translate "Amplas" %}{% endif %} ({{ margem.mm }} mm)</option>{% endfor %}
+          </select>
+        </label>
+        <label class="te-marcado"><input type="checkbox" data-faixa {% if not editavel %}disabled{% endif %}>{% translate "Faixa da bandeira no topo" %}</label>
+        <label class="te-marcado"><input type="checkbox" data-numeracao {% if not editavel %}disabled{% endif %}>{% translate "Numeração de páginas no PDF" %}</label>
+      </section>
+
+      <section class="te-secao te-usos" data-usos></section>
+
+      <section class="te-notas">
+        <span class="te-notas-titulo">{% translate "Notas de integração" %}</span>
+        <ul>
+          <li>{% translate "O modelo é gravado em" %} <b>DocumentTemplate.layout</b>: {% translate "elementos com coordenadas em pt, na ordem de desenho; o PDF sai do mesmo layout." %}</li>
+          <li>{% translate "Campo =" %} <b>{"kind": "field", "source": "grupo.chave"}</b> {% translate "dentro do conteúdo; ao emitir, o renderer resolve pelo registro de fontes de dados." %}</li>
+          <li>{% translate "Grupo" %} <b>calculado</b> {% translate "é derivado no servidor (duração, data de emissão) — não aceita edição manual." %}</li>
+          <li>QR: {% translate "elemento" %} <b>qr_code</b> {% translate "gerado na geração do PDF a partir do conteúdo configurado." %}</li>
+          <li>{% translate "Ao salvar, o layout inteiro é revalidado pelo contrato: links só" %} <b>http(s)/mailto/tel</b>; {% translate "texto é sempre texto." %}</li>
+        </ul>
+      </section>
+
+      {% if pode_restaurar %}
+      <button type="button" class="te-restaurar" data-acao="restaurar">{% translate "Restaurar modelo padrão" %}</button>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div class="te-rodape">
+    <span class="te-estado" data-estado>{% translate "Tudo salvo" %}</span>
+    {% if editavel %}
+    <button type="button" class="te-btn te-btn-neutro" data-acao="descartar">{% translate "Descartar" %}</button>
+    <button type="button" class="te-btn te-btn-contorno" data-acao="campo-rapido"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{% translate "Campo" %}</button>
+    <button type="button" class="te-btn te-btn-primario" data-acao="salvar">{% translate "Salvar" %}</button>
+    {% endif %}
   </div>
 
   <form class="te-csrf">{% csrf_token %}</form>
+  {% comment %}
+  "Visualizar": o layout em edicao vai por POST para o servidor desenhar o
+  PDF numa aba nova. O navegador nunca gera PDF.
+  {% endcomment %}
+  <form method="post" action="{{ previa_url }}" target="_blank" data-form-previa hidden>
+    {% csrf_token %}
+    <input type="hidden" name="layout" value="">
+    <input type="hidden" name="exemplo" value="0">
+  </form>
 </div>
 
 {{ layout_json|json_script:"te-layout" }}
+{{ layout_padrao_json|json_script:"te-layout-padrao" }}
 {{ pagina_json|json_script:"te-pagina" }}
 {{ tipos_json|json_script:"te-tipos" }}
 {{ fontes_json|json_script:"te-fontes" }}
+{{ exemplo_json|json_script:"te-exemplo" }}
+{{ idiomas_json|json_script:"te-idiomas" }}
 {{ ids_json|json_script:"te-ids" }}
 {{ assets_json|json_script:"te-assets" }}
 {{ config_json|json_script:"te-config" }}
@@ -119,8 +302,10 @@ pagina_json, tipos_json, fontes_json, ids_json, config_json.
 {% block extra_js %}
 <script src="{% static 'js/template-editor/geometry.js' %}"></script>
 <script src="{% static 'js/template-editor/state.js' %}"></script>
+<script src="{% static 'js/template-editor/runs.js' %}"></script>
+<script src="{% static 'js/template-editor/document.js' %}"></script>
 <script src="{% static 'js/template-editor/canvas.js' %}"></script>
-<script src="{% static 'js/template-editor/properties.js' %}"></script>
+<script src="{% static 'js/template-editor/panels.js' %}"></script>
 <script src="{% static 'js/template-editor/api.js' %}"></script>
 <script src="{% static 'js/template-editor/editor.js' %}"></script>
 {% endblock %}

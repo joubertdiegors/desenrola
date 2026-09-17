@@ -42,29 +42,41 @@ TOLERANCIA_DE_ALTURA = 1e-6
 
 
 class Trecho:
-    """Um pedaco de texto com o seu estilo. A unidade que o motor move."""
+    """
+    Um pedaco de texto com o seu estilo. A unidade que o motor move.
 
-    __slots__ = ("texto", "fonte", "tamanho", "cor", "espaco_entre_letras", "decoracao")
+    `fundo` e a cor de realce atras do texto (None = nenhuma) e `link` a
+    URL que o trecho abre no PDF (None = texto comum). Os dois vieram com
+    o editor rico e sao estilo como os demais: dois trechos vizinhos so
+    se fundem quando TUDO coincide.
+    """
+
+    __slots__ = (
+        "texto", "fonte", "tamanho", "cor", "espaco_entre_letras", "decoracao",
+        "fundo", "link",
+    )
 
     def __init__(self, texto, fonte, tamanho, cor="#000000",
-                 espaco_entre_letras=0.0, decoracao="none"):
+                 espaco_entre_letras=0.0, decoracao="none", fundo=None, link=None):
         self.texto = texto
         self.fonte = fonte
         self.tamanho = tamanho
         self.cor = cor
         self.espaco_entre_letras = espaco_entre_letras
         self.decoracao = decoracao
+        self.fundo = fundo
+        self.link = link
 
     def com_texto(self, texto):
         return Trecho(
             texto, self.fonte, self.tamanho, self.cor,
-            self.espaco_entre_letras, self.decoracao,
+            self.espaco_entre_letras, self.decoracao, self.fundo, self.link,
         )
 
     def com_tamanho(self, tamanho):
         return Trecho(
             self.texto, self.fonte, tamanho, self.cor,
-            self.espaco_entre_letras, self.decoracao,
+            self.espaco_entre_letras, self.decoracao, self.fundo, self.link,
         )
 
     def __repr__(self):  # pragma: no cover - so para depuracao
@@ -292,6 +304,8 @@ def _juntar(pedacos):
             and anterior.cor == pedaco.cor
             and anterior.espaco_entre_letras == pedaco.espaco_entre_letras
             and anterior.decoracao == pedaco.decoracao
+            and anterior.fundo == pedaco.fundo
+            and anterior.link == pedaco.link
         )
         if mesmo_estilo:
             juntos[-1] = anterior.com_texto(anterior.texto + pedaco.texto)

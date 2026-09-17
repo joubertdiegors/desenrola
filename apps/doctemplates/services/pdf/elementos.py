@@ -35,13 +35,45 @@ PADROES_DE_TRACO = {
     "dotted": (1, 2),
 }
 
-# Fontes registradas por `pdfengine.fontconfig`. O layout declara so a
-# familia (`LiberationSans`) e o peso; o arquivo concreto e escolhido
-# aqui.
+# A face concreta de cada familia/peso/estilo. O layout declara so a
+# familia e o peso; o nome registrado no reportlab e escolhido aqui.
+#
+#   LiberationSans -- as QUATRO faces EMBUTIDAS (`pdfengine.fontconfig`),
+#     clone metrico da Arial; e a tipografia do documento oficial. O
+#     italico e a face italica de verdade, nao a regular inclinada.
+#   Times, Courier -- as familias padrao do PDF (14 fontes base), com
+#     as quatro variantes. Nao sao embutidas: o leitor as substitui pela
+#     fonte compativel que tiver (Times New Roman/Courier New no
+#     Windows), e todo leitor as renderiza.
 _FACES = {
-    ("LiberationSans", "regular"): "LiberationSans",
-    ("LiberationSans", "bold"): "LiberationSans-Bold",
+    ("LiberationSans", "regular", "normal"): "LiberationSans",
+    ("LiberationSans", "bold", "normal"): "LiberationSans-Bold",
+    ("LiberationSans", "regular", "italic"): "LiberationSans-Italic",
+    ("LiberationSans", "bold", "italic"): "LiberationSans-BoldItalic",
+    ("Times", "regular", "normal"): "Times-Roman",
+    ("Times", "bold", "normal"): "Times-Bold",
+    ("Times", "regular", "italic"): "Times-Italic",
+    ("Times", "bold", "italic"): "Times-BoldItalic",
+    ("Courier", "regular", "normal"): "Courier",
+    ("Courier", "bold", "normal"): "Courier-Bold",
+    ("Courier", "regular", "italic"): "Courier-Oblique",
+    ("Courier", "bold", "italic"): "Courier-BoldOblique",
 }
+
+# Largura minima do recuo de um bloco com marcador de lista quando o
+# layout nao declara `indent`: o marcador precisa de onde ficar.
+RECUO_MINIMO_DO_MARCADOR = 18.0
+
+# Quanto de largura o texto guarda para si, custe o que custar. Um recuo
+# maior do que a propria caixa deixaria largura zero -- e largura zero
+# nao desenha nada, ou seja, o texto SUMIRIA do documento sem aviso.
+# Melhor um recuo menor do que o pedido e o texto visivel: o documento
+# fica feio, mas ninguem perde conteudo em silencio.
+LARGURA_MINIMA_DO_TEXTO = 12.0
+
+# A numeracao de paginas: tamanho e distancia do pe da pagina.
+TAMANHO_DO_NUMERO_DE_PAGINA = 9.0
+PE_DO_NUMERO_DE_PAGINA = 28.0
 
 
 class FonteIndisponivelError(LookupError):
@@ -56,21 +88,14 @@ def face(familia, peso="regular", estilo="normal"):
     """
     O nome registrado da face para uma familia/peso/estilo.
 
-    Italico levanta de proposito: so as faces Regular e Bold estao
-    versionadas em `pdfengine/fonts/`. Desenhar italico com a face
-    regular produziria um documento que MENTE sobre a propria
-    tipografia -- melhor falhar e deixar claro o que falta.
+    Uma combinacao que nao existe levanta: desenhar com outra face
+    produziria um documento que MENTE sobre a propria tipografia.
     """
-    if estilo == "italic":
-        raise FonteIndisponivelError(
-            f'Não há face itálica embutida para "{familia}". As faces '
-            "disponíveis são regular e bold (ver pdfengine/fonts/)."
-        )
     try:
-        return _FACES[(familia, peso)]
+        return _FACES[(familia, peso, estilo)]
     except KeyError:
         raise FonteIndisponivelError(
-            f'Não há face embutida para "{familia}" com peso "{peso}".'
+            f'Não há face para "{familia}" com peso "{peso}" e estilo "{estilo}".'
         ) from None
 
 
@@ -114,24 +139,31 @@ def _trechos_do_conteudo(bloco, propriedades, contexto):
     espacamento = float(propriedades.get("letter_spacing", 0.0) or 0.0)
     decoracao = propriedades.get("text_decoration", "none")
 
-    def um(conteudo, peso_local, estilo_local):
+    def um(conteudo, parte=None):
+        # Cada trecho de `mixed` pode sobrepor o estilo do elemento
+        # (ver `layout_schema.ESTILO_DO_TRECHO`); o que nao declarar,
+        # herda.
+        proprio = parte if isinstance(parte, dict) else {}
         return motor.Trecho(
             texto_do_bloco(conteudo, contexto),
-            face(familia, peso_local, estilo_local),
-            tamanho, cor, espacamento, decoracao,
+            face(
+                proprio.get("font_family", familia),
+                proprio.get("font_weight", peso),
+                proprio.get("font_style", estilo),
+            ),
+            float(proprio.get("font_size", tamanho)),
+            proprio.get("color", cor),
+            espacamento,
+            proprio.get("text_decoration", decoracao),
+            proprio.get("highlight"),
+            proprio.get("link"),
         )
 
     if isinstance(bloco, dict) and bloco.get("kind") == "mixed":
-        trechos = []
-        for parte in bloco.get("parts") or []:
-            trechos.append(um(
-                parte,
-                parte.get("font_weight", peso),
-                parte.get("font_style", estilo),
-            ))
+        trechos = [um(parte, parte) for parte in bloco.get("parts") or []]
         return [t for t in trechos if t.texto]
 
-    return [um(bloco, peso, estilo)]
+    return [um(bloco)]
 
 
 def _desenhar_paragrafo(canvas, elemento, contexto, pagina, trechos):
@@ -147,7 +179,16 @@ def _desenhar_paragrafo(canvas, elemento, contexto, pagina, trechos):
         return 0
 
     topo, direita, baixo, esquerda = _caixa(propriedades.get("padding"))
-    largura = max(0.0, float(elemento["width"]) - esquerda - direita)
+    # O recuo (lista, "aumentar recuo") empurra o texto para a direita
+    # dentro da caixa; o marcador, se houver, e desenhado nele.
+    marcador = propriedades.get("list_marker") or ""
+    recuo = float(propriedades.get("indent", 0.0) or 0.0)
+    if marcador and recuo <= 0:
+        recuo = RECUO_MINIMO_DO_MARCADOR
+    # O recuo nunca come a caixa inteira (ver LARGURA_MINIMA_DO_TEXTO).
+    disponivel = float(elemento["width"]) - esquerda - direita
+    recuo = min(recuo, max(0.0, disponivel - LARGURA_MINIMA_DO_TEXTO))
+    largura = max(0.0, disponivel - recuo)
     altura = max(0.0, float(elemento["height"]) - topo - baixo)
     if largura <= 0:
         return 0
@@ -166,15 +207,28 @@ def _desenhar_paragrafo(canvas, elemento, contexto, pagina, trechos):
     altura_do_bloco = len(linhas) * entrelinha
     alinhamento_vertical = propriedades.get("vertical_align", "top")
     if alinhamento_vertical == "middle":
-        recuo = max(0.0, (altura - altura_do_bloco) / 2)
+        recuo_vertical = max(0.0, (altura - altura_do_bloco) / 2)
     elif alinhamento_vertical == "bottom":
-        recuo = max(0.0, altura - altura_do_bloco)
+        recuo_vertical = max(0.0, altura - altura_do_bloco)
     else:
-        recuo = 0.0
+        recuo_vertical = 0.0
 
-    x0 = float(elemento["x"]) + esquerda
-    topo_do_texto = float(elemento["y"]) + topo + recuo
+    x0 = float(elemento["x"]) + esquerda + recuo
+    topo_do_texto = float(elemento["y"]) + topo + recuo_vertical
     alinhamento = propriedades.get("align", "left")
+
+    if marcador and linhas:
+        # O marcador segue a tipografia do ELEMENTO, na primeira linha,
+        # encostado no comeco do recuo -- como um item de lista.
+        primeiro = trechos[0]
+        ascent_do_marcador, _d = motor.altura_da_fonte(primeiro.fonte, primeiro.tamanho)
+        objeto = canvas.beginText(
+            float(elemento["x"]) + esquerda, pagina["height"] - (topo_do_texto + ascent_do_marcador)
+        )
+        objeto.setFont(primeiro.fonte, primeiro.tamanho)
+        objeto.setFillColor(_cor(primeiro.cor))
+        objeto.textOut(marcador)
+        canvas.drawText(objeto)
 
     if transbordo == "clip":
         canvas.saveState()
@@ -202,6 +256,8 @@ def _desenhar_paragrafo(canvas, elemento, contexto, pagina, trechos):
         for deslocamento, pedaco in posicoes:
             if not pedaco.texto.strip():
                 continue
+            _realcar(canvas, pedaco, x0 + deslocamento, y,
+                     extra * pedaco.texto.count(" "))
             objeto = canvas.beginText(x0 + deslocamento, y)
             objeto.setFont(pedaco.fonte, pedaco.tamanho)
             objeto.setFillColor(_cor(pedaco.cor))
@@ -216,6 +272,8 @@ def _desenhar_paragrafo(canvas, elemento, contexto, pagina, trechos):
             canvas.drawText(objeto)
             _decorar(canvas, pedaco, x0 + deslocamento, y,
                      extra * pedaco.texto.count(" "))
+            _ligar(canvas, pedaco, x0 + deslocamento, y,
+                   extra * pedaco.texto.count(" "))
         desenhadas += 1
 
     if transbordo == "clip":
@@ -227,6 +285,34 @@ def _caminho_da_caixa(canvas, x, y_do_topo, largura, altura, pagina):
     caminho = canvas.beginPath()
     caminho.rect(x, _para_baixo(y_do_topo, altura, pagina), largura, altura)
     return caminho
+
+
+def _caixa_do_pedaco(pedaco, x, y, extra=0.0):
+    """O retangulo que o pedaco ocupa: (x0, y0, x1, y1), Y do reportlab."""
+    largura = motor.largura_do_trecho(pedaco) + extra
+    ascent, descent = motor.altura_da_fonte(pedaco.fonte, pedaco.tamanho)
+    return x, y - descent, x + largura, y + ascent
+
+
+def _realcar(canvas, pedaco, x, y, extra=0.0):
+    """O fundo de um trecho realcado, desenhado ANTES do texto."""
+    if not pedaco.fundo:
+        return
+    x0, y0, x1, y1 = _caixa_do_pedaco(pedaco, x, y, extra)
+    canvas.saveState()
+    canvas.setFillColor(_cor(pedaco.fundo))
+    canvas.rect(x0, y0, x1 - x0, y1 - y0, stroke=0, fill=1)
+    canvas.restoreState()
+
+
+def _ligar(canvas, pedaco, x, y, extra=0.0):
+    """
+    A area clicavel de um trecho-link. Anotacao de link do proprio PDF:
+    o texto continua texto, e quem abre o documento num leitor clica.
+    """
+    if not pedaco.link:
+        return
+    canvas.linkURL(pedaco.link, _caixa_do_pedaco(pedaco, x, y, extra), relative=0)
 
 
 def _decorar(canvas, pedaco, x, y, extra=0.0):
@@ -522,6 +608,32 @@ def desenhar_table(canvas, elemento, contexto, pagina, recursos):
 
 
 # ---------------------------------------------------------------------------
+# Estrutura
+# ---------------------------------------------------------------------------
+
+
+def desenhar_page_break(canvas, elemento, contexto, pagina, recursos):
+    """
+    Nao desenha nada: a quebra e lida por `render_layout`, que a usa para
+    distribuir os elementos pelas paginas. Esta aqui para o despacho por
+    tipo continuar completo -- todo tipo registrado tem desenhador.
+    """
+    return 0
+
+
+def desenhar_numero_de_pagina(canvas, numero, total, pagina, *, familia="LiberationSans"):
+    """"n / N" centralizado no pe da pagina. Chamado por `render_layout`."""
+    texto = f"{numero} / {total}"
+    fonte = face(familia)
+    largura = motor.largura_do_texto(texto, fonte, TAMANHO_DO_NUMERO_DE_PAGINA)
+    objeto = canvas.beginText((pagina["width"] - largura) / 2, PE_DO_NUMERO_DE_PAGINA)
+    objeto.setFont(fonte, TAMANHO_DO_NUMERO_DE_PAGINA)
+    objeto.setFillColor(_cor("#000000"))
+    objeto.textOut(texto)
+    canvas.drawText(objeto)
+
+
+# ---------------------------------------------------------------------------
 # Registro
 # ---------------------------------------------------------------------------
 
@@ -534,6 +646,7 @@ DESENHADORES = {
     "table": desenhar_table,
     "line": desenhar_line,
     "rectangle": desenhar_rectangle,
+    "page_break": desenhar_page_break,
 }
 
 

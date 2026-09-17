@@ -334,10 +334,14 @@ class TestTipografia:
     def test_regular_usa_a_face_regular(self):
         assert elementos.face("LiberationSans", "regular") == "LiberationSans"
 
-    def test_italico_e_recusado_por_nao_haver_face(self):
-        """Fingir itálico com a face regular seria mentir sobre a tipografia."""
-        with pytest.raises(elementos.FonteIndisponivelError, match="itálica"):
-            elementos.face("LiberationSans", "regular", "italic")
+    def test_italico_usa_a_face_italica_embutida(self):
+        """
+        Até o editor rico não havia face itálica e o pedido era recusado --
+        fingir itálico com a face regular seria mentir sobre a tipografia.
+        Agora a face existe (`pdfengine/fonts/`), e é ela que sai.
+        """
+        assert elementos.face("LiberationSans", "regular", "italic") == "LiberationSans-Italic"
+        assert elementos.face("LiberationSans", "bold", "italic") == "LiberationSans-BoldItalic"
 
     def test_familia_desconhecida_e_recusada(self):
         with pytest.raises(elementos.FonteIndisponivelError):
@@ -896,7 +900,7 @@ class TestGenerico:
 
     def test_o_despacho_e_por_tipo(self):
         assert sorted(elementos.DESENHADORES) == [
-            "image", "line", "number", "qr_code",
+            "image", "line", "number", "page_break", "qr_code",
             "rectangle", "rich_text", "table", "text",
         ]
 

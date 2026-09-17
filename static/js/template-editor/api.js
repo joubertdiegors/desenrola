@@ -40,11 +40,16 @@
   }
 
   /*
-   * Grava o layout. Devolve sempre `{ok, status, dados}` -- inclusive
-   * em falha de rede, para quem chama nunca precisar de try/catch.
+   * Grava o layout (e o que mais o editor mandar em `extras`, hoje o
+   * idioma). Devolve sempre `{ok, status, dados}` -- inclusive em falha
+   * de rede, para quem chama nunca precisar de try/catch.
    */
-  function salvar(doc, url, layout) {
-    return enviar(doc, url, { layout: layout }).catch(function () {
+  function salvar(doc, url, layout, extras) {
+    var corpo = { layout: layout };
+    Object.keys(extras || {}).forEach(function (chave) {
+      corpo[chave] = extras[chave];
+    });
+    return enviar(doc, url, corpo).catch(function () {
       return { ok: false, status: 0, dados: { error: "Falha de rede ao salvar." } };
     });
   }

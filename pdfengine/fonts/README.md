@@ -5,12 +5,18 @@ depender de fonte instalada no sistema operacional do servidor.
 
 ## O que são
 
-**Liberation Sans** (Regular e Bold), da coleção Liberation Fonts.
+**Liberation Sans** (Regular, Bold, Italic e Bold Italic), da coleção
+Liberation Fonts. As duas faces itálicas entraram com o editor rico de
+modelos (Etapa 3.7): itálico e negrito-itálico passaram a ser escolhas
+do administrador, e uma face inclinada de verdade é a única forma
+honesta de as desenhar.
 
 | arquivo | SHA-256 |
 | --- | --- |
 | `LiberationSans-Regular.ttf` | `76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8` |
 | `LiberationSans-Bold.ttf` | `788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173` |
+| `LiberationSans-Italic.ttf` | `e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0` |
+| `LiberationSans-BoldItalic.ttf` | `698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee` |
 
 ## De onde vieram
 
