@@ -1,6 +1,22 @@
 {% load i18n %}{% comment %}
 Barra superior da area logada (layout 2c). No celular so aparece quando
-mobile_nav e verdadeiro (dashboard, perfil): logotipo + avatar.
+mobile_nav e verdadeiro (dashboard, perfil): logotipo CENTRALIZADO.
+
+NO CELULAR NAO HA AVATAR AQUI
+-----------------------------
+As iniciais ficavam a direita do logotipo e desequilibravam a barra: no
+celular o Perfil ja tem um destino proprio na barra INFERIOR
+(`components/tabbar.html`), e repetir o mesmo destino em duas barras da
+mesma tela e ruido, nao atalho. Sem elas a barra fica com uma coisa so
+-- a marca -- e o logotipo pode enfim ficar no centro (ver `.app-nav`
+em layout.css).
+
+NO DESKTOP HA UM ACESSO SO AO PERFIL
+------------------------------------
+Havia dois: o link solto ao lado de "Minhas cartas" e o menu das
+iniciais. Ficou o menu -- e o unico que tambem abriga o "Sair", entao
+manter o link solto significaria ter duas portas para o Perfil e uma
+so para sair.
 
 Quem tem `core.access_backoffice` ganha aqui o atalho para a area
 administrativa -- no celular so o icone, no desktop icone e rotulo.
@@ -10,7 +26,6 @@ administrativa -- no celular so o icone, no desktop icone e rotulo.
     <a href="{% url 'core:dashboard' %}">{% include "components/logo.html" %}</a>
     <a class="nav-link d-only{% if active_nav == 'home' %} is-current{% endif %}" href="{% url 'core:dashboard' %}"{% if active_nav == "home" %} aria-current="page"{% endif %}>{% translate "Início" %}</a>
     <a class="nav-link d-only{% if active_nav == 'letters' %} is-current{% endif %}" href="{% url 'letters:history' %}"{% if active_nav == "letters" %} aria-current="page"{% endif %}>{% translate "Minhas cartas" %}</a>
-    <a class="nav-link d-only{% if active_nav == 'profile' %} is-current{% endif %}" href="{% url 'accounts:profile' %}"{% if active_nav == "profile" %} aria-current="page"{% endif %}>{% translate "Perfil" %}</a>
     <span class="d-only push"></span>
     {% comment %}
     Atalho para a área administrativa, do lado da identidade de quem
@@ -32,7 +47,7 @@ administrativa -- no celular so o icone, no desktop icone e rotulo.
     <details class="dropdown user-menu d-only">
       <summary aria-label="{% translate 'Menu do usuário' %}"><span class="avatar avatar-md">{{ user.get_initials }}</span>{{ user.get_short_name }} <i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
-        <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="ph ph-user" aria-hidden="true"></i>{% translate "Perfil" %}</a>
+        <a class="dropdown-item{% if active_nav == 'profile' %} is-current{% endif %}" href="{% url 'accounts:profile' %}"{% if active_nav == "profile" %} aria-current="page"{% endif %}><i class="ph ph-user" aria-hidden="true"></i>{% translate "Perfil" %}</a>
         <div class="dropdown-sep"></div>
         <form method="post" action="{% url 'accounts:logout' %}">
           {% csrf_token %}
@@ -40,6 +55,5 @@ administrativa -- no celular so o icone, no desktop icone e rotulo.
         </form>
       </div>
     </details>
-    <a class="avatar avatar-md m-only" href="{% url 'accounts:profile' %}" aria-label="{% translate 'Perfil' %}">{{ user.get_initials }}</a>
   </nav>
 </header>

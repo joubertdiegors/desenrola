@@ -816,15 +816,25 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
    -------------------------------------------------------------------------- */
 
 .app-nav { padding: 16px 48px; }
-/* O atalho do Backoffice nao encolhe: no celular a barra tem logotipo,
-   este botao e o avatar, e deixar o botao espremer mudaria a area de
-   toque em vez de deixar o logotipo ceder. */
+/* O atalho do Backoffice nao encolhe: deixar o botao espremer mudaria a
+   area de toque em vez de deixar o logotipo ceder. */
 .app-nav .nav-backoffice { flex: none; }
 .user-menu > summary { gap: 8px; min-height: 40px; font-size: 14px; font-weight: 600; color: var(--navy); }
 .user-menu .ph-caret-down { color: var(--mu); }
 
 @media (max-width: 767px) {
-  .app-nav { padding: 12px 20px; }
+  /* A marca no CENTRO, e nao a esquerda com as iniciais a direita (ver
+     o comentario de `components/app_nav.html`). O atalho do Backoffice,
+     quando existe, sai do fluxo e vai para a borda: em `justify-content:
+     center` ele empurraria o logotipo para a esquerda, e o centro
+     deixaria de ser centro para metade dos administradores. */
+  .app-nav { padding: 12px 20px; justify-content: center; position: relative; }
+  .app-nav .nav-backoffice {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 
 
