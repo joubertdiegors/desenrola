@@ -105,16 +105,22 @@ def _fill_until(client, letter, step):
 
 
 class TestNavbarDaHome:
-    def test_usa_o_container_padrao_do_projeto(self, client):
-        """
-        O mesmo `.container` do resto do site (max-width + margin auto) --
-        não uma margem própria só para a barra.
-        """
+    """
+    A barra alinhada com o conteúdo da página -- o defeito original era
+    tudo amontoado à esquerda, com a direita vazia.
+
+    A identidade visual nova trocou a marcação: a barra tem largura
+    própria (a mesma coluna de 960px das seções, ver `.topo-publico-barra`
+    em layout.css) e dois lados declarados, em vez de um espaçador no
+    meio de uma lista.
+    """
+
+    def test_a_barra_tem_a_mesma_coluna_das_secoes(self, client):
         html = client.get(reverse("core:home")).content.decode()
 
-        assert 'class="nav-desktop site-nav container"' in html
+        assert 'class="topo-publico-barra d-only"' in html
 
-    def test_todo_o_conteudo_fica_dentro_do_mesmo_container(self, client, db):
+    def test_todo_o_conteudo_fica_dentro_da_mesma_barra(self, client, db):
         """Logo, links e botões participam do mesmo alinhamento."""
         # "Parceiros" só entra no menu quando há parceiro cadastrado (a
         # âncora some junto com a seção) -- ver apps/content/tests/test_home.py.
@@ -123,7 +129,7 @@ class TestNavbarDaHome:
         Partner.objects.create(name="Parceiro de teste")
 
         html = client.get(reverse("core:home")).content.decode()
-        barra = html[html.index('class="nav-desktop site-nav container"') :]
+        barra = html[html.index('class="topo-publico-barra d-only"') :]
         barra = barra[: barra.index("</nav>")]
 
         for pedaco in (
@@ -135,30 +141,25 @@ class TestNavbarDaHome:
         ):
             assert pedaco in barra
 
-    def test_o_espacador_empurra_o_lado_direito(self, client):
-        """
-        Sem isto tudo fica amontoado à esquerda, com a direita vazia --
-        era exatamente o defeito relatado.
-        """
+    def test_a_marca_fica_a_esquerda_e_as_contas_a_direita(self, client):
         html = client.get(reverse("core:home")).content.decode()
-        barra = html[html.index('class="nav-desktop site-nav container"') :]
+        barra = html[html.index('class="topo-publico-barra d-only"') :]
         barra = barra[: barra.index("</nav>")]
 
-        assert '<span class="push"></span>' in barra
-        # o espaçador vem antes do bloco da direita
-        assert barra.index("push") < barra.index(reverse("accounts:login"))
+        assert barra.index("topo-publico-esquerda") < barra.index("topo-publico-contas")
+        assert barra.index("topo-publico-contas") < barra.index(reverse("accounts:signup"))
 
-    def test_a_landing_usa_o_mesmo_container(self, client):
+    def test_a_landing_usa_a_mesma_coluna_em_toda_parte(self, client):
         """A barra alinha com as seções da página, não com a borda."""
         html = client.get(reverse("core:home")).content.decode()
 
         assert 'class="hero container"' in html
-        assert 'class="section container"' in html
+        assert 'class="home-largura"' in html
 
     def test_o_menu_do_celular_continua_intacto(self, client):
         html = client.get(reverse("core:home")).content.decode()
 
-        assert 'class="nav-mobile"' in html
+        assert 'class="topo-publico-barra m-only"' in html
         assert "dropdown-item" in html
 
 

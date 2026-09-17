@@ -285,12 +285,12 @@ class TestContador:
 
         html = client.get(HOME).content.decode()
 
-        assert '<span class="stat-badge-value">2</span>' in html
+        assert '<span class="banner-contador-valor">2</span>' in html
 
     def test_zero_aparece_na_home(self, client):
         html = client.get(HOME).content.decode()
 
-        assert '<span class="stat-badge-value">0</span>' in html
+        assert '<span class="banner-contador-valor">0</span>' in html
 
     @pytest.mark.parametrize(
         "quantas, escrito",
@@ -309,7 +309,7 @@ class TestContador:
 
         html = client.get(HOME).content.decode()
 
-        assert f'<span class="stat-badge-value">{escrito}</span>' in html
+        assert f'<span class="banner-contador-valor">{escrito}</span>' in html
 
     def test_o_contexto_recebe_o_numero_e_nao_o_texto(self, client, user):
         """
@@ -421,9 +421,14 @@ class TestConteudoDoCms:
         assert "Como funciona?" not in html
 
     def test_os_cartoes_de_uma_secao_de_lista_saem_na_ordem(self, client):
+        """
+        A numeração escrita no título ("1. ") sai na hora de desenhar --
+        quem numera os passos agora é a posição na lista (ver
+        `conteudo.sem_numeracao`). A ORDEM continua sendo a do cadastro.
+        """
         html = client.get(HOME).content.decode()
 
-        assert html.index("1. Preencha") < html.index("2. Escolha") < html.index("3. Receba")
+        assert html.index("Preencha") < html.index("Escolha") < html.index("Receba")
 
     def test_sem_pagina_no_banco_a_home_nao_quebra(self, client):
         """Instalação sem o conteúdo semeado: página em branco, não 500."""

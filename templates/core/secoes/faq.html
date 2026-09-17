@@ -1,70 +1,49 @@
 {% load i18n %}{% comment %}
-Perguntas frequentes -- desenho 1a no desktop, 2a no celular.
+Perguntas frequentes.
 
-Coluna estreita a esquerda com titulo, chamada e bloco de contato;
-sanfona a direita. No celular vira uma coluna so, com o bloco de
-contato no fim.
+SÓ PERGUNTA E RESPOSTA
+----------------------
+Uma coluna estreita e centrada com o título e a sanfona, e mais nada:
+sem texto de apoio, sem bloco de contato, sem chamada. É o que a
+referência visual desenha, e é o que esta seção passou a desenhar --
+os campos correspondentes continuam gravados no CMS, apenas não são
+mais colocados na página.
 
-A SANFONA E `<details>`, E FUNCIONA SEM JAVASCRIPT
+A SANFONA É `<details>`, E FUNCIONA SEM JAVASCRIPT
 --------------------------------------------------
-Abrir e fechar e comportamento NATIVO do navegador: teclado, leitor de
-tela e busca do Ctrl+F ja sabem lidar com ele, de graca. Um acordeao
-escrito a mao precisaria de `role`, `aria-expanded`, `aria-controls`,
-tratamento de Enter e Espaco -- e continuaria quebrado com o
-JavaScript desligado.
+Abrir e fechar é comportamento NATIVO do navegador: teclado, leitor de
+tela e a busca do Ctrl+F já sabem lidar com ele, de graça. Um acordeão
+escrito à mão precisaria de `role`, `aria-expanded`, `aria-controls`,
+tratamento de Enter e Espaço -- e continuaria quebrado com o JavaScript
+desligado.
 
-`name="faq"` e o que deixa UMA aberta de cada vez, como na referencia.
-Onde o navegador ainda nao entende o atributo, varias ficam abertas ao
-mesmo tempo: o pior caso e a secao inteira legivel, o que nao e
-defeito nenhum.
+`name="faq"` é o que deixa UMA aberta de cada vez. Onde o navegador
+ainda não entende o atributo, várias ficam abertas ao mesmo tempo: o
+pior caso é a seção inteira legível, o que não é defeito nenhum.
 
-SEM PERGUNTA CADASTRADA, A SECAO INTEIRA SOME
+SEM PERGUNTA CADASTRADA, A SEÇÃO INTEIRA SOME
 ---------------------------------------------
-Titulo e sanfona vazia seriam uma promessa nao cumprida -- mesma regra
+Título e sanfona vazia seriam uma promessa não cumprida -- mesma regra
 dos parceiros. O item "#faq" do menu some junto (ver
 `content.services._menu_sem_ancora_morta`).
 
-A QUANTIDADE NAO E FIXA
------------------------
-A sanfona desenha o que estiver cadastrado, de uma a quantas forem.
-
-Contexto: secoes.faq, perguntas, site_config.
+Contexto: secoes.faq, perguntas.
 {% endcomment %}
 {% if perguntas %}
-<section class="section container faq" id="faq">
-  <div class="faq-coluna">
-    <h2>{{ secoes.faq.title }}</h2>
-    {% if secoes.faq.lead %}<p class="section-lead">{{ secoes.faq.lead }}</p>{% endif %}
+<section class="home-secao home-secao-azul" id="faq">
+  <div class="home-largura home-largura-estreita">
+    <h2 class="faq-titulo">{{ secoes.faq.title }}</h2>
+    <div class="faq-lista">
+      {% for pergunta in perguntas %}
+      <details class="faq-item" name="faq">
+        <summary class="faq-pergunta">
+          <span>{{ pergunta.question }}</span>
+          <span class="faq-sinal" aria-hidden="true"></span>
+        </summary>
+        <div class="faq-resposta">{{ pergunta.answer|linebreaks }}</div>
+      </details>
+      {% endfor %}
+    </div>
   </div>
-  <div class="faq-lista">
-    {% for pergunta in perguntas %}
-    <details class="faq-item" name="faq">
-      <summary class="faq-pergunta">
-        <span>{{ pergunta.question }}</span>
-        <span class="faq-sinal" aria-hidden="true"></span>
-      </summary>
-      <div class="faq-resposta">{{ pergunta.answer|linebreaks }}</div>
-    </details>
-    {% endfor %}
-  </div>
-  {% comment %}
-  O bloco de contato so existe se houver texto E e-mail cadastrado em
-  Sistema: um botao "Falar com o suporte" sem endereço não abriria
-  nada.
-
-  Fica FORA da coluna do titulo porque muda de lugar: no desktop
-  desce por baixo do titulo, no celular vai para o fim da secao,
-  depois das perguntas -- e e a grade que decide isso, nao dois
-  blocos repetidos com `d-only` e `m-only`.
-  {% endcomment %}
-  {% if secoes.faq.cta_title and site_config.contact.email %}
-  <div class="card faq-contato">
-    <h3>{{ secoes.faq.cta_title }}</h3>
-    {% if secoes.faq.cta_text %}<p>{{ secoes.faq.cta_text }}</p>{% endif %}
-    {% if secoes.faq.cta %}
-    <a class="btn btn-secondary" href="mailto:{{ site_config.contact.email }}">{{ secoes.faq.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    {% endif %}
-  </div>
-  {% endif %}
 </section>
 {% endif %}

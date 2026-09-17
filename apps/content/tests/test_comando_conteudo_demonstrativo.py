@@ -143,7 +143,7 @@ class TestNadaInventado:
         rodar()
 
         corpo = client.get(HOME).content.decode()
-        numero = re.search(r'stat-badge-value">([^<]*)<', corpo)
+        numero = re.search(r'banner-contador-valor">([^<]*)<', corpo)
 
         assert numero.group(1) == "0"
 

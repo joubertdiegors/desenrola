@@ -1,25 +1,42 @@
-{% load i18n %}{% comment %}
-Como funciona -- os passos que explicam o servico.
+{% load i18n conteudo %}{% comment %}
+Como funciona -- os passos que explicam o serviço.
+
+O TÍTULO VIRA CHAPÉU, E O APOIO VIRA TÍTULO
+-------------------------------------------
+A referência desenha a seção com um chapéu curto em maiúsculas ("COMO
+FUNCIONA") e, abaixo dele, a frase que de fato titula o bloco. É a
+mesma dupla que o CMS já guarda -- `title` e `lead` --, apenas com os
+papéis visuais que a referência dá a cada uma. Nenhum campo novo,
+nenhum texto escrito no código.
+
+O NÚMERO É DESENHO, NÃO CONTEÚDO
+--------------------------------
+`01`, `02`, `03` saem da POSIÇÃO do passo na lista, não de um campo.
+Por isso `sem_numeracao` tira a numeração que porventura esteja escrita
+no título cadastrado: sem ela a tela mostraria "01" ao lado de
+"1. Preencha". O texto no banco continua como está -- quem administra
+pode escrever com ou sem número, e a tela sai igual dos dois jeitos.
 
 Contexto: secoes.how.
 {% endcomment %}
-<section class="section container" id="como-funciona">
-  <h2>{{ secoes.how.title }}</h2>
-  <p class="section-lead">{{ secoes.how.lead }}</p>
-  <div class="how-grid">
-    {% for card in secoes.how.cards %}
-    {% comment %}
-    O texto fica num bloco proprio para o cartao poder deitar no
-    celular -- icone a esquerda, texto a direita -- sem que titulo e
-    paragrafo virem colunas ao lado do icone.
-    {% endcomment %}
-    <div class="card how-card">
-      <span class="tint how-card-icon"><i class="ph {{ card.icon }}" aria-hidden="true"></i></span>
-      <div class="how-card-texto">
-        <h3>{{ card.title }}</h3>
-        <p class="text-muted">{{ card.text }}</p>
+<section class="home-secao home-secao-azul" id="como-funciona">
+  <div class="home-largura">
+    <div class="home-secao-cabeca">
+      <div class="home-secao-titulo">
+        {% if secoes.how.title %}<span class="home-chapeu">{{ secoes.how.title }}</span>{% endif %}
+        {% if secoes.how.lead %}<h2>{{ secoes.how.lead }}</h2>{% endif %}
       </div>
     </div>
-    {% endfor %}
+    <ol class="how-grid">
+      {% for card in secoes.how.cards %}
+      <li class="how-card">
+        <span class="how-card-numero">{{ forloop.counter|stringformat:"02d" }}</span>
+        <div class="how-card-texto">
+          <b>{{ card.title|sem_numeracao }}</b>
+          <span>{{ card.text }}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
   </div>
 </section>

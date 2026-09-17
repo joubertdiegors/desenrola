@@ -1,5 +1,5 @@
 {% load i18n %}{% comment %}
-Barra superior da landing (layout 2a desktop, 4a celular).
+Barra superior das páginas públicas.
 
 O QUE VEM DO CMS, E O QUE NÃO VEM
 ---------------------------------
@@ -17,30 +17,37 @@ porque quem some é o `<header>`.
 Os botões de entrar e criar conta continuam sendo ESTRUTURA do produto:
 o que se administra é o texto deles, não a existência. Um site de gerar
 cartas sem porta de entrada não é uma configuração, é um defeito.
+
+DUAS BARRAS, E NÃO UMA QUE ENCOLHE
+----------------------------------
+No desktop os links ficam ao lado da marca e os botões de conta à
+direita; no celular a marca fica à esquerda e tudo o mais entra no menu
+do botão à direita. São duas composições diferentes, não a mesma com
+peças escondidas -- e é assim que a referência visual as desenha.
 {% endcomment %}{% if partes.navbar %}
 {% with nav=partes.navbar.conteudo %}
-<header class="d-only">
-  {% comment %}
-  `container` e o mesmo max-width do resto do site (ver .container em
-  static/css/layout.css) -- e o que mantem o conteudo da barra alinhado
-  com o conteudo das paginas. O `push` no meio empurra os botoes para a
-  direita. Mesmo padrao da barra da area logada (components/app_nav.html).
-  {% endcomment %}
-  <nav class="nav-desktop site-nav container" aria-label="{% translate 'Navegação principal' %}">
-    <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
-    {% for item in menu_itens %}
-    <a class="nav-link" href="{{ item.destination }}">{{ item.label }}</a>
-    {% endfor %}
-    <span class="push"></span>
-    <a class="btn btn-text" href="{% url 'accounts:login' %}">{{ nav.login_label|default:_("Fazer login") }}</a>
-    <a class="btn btn-primary" href="{% url 'accounts:signup' %}">{{ nav.signup_label|default:_("Criar minha conta") }}</a>
+<header class="topo-publico">
+  <nav class="topo-publico-barra d-only" aria-label="{% translate 'Navegação principal' %}">
+    <div class="topo-publico-esquerda">
+      <a class="topo-publico-marca" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+      {% if menu_itens %}
+      <div class="topo-publico-links">
+        {% for item in menu_itens %}
+        <a class="nav-link" href="{{ item.destination }}">{{ item.label }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="topo-publico-contas">
+      <a class="topo-publico-entrar" href="{% url 'accounts:login' %}">{{ nav.login_label|default:_("Fazer login") }}</a>
+      <a class="btn btn-primary btn-sm" href="{% url 'accounts:signup' %}">{{ nav.signup_label|default:_("Criar minha conta") }}</a>
+    </div>
   </nav>
-</header>
-<header class="m-only">
-  <nav class="nav-mobile" aria-label="{% translate 'Navegação principal' %}">
-    <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
-    <details class="dropdown">
-      <summary class="btn btn-ghost btn-icon-sm" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
+
+  <nav class="topo-publico-barra m-only" aria-label="{% translate 'Navegação principal' %}">
+    <a class="topo-publico-marca" href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
+    <details class="dropdown topo-publico-menu">
+      <summary class="topo-publico-hamburguer" aria-label="{% translate 'Menu' %}"><i class="ph ph-list" aria-hidden="true"></i></summary>
       <div class="dropdown-menu">
         {% for item in menu_itens %}
         <a class="dropdown-item" href="{{ item.destination }}">{{ item.label }}</a>

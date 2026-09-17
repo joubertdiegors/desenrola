@@ -171,11 +171,11 @@ class TestRenderizacaoReal:
     @pytest.mark.parametrize(
         ("chave", "marca"),
         [
-            ("navbar", "nav-desktop"),
+            ("navbar", "topo-publico-barra"),
             ("hero", 'class="hero container"'),
-            ("trust", "trust-bar"),
+            ("trust", "home-selos"),
             ("how", "how-grid"),
-            ("cta", "cta-banner"),
+            ("cta", "home-cta"),
             ("footer", "site-footer"),
         ],
     )
@@ -198,7 +198,7 @@ class TestRenderizacaoReal:
     def test_desenha_parte_desativada(self, cliente):
         PageSection.objects.filter(page__key="home", key="cta").update(is_active=False)
 
-        assert "cta-banner" in cliente.get(url_da_previa("cta")).content.decode()
+        assert "home-cta" in cliente.get(url_da_previa("cta")).content.decode()
 
 
 # ===========================================================================

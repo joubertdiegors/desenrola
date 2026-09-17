@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% load i18n static %}
+{% load i18n %}
 {% comment %}
-Landing (layouts 2a desktop, 3a tablet, 4a celular).
+Landing pública.
 
 O CONTEÚDO VEM DO CMS
 ---------------------
 Os textos saem de `content.Page`/`PageSection` (chave "home"), entregues
 pela view em `secoes`, indexados pela chave da seção. A ESTRUTURA --
-grade, cartões, ícones de moldura, âncoras -- mora nos parciais de
-`core/secoes/`, porque é desenho, não conteúdo.
+faixas, grade, cartões, âncoras -- mora nos parciais de `core/secoes/`,
+porque é desenho, não conteúdo.
 
 CADA PARTE EM UM ARQUIVO
 ------------------------
@@ -17,6 +17,14 @@ ordem. Não é organização por gosto: é o que permite a Central de
 Conteúdo renderizar UMA parte isolada, com o mesmo código e o mesmo
 CSS, para a miniatura e a pré-visualização. Uma segunda implementação
 visual da Home envelheceria no primeiro ajuste.
+
+A ORDEM É A DA REFERÊNCIA VISUAL
+--------------------------------
+Banner → destaques → Como funciona → Parceiros → Perguntas → Mini
+Banner → Rodapé. É essa ordem que faz a alternância de fundos (branco,
+azul claro, branco, azul claro, faixa azul, branco) cair certa: cada
+parcial declara o fundo da sua faixa, e duas faixas iguais em sequência
+apagariam a divisão entre as seções.
 
 ATIVAÇÃO
 --------
@@ -30,23 +38,31 @@ cartas_emitidas, menu_itens, blocos_do_rodape.
 
 {% block title %}{{ site_config.name }} · {{ secoes.hero.title }}{% endblock %}
 
+{% comment %}
+`publico` troca a família tipográfica e as medidas da página para as da
+identidade pública (ver layout.css). Não vale para a área logada, que
+continua com a tipografia do produto.
+{% endcomment %}
+{% block body_class %}publico{% endblock %}
+
 {% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
 {% comment %}
-Banner superior. Qual DESENHO -- entre os tres de
+Banner superior. Qual DESENHO -- entre os sete de
 `content.section_schema` -- e resolvido em Python (`contexto_da_home`),
 com queda para "imagem_texto" quando o valor gravado e vazio ou
 desconhecido. Aqui so se inclui o que foi escolhido.
+
+O sistema de modelos do Banner NAO muda com a identidade nova: o que
+mudou por fora e a largura da faixa e a capsula do contador.
 {% endcomment %}
 {% if template_do_banner %}{% include template_do_banner %}{% endif %}
 {% if partes.trust %}{% include "core/secoes/trust.html" %}{% endif %}
-{% if partes.partners %}{% include "core/secoes/partners.html" %}{% endif %}
 {% if partes.how %}{% include "core/secoes/how.html" %}{% endif %}
+{% if partes.partners %}{% include "core/secoes/partners.html" %}{% endif %}
 {% if partes.faq %}{% include "core/secoes/faq.html" %}{% endif %}
 {% if partes.cta %}{% include "core/secoes/cta.html" %}{% endif %}
 {% endblock %}
 
 {% block footer %}{% include "components/site_footer.html" %}{% endblock %}
-
-{% block extra_js %}<script src="{% static 'js/carrossel-de-parceiros.js' %}" defer></script>{% endblock %}

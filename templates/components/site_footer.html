@@ -1,8 +1,10 @@
 {% load i18n %}{% comment %}
-Rodapé minimalista, em três linhas (Bloco C): 1. Marca, 2. Links,
-3. Copyright. Mesma identidade nos dois tamanhos -- no celular a marca
-fica centralizada, os links quebram em linhas conforme precisarem, e o
-copyright continua por último; nenhuma linha de bloco pesado ou cartão.
+Rodapé -- marca, links e copyright, CENTRADOS, em três linhas.
+
+É a forma da referência visual: fundo branco, uma borda fina no topo, o
+nome do site em destaque, os links numa linha que quebra sozinha quando
+precisa, e o copyright pequeno por último. A mesma composição nas duas
+larguras -- não há uma versão de desktop e outra de celular.
 
 O QUE O CMS CONTROLA AQUI
 -------------------------
@@ -10,10 +12,7 @@ A COMPOSIÇÃO, e só ela: quais blocos aparecem e em que ordem
 (`blocos_do_rodape`, editado em Central de Conteúdo → Final → Rodapé),
 mais o rótulo do link de contato. O rodapé inteiro some quando a parte
 "footer" está desativada -- e some o ELEMENTO, sem deixar faixa vazia
-no lugar. A ordem escolhida vale para os blocos da linha do meio
-(legais/contato/redes); a marca é sempre a primeira linha e o copyright
-é sempre a última -- é a forma "três linhas" da referência, não uma
-lista solta.
+no lugar.
 
 O QUE ELE NÃO CONTROLA
 ----------------------
@@ -22,13 +21,17 @@ contato e redes, também de `SiteSettings`; os links legais, dos
 `ContentBlock` legais. Nada disso é duplicado aqui: cada dado tem um
 dono só, e o rodapé apenas decide se mostra e em que ordem.
 
+A MARCA É O NOME, E NÃO O LOGOTIPO
+----------------------------------
+A referência põe o nome do site em texto, e não a marca desenhada --
+que já abre a página, no alto. `site_config.name` é a mesma fonte das
+duas.
+
 O ANO É DO SERVIDOR
 -------------------
 `{% templatetag openblock %} now "Y" {% templatetag closeblock %}`, e não
 uma configuração: o ano corrente não é uma decisão editorial, e um campo
 para ele só criaria uma coisa a mais para alguém esquecer de atualizar.
-Uma linha só de copyright -- não duas (uma para desktop, outra para
-celular) --, porque as duas sempre diriam a mesma coisa.
 
 TERMOS DE USO E PRIVACIDADE
 ---------------------------
@@ -37,44 +40,35 @@ publicado (`content.ContentBlock`, chaves `legal.*`). Sem texto, o link
 não existe -- e não vira um `#`. Um link que leva a lugar nenhum é pior
 do que link nenhum.
 
-Quem escreve os textos é o cliente, pelo Django Admin. O código cria o
-lugar; o conteúdo jurídico não se inventa.
-
 Contexto: partes.footer, blocos_do_rodape, paginas_legais, site_config.
 {% endcomment %}{% if partes.footer %}
 {% with rodape=partes.footer.conteudo %}
 <footer class="site-footer">
-  {% if "marca" in blocos_do_rodape %}
-  <div class="site-footer-marca">
-    <a href="{% url 'core:home' %}">{% include "components/logo.html" with small=True %}</a>
-  </div>
-  {% endif %}
+  <div class="home-largura site-footer-conteudo">
+    {% if "marca" in blocos_do_rodape %}
+    <a class="site-footer-marca" href="{% url 'core:home' %}">{{ site_config.name }}</a>
+    {% endif %}
 
-  {% if "legais" in blocos_do_rodape or "contato" in blocos_do_rodape or "redes" in blocos_do_rodape %}
-  <div class="site-footer-links">
-    {% for bloco in blocos_do_rodape %}
-      {% if bloco == "legais" %}
-        {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
-        {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
-      {% elif bloco == "contato" %}
-        {% if site_config.contact.email or site_config.contact.phone or site_config.contact.address %}
-        <span class="site-footer-contato">
+    {% if "legais" in blocos_do_rodape or "contato" in blocos_do_rodape or "redes" in blocos_do_rodape %}
+    <nav class="site-footer-links" aria-label="{% translate 'Links do rodapé' %}">
+      {% for bloco in blocos_do_rodape %}
+        {% if bloco == "legais" %}
+          {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
+          {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
+        {% elif bloco == "contato" %}
           {% if site_config.contact.email %}<a href="mailto:{{ site_config.contact.email }}">{{ rodape.contato_label|default:_("Contato") }}</a>{% endif %}
           {% if site_config.contact.phone %}<span>{{ site_config.contact.phone }}</span>{% endif %}
           {% if site_config.contact.address %}<span>{{ site_config.contact.address|linebreaksbr }}</span>{% endif %}
-        </span>
+        {% elif bloco == "redes" %}
+          {% for rede in site_config.social %}
+          <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
+          {% endfor %}
         {% endif %}
-      {% elif bloco == "redes" %}
-        {% for rede in site_config.social %}
-        <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
-        {% endfor %}
-      {% endif %}
-    {% endfor %}
-  </div>
-  {% endif %}
+      {% endfor %}
+    </nav>
+    {% endif %}
 
-  <div class="site-footer-copyright">
-    <span>{{ site_config.name }} &copy; {% now "Y" %}</span>
+    <span class="site-footer-copyright">&copy; {% now "Y" %} {{ site_config.name }}</span>
   </div>
 </footer>
 {% endwith %}

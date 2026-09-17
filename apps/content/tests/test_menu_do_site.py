@@ -568,5 +568,5 @@ class TestCelular:
 
         corpo = barra(client)
 
-        assert "nav-desktop" in corpo
+        assert "topo-publico-barra" in corpo
         assert reverse("accounts:login") in corpo

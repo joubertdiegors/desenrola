@@ -634,7 +634,8 @@ class TestSitePublico:
 
         corpo = client.get(HOME).content.decode()
 
-        assert "Outro Nome ©" in corpo or "Outro Nome &copy;" in corpo
+        rodape = corpo[corpo.index("site-footer-copyright") :][:200]
+        assert "Outro Nome" in rodape
 
     def test_sem_documento_publicado_o_rodape_nao_traz_link_legal(self, client):
         """

@@ -63,7 +63,7 @@ class TestComoFuncionaNoCelular:
         )
 
         assert 'class="how-card-texto"' in template
-        assert template.index("how-card-icon") < template.index("how-card-texto")
+        assert template.index("how-card-numero") < template.index("how-card-texto")
 
 
 class TestPaginaNaoRolaDeLado:
@@ -75,23 +75,29 @@ class TestPaginaNaoRolaDeLado:
     pai, nunca a sorte.
     """
 
-    def test_o_enfeite_do_mini_banner_e_recortado_pelo_proprio_banner(self):
+    def test_o_mini_banner_nao_tem_nada_fora_da_caixa(self):
         """
-        `.cta-banner-deco` fica a 30px fora da borda direita. O que o
-        segura é `overflow: hidden` no `.cta-banner` -- tirar isso faz a
-        Home rolar de lado em toda largura de tela.
+        Havia um globo gigante de enfeite, posicionado 30px FORA da
+        borda direita -- e só um `overflow: hidden` segurava a página.
+        A faixa da referência não tem enfeite nenhum: nada sai da caixa,
+        então não há nada para recortar.
         """
         css = LAYOUT.read_text(encoding="utf-8")
-        bloco = css[css.index(".cta-banner {") : css.index(".cta-banner h2")]
+        bloco = css[css.index(".home-secao-gradiente {") : css.index(".home-cta-botao")]
 
-        assert "overflow: hidden;" in bloco
+        assert "position: absolute" not in bloco
+        assert "cta-banner-deco" not in css
 
     def test_a_foto_que_sangra_e_recortada_pela_secao(self):
         """
         No desenho "Assimétrico" a foto é posicionada fora da grade.
         """
         css = LAYOUT.read_text(encoding="utf-8")
-        bloco = css[css.index(".hero-assimetrico {") : css.index(".hero-assimetrico-grade")]
+        # A partir da DECLARACAO, e nao da primeira aparicao do nome: a
+        # identidade publica ajusta o respiro lateral do desenho mais
+        # acima no arquivo, e o recorte mora aqui embaixo.
+        inicio = css.index(".hero-assimetrico {")
+        bloco = css[inicio : css.index(".hero-assimetrico-grade {", inicio)]
 
         assert "overflow: hidden;" in bloco
 

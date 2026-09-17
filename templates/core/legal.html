@@ -28,6 +28,8 @@ levariam a lugar nenhum -- exatamente o defeito que esta etapa existe
 para remover. Aqui vai só a marca, de volta para a Home, com as mesmas
 classes das telas de autenticação.
 {% endcomment %}
+{% block body_class %}publico{% endblock %}
+
 {% block header %}
 <header class="auth-header">
   <a href="{% url 'core:home' %}">{% include "components/logo.html" %}</a>
@@ -35,7 +37,7 @@ classes das telas de autenticação.
 {% endblock %}
 
 {% block content %}
-<article class="section container legal-page">
+<article class="home-largura legal-page">
   <h1>{{ titulo }}</h1>
   <div class="legal-texto">{{ texto|linebreaks }}</div>
 </article>

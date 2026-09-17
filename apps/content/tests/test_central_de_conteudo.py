@@ -241,12 +241,12 @@ class TestMiniaturas:
     @pytest.mark.parametrize(
         ("chave", "marca"),
         [
-            ("navbar", "nav-desktop"),
+            ("navbar", "topo-publico-barra"),
             ("hero", 'class="hero container"'),
-            ("trust", "trust-bar"),
+            ("trust", "home-selos"),
             ("partners", "partners-grid"),
             ("how", "how-grid"),
-            ("cta", "cta-banner"),
+            ("cta", "home-cta"),
             ("footer", "site-footer"),
         ],
     )
@@ -302,7 +302,7 @@ class TestMiniaturas:
         PageSection.objects.filter(page__key="home", key="cta").update(is_active=False)
         url = reverse("backoffice:content_preview", args=[secao("cta").pk])
 
-        assert "cta-banner" in cliente.get(url).content.decode()
+        assert "home-cta" in cliente.get(url).content.decode()
 
     def test_parte_de_outra_pagina_nao_tem_previa(self, cliente):
         from apps.content.models import Page
@@ -429,12 +429,15 @@ class TestHomeIntacta:
         corpo = client.get(reverse("core:home")).content.decode()
         miolo = corpo[corpo.index("<main") : corpo.index("</main>")]
 
+        # A ordem da referencia visual: banner, selos, Como funciona,
+        # Parceiros, Mini Banner. "Como funciona" passou a vir ANTES de
+        # Parceiros -- e o que faz a alternancia de fundos cair certa.
         na_ordem = (
             'class="hero container"',
-            "trust-bar",
-            "partners-grid",
+            "home-selos",
             "how-grid",
-            "cta-banner",
+            "partners-grid",
+            "home-cta",
         )
         posicoes = [miolo.index(marca) for marca in na_ordem]
         assert posicoes == sorted(posicoes)
@@ -445,7 +448,7 @@ class TestHomeIntacta:
 
         miolo = client.get(reverse("core:home")).content.decode()
 
-        assert "trust-bar" not in miolo
+        assert "home-selos" not in miolo
 
     def test_a_declaracao_cobre_todas_as_partes_da_home(self):
         """

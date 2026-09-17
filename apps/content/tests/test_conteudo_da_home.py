@@ -581,7 +581,7 @@ class TestHomePublica:
     def test_o_contador_continua_independente(self, client):
         corpo = client.get(HOME).content.decode()
 
-        assert '<span class="stat-badge-value">0</span>' in corpo
+        assert '<span class="banner-contador-valor">0</span>' in corpo
 
     def test_o_conteudo_e_escapado(self, client, cliente):
         """Texto de administrador continua sendo texto, não marcação."""

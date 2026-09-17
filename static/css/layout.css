@@ -50,11 +50,124 @@ body { display: flex; flex-direction: column; }
    Landing
    -------------------------------------------------------------------------- */
 
-.site-nav {
+/* A IDENTIDADE DAS PAGINAS PUBLICAS
+   ---------------------------------
+   `body.publico` (Home, parceiros, paginas legais) troca a familia
+   tipografica e as medidas da pagina. A area logada nao recebe a
+   classe e continua exatamente como esta: a identidade nova e da
+   vitrine, nao do produto.
+
+   As cores derivam de `--p` por `color-mix`, como o resto do projeto:
+   trocar a cor principal no Backoffice continua trocando a pagina
+   inteira, e nao ha uma segunda lista de azuis para manter. */
+body.publico {
+  --font: "Manrope", "Inter", system-ui, sans-serif;
+  /* O azul muito claro das faixas alternadas. */
+  --pub-azul: color-mix(in srgb, var(--p) 7%, #fff);
+  /* A borda dos cartoes: mais discreta que a `--bd` geral. */
+  --pub-bd: color-mix(in srgb, var(--p) 14%, #fff);
+  /* O fundo da capsula do contador. */
+  --pub-pilula: color-mix(in srgb, var(--p) 11%, #fff);
+  background: #fff;
+}
+
+/* A COLUNA DE CONTEUDO
+   --------------------
+   960px de faixa com 24px de respiro lateral -- 912px de conteudo, a
+   medida da referencia. Vale tambem para o Banner: e a unica coisa que
+   a identidade nova muda nele, e o que faz a marca, a chamada e as
+   secoes cairem na mesma vertical.
+
+   `.container` global continua com 1280px: ele veste o produto
+   inteiro, e estreita-lo mudaria o painel, o assistente e o perfil. */
+body.publico .container,
+.home-largura { width: 100%; max-width: 960px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+/* Os sete desenhos do Banner trazem o respiro lateral no proprio
+   `padding` (48px). Na coluna de 960px isso deixaria a chamada 24px
+   mais para dentro do que as secoes de baixo -- entao aqui, e SO aqui,
+   o lateral acompanha a coluna. O vertical nao se mexe: e ele que
+   reserva o lugar da capsula do contador. */
+body.publico .hero,
+body.publico .hero-texto,
+body.publico .hero-cheio,
+body.publico .hero-destaque,
+body.publico .hero-assimetrico-grade,
+body.publico .hero-amplo-texto,
+body.publico .hero-editorial { padding-left: 24px; padding-right: 24px; }
+.home-largura-estreita { max-width: 760px; }
+
+/* Uma FAIXA: fundo de ponta a ponta, conteudo no meio. E ela que
+   produz a alternancia branco / azul claro que separa as secoes sem
+   precisar de moldura nenhuma. */
+.home-secao { display: flex; justify-content: center; }
+.home-secao-branca { background: #fff; }
+.home-secao-azul { background: var(--pub-azul); border-top: 1px solid var(--pub-bd); }
+.home-secao-azul + .home-secao-azul { border-top: 0; }
+.home-secao > .home-largura { padding-top: 44px; padding-bottom: 48px; }
+
+.home-secao-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.home-secao-titulo { display: flex; flex-direction: column; gap: 5px; }
+.home-secao-cabeca h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+.home-chapeu {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p);
+}
+.home-link-forte { font-size: 14px; font-weight: 700; color: var(--p); white-space: nowrap; }
+
+/* Cabecalho de uma pagina publica que nao e a Home (parceiros, legais). */
+.home-pagina-cabeca { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.home-pagina-cabeca h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
+.home-pagina-cabeca p { color: var(--mu); font-size: 16px; }
+
+/* A BARRA SUPERIOR
+   ----------------
+   Fundo branco, uma borda fina embaixo e a mesma coluna de 960px do
+   resto. No desktop: marca e links a esquerda, contas a direita. No
+   celular: marca a esquerda, um botao a direita -- e nao a mesma barra
+   com pecas escondidas. */
+.topo-publico { background: #fff; border-bottom: 1px solid var(--pub-bd); }
+.topo-publico-barra {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 12px 24px;
 }
+.topo-publico-esquerda { display: flex; align-items: center; gap: 26px; min-width: 0; }
+.topo-publico-links { display: flex; gap: 20px; }
+.topo-publico-links a { font-size: 14px; font-weight: 500; color: var(--mu); }
+.topo-publico-links a:hover { color: var(--navy); }
+.topo-publico-contas { display: flex; align-items: center; gap: 12px; }
+.topo-publico-entrar { font-size: 14px; font-weight: 600; color: var(--navy); }
+.topo-publico-marca { display: flex; align-items: center; }
+.topo-publico-hamburguer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--pub-bd);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 17px;
+  cursor: pointer;
+  list-style: none;
+}
+.topo-publico-hamburguer::-webkit-details-marker { display: none; }
+.topo-publico-menu { position: relative; }
 .site-nav-lang { min-height: 40px; padding: 0 12px; font-size: 13px; gap: 6px; width: auto; }
 
 .hero {
@@ -314,72 +427,93 @@ body { display: flex; flex-direction: column; }
   text-align: center;
 }
 
-.trust-bar {
-  padding: 0 48px 48px;
-}
-.trust-bar-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 18px 24px;
-  gap: 16px;
-}
-.trust-item {
-  display: flex;
-  gap: 12px;
+/* A CAPSULA DO CONTADOR
+   ---------------------
+   Uma pilula curta: fundo azul claro, texto azul, um pontinho antes do
+   numero -- que e o indicador "ao vivo". O numero vem do banco
+   (`letters.statistics`), nunca do CSS nem do template.
+
+   A POSICAO continua vindo das nove classes `pos-*` acima: a capsula
+   mudou de roupa, nao de regra. */
+.banner-contador {
+  /* Absoluto porque as nove classes `pos-*` acima so dizem ONDE -- e
+     e o desenho do banner que reserva o respiro para ele. */
+  position: absolute;
+  display: inline-flex;
   align-items: center;
-  font-size: 14px;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--pub-pilula);
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--p);
+  line-height: 1.4;
+  max-width: calc(100% - 32px);
 }
-.trust-item .ph { font-size: 24px; color: var(--p); }
-.trust-item + .trust-item { border-left: 1px solid var(--bd); padding-left: 24px; }
+.banner-contador-ponto { width: 6px; height: 6px; border-radius: 999px; background: var(--p); flex: none; }
+.banner-contador-valor { font-variant-numeric: tabular-nums; }
+
+/* A linha de selos logo abaixo da chamada: texto pequeno, separado por
+   pontos. O ponto e desenhado pelo CSS -- assim ele nao aparece antes
+   do primeiro item nem depois do ultimo, e nao ha caractere solto no
+   meio do texto para um leitor de tela anunciar. */
+/* 18px no topo porque o Banner nem sempre deixa respiro embaixo: no
+   tablet o desenho padrao termina com `padding-bottom: 0`, e a linha de
+   selos encostava na chamada. */
+.home-secao-selos > .home-largura { padding-top: 18px; padding-bottom: 28px; }
+.home-selos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  font-size: 13px;
+  color: var(--mu);
+}
+.home-selos li { display: flex; align-items: center; gap: 22px; }
+.home-selos li + li::before { content: "·"; color: var(--pub-bd); }
 
 .section { padding: 8px 48px 56px; }
 .section h2 { font-size: 30px; }
 .section-lead { color: var(--mu); margin: 6px 0 22px; }
 
-/* Nossos Parceiros · modelo 2a (Bloco B). Cabecalho sobre uma linha, e
-   so imagem + botao por cartao -- nome e descricao continuam gravados
-   (administracao/SEO), mas nao sao desenhados (ver `_partner_card.html`). */
-.parceiros-cabeca {
-  border-bottom: 1px solid var(--bd);
-  padding-bottom: 16px;
-  margin-bottom: 22px;
-}
-.parceiros-cabeca .section-lead { margin: 6px 0 0; }
-
-/* ATE QUATRO, UMA GRADE; NUNCA UMA SEGUNDA FILEIRA
-   --------------------------------------------------
-   Acima de quatro, `partners.html` desenha `.partners-carrossel` no
-   lugar desta grade -- ver logo abaixo. As duas sao listas (`<ul>`),
-   entao a marca de item some aqui, uma vez so para as duas. */
-.partners-grid,
-.partners-carrossel { list-style: none; margin: 0; padding: 0; }
-
-.partners-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
-/* Menos de quatro cadastrados (ou carrossel desligado, com mais):
-   a grade encolhe em vez de espichar os cartoes por colunas vazias. */
-.partners-grid-1 { grid-template-columns: minmax(0, 320px); }
-.partners-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 660px; }
-.partners-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1000px; }
+/* NOSSOS PARCEIROS -- UMA FILEIRA DE QUATRO
+   -----------------------------------------
+   Sem carrossel e sem segunda fileira: acima de quatro cadastrados a
+   Home mostra os quatro primeiros e o "Ver todos" leva a pagina de
+   parceiros (ver `core/secoes/partners.html`). A pagina de parceiros
+   reusa a MESMA grade, e la ela quebra em quantas linhas precisar. */
+.partners-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+/* Menos de quatro cadastrados: a grade encolhe em vez de espichar os
+   cartoes por colunas vazias. */
+.partners-grid-1 { grid-template-columns: minmax(0, 260px); }
+.partners-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 480px; }
+.partners-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 720px; }
 
 .partner-item { min-width: 0; }
 .partner-card {
   position: relative;
   display: block;
-  height: 100%;
-  min-height: 220px;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--pub-bd);
+  border-radius: 12px;
+  background: #fff;
   overflow: hidden;
   text-decoration: none;
   color: inherit;
 }
-.partner-card:hover { color: inherit; }
+.partner-card:hover { color: inherit; border-color: color-mix(in srgb, var(--p) 30%, #fff); }
 .partner-media { position: absolute; inset: 0; }
 .partner-image { height: 100%; width: 100%; }
-img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; }
+img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; }
 /* O botao e uma capsula SOBRE o cartao -- nao uma faixa no pe. Reusa as
    nove classes `.pos-*` do contador do banner (mesmo arquivo, acima):
-   a mesma posicao fechada, o mesmo CSS, nenhuma coordenada livre. */
+   a mesma posicao fechada, o mesmo CSS, nenhuma coordenada livre.
+   Em branco no CMS, ele nao existe e o cartao fica so com a marca --
+   que e o desenho da referencia. */
 .partner-botao {
   position: absolute;
   z-index: 1;
@@ -387,89 +521,31 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   box-shadow: var(--shadow-card);
 }
 
-/* CARROSSEL -- SO ACIMA DE QUATRO, E SO QUANDO LIGADO NO BACKOFFICE
-   --------------------------------------------------------------------
-   `overflow-x: auto` rola por toque, roda do mouse e teclado (a trilha
-   e focavel) sem nenhuma linha de script -- as setas em
-   `carrossel-de-parceiros.js` sao so mais um jeito de mover a MESMA
-   rolagem, nunca o unico. O scroll fica preso a esta caixa: a pagina em
-   volta nao ganha barra de rolagem nenhuma. */
-.partners-carrossel-caixa { display: flex; align-items: center; gap: 12px; }
-.partners-carrossel {
+/* COMO FUNCIONA -- tres cartoes numerados. */
+.how-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.how-card {
   display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
-  padding-bottom: 4px;
-  /* Sem isto, o item flexivel recusa encolher abaixo da largura de
-     todos os cartoes somados -- o "auto" acima nunca chegaria a rolar,
-     e a pagina inteira e que ganharia a barra horizontal. */
-  min-width: 0;
-}
-.partners-carrossel .partner-item {
-  flex: 0 0 240px;
-  scroll-snap-align: start;
-}
-@media (prefers-reduced-motion: reduce) {
-  .partners-carrossel { scroll-behavior: auto; }
-}
-.partners-seta {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1.5px solid var(--bd);
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 18px 20px;
   background: #fff;
-  color: var(--navy);
-  font-size: 18px;
-  cursor: pointer;
+  border: 1px solid var(--pub-bd);
+  border-radius: 12px;
 }
-.partners-seta:hover { border-color: var(--p); color: var(--p); }
+.how-card-numero { font-size: 12px; font-weight: 800; color: var(--p); font-variant-numeric: tabular-nums; }
+.how-card-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.how-card-texto b { font-size: 16px; font-weight: 700; color: var(--navy); }
+.how-card-texto span { font-size: 14px; line-height: 1.5; color: var(--mu); }
 
-.parceiros-rodape { display: flex; justify-content: center; margin-top: 28px; }
-
-.how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.how-card { padding: 24px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-.how-card-texto { min-width: 0; }
-.how-card-texto h3 + p { margin-top: 6px; }
-.how-card-icon { width: 52px; height: 52px; display: grid; place-items: center; color: var(--p); font-size: 26px; border-radius: var(--radius-md); }
-
-/* ---------------------------------------------------------------------------
-   Perguntas frequentes · desenho 1a (desktop) e 2a (celular).
-
-   A sanfona e `<details>`/`<summary>` nativo. O unico trabalho do CSS e
-   trocar o marcador padrao do navegador -- um triangulinho que muda de
-   tamanho em cada sistema -- pelo circulo com "+" e "−" da referencia.
-   --------------------------------------------------------------------------- */
-.faq {
-  display: grid;
-  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
-  /* Areas nomeadas, e nao ordem do HTML: o bloco de contato fica por
-     baixo do titulo no desktop e no FIM da secao no celular, e a grade
-     resolve isso sem duplicar o bloco com `d-only`/`m-only`. */
-  grid-template-areas:
-    "cabeca lista"
-    "contato lista";
-  grid-template-rows: auto 1fr;
-  gap: 0 64px;
-  align-items: start;
-}
-.faq-coluna { grid-area: cabeca; }
-.faq-lista { grid-area: lista; }
-.faq-contato { grid-area: contato; }
-.faq-coluna .section-lead { margin: 8px 0 0; max-width: 42ch; }
-.faq-contato { margin-top: 26px; padding: 20px; display: grid; gap: 8px; justify-items: start; }
-.faq-contato h3 { font-size: 16px; }
-.faq-contato p { font-size: 14px; color: var(--mu); }
-.faq-contato .btn { margin-top: 6px; }
-
+/* PERGUNTAS FREQUENTES
+   --------------------
+   Coluna estreita e centrada: titulo, e as perguntas separadas por um
+   filete. A sanfona e `<details>`/`<summary>` nativo -- o unico
+   trabalho do CSS e trocar o triangulinho padrao do navegador pelo
+   sinal de mais que a referencia desenha. */
+.faq-titulo { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; text-align: center; margin-bottom: 8px; }
 .faq-lista { display: flex; flex-direction: column; }
-.faq-item { border-top: 1px solid var(--bd); }
-.faq-item:last-child { border-bottom: 1px solid var(--bd); }
+.faq-item { border-bottom: 1px solid var(--pub-bd); }
 
 .faq-pergunta {
   display: flex;
@@ -479,9 +555,10 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   /* 56px de alvo de toque: e a altura minima que a referencia usa no
      celular, e nao ha razao para o desktop ser menor. */
   min-height: 56px;
-  padding: 14px 0;
+  padding: 15px 2px;
   cursor: pointer;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--navy);
   /* Fora o triangulo padrao, nos dois motores. */
   list-style: none;
@@ -492,92 +569,67 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
 
 /* O "+" que vira "−": duas barras cruzadas, e a vertical some quando a
    pergunta esta aberta. */
-.faq-sinal {
-  position: relative;
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--bd);
-  border-radius: 50%;
-  background: #fff;
-}
+.faq-sinal { position: relative; flex: none; width: 17px; height: 17px; }
 .faq-sinal::before,
 .faq-sinal::after {
   content: "";
   position: absolute;
   inset: 50% auto auto 50%;
-  width: 12px;
+  width: 13px;
   height: 2px;
+  border-radius: 2px;
   background: var(--p);
   transform: translate(-50%, -50%);
 }
 .faq-sinal::after { transform: translate(-50%, -50%) rotate(90deg); }
-.faq-item[open] .faq-sinal { background: var(--p10); border-color: var(--p20); }
 .faq-item[open] .faq-sinal::after { opacity: 0; }
 
-.faq-resposta { padding: 0 46px 20px 0; color: var(--mu); font-size: 15px; line-height: 1.65; }
+.faq-resposta { padding: 0 30px 16px 2px; color: var(--mu); font-size: 14.5px; line-height: 1.6; }
 .faq-resposta p { margin: 0 0 10px; }
 .faq-resposta p:last-child { margin-bottom: 0; }
 
-.cta-banner {
-  border-radius: 18px;
-  background: linear-gradient(120deg, var(--navy), color-mix(in srgb, var(--navy) 70%, var(--p)));
-  color: #fff;
-  padding: 40px 44px;
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  position: relative;
-  overflow: hidden;
+/* MINI BANNER -- a faixa azul antes do rodape. */
+.home-secao-gradiente {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--p) 60%, #0b1a33), var(--p));
 }
-.cta-banner h2 { color: #fff; font-size: 28px; }
-.cta-banner p { opacity: 0.85; margin-top: 6px; font-size: 16px; }
-.cta-banner-icon { font-size: 56px; color: color-mix(in srgb, #fff 70%, var(--p)); flex: none; }
-.cta-banner .btn { background: #fff; color: var(--navy); min-height: 50px; padding: 0 24px; flex: none; }
-.cta-banner-deco { position: absolute; right: -30px; bottom: -60px; font-size: 220px; opacity: 0.12; }
-
-/* Rodape minimalista em tres linhas (Bloco C): marca, links, copyright
-   -- ver `components/site_footer.html`. Sem cartao, sem borda entre as
-   linhas: so espaco, que e o que "leve" pede. */
-.site-footer {
-  padding: 32px 48px;
-  border-top: 1px solid var(--bd);
+.home-secao-gradiente > .home-largura { padding-top: 34px; padding-bottom: 34px; }
+.home-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.home-cta-texto { display: flex; flex-direction: column; gap: 4px; }
+.home-cta h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.025em; color: #fff; }
+.home-cta p { font-size: 14.5px; color: color-mix(in srgb, #fff 80%, var(--p)); }
+.home-cta-botao {
+  flex: none;
+  padding: 12px 20px;
+  border-radius: 9px;
   background: #fff;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--p) 60%, #0b1a33);
+}
+.home-cta-botao:hover { color: color-mix(in srgb, var(--p) 60%, #0b1a33); background: color-mix(in srgb, #fff 92%, var(--p)); }
+
+/* RODAPE -- tres linhas centradas, nas duas larguras. */
+.site-footer { background: #fff; border-top: 1px solid var(--pub-bd); display: flex; justify-content: center; }
+.site-footer-conteudo {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  font-size: 13px;
-  color: var(--mu);
+  align-items: center;
+  gap: 10px;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  text-align: center;
 }
-/* Pagina legal: uma coluna de texto corrido. Largura de leitura, e nao
-   os 1280px do `.container` -- linha longa demais cansa, e um texto
-   juridico ja e dificil o bastante. */
-.legal-page { max-width: 760px; padding-bottom: 64px; }
-.legal-page h1 { font-size: 34px; margin-bottom: 20px; }
-.legal-texto { color: var(--tx); line-height: 1.7; }
-.legal-texto p { margin: 0 0 16px; }
-@media (max-width: 767px) {
-  .legal-page h1 { font-size: 26px; }
-}
-
-/* Alvo de toque de pelo menos 40px, mesmo com o texto pequeno (13px) do
-   rodape: a altura fica no LINK, nao no texto dentro dele. */
-.site-footer a { display: inline-flex; align-items: center; min-height: 40px; color: inherit; }
-.site-footer a:hover { color: var(--p); }
-
-.site-footer-marca { display: flex; }
-
-/* Linha do meio: legais, contato e redes, na ordem escolhida no
-   Backoffice -- os tres cabem lado a lado, e quebram em mais linhas
-   sozinhos quando o espaco nao alcanca. */
-.site-footer-links { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-/* Redes sociais: so icone, e so as que estao configuradas (o nome vai no
-   aria-label). Herdam a cor do rodape como os demais links. */
-.site-footer-social { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 18px; line-height: 1; }
-.site-footer-contato { display: inline-flex; gap: 16px; flex-wrap: wrap; }
-.site-footer-contato span { display: inline-flex; align-items: flex-start; gap: 6px; }
-
-.site-footer-copyright { font-size: 12px; }
+.site-footer-marca { font-size: 15px; font-weight: 700; color: var(--navy); }
+.site-footer-marca:hover { color: var(--p); }
+.site-footer-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 20px; font-size: 13.5px; color: var(--mu); }
+/* Alvo de toque de pelo menos 40px, mesmo com o texto pequeno (13.5px):
+   a altura fica no LINK, nao no texto dentro dele -- e como a linha tem
+   `gap` vertical pequeno, o resultado na tela continua sendo a linha
+   compacta da referencia. */
+.site-footer-links a { display: inline-flex; align-items: center; min-height: 40px; color: var(--mu); }
+.site-footer-links a:hover { color: var(--p); }
+.site-footer-social { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 16px; line-height: 1; }
+.site-footer-copyright { font-size: 12px; color: color-mix(in srgb, var(--mu) 70%, #fff); }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hero { grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 110px 32px 0; background: none; }
@@ -591,19 +643,11 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   .hero-amplo-texto h1 { font-size: 40px; }
   .hero-editorial { gap: 32px; padding: 110px 32px 32px; }
   .hero-editorial h1 { font-size: 38px; }
-  .trust-bar { padding: 28px 32px 0; }
   .section { padding: 0 32px; margin-top: 40px; }
-  .faq { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeca" "lista" "contato"; grid-template-rows: none; gap: 28px; }
-  .faq-coluna .section-lead { max-width: none; }
-  /* Duas colunas no tablet: quatro cartoes em 834px dariam 180px de
-     largura -- estreito demais para a logomarca respirar dentro do
-     `padding` do cartao. */
-  .partners-grid,
-  .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
-  .partners-grid { gap: 14px; }
-  .partners-carrossel .partner-item { flex-basis: 200px; }
-  .how-grid { gap: 14px; }
-  .cta-banner { margin: 32px; padding: 30px 32px; }
+  /* A referencia nao tem uma versao de tablet: nesta faixa a coluna de
+     960px simplesmente ocupa a largura disponivel, e as tres colunas de
+     "Como funciona" e as quatro de Parceiros continuam cabendo. So o
+     Banner, que tem grade propria, ganha ajuste aqui. */
 }
 
 @media (max-width: 767px) {
@@ -673,92 +717,63 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   .aviso-do-email .notice { align-items: flex-start; flex-wrap: wrap; }
   .aviso-do-email .btn { margin-left: 0; width: 100%; }
 
-  .stat-badge { display: flex; padding: 10px 12px; }
-  .stat-badge-row { display: flex; gap: 8px; align-items: baseline; }
-  .stat-badge-live { margin-top: 3px; }
+  /* A CAPSULA DO CONTADOR, no celular: a mesma pilula, com um
+     respiro a menos -- e o rotulo pode quebrar em duas linhas sem
+     desalinhar o pontinho, que fica no topo. */
+  .banner-contador { align-items: flex-start; font-size: 12px; padding: 5px 11px; }
+  .banner-contador-ponto { margin-top: 6px; }
 
-  .trust-bar { padding: 22px 20px 0; }
-  .trust-bar-grid { padding: 14px 8px; gap: 6px; text-align: center; }
-  .trust-item { flex-direction: column; gap: 6px; }
-  .trust-item + .trust-item { border-left: 1px solid var(--bd); padding-left: 0; }
+  .topo-publico-barra { padding: 12px 16px; }
+  body.publico .container,
+  .home-largura { padding-left: 20px; padding-right: 20px; }
+  .home-secao > .home-largura { padding-top: 28px; padding-bottom: 30px; }
+  .home-secao-cabeca { margin-bottom: 14px; }
+  .home-secao-cabeca h2 { font-size: 20px; letter-spacing: -0.022em; }
+  .home-chapeu { font-size: 11px; }
+  .home-link-forte { font-size: 13.5px; }
+  .home-pagina-cabeca h1 { font-size: 26px; }
+  .home-pagina-cabeca p { font-size: 15px; }
+
+  .home-secao-selos > .home-largura { padding-bottom: 22px; }
+  .home-selos { gap: 6px 14px; font-size: 12.5px; }
+  .home-selos li { gap: 14px; }
 
   .section { padding: 30px 20px 0; }
   .section h2 { font-size: 24px; }
-  /* Grade compacta, nao despejo vertical: ate quatro parceiros cabem em
-     duas colunas -- uma coluna so empilharia quatro cartoes numa fila
-     comprida, exatamente o que a composicao principal evita. Sozinho,
-     um parceiro ocupa a largura inteira: dividir a linha ao meio para
-     UM cartao so deixaria a outra metade vazia. */
+
+  /* DUAS COLUNAS, e cartao quadrado -- e o desenho da referencia no
+     celular. Uma coluna so empilharia quatro cartoes numa fila
+     comprida, exatamente o que a fileira unica do desktop evita. */
   .partners-grid,
   .partners-grid-2,
   .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: none; }
   .partners-grid-1 { grid-template-columns: minmax(0, 1fr); }
-  .partner-card { min-height: 160px; }
-  img.partner-image { padding: 18px; }
-  .partners-carrossel .partner-item { flex-basis: 190px; }
-  .partners-seta { width: 40px; height: 40px; font-size: 16px; }
-  /* Perguntas frequentes · desenho 2a. Cada pergunta vira um cartao
-     com borda propria, em vez de linhas separadas por filete: na
-     largura do celular o filete sozinho nao separa o suficiente. */
-  .faq { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cabeca" "lista" "contato"; grid-template-rows: none; gap: 20px; }
-  .faq-coluna .section-lead { max-width: none; }
-  .faq-lista { gap: 10px; }
-  .faq-item {
-    border: 1px solid var(--bd);
-    border-radius: var(--radius-md);
-    background: #fff;
-    padding: 0 14px;
-  }
-  .faq-item:last-child { border-bottom: 1px solid var(--bd); }
-  .faq-pergunta { font-size: 15px; gap: 12px; }
-  .faq-resposta { padding: 0 0 16px; font-size: 14.5px; }
-  .faq-contato { margin-top: 0; }
-  .faq-contato .btn { width: 100%; }
+  .partner-card { aspect-ratio: 1 / 1; }
+  img.partner-image { padding: 16px; }
 
-  /* UMA coluna, icone ao lado do texto.
-     Tres colunas em 390px davam 89px de largura util por cartao -- sete
-     caracteres por linha, medido no navegador. O texto cabia, e por
-     isso nao havia rolagem horizontal nenhuma para denunciar; so
-     abrindo a pagina se ve que ninguem consegue ler aquilo. Deitado, o
-     cartao ganha a largura inteira e continua ocupando pouca altura. */
-  .how-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .how-card { padding: 14px; gap: 12px; flex-direction: row; align-items: flex-start; }
-  .how-card h3 { font-size: 15px; }
-  .how-card p { font-size: 13px; }
-  .how-card-icon { width: 40px; height: 40px; flex: none; font-size: 22px; }
+  /* CADA PASSO DEITADO: numero a esquerda, texto a direita.
+     Tres colunas em 390px davam 89px de largura util por cartao --
+     sete caracteres por linha, medido no navegador. */
+  .how-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .how-card { flex-direction: row; gap: 12px; padding: 14px 16px; }
+  .how-card-numero { flex: none; padding-top: 3px; }
+  .how-card-texto b { font-size: 15.5px; }
 
-  /* Mini Banner sangrando de ponta a ponta no celular: sem margem
-     lateral e sem cantos arredondados, ele deixa de ser um cartao
-     dentro da pagina e vira uma faixa da propria pagina. O respiro
-     lateral volta por dentro, no `padding`. */
-  .cta-banner {
-    /* -20px cancela EXATAMENTE o `padding` lateral de `.section` no
-       celular: a faixa fica com a largura da janela, nem um pixel a
-       mais -- o que faria a pagina rolar de lado. */
-    margin: 22px -20px 26px;
-    padding: 26px 20px;
-    gap: 14px;
-    border-radius: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-  .cta-banner h2 { font-size: 20px; }
-  .cta-banner p { font-size: 14px; }
-  .cta-banner-icon { font-size: 36px; }
-  /* O botao FICA. Ele era escondido aqui, e uma chamada para acao sem a
-     acao e exatamente o "botao sem funcao" que o projeto proibe -- no
-     celular ele passa a ocupar a largura inteira, como os outros. */
-  .cta-banner .btn { width: 100%; min-height: 52px; font-size: 16px; }
-  .cta-banner-deco { font-size: 150px; bottom: -50px; right: -40px; }
+  .faq-titulo { font-size: 20px; letter-spacing: -0.022em; margin-bottom: 10px; }
+  .faq-pergunta { align-items: flex-start; font-size: 15.5px; line-height: 1.35; gap: 12px; padding: 14px 2px; }
+  .faq-sinal { margin-top: 3px; }
+  .faq-resposta { padding: 0 24px 14px 2px; font-size: 14px; }
 
-  /* A marca fica centralizada (a identidade pedida para o celular); os
-     links quebram sozinhos em linhas conforme o espaco, tambem
-     centralizados -- nunca uma so coluna comprida de links empilhados. */
-  .site-footer { margin-top: auto; padding: 24px 20px 28px; align-items: center; text-align: center; gap: 16px; }
-  .site-footer-links { justify-content: center; }
-  .site-footer-contato { flex-direction: column; align-items: center; gap: 6px; }
-  .footer-lang { margin-left: 0; }
+  /* O Mini Banner centraliza e o botao ocupa a largura disponivel. */
+  .home-secao-gradiente > .home-largura { padding-top: 30px; padding-bottom: 30px; }
+  .home-cta { flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .home-cta h2 { font-size: 20px; letter-spacing: -0.022em; }
+  .home-cta p { font-size: 14px; }
+  .home-cta-botao { width: 100%; padding: 13px 20px; text-align: center; }
+
+  .site-footer { margin-top: auto; }
+  .site-footer-conteudo { padding-top: 22px; padding-bottom: 22px; gap: 10px; }
+  .site-footer-links { max-width: 300px; gap: 9px 18px; }
 }
 
 

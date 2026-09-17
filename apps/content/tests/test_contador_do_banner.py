@@ -147,7 +147,7 @@ class TestNumeroReal:
     def test_sem_carta_nenhuma_mostra_zero(self, client):
         statistics.esquecer_a_contagem()
 
-        assert '<span class="stat-badge-value">0</span>' in corpo(client)
+        assert '<span class="banner-contador-valor">0</span>' in corpo(client)
 
     def test_mostra_a_contagem_do_sistema(self, client, letter):
         letter.finalized_at = letter.created_at
@@ -157,7 +157,7 @@ class TestNumeroReal:
         html = corpo(client)
 
         assert statistics.cartas_emitidas() == 1
-        assert '<span class="stat-badge-value">1</span>' in html
+        assert '<span class="banner-contador-valor">1</span>' in html
 
     def test_o_numero_muda_quando_a_contagem_muda(self, client, letter):
         """Duas leituras diferentes provam que não é um texto fixo."""
@@ -169,8 +169,8 @@ class TestNumeroReal:
         statistics.esquecer_a_contagem()
         um = corpo(client)
 
-        assert '<span class="stat-badge-value">0</span>' in zero
-        assert '<span class="stat-badge-value">1</span>' in um
+        assert '<span class="banner-contador-valor">0</span>' in zero
+        assert '<span class="banner-contador-valor">1</span>' in um
 
     def test_a_referencia_visual_nao_sobrevive_na_home(self, client):
         """"8 cartas geradas" é o texto do arquivo de desenho, não dado."""
@@ -211,12 +211,12 @@ class TestNumeroReal:
 class TestAtivacao:
     def test_ativo_por_padrao(self, client):
         assert secao().counter_enabled is True
-        assert "stat-badge-value" in corpo(client)
+        assert "banner-contador-valor" in corpo(client)
 
     def test_desativado_no_backoffice_some_da_home(self, client):
         PageSection.objects.filter(pk=secao().pk).update(counter_enabled=False)
 
-        assert "stat-badge-value" not in corpo(client)
+        assert "banner-contador-valor" not in corpo(client)
         assert "banner-contador" not in corpo(client)
 
     def test_desligar_nao_apaga_o_resto_do_banner(self, client):
@@ -232,7 +232,7 @@ class TestAtivacao:
         assert secao().counter_enabled is True
         escrever(badge_label="")
 
-        assert "stat-badge-value" not in corpo(client)
+        assert "banner-contador-valor" not in corpo(client)
 
     def test_o_backoffice_liga_e_desliga_de_verdade(self, cliente):
         cliente.post(url_do_editor(), _payload_do_editor(contador_ativo=""))
@@ -270,7 +270,7 @@ class TestIndicadorAoVivo:
         escrever(badge_note="Atualizado em tempo real")
 
         assert "Atualizado em tempo real" in corpo(client)
-        assert "stat-badge-live" in corpo(client)
+        assert "banner-contador-ponto" in corpo(client)
 
     def test_indicador_desativado_esconde_o_selo_mas_nao_o_numero(self, client):
         escrever(badge_note="Atualizado em tempo real")
@@ -279,13 +279,13 @@ class TestIndicadorAoVivo:
         html = corpo(client)
 
         assert "Atualizado em tempo real" not in html
-        assert "stat-badge-value" in html
+        assert "banner-contador-valor" in html
 
     def test_sem_nota_o_selo_nao_aparece_mesmo_ativo(self, client):
         assert secao().counter_live_enabled is True
         escrever(badge_note="")
 
-        assert "stat-badge-live" not in corpo(client)
+        assert "banner-contador-ponto" not in corpo(client)
 
     def test_o_backoffice_liga_e_desliga_o_indicador(self, cliente):
         escrever(badge_note="Atualizado em tempo real")
@@ -313,7 +313,7 @@ class TestPosicionamento:
 
         html = corpo(client)
 
-        assert f'banner-contador tint stat-badge pos-{posicao}"' in html
+        assert f'banner-contador pos-{posicao}"' in html
 
     @pytest.mark.parametrize("posicao", POSICOES)
     def test_o_backoffice_grava_a_posicao_escolhida(self, cliente, posicao):
@@ -347,7 +347,7 @@ class TestTodosOsDesenhos:
     def test_o_contador_aparece_em_cada_um_dos_sete(self, client, desenho):
         usar_desenho(desenho)
 
-        assert "stat-badge-value" in corpo(client)
+        assert "banner-contador-valor" in corpo(client)
 
     def test_funciona_em_somente_texto_sem_imagem_nenhuma(self, client):
         usar_desenho("somente_texto")
@@ -355,14 +355,14 @@ class TestTodosOsDesenhos:
         html = corpo(client)
 
         assert "img-slot" not in html
-        assert "stat-badge-value" in html
+        assert "banner-contador-valor" in html
 
     @pytest.mark.parametrize("desenho", TODOS_OS_DESENHOS)
     def test_desativado_continua_ausente_em_qualquer_desenho(self, client, desenho):
         usar_desenho(desenho)
         PageSection.objects.filter(pk=secao().pk).update(counter_enabled=False)
 
-        assert "stat-badge-value" not in corpo(client)
+        assert "banner-contador-valor" not in corpo(client)
 
     def test_nao_ha_uma_segunda_logica_de_contagem(self):
         """
@@ -396,7 +396,7 @@ class TestPrevia:
 
         html = cliente.get(url_da_previa()).content.decode()
 
-        assert '<span class="stat-badge-value">1</span>' in html
+        assert '<span class="banner-contador-valor">1</span>' in html
 
     def test_a_previa_reflete_o_interruptor_ainda_nao_salvo(self, cliente):
         assert secao().counter_enabled is True
@@ -405,7 +405,7 @@ class TestPrevia:
             url_da_previa(), _payload_do_editor(contador_ativo="")
         ).content.decode()
 
-        assert "stat-badge-value" not in html
+        assert "banner-contador-valor" not in html
         assert secao().counter_enabled is True
 
     def test_a_previa_reflete_a_posicao_ainda_nao_salva(self, cliente):

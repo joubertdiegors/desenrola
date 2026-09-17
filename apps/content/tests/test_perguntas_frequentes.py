@@ -25,7 +25,7 @@ from django.contrib.auth.models import Permission
 from django.test import Client
 from django.urls import reverse
 
-from apps.content.models import FaqItem, PageSection, SiteSettings
+from apps.content.models import FaqItem, PageSection, PageSectionTranslation
 
 pytestmark = pytest.mark.django_db
 
@@ -226,55 +226,40 @@ class TestSanfonaNativa:
 
 
 class TestBlocoDeContato:
-    def _com_email(self, endereco="suporte@exemplo.test"):
-        config = SiteSettings.load()
-        config.contact_email = endereco
-        config.save(update_fields=["contact_email"])
+    """
+    O bloco de contato SAIU da seção.
 
-    def test_sem_email_cadastrado_o_bloco_nao_aparece(self, client):
-        criar(1)
+    A referência visual desta rodada desenha só título, perguntas e
+    respostas -- nada de chamada para o suporte no meio das dúvidas. Os
+    campos continuam gravados no CMS; a seção deixou de colocá-los na
+    página.
+    """
 
-        assert "faq-contato" not in secao(client)
-
-    def test_com_email_o_bloco_aparece_com_mailto(self, client):
-        criar(1)
-        self._com_email()
-
-        html = secao(client)
-
-        assert "faq-contato" in html
-        assert 'href="mailto:suporte@exemplo.test"' in html
-
-    def test_o_bloco_fica_depois_das_perguntas_no_html(self, client):
-        """
-        A ordem do HTML é a do celular (desenho 2a). No desktop a grade
-        o traz de volta para a coluna da esquerda, por área nomeada.
-        """
-        criar(1)
-        self._com_email()
-
-        html = secao(client)
-
-        assert html.index("faq-lista") < html.index("faq-contato")
-
-    def test_sem_titulo_o_bloco_nao_aparece(self, client):
-        from apps.content.models import PageSectionTranslation
-
-        criar(1)
-        self._com_email()
+    def test_o_bloco_nao_e_mais_desenhado(self, client):
         traducao = PageSectionTranslation.objects.get(
             section__page__key="home", section__key="faq", language="pt"
         )
-        traducao.content = {**traducao.content, "cta_title": ""}
+        traducao.content = {
+            **traducao.content,
+            "cta_title": "Não encontrou sua dúvida?",
+            "cta_text": "Fale com a gente.",
+            "cta": "Falar com o suporte",
+        }
         traducao.save(update_fields=["content"])
+        criar(1)
 
-        assert "faq-contato" not in secao(client)
+        html = secao(client)
 
+        assert "faq-contato" not in html
+        assert "Falar com o suporte" not in html
 
-# ===========================================================================
-# 5. A resposta é texto, não HTML
-# ===========================================================================
+    def test_a_secao_continua_so_com_pergunta_e_resposta(self, client):
+        criar(2)
 
+        html = secao(client)
+
+        assert html.count("faq-item") == 2
+        assert "faq-titulo" in html
 
 class TestRespostaEscapada:
     def test_html_digitado_sai_escapado(self, client):

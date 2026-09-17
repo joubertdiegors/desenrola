@@ -2,13 +2,26 @@
 O contador de cartas -- UM parcial, incluído pelos sete desenhos do
 Banner superior.
 
+UMA CÁPSULA, E NÃO UM CARTÃO
+----------------------------
+A referência visual desenha o contador como uma pílula curta: fundo azul
+claro, texto azul, um pontinho antes do número. Era um cartão com ícone,
+número grande e nota em segunda linha -- pesado demais para o que ele
+diz, e competindo com o título logo abaixo.
+
+O pontinho É o indicador "ao vivo", e o texto dele (`badge_note`)
+virou o NOME do pontinho: a referência não tem onde escrever "atualizado
+em tempo real" ao lado, mas quem usa leitor de tela precisa saber o que
+aquele ponto significa. O texto continua administrável, e continua
+sendo ele -- junto com o interruptor -- que decide se o ponto existe.
+
 POR QUE UM PARCIAL SÓ, E NÃO UM POR DESENHO
 --------------------------------------------
 Até esta etapa, três dos sete desenhos desenhavam o contador cada um do
-seu jeito (`.stat-badge`, `.hero-selo`, `.hero-pilula`), e os outros
-quatro simplesmente não o tinham -- não havia onde editá-lo. Um parcial
-só, incluído por todos, é o que faz "funciona nos sete desenhos" ser
-verdade sem sete implementações visuais para divergir com o tempo.
+seu jeito, e os outros quatro simplesmente não o tinham -- não havia
+onde editá-lo. Um parcial só, incluído por todos, é o que faz "funciona
+nos sete desenhos" ser verdade sem sete implementações visuais para
+divergir com o tempo.
 
 O NÚMERO NUNCA É DIGITADO
 --------------------------
@@ -36,20 +49,15 @@ contador_ao_vivo_ativo), secoes.hero (badge_label, badge_note),
 cartas_emitidas.
 {% endcomment %}
 {% if partes.hero.contador_ativo and secoes.hero.badge_label %}
-<div class="banner-contador tint stat-badge pos-{{ partes.hero.contador_posicao }}">
-  <i class="ph-fill ph-users" aria-hidden="true"></i>
-  <div class="stat-badge-row">
-    {% comment %}
-    O número conta CARTAS EMITIDAS (apps.letters.statistics), não
-    pessoas -- e o rótulo ao lado, que vem do CMS, diz isso.
-    `intcomma` põe o separador de milhar da locale -- é apresentação;
-    o contexto recebe o número inteiro.
-    {% endcomment %}
-    <span class="stat-badge-value">{{ cartas_emitidas|intcomma }}</span>
-    <span class="stat-badge-label">{{ secoes.hero.badge_label|linebreaksbr }}</span>
-  </div>
-  {% if partes.hero.contador_ao_vivo_ativo and secoes.hero.badge_note %}
-  <span class="stat-badge-live"><i class="ph-fill ph-circle" aria-hidden="true"></i>{{ secoes.hero.badge_note }}</span>
-  {% endif %}
-</div>
+<span class="banner-contador pos-{{ partes.hero.contador_posicao }}">
+  {% if partes.hero.contador_ao_vivo_ativo and secoes.hero.badge_note %}<span class="banner-contador-ponto" role="img" aria-label="{{ secoes.hero.badge_note }}"></span>{% endif %}
+  {% comment %}
+  O número conta CARTAS EMITIDAS (apps.letters.statistics), não pessoas
+  -- e o rótulo ao lado, que vem do CMS, diz isso. `intcomma` põe o
+  separador de milhar da locale: é apresentação; o contexto recebe o
+  número inteiro.
+  {% endcomment %}
+  <span class="banner-contador-valor">{{ cartas_emitidas|intcomma }}</span>
+  <span class="banner-contador-rotulo">{{ secoes.hero.badge_label }}</span>
+</span>
 {% endif %}

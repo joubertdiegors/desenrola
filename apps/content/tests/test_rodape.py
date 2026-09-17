@@ -407,7 +407,7 @@ class TestAcessibilidade:
         raiz = pathlib.Path(__file__).resolve().parents[3]
         css = (raiz / "static" / "css" / "layout.css").read_text(encoding="utf-8")
 
-        assert "min-height: 40px" in css.split(".site-footer a {")[1].split("}")[0]
+        assert "min-height: 40px" in css.split(".site-footer-links a {")[1].split("}")[0]
 
     def test_icones_de_rede_social_tem_area_de_toque_quadrada(self):
         """

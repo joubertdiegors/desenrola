@@ -1,16 +1,29 @@
 {% load i18n %}{% comment %}
-Mini Banner -- a faixa de chamada no fim da pagina.
+Mini Banner -- a faixa de chamada no fim da página.
+
+A FAIXA É DA LARGURA DA TELA
+----------------------------
+Era um cartão azul com cantos arredondados dentro da coluna de
+conteúdo. A referência desenha uma FAIXA inteira, de borda a borda, com
+o conteúdo centrado na mesma coluna das demais seções -- é o que separa
+o fim do conteúdo do rodapé.
+
+No desktop o texto fica à esquerda e o botão à direita; no celular tudo
+centraliza e o botão ocupa a largura disponível.
+
+O destino continua sendo o cadastro de conta -- a única ação que esta
+faixa sempre teve.
 
 Contexto: secoes.cta.
 {% endcomment %}
-<section class="section container">
-  <div class="cta-banner">
-    <i class="ph cta-banner-icon ph-airplane-tilt" aria-hidden="true"></i>
-    <div>
+<section class="home-secao home-secao-gradiente">
+  <div class="home-largura home-cta">
+    <div class="home-cta-texto">
       <h2>{{ secoes.cta.title }}</h2>
-      <p>{{ secoes.cta.text }}</p>
+      {% if secoes.cta.text %}<p>{{ secoes.cta.text }}</p>{% endif %}
     </div>
-    <a class="btn" href="{% url 'accounts:signup' %}">{{ secoes.cta.button }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-    <i class="ph cta-banner-deco ph-globe-hemisphere-west" aria-hidden="true"></i>
+    {% if secoes.cta.button %}
+    <a class="home-cta-botao" href="{% url 'accounts:signup' %}">{{ secoes.cta.button }} <span aria-hidden="true">→</span></a>
+    {% endif %}
   </div>
 </section>

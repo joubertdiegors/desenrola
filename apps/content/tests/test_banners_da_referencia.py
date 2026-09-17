@@ -66,9 +66,17 @@ def conteudo():
 
 
 def area_do_banner(client):
-    """Só o que a página desenha -- o `<head>` traz o título em qualquer desenho."""
+    """
+    Só a PRIMEIRA seção do `<main>` -- o Banner.
+
+    Não o `<main>` inteiro: "Como funciona" também numera os passos
+    dele (01, 02, 03), e uma busca por ">03<" na página toda acharia
+    aquele número em vez deste.
+    """
     html = client.get(HOME).content.decode()
-    return html[html.index("<main") : html.index("</main>")]
+    corpo = html[html.index("<main") : html.index("</main>")]
+    fim = corpo.find("</section>")
+    return corpo if fim == -1 else corpo[: fim + len("</section>")]
 
 
 # ===========================================================================
@@ -139,7 +147,7 @@ class TestContadorReal:
         html = area_do_banner(client)
 
         assert statistics.cartas_emitidas() == 1
-        assert '<span class="stat-badge-value">1</span>' in html
+        assert '<span class="banner-contador-valor">1</span>' in html
 
     @pytest.mark.parametrize("desenho", (DESTAQUE, ASSIMETRICO))
     def test_sem_carta_nenhuma_mostra_zero(self, client, desenho):
@@ -149,7 +157,7 @@ class TestContadorReal:
 
         html = area_do_banner(client)
 
-        assert '<span class="stat-badge-value">0</span>' in html
+        assert '<span class="banner-contador-valor">0</span>' in html
 
     @pytest.mark.parametrize("desenho", NOVOS)
     def test_o_numero_do_arquivo_de_desenho_nao_esta_em_lugar_nenhum(
@@ -173,7 +181,7 @@ class TestContadorReal:
 
         html = area_do_banner(client)
 
-        assert "stat-badge-value" not in html
+        assert "banner-contador-valor" not in html
         assert "banner-contador" not in html
 
 

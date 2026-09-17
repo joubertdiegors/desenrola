@@ -84,7 +84,7 @@ class TestPadrao:
 
         for marca in (
             '<section class="hero container">',
-            "stat-badge-value",
+            "banner-contador-valor",
             "hero-art",
             "hero-lead",
             "hero-actions",
@@ -150,7 +150,7 @@ class TestImagemCompleta:
         """
         usar(IMAGEM_COMPLETA)
 
-        assert "stat-badge-value" in corpo(client)
+        assert "banner-contador-valor" in corpo(client)
 
     def test_o_botao_fica_abaixo_e_so_se_houver(self, client):
         usar(IMAGEM_COMPLETA)

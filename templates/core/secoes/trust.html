@@ -1,16 +1,27 @@
 {% load i18n %}{% comment %}
 Destaques abaixo do Banner superior.
 
-Marcacao identica a que estava em `core/home.html` -- movida para ca
-para que a Central possa renderizar ESTA secao isolada, com o mesmo
-codigo e o mesmo CSS. Nao ha segunda implementacao.
+UMA LINHA DE TEXTO, E NÃO UM CARTÃO
+-----------------------------------
+A referência visual desta rodada põe os pontos fortes numa linha curta
+logo abaixo da chamada: texto pequeno, cinza, separado por pontos. Era
+um cartão com moldura e ícones -- que competia com o banner logo acima
+e repetia a moldura que as seções seguintes já têm.
+
+Os ícones saíram do desenho (a referência não os tem), mas continuam
+gravados em cada item: quem administra não perde nada, e voltar a
+desenhá-los é uma linha.
 
 Contexto: secoes.trust.
 {% endcomment %}
-<section class="trust-bar container">
-  <div class="card trust-bar-grid">
-    {% for card in secoes.trust.cards %}
-    <span class="trust-item"><i class="ph {{ card.icon }}" aria-hidden="true"></i>{{ card.title }}</span>
-    {% endfor %}
+{% if secoes.trust.cards %}
+<section class="home-secao home-secao-branca home-secao-selos">
+  <div class="home-largura">
+    <ul class="home-selos">
+      {% for card in secoes.trust.cards %}
+      <li>{{ card.title }}</li>
+      {% endfor %}
+    </ul>
   </div>
 </section>
+{% endif %}
