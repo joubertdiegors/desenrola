@@ -864,3 +864,28 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 }
 .date-input .date-input-open:hover { background: var(--p10); }
 .date-input .date-input-open:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }
+
+/* NO CELULAR O CAMPO INTEIRO ABRE O CALENDARIO
+   ---------------------------------------------
+   No desktop o campo e' para DIGITAR (dd/mm/aaaa com mascara) e o
+   calendario e' o botao do canto. No celular a expectativa e' a
+   inversa: toca-se no campo e o seletor do sistema aparece -- e era
+   exatamente isso que nao acontecia, porque o unico ponto que abria o
+   seletor era um alvo de 40px no canto direito.
+
+   Aqui o proprio `input[type=date]` (invisivel) passa a cobrir o campo
+   todo. O toque cai NELE, e quem abre o calendario e' o navegador, sem
+   depender de `showPicker()` -- que nao existe no Safari do iOS antes
+   da versao 16 e era onde o caminho por JS emudecia.
+
+   `pointer: coarse` e nao so a largura: o que decide e' o dedo, nao o
+   tamanho da janela. Um desktop estreito continua digitavel. */
+@media (pointer: coarse) {
+  .date-input .date-input-picker {
+    right: 0;
+    top: 0;
+    transform: none;
+    width: 100%;
+    height: 100%;
+  }
+}
