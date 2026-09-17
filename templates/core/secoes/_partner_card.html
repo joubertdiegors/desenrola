@@ -1,43 +1,32 @@
 {% comment %}
-Um cartão de parceiro -- só imagem e botão (Bloco B).
+Um cartão de parceiro na HOME -- só a imagem, como na referência visual.
 
-NOME E DESCRIÇÃO CONTINUAM GRAVADOS, SÓ NÃO SÃO DESENHADOS
------------------------------------------------------------
-A referência (modelo 2a) pede um cartão limpo: logomarca e um botão, sem
-nome nem texto explicativo por cima. `parceiro.name` e
-`parceiro.description` continuam na tela de administração e servem de
-`aria-label` -- é o cartão INTEIRO que é o link, e é ele que precisa do
-nome para quem usa leitor de tela, já que não há mais texto visível
-para anunciar.
+O CARTÃO INTEIRO É O LINK
+-------------------------
+A referência desenha um bloco 4:3 com a imagem preenchendo tudo, sem
+nome nem botão por cima. `parceiro.name` continua gravado e serve de
+`aria-label`: é o que anuncia o destino para quem usa leitor de tela,
+já que não há texto visível.
 
-O BOTÃO É UMA CÁPSULA SOBRE O CARTÃO, NÃO UMA FAIXA NO PÉ
-------------------------------------------------------------
-`parte.parceiros_posicao_botao` é um dos nove valores fechados de
-`PageSection.Posicao9` -- a MESMA classe `pos-*` do contador do banner
-(`static/css/layout.css`): nenhuma segunda tabela de posições, nenhuma
-coordenada livre.
+Nome, descrição e o botão "Conheça" aparecem na PÁGINA de parceiros
+(`_partner_card_completo.html`), para onde o "Ver todos" leva -- lá há
+lugar para eles.
 
-SEM DESTINO, O CARTÃO NÃO É UM LINK -- E O BOTÃO NÃO EXISTE
--------------------------------------------------------------
+SEM DESTINO, O CARTÃO NÃO É UM LINK
+-----------------------------------
 Um parceiro sem `url` continua aparecendo (a imagem sozinha ainda
-apresenta a marca), mas a moldura não vira `<a href="#">`: é uma div, e
-não há botão para lugar nenhum.
+apresenta a marca), mas a moldura não vira `<a href="#">`: é uma div.
 
-Contexto: parceiro, parte (`partes.partners`), secoes.partners.cta.
+Contexto: parceiro.
 {% endcomment %}
 {% if parceiro.url %}
-<a class="card partner-card" href="{{ parceiro.url }}" target="_blank" rel="noopener" aria-label="{{ parceiro.name }}">
+<a class="partner-card" href="{{ parceiro.url }}" target="_blank" rel="noopener" aria-label="{{ parceiro.name }}">
 {% else %}
-<div class="card partner-card" aria-label="{{ parceiro.name }}">
+<div class="partner-card" aria-label="{{ parceiro.name }}">
 {% endif %}
-  <div class="partner-media">
-    {% if parceiro.logo %}
-    <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
-    {% else %}
-    <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
-    {% endif %}
-  </div>
-  {% if parceiro.url and secoes.partners.cta %}
-  <span class="partner-botao btn btn-primary pos-{{ parte.parceiros_posicao_botao }}">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>
+  {% if parceiro.logo %}
+  <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+  {% else %}
+  <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
   {% endif %}
 {% if parceiro.url %}</a>{% else %}</div>{% endif %}

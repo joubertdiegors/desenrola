@@ -197,18 +197,19 @@ class TestCabecalho:
 
 
 class TestCartao:
-    def test_o_botao_e_uma_capsula_sobre_o_cartao(self, client):
+    def test_o_cartao_e_so_a_imagem(self, client):
         """
-        Bloco B: nada de faixa de largura inteira no pé -- o botão é uma
-        cápsula posicionada (`partner-botao`), como o cartão da
-        referência pede.
+        A referência visual desenha o cartão da Home como um bloco 4:3
+        só com a imagem: sem botão por cima, sem faixa no pé. O botão
+        vive na página de parceiros.
         """
         criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert "partner-botao btn btn-primary" in html
+        assert "partner-botao" not in html
         assert "btn-block" not in html
+        assert html.count("partner-image") == 2
 
     def test_nome_e_descricao_nao_aparecem_no_cartao(self, client):
         """
@@ -234,7 +235,6 @@ class TestCartao:
 
         html = secao_dos_parceiros(client)
 
-        assert "partner-botao" not in html
         assert "href=" not in html
 
     def test_a_logomarca_nao_e_recortada(self):

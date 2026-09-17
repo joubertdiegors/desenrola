@@ -134,7 +134,6 @@ def _payload_do_editor(**extra):
     base = {
         "idioma": "pt",
         **traducao().content,
-        "parceiros_posicao_botao": secao().partners_button_position,
         "parceiros_ver_todos_ativo": "on",
     }
     base.update(extra)
@@ -208,46 +207,47 @@ class TestUmaFileiraSo:
 
 
 # ===========================================================================
-# 3. O botão -- as nove posições fechadas
+# 3. O cartão da Home é só a imagem
 # ===========================================================================
 
 
-class TestPosicaoDoBotao:
-    def test_o_padrao_e_inferior_centro(self, client):
-        assert secao().partners_button_position == "inferior-centro"
-        criar(1)
+class TestCartaoSoImagem:
+    """
+    A referência visual desenha o cartão da Home como um bloco 4:3 só
+    com a imagem -- sem botão por cima. O botão (e o nome, e a descrição)
+    mora na PÁGINA de parceiros, para onde o "Ver todos" leva.
+    """
 
-        assert "pos-inferior-centro" in secao_dos_parceiros(client)
-
-    @pytest.mark.parametrize("posicao", POSICOES)
-    def test_cada_uma_das_nove_aparece_no_botao(self, client, posicao):
-        criar(1)
-        PageSection.objects.filter(pk=secao().pk).update(partners_button_position=posicao)
+    def test_nao_ha_botao_sobre_o_cartao(self, client):
+        criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert f'partner-botao btn btn-primary pos-{posicao}"' in html
+        assert "partner-botao" not in html
+        assert "pos-inferior-centro" not in html
 
-    @pytest.mark.parametrize("posicao", POSICOES)
-    def test_o_backoffice_grava_a_posicao_escolhida(self, cliente, posicao):
-        cliente.post(url_do_editor(), _payload_do_editor(parceiros_posicao_botao=posicao))
+    def test_o_cartao_inteiro_e_o_link_com_o_nome_no_aria_label(self, client):
+        criar(1)
 
-        assert secao().partners_button_position == posicao
+        html = secao_dos_parceiros(client)
 
-    def test_valor_fora_do_conjunto_e_recusado(self, cliente):
-        cliente.post(
-            url_do_editor(),
-            _payload_do_editor(parceiros_posicao_botao="direita-solta-33px"),
-        )
+        assert 'class="partner-card" href="https://parceiro1.example.com"' in html
+        assert 'aria-label="Parceiro 1"' in html
 
-        assert secao().partners_button_position != "direita-solta-33px"
+    def test_o_backoffice_nao_oferece_mais_a_posicao_do_botao(self, cliente):
+        """
+        Um controle que não muda nada na tela é pior do que controle
+        nenhum. A coluna `partners_button_position` ficou no modelo,
+        sem tela -- a mudança é reversível.
+        """
+        corpo = cliente.get(url_do_editor()).content.decode()
+
+        assert 'name="parceiros_posicao_botao"' not in corpo
 
     def test_a_mesma_classe_do_contador_do_banner(self):
         """
-        Uma segunda tabela de posições seria exatamente a duplicação que
-        o projeto proíbe -- a classe `.pos-<posição>` isolada (a que o
-        botão do parceiro usa) só é DEFINIDA uma vez; o mobile do
-        contador só a referencia, combinada com `.banner-contador`.
+        As nove posições continuam definidas UMA vez (o contador do
+        banner as usa); nenhuma segunda tabela nasceu.
         """
         import re
 
@@ -349,7 +349,6 @@ class TestCasosDoParceiro:
         html = secao_dos_parceiros(client)
 
         assert "img-slot" in html
-        assert "partner-botao" in html
 
 
 # ===========================================================================
@@ -394,16 +393,15 @@ class TestPrevia:
 
         assert 'class="partners-grid"' in html
 
-    def test_a_previa_reflete_a_posicao_ainda_nao_salva(self, cliente):
+    def test_a_previa_reflete_o_titulo_ainda_nao_salvo(self, cliente):
         criar(1)
 
         html = cliente.post(
-            url_da_previa(),
-            _payload_do_editor(parceiros_posicao_botao="superior-direita"),
+            url_da_previa(), _payload_do_editor(title="Título só da prévia")
         ).content.decode()
 
-        assert 'pos-superior-direita"' in html
-        assert secao().partners_button_position != "superior-direita"
+        assert "Título só da prévia" in html
+        assert traducao().content.get("title") != "Título só da prévia"
 
     def test_a_previa_reflete_o_ver_todos_desligado_sem_salvar(self, cliente):
         criar(9)
@@ -417,10 +415,10 @@ class TestPrevia:
 
     def test_previa_e_salvamento_desenham_a_mesma_composicao(self, cliente):
         criar(6)
-        dados = _payload_do_editor(parceiros_posicao_botao="centro")
+        dados = _payload_do_editor(title="Parceiros de confiança")
 
         da_previa = cliente.post(url_da_previa(), dados).content.decode()
         cliente.post(url_do_editor(), dados)
 
-        assert 'pos-centro"' in da_previa
-        assert secao().partners_button_position == "centro"
+        assert "Parceiros de confiança" in da_previa
+        assert traducao().content.get("title") == "Parceiros de confiança"

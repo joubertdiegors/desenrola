@@ -3,20 +3,20 @@
 {% comment %}
 Todos os parceiros -- a página para onde o "Ver todos" da Home leva.
 
-MESMOS DADOS, MESMO CARTÃO
+MESMOS DADOS, MAIS DETALHE
 --------------------------
-`content.Partner`, na mesma ordem da Home, com o MESMO
-`core/secoes/_partner_card.html`. A Home mostra os quatro primeiros
-numa fileira; aqui saem todos, numa grade que quebra em quantas linhas
-precisar -- é justamente o que a Home não faz.
+`content.Partner`, na mesma ordem da Home. A Home mostra os quatro
+primeiros só com a imagem; aqui saem todos, com nome, descrição e o
+botão para o site de cada um (`core/secoes/_partner_card_completo.html`)
+-- a grade quebra em quantas linhas precisar, que é justamente o que a
+Home não faz.
 
 Nenhum cadastro próprio, nenhum texto novo: o título e o texto de apoio
 saem da mesma seção "Nossos Parceiros" do CMS que a Home lê.
 
 Sem parceiro publicado, a view responde 404 antes de chegar aqui.
 
-Contexto: parceiros, secoes.partners, partes, menu_itens,
-blocos_do_rodape.
+Contexto: parceiros, secoes.partners, partes, menu_itens.
 {% endcomment %}
 
 {% block title %}{{ secoes.partners.title|default:_("Parceiros") }} · {{ site_config.name }}{% endblock %}
@@ -26,15 +26,15 @@ blocos_do_rodape.
 {% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
-<section class="home-secao home-secao-branca">
+<section class="home-secao home-secao-branca home-secao-pagina">
   <div class="home-largura">
     <div class="home-pagina-cabeca">
       <h1>{{ secoes.partners.title|default:_("Parceiros") }}</h1>
       {% if secoes.partners.lead %}<p>{{ secoes.partners.lead }}</p>{% endif %}
     </div>
-    <ul class="partners-grid">
+    <ul class="partners-grid partners-grid-completa">
       {% for parceiro in parceiros %}
-      <li class="partner-item">{% include "core/secoes/_partner_card.html" with parte=partes.partners %}</li>
+      <li class="partner-item">{% include "core/secoes/_partner_card_completo.html" %}</li>
       {% endfor %}
     </ul>
   </div>

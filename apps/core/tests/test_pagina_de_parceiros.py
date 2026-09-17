@@ -114,9 +114,11 @@ class TestMesmosDados:
         Partner.objects.create(name="Sem site", order=1, url="")
 
         html = corpo(client)
-        cartao = html[html.index("partner-card") - 40 : html.index("partner-card") + 200]
+        inicio = html.index("partner-card-completo")
+        cartao = html[inicio : html.index("</article>", inicio)]
 
-        assert "<a" not in cartao
+        assert "href=" not in cartao
+        assert "partner-card-link" not in cartao
 
     def test_o_titulo_vem_da_mesma_secao_do_cms(self, client):
         criar(1)

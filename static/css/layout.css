@@ -148,6 +148,8 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
 .home-secao-azul { background: var(--pub-azul); border-top: 1px solid var(--pub-bd); }
 .home-secao-azul + .home-secao-azul { border-top: 0; }
 .home-secao > .home-largura { padding-top: 44px; padding-bottom: 48px; }
+#parceiros > .home-largura { padding-top: 40px; padding-bottom: 40px; }
+#parceiros .home-secao-cabeca { margin-bottom: 16px; }
 
 .home-secao-cabeca {
   display: flex;
@@ -270,10 +272,9 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
    Posicionamento fechado -- nove classes para as nove opcoes de
    `content.models.PageSection.Posicao9`; nao ha coordenada livre.
    Compartilhado por qualquer elemento absoluto sobre um ancestral
-   `position: relative`: o contador do banner (logo abaixo) e o botao do
-   cartao de parceiro (Bloco B, `.partner-botao`, mais adiante neste
-   arquivo). Um SO lugar para as nove posicoes -- nao duas classes
-   iguais criadas em dois pontos do CSS para o mesmo problema.
+   `position: relative` -- hoje, o contador do banner (logo abaixo). Um
+   SO lugar para as nove posicoes -- nao duas classes iguais criadas em
+   dois pontos do CSS para o mesmo problema.
    --------------------------------------------------------------------------- */
 .pos-superior-esquerda { top: 24px; left: 24px; }
 .pos-superior-centro { top: 24px; left: 50%; transform: translateX(-50%); }
@@ -546,20 +547,22 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
   color: inherit;
 }
 .partner-card:hover { color: inherit; border-color: color-mix(in srgb, var(--p) 30%, #fff); }
-.partner-media { position: absolute; inset: 0; }
-.partner-image { height: 100%; width: 100%; }
+.partner-image { display: block; width: 100%; height: 100%; }
+/* `contain`, e nao `cover`: o que esta cadastrado e' LOGOMARCA, e
+   recorta-la cortaria o nome da empresa (decisao registrada em
+   `test_parceiros_modelo_2a`). O respiro interno e' o que a marca
+   precisa para nao encostar na moldura. */
 img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; }
-/* O botao e uma capsula SOBRE o cartao -- nao uma faixa no pe. Reusa as
-   nove classes `.pos-*` do contador do banner (mesmo arquivo, acima):
-   a mesma posicao fechada, o mesmo CSS, nenhuma coordenada livre.
-   Em branco no CMS, ele nao existe e o cartao fica so com a marca --
-   que e o desenho da referencia. */
-.partner-botao {
-  position: absolute;
-  z-index: 1;
-  max-width: calc(100% - 24px);
-  box-shadow: var(--shadow-card);
-}
+/* Na PAGINA de parceiros o cartao ganha corpo: nome, descricao e o link
+   para o site, abaixo da mesma imagem 4:3 da Home. */
+.partner-card-completo { aspect-ratio: auto; display: flex; flex-direction: column; height: 100%; }
+.partner-card-imagem { position: relative; aspect-ratio: 4 / 3; border-bottom: 1px solid var(--pub-bd); }
+.partner-card-imagem .partner-image { position: absolute; inset: 0; }
+.partner-card-corpo { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; }
+.partner-card-nome { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.partner-card-descricao { font-size: 13.5px; line-height: 1.5; color: var(--mu); }
+.partner-card-link { font-size: 13.5px; margin-top: 2px; }
+.home-secao-pagina > .home-largura { padding-top: 40px; padding-bottom: 56px; }
 
 /* COMO FUNCIONA -- tres cartoes numerados. */
 .how-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -797,6 +800,7 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   .partners-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: none; }
   .partners-grid-1 { grid-template-columns: minmax(0, 1fr); }
   .partner-card { aspect-ratio: 1 / 1; }
+  .partner-card-completo { aspect-ratio: auto; }
   img.partner-image { padding: 16px; }
 
   /* CADA PASSO DEITADO: numero a esquerda, texto a direita.

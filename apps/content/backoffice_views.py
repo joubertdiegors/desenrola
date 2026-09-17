@@ -427,9 +427,7 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=No
         contador_ao_vivo_ativo=bool(
             _proposto_ou_atual("contador_ao_vivo_ativo", "contador_ao_vivo_ativo")
         ),
-        parceiros_posicao_botao=_proposto_ou_atual(
-            "parceiros_posicao_botao", "parceiros_posicao_botao"
-        ),
+        parceiros_posicao_botao=parte.parceiros_posicao_botao,
         parceiros_ver_todos_ativo=bool(
             _proposto_ou_atual("parceiros_ver_todos_ativo", "parceiros_ver_todos_ativo")
         ),

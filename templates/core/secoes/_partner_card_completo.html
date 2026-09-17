@@ -1,0 +1,32 @@
+{% load i18n %}{% comment %}
+Um cartão de parceiro na PÁGINA de parceiros -- com tudo o que está
+cadastrado.
+
+A Home mostra só a imagem (ver `_partner_card.html`); aqui há lugar
+para o nome, a descrição e o botão. Mesma moldura, mesma proporção da
+imagem, mesmos dados: um `Partner`, nenhuma cópia.
+
+O BOTÃO SÓ EXISTE COM DESTINO
+-----------------------------
+Sem `url` o cartão apresenta a marca e a descrição, e não oferece um
+botão para lugar nenhum. O texto do botão vem do CMS
+(`secoes.partners.cta`); em branco, sai "Conheça".
+
+Contexto: parceiro, secoes.partners.cta.
+{% endcomment %}
+<article class="partner-card partner-card-completo">
+  <div class="partner-card-imagem">
+    {% if parceiro.logo %}
+    <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
+    {% else %}
+    <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+    {% endif %}
+  </div>
+  <div class="partner-card-corpo">
+    <h2 class="partner-card-nome">{{ parceiro.name }}</h2>
+    {% if parceiro.description %}<p class="partner-card-descricao">{{ parceiro.description }}</p>{% endif %}
+    {% if parceiro.url %}
+    <a class="home-link-forte partner-card-link" href="{{ parceiro.url }}" target="_blank" rel="noopener">{{ secoes.partners.cta|default:_("Conheça") }} <span aria-hidden="true">→</span></a>
+    {% endif %}
+  </div>
+</article>

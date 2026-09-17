@@ -71,11 +71,13 @@ class ParteDaPagina:
     # conteúdo. Valem em qualquer idioma, e por isso não moram em
     # `conteudo`. Ver os campos equivalentes em `PageSection`.
     #
-    # `partners_carousel_enabled` e `partners_carousel_controls_enabled`
-    # continuam no modelo, com os valores gravados, mas não são lidos:
-    # a Home passou a mostrar uma fileira de quatro e o "Ver todos", sem
-    # carrossel (ver `core/secoes/partners.html`). As colunas ficaram
-    # para que a mudança seja reversível sem perder configuração.
+    # `partners_carousel_enabled`, `partners_carousel_controls_enabled` e
+    # `partners_button_position` continuam no modelo, com os valores
+    # gravados, mas não são lidos: a Home passou a mostrar uma fileira de
+    # quatro cartões só com a imagem e o "Ver todos" -- sem carrossel e
+    # sem botão posicionado sobre o cartão (ver `core/secoes/partners.html`
+    # e `_partner_card.html`). As colunas ficaram para que a mudança seja
+    # reversível sem perder configuração.
     contador_ativo: bool = False
     contador_posicao: str = PageSection.Posicao9.SUPERIOR_ESQUERDA
     contador_ao_vivo_ativo: bool = True

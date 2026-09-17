@@ -75,7 +75,6 @@ class FormularioDeSecao(forms.Form):
         "contador_ativo",
         "contador_posicao",
         "contador_ao_vivo_ativo",
-        "parceiros_posicao_botao",
         "parceiros_ver_todos_ativo",
     )
 
@@ -167,13 +166,9 @@ class FormularioDeSecao(forms.Form):
             )
 
         if declarada.cartoes_com_botao:
-            self.fields["parceiros_posicao_botao"] = forms.ChoiceField(
-                label=_("Posição do botão no cartão"),
-                required=False,
-                initial=secao.partners_button_position,
-                choices=PageSection.Posicao9.choices,
-                widget=forms.Select(attrs={"class": "input"}),
-            )
+            # O cartao da Home passou a ser so a imagem (referencia visual);
+            # o botao com posicao livre nao existe mais nele. A coluna
+            # `partners_button_position` ficou no modelo, sem controle.
             self.fields["parceiros_ver_todos_ativo"] = forms.BooleanField(
                 label=_("Botão \"Ver todos os parceiros\""),
                 required=False,
@@ -270,14 +265,6 @@ class FormularioDeSecao(forms.Form):
             if secao.counter_live_enabled != ao_vivo:
                 secao.counter_live_enabled = ao_vivo
                 mudou.append("counter_live_enabled")
-        if "parceiros_posicao_botao" in self.fields:
-            posicao = (
-                self.cleaned_data.get("parceiros_posicao_botao")
-                or PageSection.Posicao9.INFERIOR_CENTRO
-            )
-            if secao.partners_button_position != posicao:
-                secao.partners_button_position = posicao
-                mudou.append("partners_button_position")
         if "parceiros_ver_todos_ativo" in self.fields:
             ativo = bool(self.cleaned_data.get("parceiros_ver_todos_ativo"))
             if secao.partners_view_all_enabled != ativo:

@@ -160,16 +160,16 @@ class TestOEditorOferece:
 
     def test_parceiros_oferece_o_cartao_sem_layout_nem_imagem(self, cliente):
         """
-        "partners" não tem desenho nem imagem próprios, mas desde o
-        Bloco B tem botão e carrossel -- o cartão aparece por causa
-        deles, não dos dois campos que este grupo de testes cobre.
+        "partners" não tem desenho nem imagem próprios, mas tem o
+        interruptor do "Ver todos" -- o cartão aparece por causa dele,
+        não dos dois campos que este grupo de testes cobre.
         """
         corpo = cliente.get(url_do_editor("partners")).content.decode()
 
         assert 'name="layout"' not in corpo
         assert 'name="imagem"' not in corpo
         assert "Desenho e imagem" in corpo
-        assert 'name="parceiros_posicao_botao"' in corpo
+        assert 'name="parceiros_ver_todos_ativo"' in corpo
 
     def test_imagem_desativada_nao_e_oferecida(self, cliente, imagem):
         morta = Asset.objects.create(kind=Asset.Kind.HOME, file=_gif("m.gif"), is_active=False)
