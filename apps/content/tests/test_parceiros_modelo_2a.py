@@ -197,17 +197,17 @@ class TestCabecalho:
 
 
 class TestCartao:
-    def test_o_cartao_e_so_a_imagem(self, client):
+    def test_o_cartao_e_a_imagem_e_a_capsula(self, client):
         """
-        A referência visual desenha o cartão da Home como um bloco 4:3
-        só com a imagem: sem botão por cima, sem faixa no pé. O botão
-        vive na página de parceiros.
+        O cartão da Home é um bloco 4:3 com a imagem e uma cápsula num
+        canto ("Home 2.0") -- nunca uma faixa de largura inteira no pé,
+        que foi o desenho que esta suíte tirou do projeto.
         """
         criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert "partner-botao" not in html
+        assert html.count("partner-botao") == 2
         assert "btn-block" not in html
         assert html.count("partner-image") == 2
 

@@ -99,6 +99,9 @@ class TestConteudoDoSnapshot:
         copia = DocumentTemplate.objects.create(
             type=tipo, name="Cópia", slug="copia-de-teste", language="fr",
             duplicated_from=modelo,
+            # Inativa: `modelo` ocupa o lugar do francês. A fotografia
+            # não pergunta se o modelo está em uso.
+            is_active=False,
         )
 
         estrutura = snapshot.build_snapshot(copia)

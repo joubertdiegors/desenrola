@@ -25,7 +25,7 @@ pytestmark = pytest.mark.django_db
 def _modelos_oficiais_prontos(modelos_oficiais_prontos):
     """
     Os quatro modelos oficiais com o logo materializado -- sem eles
-    `official_document_template()` devolve `None` e o assistente
+    `active_document_template()` devolve `None` e o assistente
     recusa criar carta nenhuma (e esta certo: seria uma carta que
     nao viraria PDF).
     """
@@ -445,7 +445,7 @@ class TestPlaceholderDoPassaporte:
         from apps.doctemplates.schema import resolve_field_text
         from apps.letters import services as svc
 
-        modelo = svc.official_document_template(idioma)
+        modelo = svc.active_document_template(idioma)
         campo = next(
             f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )
@@ -459,7 +459,7 @@ class TestPlaceholderDoPassaporte:
         """
         from apps.letters import services as svc
 
-        modelo = svc.official_document_template("fr")
+        modelo = svc.active_document_template("fr")
         campo = next(
             f for f in modelo.field_schema["fields"] if f["key"] == "guest_passport"
         )

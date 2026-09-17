@@ -213,18 +213,43 @@ class TestUmaFileiraSo:
 
 class TestCartaoSoImagem:
     """
-    A referência visual desenha o cartão da Home como um bloco 4:3 só
-    com a imagem -- sem botão por cima. O botão (e o nome, e a descrição)
-    mora na PÁGINA de parceiros, para onde o "Ver todos" leva.
+    O cartão da Home é um bloco 4:3 com a imagem e uma cápsula num
+    canto -- o desenho do arquivo "Home 2.0". Nome e descrição
+    continuam só na PÁGINA de parceiros, para onde o "Ver todos" leva.
     """
 
-    def test_nao_ha_botao_sobre_o_cartao(self, client):
+    def test_o_botao_aparece_sobre_o_cartao(self, client):
         criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert "partner-botao" not in html
-        assert "pos-inferior-centro" not in html
+        assert "partner-botao" in html
+        assert "pos-inferior-centro" in html
+
+    def test_o_botao_e_um_span_e_nao_uma_segunda_ancora(self, client):
+        """
+        O cartão INTEIRO já é o link: uma âncora dentro de outra não
+        existe em HTML, e um `href="#"` para disfarçar seria um botão
+        que não leva a lugar nenhum.
+        """
+        criar(1)
+
+        html = secao_dos_parceiros(client)
+
+        assert '<span class="partner-botao' in html
+        assert 'href="#"' not in html
+
+    def test_sem_texto_no_cms_o_botao_nao_existe(self, client):
+        criar(1)
+        escrever(cta="")
+
+        assert "partner-botao" not in secao_dos_parceiros(client)
+
+    def test_o_texto_do_botao_vem_do_cms(self, client):
+        criar(1)
+        escrever(cta="Ver parceiro")
+
+        assert "Ver parceiro" in secao_dos_parceiros(client)
 
     def test_o_cartao_inteiro_e_o_link_com_o_nome_no_aria_label(self, client):
         criar(1)
@@ -234,20 +259,22 @@ class TestCartaoSoImagem:
         assert 'class="partner-card" href="https://parceiro1.example.com"' in html
         assert 'aria-label="Parceiro 1"' in html
 
-    def test_o_backoffice_nao_oferece_mais_a_posicao_do_botao(self, cliente):
+    def test_o_backoffice_oferece_a_posicao_do_botao(self, cliente):
         """
-        Um controle que não muda nada na tela é pior do que controle
-        nenhum. A coluna `partners_button_position` ficou no modelo,
-        sem tela -- a mudança é reversível.
+        O botão voltou ao cartão, e com ele o controle: a coluna
+        `partners_button_position` nunca saiu do modelo, então o que
+        estava gravado continua valendo.
         """
         corpo = cliente.get(url_do_editor()).content.decode()
 
-        assert 'name="parceiros_posicao_botao"' not in corpo
+        assert 'name="parceiros_posicao_botao"' in corpo
 
     def test_a_mesma_classe_do_contador_do_banner(self):
         """
-        As nove posições continuam definidas UMA vez (o contador do
-        banner as usa); nenhuma segunda tabela nasceu.
+        As nove posições continuam definidas UMA vez -- o contador do
+        banner e o botão do cartão usam as mesmas. O afastamento da
+        borda é um parâmetro (`--pos-respiro`), não uma segunda tabela:
+        o cartão é pequeno e pede 8px onde a faixa pede 24px.
         """
         import re
 

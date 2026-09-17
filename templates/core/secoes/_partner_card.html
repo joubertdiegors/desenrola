@@ -1,23 +1,31 @@
 {% comment %}
-Um cartão de parceiro na HOME -- só a imagem, como na referência visual.
+Um cartão de parceiro na HOME -- a imagem e o botão, como no arquivo
+de referência "Home 2.0".
 
-O CARTÃO INTEIRO É O LINK
--------------------------
-A referência desenha um bloco 4:3 com a imagem preenchendo tudo, sem
-nome nem botão por cima. `parceiro.name` continua gravado e serve de
-`aria-label`: é o que anuncia o destino para quem usa leitor de tela,
-já que não há texto visível.
+O CARTÃO INTEIRO É O LINK, E O BOTÃO É UMA CÁPSULA SOBRE ELE
+-------------------------------------------------------------
+A referência desenha um bloco 4:3 com a imagem preenchendo tudo e uma
+cápsula ("Ver parceiro →") num canto. A cápsula é um `<span>`, não uma
+âncora: o cartão inteiro já é o link, e link dentro de link não existe
+em HTML. `parceiro.name` continua no `aria-label` do cartão -- é ele
+que anuncia o destino para quem usa leitor de tela.
 
-Nome, descrição e o botão "Conheça" aparecem na PÁGINA de parceiros
+O texto da cápsula vem do CMS (`secoes.partners.cta`) e a posição de
+`parte.parceiros_posicao_botao` -- um dos nove valores fechados de
+`PageSection.Posicao9`, as MESMAS classes `pos-*` do contador do
+banner. Nenhuma coordenada livre, nenhuma segunda tabela de posições.
+
+Nome e descrição aparecem na PÁGINA de parceiros
 (`_partner_card_completo.html`), para onde o "Ver todos" leva -- lá há
 lugar para eles.
 
-SEM DESTINO, O CARTÃO NÃO É UM LINK
------------------------------------
+SEM DESTINO, O CARTÃO NÃO É UM LINK -- E NÃO TEM BOTÃO
+-------------------------------------------------------
 Um parceiro sem `url` continua aparecendo (a imagem sozinha ainda
-apresenta a marca), mas a moldura não vira `<a href="#">`: é uma div.
+apresenta a marca), mas a moldura não vira `<a href="#">`: é uma div, e
+sem botão para lugar nenhum. Sem texto no CMS, idem.
 
-Contexto: parceiro.
+Contexto: parceiro, parte (`partes.partners`), secoes.partners.cta.
 {% endcomment %}
 {% if parceiro.url %}
 <a class="partner-card" href="{{ parceiro.url }}" target="_blank" rel="noopener" aria-label="{{ parceiro.name }}">
@@ -28,5 +36,8 @@ Contexto: parceiro.
   <img class="partner-image" src="{{ parceiro.logo.file.url }}" alt="{{ parceiro.logo.alt_text|default:parceiro.name }}">
   {% else %}
   <div class="img-slot partner-image" aria-hidden="true"><i class="ph ph-image" aria-hidden="true"></i></div>
+  {% endif %}
+  {% if parceiro.url and secoes.partners.cta %}
+  <span class="partner-botao btn btn-primary pos-{{ parte.parceiros_posicao_botao }}">{{ secoes.partners.cta }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></span>
   {% endif %}
 {% if parceiro.url %}</a>{% else %}</div>{% endif %}

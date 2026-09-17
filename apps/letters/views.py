@@ -130,7 +130,7 @@ def start(request):
     """
     language = services.idioma_padrao_da_carta()
     try:
-        document_template = services.official_document_template(language)
+        document_template = services.active_document_template(language)
     except DefaultDocumentTemplateMissingError:
         return _biblioteca_quebrada(request)
     if document_template is None:

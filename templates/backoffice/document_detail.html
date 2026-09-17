@@ -21,12 +21,20 @@ para ele, e desativar resolve o caso real sem perder histórico.
   </div>
   <span class="push"></span>
   {% if modelo.is_system %}<span class="tag tag-primary">{% translate "Oficial" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Personalizado" %}</span>{% endif %}
-  {% if modelo.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
+  {% comment %}
+  Três situações, como na biblioteca: ativo (em uso), rascunho (ligado,
+  mas o desenho ainda não serve -- o assistente recusa) e inativo.
+  {% endcomment %}
+  {% if situacao == "ativo" %}<span class="tag tag-success">{% translate "Ativo" %}</span>
+  {% elif situacao == "rascunho" %}<span class="tag tag-warning" title="{% translate 'Ligado, mas o desenho ainda não pode ser usado.' %}">{% translate "Rascunho" %}</span>
+  {% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
   <a class="btn btn-ghost" href="{% url 'backoffice:document_library' %}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Biblioteca" %}</a>
 </div>
 
 {% if not modelo.is_active %}
-<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Modelo desativado: não é usado em cartas novas. As cartas já emitidas continuam intactas." %}</span></div>
+<div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Modelo desativado: não é usado em cartas novas. As cartas já emitidas continuam intactas." %}{% if em_uso_no_idioma %} {% blocktranslate with nome=em_uso_no_idioma.name idioma=modelo.get_language_display %}Quem está em uso em {{ idioma }} é "{{ nome }}".{% endblocktranslate %}{% endif %}</span></div>
+{% elif situacao == "rascunho" %}
+<div class="notice"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Este modelo está ligado, mas o desenho ainda não pode ser usado: falta o layout ou alguma imagem que ele referencia. O assistente não emite cartas com ele." %}</span></div>
 {% endif %}
 
 <div class="bo-panel">
@@ -123,7 +131,11 @@ para ele, e desativar resolve o caso real sem perder histórico.
     </form>
 
     <form method="post" action="{% url 'backoffice:document_library_activation' modelo.pk %}"
-          onsubmit="return confirm('{% if modelo.is_active %}{% translate "Desativar este modelo? Ele deixa de ser usado em cartas novas." %}{% else %}{% translate "Ativar este modelo?" %}{% endif %}');">
+          {% comment %}
+          A pergunta diz a consequência inteira: ativar é uma TROCA, e
+          quem sai do ar aparece pelo nome.
+          {% endcomment %}
+          onsubmit="return confirm('{% if modelo.is_active %}{% blocktranslate with idioma=modelo.get_language_display %}Desativar este modelo? {{ idioma }} fica sem modelo em uso e o assistente deixa de oferecer o idioma em cartas novas.{% endblocktranslate %}{% elif em_uso_no_idioma %}{% blocktranslate with nome=em_uso_no_idioma.name %}Ativar este modelo? &quot;{{ nome }}&quot; será desativado, e as cartas novas passam a sair por este.{% endblocktranslate %}{% else %}{% blocktranslate with idioma=modelo.get_language_display %}Ativar este modelo? Ele passa a ser o documento usado em {{ idioma }}.{% endblocktranslate %}{% endif %}');">
       {% csrf_token %}
       <input type="hidden" name="ativo" value="{% if modelo.is_active %}0{% else %}1{% endif %}">
       {% if modelo.is_active %}

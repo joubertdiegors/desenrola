@@ -11,6 +11,15 @@ e `layout` da origem -- e com `duplicated_from` apontando para ela, so
 como linhagem. A partir dai as duas vivem separadas: nada que se faca na
 copia alcanca a origem, e vice-versa.
 
+A COPIA NASCE INATIVA
+---------------------
+Cada idioma tem UM modelo ativo (ver `services/ativacao.py`), e e ele
+que o assistente usa. Se a copia nascesse ativa, duplicar um modelo
+trocaria, sozinho, o documento que sai na proxima carta -- e o banco
+nem deixaria, porque o indice parcial recusa o segundo ativo do mesmo
+idioma. Entao a copia nasce fora de uso: existe, abre no editor, e so
+entra em producao quando alguem a ativa de proposito.
+
 INDEPENDENCIA DE VERDADE
 ------------------------
 `field_schema` e `layout` sao dicionarios aninhados. Uma copia rasa
@@ -93,7 +102,8 @@ def duplicar_modelo(origem, nome, created_by=None):
             duplicated_from=origem,
             field_schema=deepcopy(origem.field_schema),
             layout=deepcopy(origem.layout),
-            is_active=True,
+            # Fora de uso ate que alguem a ative (ver o cabecalho).
+            is_active=False,
             created_by=created_by,
         )
         copia.full_clean()

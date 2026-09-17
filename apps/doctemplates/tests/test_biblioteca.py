@@ -152,15 +152,20 @@ class TestDocumentTemplateCriacao:
         assert (m.is_system, m.is_locked) == (True, True)
 
     def test_duplicated_from_aceita_outro_modelo(self, modelo, tipo):
+        # Inativa: `modelo` já é o ativo deste (tipo, idioma), e dois
+        # ativos do mesmo idioma o banco recusa. Aqui só a linhagem
+        # importa.
         copia = DocumentTemplate.objects.create(
-            type=tipo, name="Cópia", slug="copia", language="pt", duplicated_from=modelo
+            type=tipo, name="Cópia", slug="copia", language="pt", duplicated_from=modelo,
+            is_active=False,
         )
         assert copia.duplicated_from == modelo
         assert list(modelo.duplicates.all()) == [copia]
 
     def test_apagar_a_origem_nao_arrasta_a_copia(self, modelo, tipo):
         copia = DocumentTemplate.objects.create(
-            type=tipo, name="Cópia", slug="copia", language="pt", duplicated_from=modelo
+            type=tipo, name="Cópia", slug="copia", language="pt", duplicated_from=modelo,
+            is_active=False,
         )
         modelo.delete()
         copia.refresh_from_db()

@@ -9,13 +9,18 @@ regra que a produziu: se alguém voltar a pôr três colunas de cartão num
 celular, ou a esconder um botão por CSS, o teste cai e diz por quê. É
 uma trava sobre uma decisão tomada olhando a tela, não uma medição.
 
-A CONTA DE 89 PIXELS
+A CONTA DE 95 PIXELS
 --------------------
 390px de tela, menos 2×20px de respiro lateral da seção, dividido por
-três colunas com 8px de intervalo, menos 2×10px de `padding` do cartão:
-sobram 89px de largura útil -- sete caracteres por linha. Coube sem
-rolagem horizontal nenhuma, e por isso passou despercebido até alguém
-abrir a página.
+três colunas com 8px de intervalo, menos 2×8px de `padding` do cartão:
+sobram 95px de largura útil. É a medida do arquivo de referência "Home
+2.0" (2b), que desenha os três passos lado a lado no celular com
+cartão compacto: ícone de 30px acima do título e tipografia de 12px.
+
+Antes esta trava guardava o oposto -- uma coluna --, decidido quando o
+cartão tinha 10px de respiro e texto de 15,5px, e três colunas deixavam
+sete caracteres por linha. O que continua valendo é o motivo da trava:
+mexer nessas medidas sem olhar a tela derruba o teste.
 """
 
 import pathlib
@@ -36,28 +41,41 @@ def regras_do_celular(trecho):
 
 class TestComoFuncionaNoCelular:
     """
-    Os passos do "Como funciona" deitam no celular, em uma coluna.
+    Os três passos ficam lado a lado no celular -- compactos, como a
+    referência 2b desenha.
     """
 
-    def test_uma_coluna(self):
+    def test_as_tres_colunas_continuam(self):
+        """A grade do desktop vale no celular; o que muda são as medidas."""
         regra = regras_do_celular(".how-grid")
 
-        assert ".how-grid { grid-template-columns: minmax(0, 1fr)" in regra
+        # O bloco do celular NAO redefine as colunas do "Como funciona":
+        # so aperta o intervalo. As tres do desktop seguem valendo.
+        assert ".how-grid { grid-template-columns" not in regra
+        assert ".how-grid { gap: 8px" in regra
 
-    def test_nao_voltam_as_tres_colunas(self):
-        regra = regras_do_celular(".how-grid")
-
-        assert "repeat(3" not in regra
-
-    def test_o_cartao_deita(self):
+    def test_o_cartao_encolhe_em_vez_de_deitar(self):
         regra = regras_do_celular(".how-card {")
 
-        assert "flex-direction: row" in regra
+        assert "padding: 14px 8px 16px" in regra
+        assert "flex-direction: row" not in regra
+
+    def test_o_icone_sobe_para_cima_do_titulo(self):
+        """
+        Lado a lado, ícone e título não caberiam em 95px: no celular a
+        referência empilha os dois.
+        """
+        regra = regras_do_celular(".how-card-topo")
+
+        assert "flex-direction: column" in regra
+
+    def test_a_tipografia_encolhe_junto(self):
+        regra = regras_do_celular(".how-card-topo b")
+
+        assert "font-size: 12.5px" in regra
 
     def test_o_texto_tem_um_bloco_proprio(self):
-        """Sem ele, título e parágrafo virariam colunas ao lado do ícone."""
-        from django.template.loader import render_to_string  # noqa: F401
-
+        """Sem ele, a descrição colaria no título."""
         template = pathlib.Path("templates/core/secoes/how.html").read_text(
             encoding="utf-8"
         )

@@ -113,6 +113,12 @@ urlpatterns = [
         doc_library_views.document_library_duplicate,
         name="document_library_duplicate",
     ),
+    # O PDF do modelo gravado -- a janela "visualizar" da biblioteca.
+    path(
+        "modelos/<int:pk>/documento.pdf",
+        doc_library_views.document_preview,
+        name="document_preview",
+    ),
     path(
         "modelos/<int:pk>/situacao/",
         doc_library_views.document_library_activation,

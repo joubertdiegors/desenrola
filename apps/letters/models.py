@@ -91,7 +91,7 @@ class Letter(TimeStampedModel):
     snapshot = models.JSONField(_("snapshot da geração"), default=dict, blank=True)
 
     # O modelo oficial que esta carta usa. Resolvido pelo IDIOMA, em
-    # `services.official_document_template()` -- nunca escolhido pelo
+    # `services.active_document_template()` -- nunca escolhido pelo
     # cliente.
     #
     # Pode ser trocado enquanto a carta ainda nao tem snapshot capturado
@@ -231,7 +231,7 @@ class LetterRenderError(RuntimeError):
 class DefaultDocumentTemplateMissingError(RuntimeError):
     """
     O modelo estrutural oficial do idioma pedido nao existe ou esta
-    inativo -- levantado por `services.official_document_template()`.
+    inativo -- levantado por `services.active_document_template()`.
 
     A migration de semeadura (`doctemplates.0010`) sempre cria os quatro
     oficiais (`carta-convite-fr/nl/en/pt`), todos ativos: chegar aqui

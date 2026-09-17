@@ -46,18 +46,20 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
   Indicadores navegáveis: uma etapa alcançável vira link; as demais ficam
   inertes. Quem manda de verdade é o servidor (services.blocking_step_before),
   isto aqui só evita oferecer um caminho que seria recusado.
+
+  O NOME DA ETAPA NÃO É DESENHADO -- MAS CONTINUA SENDO LIDO
+  ----------------------------------------------------------
+  A fileira de nomes abaixo dos indicadores saiu: o topo mostra o
+  check dos concluídos e o número do atual e dos futuros, e só. O nome
+  acompanha cada indicador para quem usa leitor de tela -- no
+  `aria-label`, quando é link; como texto visualmente oculto, quando é
+  um `<span>`. `{% templatetag openblock %} cycle {% templatetag closeblock %}`
+  anda junto com o laço, então os seis nomes continuam escritos uma vez
+  só, na ordem das etapas.
   {% endcomment %}
   <nav class="stepper" aria-label="{% translate 'Etapas' %}">
-    {% for n in steps %}{% if n in reachable_steps and n != step %}<a class="step-dot{% if n < step %} is-done{% endif %}" href="{% url 'letters:step' letter_uuid=letter.uuid step=n %}" aria-label="{% blocktranslate %}Ir para a etapa {{ n }}{% endblocktranslate %}">{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}</a>{% else %}<span class="step-dot{% if n < step %} is-done{% elif n == step %} is-current{% endif %}"{% if n == step %} aria-current="step"{% endif %}>{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}</span>{% endif %}{% if not forloop.last %}<span class="step-line{% if n < step %} is-done{% endif %}" aria-hidden="true"></span>{% endif %}{% endfor %}
+    {% for n in steps %}{% cycle _("Convidado") _("Viagem") _("Anfitrião") _("Avisos") _("Idioma") _("Revisão") as nome_da_etapa silent %}{% if n in reachable_steps and n != step %}<a class="step-dot{% if n < step %} is-done{% endif %}" href="{% url 'letters:step' letter_uuid=letter.uuid step=n %}" aria-label="{% blocktranslate with nome=nome_da_etapa %}Ir para a etapa {{ n }}: {{ nome }}{% endblocktranslate %}">{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}</a>{% else %}<span class="step-dot{% if n < step %} is-done{% elif n == step %} is-current{% endif %}"{% if n == step %} aria-current="step"{% endif %}>{% if n < step %}<i class="ph-bold ph-check" aria-hidden="true"></i>{% else %}{{ n }}{% endif %}<span class="visually-hidden">{{ nome_da_etapa }}</span></span>{% endif %}{% if not forloop.last %}<span class="step-line{% if n < step %} is-done{% endif %}" aria-hidden="true"></span>{% endif %}{% endfor %}
   </nav>
-  <div class="step-labels d-only">
-    <span{% if step == 1 %} class="is-current"{% endif %}>{% translate "Convidado" %}</span>
-    <span{% if step == 2 %} class="is-current"{% endif %}>{% translate "Viagem" %}</span>
-    <span{% if step == 3 %} class="is-current"{% endif %}>{% translate "Anfitrião" %}</span>
-    <span{% if step == 4 %} class="is-current"{% endif %}>{% translate "Avisos" %}</span>
-    <span{% if step == 5 %} class="is-current"{% endif %}>{% translate "Idioma" %}</span>
-    <span{% if step == 6 %} class="is-current"{% endif %}>{% translate "Revisão" %}</span>
-  </div>
 
   <h1>{{ step_info.title }}</h1>
   <p class="wizard-lead">{{ step_info.hint }}</p>
@@ -165,11 +167,11 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
         <label>{% translate "Nome completo do anfitrião" %}</label>
         <div class="input is-readonly">{{ user.full_name|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div>
       </div>
-      <div class="field span-2"><label>{% translate "Endereço completo na Bélgica" %}</label><div class="input is-readonly">{{ user.get_address_display|default:"—" }}</div></div>
-      <div class="field"><label>{% translate "Número de telefone" %}</label><div class="input is-readonly">{{ user.phone|default:"—" }}</div></div>
-      <div class="field"><label>{% translate "Data de nascimento" %}</label><div class="input is-readonly">{{ user.birth_date|date:"d/m/Y"|default:"—" }}</div></div>
-      <div class="field"><label>{% translate "Nacionalidade" %}</label><div class="input is-readonly">{{ user.nationality|default:"—" }}</div></div>
-      <div class="field"><label>{% translate "Número do documento de identidade" %}</label><div class="input is-readonly">{{ user.document_number|default:"—" }}</div></div>
+      <div class="field span-2"><label>{% translate "Endereço completo na Bélgica" %}</label><div class="input is-readonly">{{ user.get_address_display|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div></div>
+      <div class="field"><label>{% translate "Número de telefone" %}</label><div class="input is-readonly">{{ user.phone|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div></div>
+      <div class="field"><label>{% translate "Data de nascimento" %}</label><div class="input is-readonly">{{ user.birth_date|date:"d/m/Y"|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div></div>
+      <div class="field"><label>{% translate "Nacionalidade" %}</label><div class="input is-readonly">{{ user.nationality|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div></div>
+      <div class="field"><label>{% translate "Número do documento de identidade" %}</label><div class="input is-readonly">{{ user.document_number|default:"—" }}<i class="ph ph-lock-simple input-icon" aria-hidden="true"></i></div></div>
       {% comment %}
       Última parada antes de confirmar: se algo acima estiver errado, é
       daqui que a pessoa sai para corrigir -- e volta para esta mesma

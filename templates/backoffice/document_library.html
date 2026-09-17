@@ -1,132 +1,409 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
-Administração · Modelos -- a biblioteca real dos DocumentTemplate.
+Administração · Modelos -- a biblioteca real dos `DocumentTemplate`.
 
-Contexto: modelos (a página atual), pagina, querystring, total,
-pode_administrar, tipos, idiomas, filtros.
+A tela é a do arquivo de referência "Tabela de modelos.html": cabeçalho
+com contagem e descrição, cartão único com a barra de filtros fundida ao
+topo, tabela em grade de sete colunas, rodapé com o resumo. As janelas
+sobrepostas (visualizar e detalhes) são as do mesmo arquivo.
 
-Todos os filtros são resolvidos no BANCO (ver `library_views`); este
-template só apresenta.
+Contexto: modelos (a página atual), pagina, querystring, total, ativos,
+ultima_alteracao, pode_administrar, tipos, idiomas, bases, filtros,
+tem_filtro, filtros_situacao, filtros_pilula, url_limpar, url_sem_busca.
 
-Três estados, três pares -- e nada além disso, para a linha continuar
-legível: Ativo/Inativo · Oficial/Personalizado · Editável/Bloqueado.
+TUDO O QUE APARECE AQUI É DADO REAL
+-----------------------------------
+Situação, natureza, edição, contagem de campos, elementos, cópias e
+cartas vêm da view (que os calcula uma vez, para a lista inteira) --
+este template não percorre JSON nem conta nada.
 
-Não há exclusão: a ação sobre um modelo que não serve mais é desativar.
+OS FILTROS SÃO LINKS
+--------------------
+Cada um monta a URL desta mesma tela com um filtro trocado e o resto
+preservado (`_url_de_filtro`, na view). Funcionam sem JavaScript; a
+busca é o único formulário, e ela leva os demais filtros escondidos
+para não perdê-los ao buscar.
+
+O QUE A REFERÊNCIA MOSTRA E ESTA TELA NÃO TEM
+---------------------------------------------
+"Excluir" não existe na arquitetura: um modelo pode ter cartas
+apontando para ele (PROTECT) e a ação sobre o que não serve mais é
+desativar -- o que preserva o histórico. "Importar" e o histórico de
+alterações por pessoa também não existem: não há de onde tirá-los, e
+botão que não faz nada é pior do que botão nenhum.
 {% endcomment %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/biblioteca-modelos.css' %}">{% endblock %}
+
 {% block bo_main %}
-<div class="bo-head">
-  <h1 class="d-only">{% translate "Modelos" %}</h1>
-  <span class="count d-only">{{ total }}</span>
-</div>
+<div class="mod">
 
-<form class="card bo-filtros" method="get">
-  <div class="field bo-filtros-busca">
-    <label for="f-busca">{% translate "Buscar" %}</label>
-    <input class="input" id="f-busca" type="search" name="q" value="{{ filtros.q }}"
-           placeholder="{% translate 'Nome ou identificador' %}">
-  </div>
-  <div class="field">
-    <label for="f-tipo">{% translate "Tipo" %}</label>
-    <select class="input" id="f-tipo" name="type">
-      <option value="">{% translate "Todos" %}</option>
-      {% for tipo in tipos %}
-      <option value="{{ tipo.pk }}"{% if filtros.type == tipo.pk|stringformat:"s" %} selected{% endif %}>{{ tipo.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-idioma">{% translate "Idioma" %}</label>
-    <select class="input" id="f-idioma" name="language">
-      <option value="">{% translate "Todos" %}</option>
-      {% for codigo, rotulo in idiomas %}
-      <option value="{{ codigo }}"{% if filtros.language == codigo %} selected{% endif %}>{{ rotulo }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-ativo">{% translate "Situação" %}</label>
-    <select class="input" id="f-ativo" name="active">
-      <option value="">{% translate "Todas" %}</option>
-      <option value="1"{% if filtros.active == "1" %} selected{% endif %}>{% translate "Ativos" %}</option>
-      <option value="0"{% if filtros.active == "0" %} selected{% endif %}>{% translate "Inativos" %}</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-natureza">{% translate "Natureza" %}</label>
-    <select class="input" id="f-natureza" name="system">
-      <option value="">{% translate "Todas" %}</option>
-      <option value="1"{% if filtros.system == "1" %} selected{% endif %}>{% translate "Oficiais" %}</option>
-      <option value="0"{% if filtros.system == "0" %} selected{% endif %}>{% translate "Personalizados" %}</option>
-    </select>
-  </div>
-  <div class="bo-filtros-acoes">
-    <button type="submit" class="btn btn-primary"><i class="ph ph-funnel" aria-hidden="true"></i>{% translate "Filtrar" %}</button>
-    <a class="btn btn-ghost" href="{% url 'backoffice:document_library' %}">{% translate "Limpar" %}</a>
-  </div>
-</form>
-
-{% if not modelos %}
-  <div class="card letters-empty">
-    <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
-    <h3>{% translate "Nenhum modelo encontrado" %}</h3>
-    <p>{% translate "Ajuste os filtros para ver outros modelos." %}</p>
-  </div>
-{% else %}
-
-<div class="card table-wrap d-only">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>{% translate "Nome" %}</th>
-        <th>{% translate "Tipo" %}</th>
-        <th>{% translate "Idioma" %}</th>
-        <th>{% translate "Natureza" %}</th>
-        <th>{% translate "Edição" %}</th>
-        <th>{% translate "Situação" %}</th>
-        <th>{% translate "Atualizado" %}</th>
-        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for modelo in modelos %}
-      <tr{% if not modelo.is_active %} class="is-inactive"{% endif %}>
-        <td class="cell-name">{{ modelo.name }}<br><span class="cell-muted">{{ modelo.slug }}</span></td>
-        <td>{{ modelo.type.name }}</td>
-        <td>{{ modelo.get_language_display }}</td>
-        <td>{% if modelo.is_system %}<span class="tag tag-primary">{% translate "Oficial" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Personalizado" %}</span>{% endif %}</td>
-        <td>{% if modelo.is_locked %}<span class="tag tag-warning"><i class="ph ph-lock" aria-hidden="true"></i>{% translate "Bloqueado" %}</span>{% else %}<span class="cell-muted">{% translate "Editável" %}</span>{% endif %}</td>
-        <td>{% if modelo.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}</td>
-        <td class="cell-muted">{{ modelo.updated_at|date:"d/m/Y" }}</td>
-        <td class="cell-actions">
-          <a class="btn btn-ghost btn-icon-sm" href="{% url 'backoffice:document_detail' modelo.pk %}" aria-label="{% translate 'Ver modelo' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="list m-only">
-  {% for modelo in modelos %}
-  <a class="list-item{% if not modelo.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:document_detail' modelo.pk %}">
-    <div class="list-body">
-      <div class="list-title">{{ modelo.name }}</div>
-      <div class="list-sub">{{ modelo.type.name }} · {{ modelo.get_language_display }}</div>
+  <header class="mod-cabecalho">
+    <div class="mod-titulos">
+      <span class="mod-kicker">Backoffice</span>
+      <div class="mod-titulo-linha">
+        <h1>{% translate "Modelos" %}</h1>
+        <span class="mod-contagem">{{ total }}</span>
+      </div>
+      <p class="mod-descricao">{% translate "Modelos de documento usados na emissão das cartas-convite. Cada idioma usa um modelo por vez: ativar outro do mesmo idioma desativa o anterior." %}</p>
     </div>
-    {% if modelo.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
-  </a>
-  {% endfor %}
+    {% if pode_administrar %}
+    <div class="mod-cabecalho-acoes">
+      <button type="button" class="mod-btn mod-btn-primario" data-abrir="mod-novo">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{% translate "Novo modelo" %}
+      </button>
+    </div>
+    {% endif %}
+  </header>
+
+  <section class="mod-cartao">
+
+    {# ---- Barra de filtros, fundida ao topo do cartão ---------------- #}
+    <div class="mod-filtros">
+      <form class="mod-busca" method="get" action="{% url 'backoffice:document_library' %}" role="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        <input type="search" name="q" value="{{ filtros.q }}" placeholder="{% translate 'Buscar por nome ou identificador' %}" aria-label="{% translate 'Buscar modelo' %}">
+        {% comment %}Buscar não pode perder o filtro que já estava aplicado.{% endcomment %}
+        {% if filtros.situacao %}<input type="hidden" name="situacao" value="{{ filtros.situacao }}">{% endif %}
+        {% if filtros.language %}<input type="hidden" name="language" value="{{ filtros.language }}">{% endif %}
+        {% if filtros.system %}<input type="hidden" name="system" value="{{ filtros.system }}">{% endif %}
+        {% if filtros.type %}<input type="hidden" name="type" value="{{ filtros.type }}">{% endif %}
+        {% if filtros.q %}<a class="mod-busca-limpar" href="{{ url_sem_busca }}" aria-label="{% translate 'Limpar a busca' %}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>{% endif %}
+        <button type="submit" class="mod-busca-ir">{% translate "Buscar" %}</button>
+      </form>
+
+      <span class="mod-sep" aria-hidden="true"></span>
+
+      <div class="mod-segmentado" role="group" aria-label="{% translate 'Situação' %}">
+        {% for opcao in filtros_situacao %}
+        <a class="mod-seg{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.rotulo }}</a>
+        {% endfor %}
+      </div>
+
+      {% for filtro in filtros_pilula %}
+      <details class="mod-menu mod-menu-filtro">
+        <summary class="mod-pilula-filtro{% if filtro.escolhido %} is-ativa{% endif %}">
+          {% if filtro.escolhido %}<span class="mod-ponto-filtro" aria-hidden="true"></span>{% endif %}
+          <span class="mod-pilula-rotulo">{{ filtro.rotulo }}</span>{{ filtro.atual }}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+        </summary>
+        <div class="mod-menu-lista">
+          {% for opcao in filtro.opcoes %}
+          <a class="mod-menu-item{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}">{{ opcao.rotulo }}</a>
+          {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+
+      {% if tem_filtro %}
+      <a class="mod-limpar" href="{{ url_limpar }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>{% translate "Limpar filtros" %}
+      </a>
+      {% endif %}
+    </div>
+
+    {% if not modelos %}
+    <div class="mod-vazio">
+      <span class="mod-vazio-icone" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+      </span>
+      <span class="mod-vazio-titulo">{% translate "Nenhum modelo corresponde aos filtros" %}</span>
+      <span class="mod-vazio-texto">{% translate "Ajuste a busca ou remova os filtros aplicados." %}</span>
+      {% if tem_filtro %}<a class="mod-btn mod-btn-contorno" href="{{ url_limpar }}">{% translate "Limpar filtros" %}</a>{% endif %}
+    </div>
+    {% else %}
+
+    <div class="mod-tabela" role="table" aria-label="{% translate 'Modelos' %}">
+      <div class="mod-cabecalho-tabela" role="row">
+        <span role="columnheader">{% translate "Modelo" %}</span>
+        <span role="columnheader">{% translate "Idioma" %}</span>
+        <span role="columnheader">{% translate "Natureza" %}</span>
+        <span role="columnheader">{% translate "Edição" %}</span>
+        <span role="columnheader">{% translate "Situação" %}</span>
+        <span role="columnheader" class="mod-col-ordenada">{% translate "Atualizado" %}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="m6 14 6 5 6-5"></path></svg>
+        </span>
+        <span role="columnheader" class="mod-col-acoes">{% translate "Ações" %}</span>
+      </div>
+
+      {% for modelo in modelos %}
+      <div class="mod-linha{% if modelo.situacao == 'inativo' %} is-inativo{% endif %}" role="row">
+        <span class="mod-celula-nome" role="cell">
+          <span class="mod-icone-doc" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M8.5 13h7M8.5 17h4"></path></svg>
+          </span>
+          <span class="mod-nome-bloco">
+            <a class="mod-nome" href="{% url 'backoffice:document_detail' modelo.pk %}">{{ modelo.name }}</a>
+            <span class="mod-sub">
+              <span class="mod-slug">{{ modelo.slug }}</span>
+              <span class="mod-ponto" aria-hidden="true"></span>
+              <span class="mod-tipo">{{ modelo.type.name }}</span>
+            </span>
+          </span>
+        </span>
+
+        <span class="mod-celula-idioma" role="cell">
+          <span class="mod-bandeira">{{ modelo.language|upper }}</span>{{ modelo.get_language_display }}
+        </span>
+
+        <span role="cell">
+          {% if modelo.is_system %}
+          <span class="mod-pilula mod-pilula-oficial">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 5 6v6c0 4 3 7 7 8.5 4-1.5 7-4.5 7-8.5V6z"></path></svg>{% translate "Oficial" %}
+          </span>
+          {% else %}
+          <span class="mod-pilula mod-pilula-copia">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20v-3.5L15.5 5a2.1 2.1 0 0 1 3 3L7 19.5z"></path></svg>{% translate "Personalizado" %}
+          </span>
+          {% endif %}
+        </span>
+
+        <span class="mod-edicao" role="cell">{% if modelo.is_locked %}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path></svg>{% translate "Bloqueado" %}{% else %}{% translate "Editável" %}{% endif %}</span>
+
+        <span role="cell">
+          {% if modelo.situacao == "ativo" %}
+          <span class="mod-situacao is-ativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Ativo" %}</span>
+          {% elif modelo.situacao == "rascunho" %}
+          <span class="mod-situacao is-rascunho" title="{% translate 'Ativo, mas o desenho ainda não pode ser usado: o assistente não emite cartas com ele.' %}"><span class="mod-farol" aria-hidden="true"></span>{% translate "Rascunho" %}</span>
+          {% else %}
+          <span class="mod-situacao is-inativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Inativo" %}</span>
+          {% endif %}
+        </span>
+
+        <span class="mod-atualizado" role="cell">
+          <span class="mod-data">{{ modelo.updated_at|date:"d/m/Y" }}</span>
+          <span class="mod-relativo">{{ modelo.relativo }}</span>
+        </span>
+
+        <span class="mod-acoes" role="cell">
+          {% if modelo.tem_desenho %}
+          <button type="button" class="mod-acao" data-abrir="mod-previa"
+                  data-nome="{{ modelo.name }}" data-slug="{{ modelo.slug }}"
+                  data-idioma="{{ modelo.get_language_display }}"
+                  data-oficial="{% if modelo.is_system %}1{% else %}0{% endif %}"
+                  data-atualizado="{{ modelo.updated_at|date:'d/m/Y' }}"
+                  data-campos="{{ modelo.campos }}"
+                  data-previa="{% url 'backoffice:document_preview' modelo.pk %}"
+                  data-editor="{% url 'backoffice:template_editor' modelo.pk %}"
+                  data-detalhe="{% url 'backoffice:document_detail' modelo.pk %}"
+                  title="{% translate 'Visualizar' %}" aria-label="{% translate 'Visualizar' %} {{ modelo.name }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </button>
+          {% endif %}
+          <a class="mod-acao" href="{% url 'backoffice:template_editor' modelo.pk %}"
+             title="{% if modelo.is_locked or modelo.is_system %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %}"
+             aria-label="{% if modelo.is_locked or modelo.is_system %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %} {{ modelo.name }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20v-3.5L15.5 5a2.1 2.1 0 0 1 3 3L7 19.5z"></path></svg>
+          </a>
+          <details class="mod-menu">
+            <summary class="mod-acao mod-acao-menu" title="{% translate 'Mais ações' %}" aria-label="{% translate 'Mais ações para' %} {{ modelo.name }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5.5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="18.5" r="1.7"></circle></svg>
+            </summary>
+            <div class="mod-menu-lista mod-menu-acoes">
+              <span class="mod-menu-titulo">{{ modelo.name }}</span>
+              {% if pode_administrar %}
+              <form method="post" action="{% url 'backoffice:document_library_duplicate' modelo.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="name" value="{% blocktranslate with nome=modelo.name %}Cópia de {{ nome }}{% endblocktranslate %}">
+                <button type="submit" class="mod-menu-item">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5h7.5A2 2 0 0 1 18.5 6.5V15"></path><rect x="5.5" y="8.5" width="10" height="11" rx="2"></rect></svg>{% translate "Duplicar" %}
+                </button>
+              </form>
+              {% endif %}
+              <button type="button" class="mod-menu-item" data-abrir="mod-detalhes"
+                      data-nome="{{ modelo.name }}" data-slug="{{ modelo.slug }}"
+                      data-versao="{{ modelo.versao }}"
+                      data-criado="{{ modelo.created_at|date:'d/m/Y' }}"
+                      data-por="{% if modelo.created_by %}{{ modelo.created_by.full_name|default:modelo.created_by.email }}{% else %}{% translate 'Sistema' %}{% endif %}"
+                      data-atualizado="{{ modelo.updated_at|date:'d/m/Y · H:i' }}"
+                      data-elementos="{{ modelo.elementos }}" data-campos="{{ modelo.campos }}"
+                      data-cartas="{{ modelo.cartas }}" data-copias="{{ modelo.copias }}"
+                      data-origem="{% if modelo.duplicated_from %}{{ modelo.duplicated_from.name }}{% endif %}"
+                      data-situacao="{{ modelo.situacao }}"
+                      data-editor="{% url 'backoffice:template_editor' modelo.pk %}"
+                      data-detalhe="{% url 'backoffice:document_detail' modelo.pk %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 11v5.5M12 8.2v.2"></path></svg>{% translate "Detalhes" %}
+              </button>
+              {% if pode_administrar %}
+              <span class="mod-menu-risco" aria-hidden="true"></span>
+              <form method="post" action="{% url 'backoffice:document_library_activation' modelo.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="voltar" value="biblioteca">
+                <input type="hidden" name="ativo" value="{% if modelo.is_active %}0{% else %}1{% endif %}">
+                <button type="submit" class="mod-menu-item{% if modelo.is_active %} is-desativar{% endif %}">
+                  {% if modelo.is_active %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M6 6l12 12"></path></svg>{% translate "Desativar" %}
+                  {% else %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="m8.5 12.5 2.5 2.5 4.5-5"></path></svg>{% translate "Ativar para este idioma" %}
+                  {% endif %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </details>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mod-rodape">
+      <span>{% blocktranslate count contagem=total %}{{ contagem }} modelo{% plural %}{{ contagem }} modelos{% endblocktranslate %}</span>
+      <span class="mod-rodape-dir">
+        <span class="mod-rodape-ativos"><span class="mod-farol" aria-hidden="true"></span>{% blocktranslate count contagem=ativos %}{{ contagem }} ativo{% plural %}{{ contagem }} ativos{% endblocktranslate %}</span>
+        {% if ultima_alteracao %}
+        <span class="mod-sep-curto" aria-hidden="true"></span>
+        <span>{% blocktranslate with quando=ultima_alteracao|date:"d/m/Y" %}Última alteração {{ quando }}{% endblocktranslate %}</span>
+        {% endif %}
+      </span>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if pagina.has_other_pages %}
+  <nav class="mod-paginacao" aria-label="{% translate 'Páginas' %}">
+    {% if pagina.has_previous %}<a class="mod-btn mod-btn-contorno" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}">{% translate "Anterior" %}</a>{% endif %}
+    <span class="mod-paginacao-texto">{% blocktranslate with atual=pagina.number paginas=pagina.paginator.num_pages %}Página {{ atual }} de {{ paginas }}{% endblocktranslate %}</span>
+    {% if pagina.has_next %}<a class="mod-btn mod-btn-contorno" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}</a>{% endif %}
+  </nav>
+  {% endif %}
 </div>
 
-{% if pagina.has_other_pages %}
-<nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
-  {% if pagina.has_previous %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
-  <span class="text-muted">{% blocktranslate with atual=pagina.number total=pagina.paginator.num_pages %}Página {{ atual }} de {{ total }}{% endblocktranslate %}</span>
-  {% if pagina.has_next %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
-</nav>
-{% endif %}
+{# ---- Janela: visualizar o modelo -------------------------------------- #}
+<dialog class="mod-janela mod-janela-previa" id="mod-previa" aria-label="{% translate 'Visualizar modelo' %}">
+  <header class="mod-janela-topo">
+    <div class="mod-janela-identidade">
+      <span class="mod-icone-doc mod-icone-grande" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M8.5 13h7M8.5 17h4"></path></svg>
+      </span>
+      <div>
+        <h3 data-campo="nome"></h3>
+        <div class="mod-janela-sub">
+          <span class="mod-slug" data-campo="slug"></span>
+          <span class="mod-ponto" aria-hidden="true"></span><span data-campo="idioma"></span>
+          <span class="mod-ponto" aria-hidden="true"></span><span>{% translate "Atualizado" %} <span data-campo="atualizado"></span></span>
+          <span class="mod-pilula mod-pilula-oficial" data-campo="oficial" hidden>{% translate "Oficial" %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="mod-janela-topo-acoes">
+      <label class="mod-exemplo">
+        <input type="checkbox" data-exemplo>{% translate "Ver com dados de exemplo" %}
+      </label>
+      <button type="button" class="mod-fechar" data-fechar aria-label="{% translate 'Fechar' %}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+  </header>
+  <div class="mod-janela-corpo">
+    {% comment %}
+    O documento de verdade, desenhado pelo mesmo renderer que gera as
+    cartas (`document_preview`). Não é uma amostra montada em HTML: é o
+    PDF que este modelo produz hoje.
+    {% endcomment %}
+    <iframe class="mod-documento" title="{% translate 'Documento do modelo' %}" data-documento src="about:blank"></iframe>
+  </div>
+  <footer class="mod-janela-rodape">
+    <span class="mod-janela-nota"><span data-campo="campos"></span> {% translate "campos do banco de dados neste modelo" %}</span>
+    <div class="mod-janela-acoes">
+      <button type="button" class="mod-btn mod-btn-contorno" data-fechar>{% translate "Fechar" %}</button>
+      <a class="mod-btn mod-btn-contorno" data-campo-href="detalhe" hidden>{% translate "Detalhes do modelo" %}</a>
+      <a class="mod-btn mod-btn-primario" data-campo-href="editor" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20v-3.5L15.5 5a2.1 2.1 0 0 1 3 3L7 19.5z"></path></svg>{% translate "Abrir no editor" %}
+      </a>
+    </div>
+  </footer>
+</dialog>
 
+{# ---- Janela: detalhes -------------------------------------------------- #}
+<dialog class="mod-janela mod-janela-detalhes" id="mod-detalhes" aria-label="{% translate 'Detalhes do modelo' %}">
+  <header class="mod-janela-topo">
+    <div>
+      <span class="mod-kicker-janela">{% translate "Detalhes do modelo" %}</span>
+      <h3 data-campo="nome"></h3>
+    </div>
+    <button type="button" class="mod-fechar" data-fechar aria-label="{% translate 'Fechar' %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </header>
+  <div class="mod-janela-corpo mod-detalhes-corpo">
+    <div class="mod-fichas">
+      <span class="mod-ficha"><span class="mod-ficha-rotulo">{% translate "Identificador" %}</span><span class="mod-ficha-valor mod-slug" data-campo="slug"></span></span>
+      <span class="mod-ficha"><span class="mod-ficha-rotulo">{% translate "Formato do layout" %}</span><span class="mod-ficha-valor">v<span data-campo="versao"></span></span></span>
+      <span class="mod-ficha"><span class="mod-ficha-rotulo">{% translate "Criado em" %}</span><span class="mod-ficha-valor" data-campo="criado"></span></span>
+    </div>
+    <span class="mod-detalhes-titulo">{% translate "O que este modelo tem" %}</span>
+    <dl class="mod-lista-dados">
+      <dt>{% translate "Situação" %}</dt><dd data-campo="situacao"></dd>
+      <dt>{% translate "Elementos no desenho" %}</dt><dd data-campo="elementos"></dd>
+      <dt>{% translate "Campos do banco usados" %}</dt><dd data-campo="campos"></dd>
+      <dt>{% translate "Cartas emitidas com ele" %}</dt><dd data-campo="cartas"></dd>
+      <dt>{% translate "Cópias feitas a partir dele" %}</dt><dd data-campo="copias"></dd>
+      <dt>{% translate "Duplicado de" %}</dt><dd data-campo="origem"></dd>
+      <dt>{% translate "Criado por" %}</dt><dd data-campo="por"></dd>
+      <dt>{% translate "Última alteração" %}</dt><dd data-campo="atualizado"></dd>
+    </dl>
+    {% comment %}
+    A referência traz aqui um histórico de alterações por pessoa. O
+    projeto não registra isso: não há tabela de auditoria de modelos, e
+    inventar linhas seria mostrar dado que não existe. Fica o que é
+    real -- e o aviso de onde a informação viria.
+    {% endcomment %}
+    <p class="mod-detalhes-nota">{% translate "O sistema guarda quem criou o modelo e quando ele mudou pela última vez. Um histórico alteração por alteração ainda não existe." %}</p>
+  </div>
+  <footer class="mod-janela-rodape">
+    <button type="button" class="mod-btn mod-btn-contorno" data-fechar>{% translate "Fechar" %}</button>
+    <div class="mod-janela-acoes">
+      <a class="mod-btn mod-btn-contorno" data-campo-href="detalhe" hidden>{% translate "Abrir a página do modelo" %}</a>
+      <a class="mod-btn mod-btn-primario" data-campo-href="editor" hidden>{% translate "Abrir no editor" %}</a>
+    </div>
+  </footer>
+</dialog>
+
+{% if pode_administrar %}
+{# ---- Janela: novo modelo (duplicando um que já existe) ----------------- #}
+<dialog class="mod-janela mod-janela-novo" id="mod-novo" aria-label="{% translate 'Novo modelo' %}">
+  {% comment %}
+  A `action` já nasce apontando para a duplicação da primeira base: o
+  JavaScript troca-a quando alguém escolhe outra, mas o formulário
+  nunca existe apontando para lugar nenhum.
+  {% endcomment %}
+  <form method="post" action="{% if bases %}{% url 'backoffice:document_library_duplicate' bases.0.pk %}{% endif %}" data-form-novo>
+    {% csrf_token %}
+    <header class="mod-janela-topo">
+      <div>
+        <span class="mod-kicker-janela">{% translate "Novo modelo" %}</span>
+        <h3>{% translate "A partir de um modelo existente" %}</h3>
+      </div>
+      <button type="button" class="mod-fechar" data-fechar aria-label="{% translate 'Fechar' %}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </header>
+    <div class="mod-janela-corpo mod-novo-corpo">
+      <p class="mod-novo-texto">{% translate "Não há modelo em branco: um documento novo começa como cópia de um que já funciona, e a cópia é sua para editar. Ela nasce inativa — entra em uso quando você a ativar." %}</p>
+      <label class="mod-campo">
+        <span>{% translate "Copiar de" %}</span>
+        <select data-base required>
+          {% for base in bases %}
+          <option value="{% url 'backoffice:document_library_duplicate' base.pk %}" data-nome="{{ base.name }}">{{ base.name }} · {{ base.get_language_display }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="mod-campo">
+        <span>{% translate "Nome do novo modelo" %}</span>
+        <input type="text" name="name" maxlength="150" required data-nome>
+      </label>
+    </div>
+    <footer class="mod-janela-rodape">
+      <span class="mod-janela-nota">{% translate "Você pode renomear depois." %}</span>
+      <div class="mod-janela-acoes">
+        <button type="button" class="mod-btn mod-btn-contorno" data-fechar>{% translate "Cancelar" %}</button>
+        <button type="submit" class="mod-btn mod-btn-primario">{% translate "Criar e abrir no editor" %}</button>
+      </div>
+    </footer>
+  </form>
+</dialog>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/biblioteca-modelos.js' %}"></script>{% endblock %}

@@ -181,9 +181,15 @@ sera usado como base e recebera uma camada com os dados variaveis,
 preservando o documento original intacto. A engine (`pdfengine/`) e uma
 biblioteca Python pura, sem Django, para ser testavel em isolamento.
 
-**Versionamento de modelos.** O modelo da carta e dado, nao codigo: PDF base
-e mapa de campos ficam numa versao imutavel. Alterar um modelo cria uma nova
-versao, e cartas antigas permanecem ligadas a versao usada na geracao.
+**Um modelo ativo por idioma.** O modelo da carta e dado, nao codigo. A
+biblioteca guarda quantos modelos se quiser por idioma, mas no maximo UM
+fica ativo: e ele que o assistente usa para emitir a carta naquele idioma.
+Ativar outro do mesmo idioma desativa o anterior no mesmo instante -- e uma
+troca, nao um acumulo --, e quem garante isso e um indice parcial no banco
+(`uniq_documenttemplate_ativo_por_idioma`), valido para qualquer caminho de
+escrita. Inativo nao e apagado: o modelo continua existindo, editavel e
+duplicavel, so fora de uso. Nao ha versionamento: alterar um modelo grava no
+proprio registro, e o que protege o passado e o snapshot abaixo.
 
 **Snapshot.** Cada carta guarda uma copia congelada de tudo que influenciou o
 resultado, permitindo reproduzir o documento anos depois.

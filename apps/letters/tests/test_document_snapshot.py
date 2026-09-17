@@ -442,7 +442,7 @@ class TestIntegracaoComAFinalizacaoReal:
         Sem preparar nada na carta: o modelo sai do idioma da etapa 5,
         e a finalização congela o desenho DAQUELE modelo.
         """
-        oficial = services.official_document_template("fr")
+        oficial = services.active_document_template("fr")
         client = auth_client
         client.post(reverse("letters:new"), PASSO_1)
         carta = Letter.objects.get(user=user)

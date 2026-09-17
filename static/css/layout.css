@@ -102,7 +102,7 @@ body.publico .hero-assimetrico-grade,
 body.publico .hero-editorial { background: none; padding: 0; }
 body.publico .hero-amplo-texto { padding: 42px 24px 40px; }
 /* O CONTADOR EM CIMA reserva a altura dele acima do titulo (capsula de
-   26px + 16px de respiro = 42px), e so quando esta em cima: a faixa
+   56px + 16px de respiro = 72px), e so quando esta em cima: a faixa
    sabe a posicao pelo `data-contador`. Em baixo, o mesmo respiro vai
    para o pe. No meio, nada a reservar. */
 .home-secao-hero[data-contador^="superior"] .hero,
@@ -110,13 +110,13 @@ body.publico .hero-amplo-texto { padding: 42px 24px 40px; }
 .home-secao-hero[data-contador^="superior"] .hero-cheio,
 .home-secao-hero[data-contador^="superior"] .hero-destaque,
 .home-secao-hero[data-contador^="superior"] .hero-assimetrico-grade,
-.home-secao-hero[data-contador^="superior"] .hero-editorial { padding-top: 42px; }
+.home-secao-hero[data-contador^="superior"] .hero-editorial { padding-top: 72px; }
 .home-secao-hero[data-contador^="inferior"] .hero,
 .home-secao-hero[data-contador^="inferior"] .hero-texto,
 .home-secao-hero[data-contador^="inferior"] .hero-cheio,
 .home-secao-hero[data-contador^="inferior"] .hero-destaque,
 .home-secao-hero[data-contador^="inferior"] .hero-assimetrico-grade,
-.home-secao-hero[data-contador^="inferior"] .hero-editorial { padding-bottom: 42px; }
+.home-secao-hero[data-contador^="inferior"] .hero-editorial { padding-bottom: 72px; }
 .home-secao-hero .banner-contador.pos-superior-esquerda,
 .home-secao-hero .banner-contador.pos-superior-centro,
 .home-secao-hero .banner-contador.pos-superior-direita { top: 0; }
@@ -276,15 +276,19 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
    SO lugar para as nove posicoes -- nao duas classes iguais criadas em
    dois pontos do CSS para o mesmo problema.
    --------------------------------------------------------------------------- */
-.pos-superior-esquerda { top: 24px; left: 24px; }
-.pos-superior-centro { top: 24px; left: 50%; transform: translateX(-50%); }
-.pos-superior-direita { top: 24px; right: 24px; }
-.pos-centro-esquerda { top: 50%; left: 24px; transform: translateY(-50%); }
+/* O afastamento da borda e um PARAMETRO (`--pos-respiro`), nao um
+   numero repetido: num cartao pequeno 24px jogariam o elemento para o
+   meio da imagem. Quem precisa de outro valor troca a variavel -- as
+   nove classes continuam definidas aqui, uma vez cada. */
+.pos-superior-esquerda { top: var(--pos-respiro, 24px); left: var(--pos-respiro, 24px); }
+.pos-superior-centro { top: var(--pos-respiro, 24px); left: 50%; transform: translateX(-50%); }
+.pos-superior-direita { top: var(--pos-respiro, 24px); right: var(--pos-respiro, 24px); }
+.pos-centro-esquerda { top: 50%; left: var(--pos-respiro, 24px); transform: translateY(-50%); }
 .pos-centro { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.pos-centro-direita { top: 50%; right: 24px; transform: translateY(-50%); }
-.pos-inferior-esquerda { bottom: 24px; left: 24px; }
-.pos-inferior-centro { bottom: 24px; left: 50%; transform: translateX(-50%); }
-.pos-inferior-direita { bottom: 24px; right: 24px; }
+.pos-centro-direita { top: 50%; right: var(--pos-respiro, 24px); transform: translateY(-50%); }
+.pos-inferior-esquerda { bottom: var(--pos-respiro, 24px); left: var(--pos-respiro, 24px); }
+.pos-inferior-centro { bottom: var(--pos-respiro, 24px); left: 50%; transform: translateX(-50%); }
+.pos-inferior-direita { bottom: var(--pos-respiro, 24px); right: var(--pos-respiro, 24px); }
 
 /* Contador do banner -- um parcial so (`_banner_contador.html`), incluido
    pelos sete desenhos de banner (acima e abaixo). O ancestral posicionado
@@ -295,7 +299,9 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
   position: absolute;
   z-index: 2;
   max-width: calc(100% - 32px);
-  box-shadow: var(--shadow-card);
+  /* A sombra da referencia: mais aberta que a dos cartoes, porque a
+     capsula flutua sobre a faixa. */
+  box-shadow: 0 4px 14px rgba(16, 39, 92, .07);
 }
 /* ELE FLUTUA EM QUALQUER LARGURA -- NUNCA MUDA DE MODO
    -------------------------------------------------------
@@ -474,9 +480,15 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
 
 /* A CAPSULA DO CONTADOR
    ---------------------
-   Uma pilula curta: fundo azul claro, texto azul, um pontinho antes do
-   numero -- que e o indicador "ao vivo". O numero vem do banco
-   (`letters.statistics`), nunca do CSS nem do template.
+   O desenho do arquivo de referencia "Home 2.0": pilula BRANCA com
+   borda, sombra e raio 14; dentro, o icone de pessoas sobre uma area
+   clara, o numero em destaque e o texto ao lado -- que pode ocupar
+   duas linhas (`max-width: 10em`, como na referencia). O numero vem do
+   banco (`letters.statistics`), nunca do CSS nem do template.
+
+   As cores saem dos tokens de `body.publico`, derivados de `--p`: a
+   referencia foi desenhada no azul do projeto, e trocar a cor
+   principal no Backoffice continua trocando a capsula junto.
 
    A POSICAO continua vindo das nove classes `pos-*` acima: a capsula
    mudou de roupa, nao de regra. */
@@ -486,18 +498,51 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
   position: absolute;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--pub-pilula);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--p);
-  line-height: 1.4;
+  gap: 11px;
+  padding: 9px 18px 9px 11px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--pub-bd);
+  /* `max-content` porque a capsula e ABSOLUTA e centralizada com
+     `left: 50%`: sem isto, a largura disponivel para ela e so a metade
+     direita do banner, e o navegador a espreme ate o rotulo quebrar em
+     quatro linhas -- que e o que fazia a capsula passar por cima do
+     titulo no celular. `max-width` continua sendo o limite real. */
+  width: max-content;
   max-width: calc(100% - 32px);
 }
+.banner-contador-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--pub-pilula);
+  color: var(--p);
+  font-size: 22px;
+  line-height: 1;
+}
 .banner-contador-ponto { width: 6px; height: 6px; border-radius: 999px; background: var(--p); flex: none; }
-.banner-contador-valor { font-variant-numeric: tabular-nums; }
+.banner-contador-valor {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.banner-contador-rotulo {
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--mu);
+  /* Largura MAXIMA, nao fixa: a capsula encolhe com um rotulo curto e
+     para de crescer aqui. 13em e o que mantem o texto em duas linhas
+     -- a altura da capsula da referencia (56px) e a do icone mais os
+     respiros, e uma terceira linha a estufaria. */
+  max-width: 13em;
+}
 
 /* A linha de selos logo abaixo da chamada: texto pequeno, separado por
    pontos. O ponto e desenhado pelo CSS -- assim ele nao aparece antes
@@ -553,6 +598,28 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
    `test_parceiros_modelo_2a`). O respiro interno e' o que a marca
    precisa para nao encostar na moldura. */
 img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; }
+/* A CAPSULA SOBRE O CARTAO
+   ------------------------
+   Menor que um botao comum: a referencia desenha uma pilula de 11,5px
+   num canto do cartao. Reusa `btn btn-primary` (a cor, o hover e o
+   foco continuam sendo os do projeto) e so ajusta as medidas.
+
+   As nove classes `pos-*` valem aqui como valem no contador -- com um
+   respiro menor, porque o cartao e pequeno: 24px afastariam a capsula
+   para o meio da imagem. */
+.partner-botao {
+  position: absolute;
+  z-index: 1;
+  gap: 5px;
+  min-height: 0;
+  padding: 7px 11px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  max-width: calc(100% - 16px);
+  box-shadow: 0 3px 10px rgba(16, 39, 92, .28);
+}
+.partner-card { --pos-respiro: 8px; }
 /* Na PAGINA de parceiros o cartao ganha corpo: nome, descricao e o link
    para o site, abaixo da mesma imagem 4:3 da Home. */
 .partner-card-completo { aspect-ratio: auto; display: flex; flex-direction: column; height: 100%; }
@@ -564,21 +631,40 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
 .partner-card-link { font-size: 13.5px; margin-top: 2px; }
 .home-secao-pagina > .home-largura { padding-top: 40px; padding-bottom: 56px; }
 
-/* COMO FUNCIONA -- tres cartoes numerados. */
+/* COMO FUNCIONA -- tres cartoes com icone, numero, titulo e descricao,
+   centralizados, como no arquivo de referencia "Home 2.0". O ponto
+   depois do numero e desenho (`::after`): o numero em si continua
+   sendo so o numero, que e o que os testes leem. */
 .how-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .how-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 18px 18px 20px;
+  align-items: center;
+  text-align: center;
+  gap: 9px;
+  padding: 20px 16px 22px;
   background: #fff;
   border: 1px solid var(--pub-bd);
   border-radius: 12px;
 }
-.how-card-numero { font-size: 12px; font-weight: 800; color: var(--p); font-variant-numeric: tabular-nums; }
-.how-card-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.how-card-texto b { font-size: 16px; font-weight: 700; color: var(--navy); }
-.how-card-texto span { font-size: 14px; line-height: 1.5; color: var(--mu); }
+.how-card-topo { display: flex; align-items: center; gap: 10px; }
+.how-card-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--pub-pilula);
+  color: var(--p);
+  font-size: 18px;
+  line-height: 1;
+}
+.how-card-topo b { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--navy); }
+.how-card-numero { font-weight: 800; color: var(--p); font-variant-numeric: tabular-nums; }
+.how-card-numero::after { content: "."; }
+.how-card-texto { font-size: 14px; line-height: 1.5; color: var(--mu); }
 
 /* PERGUNTAS FREQUENTES
    --------------------
@@ -777,11 +863,9 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   .aviso-do-email .notice { align-items: flex-start; flex-wrap: wrap; }
   .aviso-do-email .btn { margin-left: 0; width: 100%; }
 
-  /* A CAPSULA DO CONTADOR, no celular: a mesma pilula, com um
-     respiro a menos -- e o rotulo pode quebrar em duas linhas sem
-     desalinhar o pontinho, que fica no topo. */
-  .banner-contador { align-items: flex-start; font-size: 12px; padding: 5px 11px; }
-  .banner-contador-ponto { margin-top: 6px; }
+  /* A CAPSULA DO CONTADOR nao tem regra de celular: a referencia
+     desenha a MESMA capsula nas duas telas (2a e 2b sao iguais neste
+     ponto), e o rotulo ja quebra sozinho em duas linhas. */
 
   .topo-publico-barra { padding: 12px 16px; }
   body.publico .container,
@@ -823,10 +907,15 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   /* CADA PASSO DEITADO: numero a esquerda, texto a direita.
      Tres colunas em 390px davam 89px de largura util por cartao --
      sete caracteres por linha, medido no navegador. */
-  .how-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .how-card { flex-direction: row; gap: 12px; padding: 14px 16px; }
-  .how-card-numero { flex: none; padding-top: 3px; }
-  .how-card-texto b { font-size: 15.5px; }
+  /* AS TRES COLUNAS CONTINUAM NO CELULAR (referencia 2b), so que
+     compactas: icone acima do titulo, icone menor, tipografia menor e
+     respiros menores. */
+  .how-grid { gap: 8px; }
+  .how-card { gap: 7px; padding: 14px 8px 16px; }
+  .how-card-topo { flex-direction: column; gap: 7px; }
+  .how-card-icone { width: 30px; height: 30px; font-size: 16px; }
+  .how-card-topo b { font-size: 12.5px; line-height: 1.3; }
+  .how-card-texto { font-size: 12px; line-height: 1.4; }
 
   .faq-titulo { font-size: 20px; letter-spacing: -0.022em; margin-bottom: 10px; }
   .faq-pergunta { align-items: flex-start; font-size: 15.5px; line-height: 1.35; gap: 12px; padding: 14px 2px; }
@@ -1035,8 +1124,9 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
 .wizard-saved { font-size: 13px; color: var(--mu); display: flex; gap: 6px; align-items: center; }
 
 .wizard { max-width: 760px; margin: 0 auto; padding: 36px 24px 60px; width: 100%; box-sizing: border-box; flex: 1; }
-.wizard .stepper { margin-bottom: 8px; }
-.wizard .step-labels { margin-bottom: 28px; }
+/* 28px ate o titulo -- o mesmo respiro de antes, agora medido a partir
+   dos indicadores: a fileira de nomes que ficava entre os dois saiu. */
+.wizard .stepper { margin-bottom: 28px; }
 .wizard h1 { font-size: 30px; }
 .wizard-lead { color: var(--mu); margin: 6px 0 20px; }
 .wizard-card { padding: 24px; }
@@ -1168,7 +1258,6 @@ img.lang-flag { object-fit: cover; display: block; }
   .wizard-nav { padding: 12px 20px; }
   .wizard { padding: 22px 20px 0; display: flex; flex-direction: column; gap: 18px; max-width: none; }
   .wizard .stepper { padding: 0; margin: 0; }
-  .wizard .step-labels { display: none; }
   .wizard h1 { font-size: 26px; }
   .wizard-lead { margin: 4px 0 0; }
   .wizard-card { padding: 0; border: 0; box-shadow: none; background: none; display: flex; flex-direction: column; gap: 18px; }

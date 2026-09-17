@@ -41,14 +41,17 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from apps.core.views import exige_permissao
 
 from .models import DocumentTemplate, DocumentTemplateLockedError, DocumentType
+from .services import ativacao
 from .services.duplicacao import duplicar_modelo
 
 # As duas permissões desta seção. Constantes, e não strings soltas por
@@ -76,21 +79,123 @@ def pode_administrar(user):
 # ---------------------------------------------------------------------------
 
 
+def _url_de_filtro(request, **mudancas):
+    """
+    A URL desta mesma tela com alguns filtros trocados e o RESTO
+    preservado.
+
+    Os filtros da barra são links, não um formulário com botão: clicar
+    em "Inativos" tem de manter a busca e o idioma que já estavam lá, e
+    tem de funcionar sem JavaScript. Montar a querystring aqui é o que
+    permite as duas coisas -- o template só escreve o endereço pronto.
+    """
+    parametros = request.GET.copy()
+    for chave, valor in mudancas.items():
+        parametros.pop(chave, None)
+        if valor:
+            parametros[chave] = valor
+    # Trocar de filtro sempre volta para a primeira página: a página 3
+    # do filtro anterior quase nunca existe no novo.
+    parametros.pop("page", None)
+    consulta = parametros.urlencode()
+    caminho = reverse("backoffice:document_library")
+    return f"{caminho}?{consulta}" if consulta else caminho
+
+
+def _quando(momento):
+    """
+    "hoje", "ontem", "há 3 dias" -- UMA unidade.
+
+    `timesince` do Django devolve duas ("2 dias, 21 horas"), e numa
+    coluna estreita isso vira duas linhas e nenhuma informação a mais:
+    quem olha a lista quer saber se mexeram nisso hoje ou no mês
+    passado.
+    """
+    from django.utils import timezone
+    from django.utils.translation import ngettext
+
+    if momento is None:
+        return ""
+    dias = (timezone.localdate() - timezone.localtime(momento).date()).days
+    if dias <= 0:
+        return _("hoje")
+    if dias == 1:
+        return _("ontem")
+    if dias < 30:
+        return ngettext("há %(n)d dia", "há %(n)d dias", dias) % {"n": dias}
+    if dias < 365:
+        meses = dias // 30
+        return ngettext("há %(n)d mês", "há %(n)d meses", meses) % {"n": meses}
+    anos = dias // 365
+    return ngettext("há %(n)d ano", "há %(n)d anos", anos) % {"n": anos}
+
+
+def _opcoes(request, parametro, atual, valores):
+    """
+    As opções de um filtro: rótulo, endereço e qual está valendo.
+
+    `atual` é o valor em vigor; a opção que bate com ele ganha
+    `atual=True`, e é ela que a barra mostra na pílula fechada.
+    """
+    return [
+        {
+            "valor": valor,
+            "rotulo": rotulo,
+            "url": _url_de_filtro(request, **{parametro: valor}),
+            "atual": (atual or "") == valor,
+        }
+        for valor, rotulo in valores
+    ]
+
+
+def _pilula(request, rotulo, parametro, atual, valores):
+    """Uma pílula com menu: o rótulo, o valor em vigor e as opções."""
+    opcoes = _opcoes(request, parametro, atual, valores)
+    escolhida = next((o for o in opcoes if o["atual"]), opcoes[0])
+    return {
+        "rotulo": rotulo,
+        "escolhido": bool(atual),
+        "atual": escolhida["rotulo"],
+        "opcoes": opcoes,
+    }
+
+
 @exige_permissao(VER_PERM)
 def document_library(request):
     """
     A biblioteca: todos os modelos, com o que cada um é e o que se pode
     fazer com ele.
 
-    O FILTRO INTEIRO VAI PARA O BANCO
-    ---------------------------------
-    Busca, tipo, idioma, situação e natureza viram `WHERE` -- nenhum é
-    resolvido em Python sobre a lista inteira. `Count("letters")` também
-    vem na mesma consulta, em vez de uma por linha.
+    QUASE TUDO VAI PARA O BANCO
+    ---------------------------
+    Busca, tipo, idioma, natureza e a parte booleana da situação viram
+    `WHERE`; `Count("letters")` e `Count("duplicates")` vêm na mesma
+    consulta, em vez de uma por linha.
+
+    A EXCEÇÃO É "RASCUNHO", e ela é honesta: separar um modelo ATIVO
+    entre "pronto" e "rascunho" depende de as imagens do desenho
+    existirem de fato (`ativacao.pronto_para_uso`), e isso é uma
+    pergunta sobre outra tabela que não cabe num `WHERE` sobre JSON.
+    Então os ativos são materializados, classificados com UMA consulta
+    de assets para a lista toda (`ativacao.situacoes`) e só então
+    paginados -- nunca uma consulta por linha, e nunca uma contagem de
+    página que não bate com o que se vê.
+
+    O QUE CADA LINHA LEVA
+    ---------------------
+    Situação em três estados, se tem desenho (é o que decide se há o
+    que pré-visualizar), quantos elementos e quantos campos do banco o
+    documento usa. Tudo calculado aqui: o template não percorre JSON.
     """
+    from .layout_schema import referencias_usadas
+    from .services import ativacao
+
     modelos = DocumentTemplate.objects.select_related(
         "type", "duplicated_from", "created_by"
-    ).annotate(cartas=Count("letters", distinct=True))
+    ).annotate(
+        cartas=Count("letters", distinct=True),
+        copias=Count("duplicates", distinct=True),
+    )
 
     busca = (request.GET.get("q") or "").strip()
     if busca:
@@ -104,19 +209,46 @@ def document_library(request):
     if idioma:
         modelos = modelos.filter(language=idioma)
 
-    ativo = request.GET.get("active") or ""
-    if ativo in ("1", "0"):
-        modelos = modelos.filter(is_active=(ativo == "1"))
+    # A situação do desenho (as três do rodapé da tabela). Valor
+    # desconhecido não filtra nada: a lista volta inteira, e a barra
+    # mostra "Todas" -- nunca uma tela vazia sem explicação.
+    pedida = (request.GET.get("situacao") or "").strip()
+    if pedida not in ativacao.SITUACOES:
+        pedida = ""
+    if pedida == ativacao.INATIVO:
+        modelos = modelos.filter(is_active=False)
+    elif pedida in (ativacao.ATIVO, ativacao.RASCUNHO):
+        modelos = modelos.filter(is_active=True)
 
     origem = request.GET.get("system") or ""
     if origem in ("1", "0"):
         modelos = modelos.filter(is_system=(origem == "1"))
 
-    modelos = modelos.order_by("type__order", "type__name", "-is_system", "language", "name")
-    pagina = Paginator(modelos, POR_PAGINA).get_page(request.GET.get("page"))
+    modelos = modelos.order_by(
+        "type__order", "type__name", "-is_system", "language", "name"
+    )
+
+    encontrados = list(modelos)
+    situacoes = ativacao.situacoes(encontrados)
+    if pedida in (ativacao.ATIVO, ativacao.RASCUNHO):
+        encontrados = [m for m in encontrados if situacoes[m.pk] == pedida]
+
+    for modelo in encontrados:
+        layout = modelo.layout or {}
+        modelo.situacao = situacoes[modelo.pk]
+        modelo.tem_desenho = bool(layout.get("elements"))
+        modelo.elementos = len(layout.get("elements") or [])
+        modelo.campos = len(referencias_usadas(layout))
+        modelo.versao = layout.get("version") or ""
+        modelo.relativo = _quando(modelo.updated_at)
+
+    pagina = Paginator(encontrados, POR_PAGINA).get_page(request.GET.get("page"))
 
     querystring = request.GET.copy()
     querystring.pop("page", None)
+
+    ativos = sum(1 for m in encontrados if m.situacao == ativacao.ATIVO)
+    ultima = max((m.updated_at for m in encontrados), default=None)
 
     contexto = _contexto_do_backoffice(_("Modelos"))
     contexto.update(
@@ -124,20 +256,134 @@ def document_library(request):
             "pagina": pagina,
             "querystring": querystring.urlencode(),
             "modelos": pagina.object_list,
-            "total": pagina.paginator.count,
+            "total": len(encontrados),
+            "ativos": ativos,
+            "ultima_alteracao": ultima,
             "pode_administrar": pode_administrar(request.user),
             "tipos": DocumentType.objects.order_by("order", "name"),
             "idiomas": DocumentTemplate._meta.get_field("language").choices,
+            # Os modelos que servem de base para um modelo novo: o
+            # caminho de criação do produto é duplicar um que já existe.
+            "bases": [
+                m for m in DocumentTemplate.objects.filter(is_system=True)
+                .select_related("type")
+                .order_by("type__order", "language")
+            ],
             "filtros": {
                 "q": busca,
                 "type": tipo_id,
                 "language": idioma,
-                "active": ativo,
+                "situacao": pedida,
                 "system": origem,
             },
+            "tem_filtro": bool(busca or tipo_id or idioma or pedida or origem),
+            # Os filtros já montados -- rótulo, endereço e qual está
+            # valendo. Assim o template percorre uma lista em vez de
+            # procurar chave por chave, e quem lê a tela vê a barra do
+            # desenho sem template nenhum decidindo regra.
+            "filtros_situacao": _opcoes(
+                request,
+                "situacao",
+                pedida,
+                (
+                    ("", _("Todas")),
+                    (ativacao.ATIVO, _("Ativos")),
+                    (ativacao.INATIVO, _("Inativos")),
+                    (ativacao.RASCUNHO, _("Rascunho")),
+                ),
+            ),
+            # As duas pílulas com menu da barra: rótulo fixo, o valor
+            # em vigor escrito ao lado e a lista para trocar.
+            "filtros_pilula": [
+                _pilula(
+                    request,
+                    _("Idioma"),
+                    "language",
+                    idioma,
+                    (
+                        ("", _("Todos")),
+                        *DocumentTemplate._meta.get_field("language").choices,
+                    ),
+                ),
+                _pilula(
+                    request,
+                    _("Natureza"),
+                    "system",
+                    origem,
+                    (("", _("Todas")), ("1", _("Oficiais")), ("0", _("Personalizados"))),
+                ),
+            ],
+            "url_limpar": reverse("backoffice:document_library"),
+            "url_sem_busca": _url_de_filtro(request, q=""),
         }
     )
     return render(request, "backoffice/document_library.html", contexto)
+
+
+@exige_permissao(VER_PERM)
+@xframe_options_sameorigin
+def document_preview(request, pk):
+    """
+    O PDF do modelo COMO ELE ESTÁ GRAVADO -- o que a janela "visualizar"
+    da biblioteca mostra no `<iframe>`.
+
+    `?exemplo=1` desenha com os valores de amostra
+    (`services.dados_de_exemplo`); sem ele, os campos saem vazios, que é
+    o que o modelo literalmente é antes de virar carta de alguém.
+
+    DUAS PRÉVIAS, DUAS PERGUNTAS DIFERENTES
+    ---------------------------------------
+    Esta (GET, por id) responde "como está o modelo salvo?" e por isso
+    serve a um `<iframe>`. A do editor (`template_editor_preview`, POST)
+    responde "como ficaria o que estou editando agora?", e por isso
+    recebe o layout no corpo. Nenhuma das duas grava nada.
+
+    Quem pode VER a biblioteca pode ver isto: é o mesmo documento que a
+    tela já descreve, com dados fictícios.
+
+    POR QUE `xframe_options_sameorigin`
+    -----------------------------------
+    O site responde `X-Frame-Options: DENY` em tudo, e é assim que tem
+    de continuar. Mas esta resposta é justamente a que a própria tela
+    enquadra: com DENY o navegador recusa mostrá-la e a janela abre
+    vazia. SAMEORIGIN libera só a própria aplicação -- nenhum outro
+    site pode enquadrar o documento.
+    """
+    from .services import dados_de_exemplo
+    from .services import pdf as servico_de_pdf
+
+    modelo = get_object_or_404(DocumentTemplate.objects.select_related("type"), pk=pk)
+    if not (modelo.layout or {}).get("elements"):
+        # Sem desenho não há o que mostrar -- e a tela nem oferece o
+        # botão. Chegar aqui é URL digitada à mão.
+        raise Http404("Este modelo ainda não tem desenho.")
+
+    dados = (
+        dados_de_exemplo.para_o_editor(modelo.slug)
+        if request.GET.get("exemplo") == "1"
+        else {}
+    )
+    try:
+        conteudo, _relatorio = servico_de_pdf.render_template(
+            modelo, dados, estrito=False
+        )
+    except (
+        servico_de_pdf.AssetAusenteError,
+        servico_de_pdf.FonteIndisponivelError,
+        servico_de_pdf.PaginaInvalidaError,
+        ValidationError,
+    ) as erro:
+        # Um modelo que não desenha é exatamente o "Rascunho" da lista.
+        # Dizer isso em texto é melhor do que um 500 dentro do iframe.
+        return HttpResponse(
+            _("Este modelo ainda não pode ser desenhado: %(motivo)s") % {"motivo": erro},
+            content_type="text/plain; charset=utf-8",
+            status=409,
+        )
+
+    resposta = HttpResponse(conteudo, content_type="application/pdf")
+    resposta["Content-Disposition"] = f'inline; filename="{modelo.slug}.pdf"'
+    return resposta
 
 
 # ---------------------------------------------------------------------------
@@ -163,10 +409,21 @@ def document_detail(request, pk):
         pk=pk,
     )
 
+    # Quem esta em uso neste idioma agora. Serve para a tela dizer, ANTES
+    # do clique, que ativar este aqui tira aquele do ar -- a troca e a
+    # regra, e esconde-la seria a tela mentindo por omissao.
+    em_uso = (
+        ativacao.irmaos_do_mesmo_idioma(modelo).filter(is_active=True).first()
+        if not modelo.is_active
+        else None
+    )
+
     contexto = _contexto_do_backoffice(modelo.name)
     contexto.update(
         {
             "modelo": modelo,
+            "situacao": ativacao.situacao(modelo),
+            "em_uso_no_idioma": em_uso,
             "estrutura": _resumo_da_estrutura(modelo),
             "assets": _assets_do_modelo(modelo),
             "copias": modelo.duplicates.order_by("name"),
@@ -237,6 +494,11 @@ def document_library_duplicate(request, pk):
     Este é o caminho de criação do produto: modelo oficial -> duplicar ->
     editar a cópia. Não há "criar modelo em branco", que começaria com
     uma página vazia e nenhum campo.
+
+    A cópia nasce INATIVA: cada idioma tem um modelo em uso, e duplicar
+    não pode trocar sozinho o documento da próxima carta (ver
+    `services/ativacao.py`). Ativá-la é um clique à parte, e é ele que
+    desativa o anterior.
     """
     origem = get_object_or_404(DocumentTemplate, pk=pk)
     nome = (request.POST.get("name") or "").strip()
@@ -254,7 +516,8 @@ def document_library_duplicate(request, pk):
 
     messages.success(
         request,
-        _('"%(nome)s" criado a partir de "%(origem)s". A cópia já pode ser editada.')
+        _('"%(nome)s" criado a partir de "%(origem)s". A cópia já pode ser editada '
+          'e entra em uso quando você a ativar.')
         % {"nome": copia.name, "origem": origem.name},
     )
     return redirect("backoffice:template_editor", pk=copia.pk)
@@ -266,39 +529,72 @@ def document_library_activation(request, pk):
     """
     Ativa ou desativa um modelo. NUNCA apaga.
 
+    ATIVAR É UMA TROCA
+    ------------------
+    Cada idioma tem UM modelo em uso. Ativar outro do mesmo idioma
+    desativa o anterior no mesmo instante (`services.ativacao.ativar`),
+    e a mensagem diz qual saiu -- um "ativado" que escondesse o
+    "desativado" seria meia verdade sobre o documento que a próxima
+    carta vai usar.
+
     Desativado, o modelo sai das opções de carta nova
-    (`letters.services.official_document_template` devolve `None` para um
-    modelo inativo do idioma, e o assistente avisa em vez de estourar).
-    As cartas já emitidas não sentem nada: elas renderizam do
+    (`letters.services.active_document_template` devolve `None` quando o
+    idioma fica sem nenhum ativo, e o assistente avisa em vez de
+    estourar). As cartas já emitidas não sentem nada: elas renderizam do
     `document_snapshot` congelado, não do modelo.
 
     `is_active` é um dos três campos que até um modelo OFICIAL aceita
     mudar (`DocumentTemplate.SYSTEM_MUTABLE_FIELDS`) -- desativar um
     oficial é uma decisão administrativa legítima, e a guarda do modelo
     já a permite sem abrir mão do resto.
+
+    VOLTA PARA ONDE SE CLICOU
+    -------------------------
+    O interruptor existe em duas telas (a biblioteca e o detalhe). O
+    `voltar` do formulário diz de qual delas veio; sem ele, o padrão é
+    o detalhe.
     """
-    modelo = get_object_or_404(DocumentTemplate, pk=pk)
+    modelo = get_object_or_404(DocumentTemplate.objects.select_related("type"), pk=pk)
     ativar = request.POST.get("ativo") == "1"
+    destino = (
+        reverse("backoffice:document_library")
+        if request.POST.get("voltar") == "biblioteca"
+        else reverse("backoffice:document_detail", args=[modelo.pk])
+    )
 
-    if modelo.is_active == ativar:
-        messages.info(request, _("Nenhuma alteração a fazer."))
-        return redirect("backoffice:document_detail", pk=modelo.pk)
-
-    modelo.is_active = ativar
     try:
-        modelo.save(update_fields=["is_active", "updated_at"])
+        mudou, desativados = ativacao.definir_situacao(modelo, ativar)
     except DocumentTemplateLockedError as erro:
         # A guarda do modelo é a autoridade; a tela só relata.
         messages.error(request, str(erro))
+        return redirect(destino)
+
+    if not mudou:
+        messages.info(request, _("Nenhuma alteração a fazer."))
+    elif not ativar:
+        messages.success(
+            request,
+            _('"%(nome)s" foi desativado e não será usado em novas cartas.')
+            % {"nome": modelo.name},
+        )
+    elif desativados:
+        messages.success(
+            request,
+            _('"%(nome)s" passou a ser o modelo em uso para %(idioma)s; '
+              '"%(anterior)s" foi desativado.')
+            % {
+                "nome": modelo.name,
+                "idioma": modelo.get_language_display(),
+                "anterior": ", ".join(m.name for m in desativados),
+            },
+        )
     else:
         messages.success(
             request,
-            _('"%(nome)s" foi ativado.') % {"nome": modelo.name}
-            if ativar
-            else _('"%(nome)s" foi desativado e não será usado em novas cartas.')
-            % {"nome": modelo.name},
+            _('"%(nome)s" passou a ser o modelo em uso para %(idioma)s.')
+            % {"nome": modelo.name, "idioma": modelo.get_language_display()},
         )
-    return redirect("backoffice:document_detail", pk=modelo.pk)
+    return redirect(destino)
 
 
 def url_da_biblioteca():

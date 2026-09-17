@@ -26,7 +26,7 @@ def _modelos_oficiais_prontos(modelos_oficiais_prontos):
     """
     Os quatro modelos oficiais com o logo materializado.
 
-    `services.official_document_template()` so devolve um modelo quando o
+    `services.active_document_template()` so devolve um modelo quando o
     asset do layout existe de verdade -- sem isto o assistente recusaria
     criar qualquer carta (e estaria certo).
     """

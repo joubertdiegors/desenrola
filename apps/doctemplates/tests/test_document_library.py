@@ -165,10 +165,17 @@ class TestModelosOficiais:
         a badge de uma linha comum, sem a página inteira.
         """
         resposta = cliente.get(reverse("backoffice:document_library"), {"system": "0"})
+        corpo = resposta.content.decode()
 
         assert modelo in resposta.context["modelos"]
         assert all(not m.is_system for m in resposta.context["modelos"])
-        assert "Oficial" not in resposta.content.decode()
+        # A palavra "Oficial" tambem vive no filtro ("Oficiais") e na
+        # janela de detalhes, que nasce escondida -- procura-la na
+        # pagina inteira nao diz nada. A pergunta certa e se alguma
+        # LINHA se declara oficial: a badge da linha e a unica
+        # `mod-pilula-oficial` sem `data-campo`.
+        assert 'mod-pilula-oficial">' not in corpo
+        assert 'data-oficial="1"' not in corpo
 
     def test_modelo_travado_aparece_marcado(self, cliente, tipo):
         DocumentTemplate.objects.create(
@@ -263,7 +270,8 @@ class TestAcaoDuplicar:
         copia = DocumentTemplate.objects.get(name="Cópia do PT")
         assert copia.is_system is False
         assert copia.is_locked is False
-        assert copia.is_active is True
+        # E inativa: o português continua no oficial até alguém trocar.
+        assert copia.is_active is False
 
     def test_a_copia_registra_quem_criou(self, cliente, oficiais, staff):
         _duplicar(cliente, oficiais["en"], "Cópia do EN")
@@ -405,14 +413,40 @@ class TestFiltros:
         assert all(not m.is_system for m in resposta.context["modelos"])
         assert modelo in resposta.context["modelos"]
 
-    def test_filtro_somente_ativos(self, cliente, tipo):
-        DocumentTemplate.objects.create(
+    def test_filtro_por_situacao(self, cliente, tipo):
+        """
+        Três situações, três listas, e cada modelo em uma só: desligado
+        (inativo), ligado sem desenho utilizável (rascunho) e ligado e
+        pronto (ativo). Chamar o rascunho de "ativo" seria a tela
+        mentindo: o assistente recusa emitir carta com ele.
+        """
+        url = reverse("backoffice:document_library")
+        inativo = DocumentTemplate.objects.create(
             type=tipo, name="Inativo", slug="inativo", language="pt", is_active=False
         )
+        rascunho = DocumentTemplate.objects.create(
+            type=tipo, name="Rascunho", slug="rascunho", language="pt"
+        )
+        pronto = DocumentTemplate.objects.create(
+            type=tipo, name="Pronto", slug="pronto", language="en",
+            layout={
+                "version": 1,
+                "elements": [{
+                    "id": "e1", "type": "text", "x": 10.0, "y": 10.0,
+                    "width": 100.0, "height": 20.0,
+                    "properties": {"content": {"kind": "text", "value": "Olá"}},
+                }],
+            },
+        )
 
-        resposta = cliente.get(reverse("backoffice:document_library"), {"active": "1"})
+        ativos = cliente.get(url, {"situacao": "ativo"}).context["modelos"]
+        rascunhos = cliente.get(url, {"situacao": "rascunho"}).context["modelos"]
+        inativos = cliente.get(url, {"situacao": "inativo"}).context["modelos"]
 
-        assert all(m.is_active for m in resposta.context["modelos"])
+        assert all(m.is_active for m in ativos)
+        assert pronto in ativos and rascunho not in ativos and inativo not in ativos
+        assert rascunho in rascunhos and pronto not in rascunhos
+        assert inativo in inativos and rascunho not in inativos
 
     def test_sem_filtro_mostra_tudo(self, cliente, modelo, oficiais):
         resposta = cliente.get(reverse("backoffice:document_library"))

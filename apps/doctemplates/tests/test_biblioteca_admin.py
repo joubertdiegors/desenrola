@@ -238,14 +238,37 @@ class TestListagem:
         assert oficiais["nl"].slug in corpo
         assert oficiais["fr"].slug not in corpo
 
-    def test_filtro_por_situacao(self, cliente, comum, oficiais):
+    def test_filtro_por_situacao(self, cliente, comum, tipo, oficiais):
+        """
+        Tres situacoes, tres listas, e cada modelo aparece em uma so:
+        inativo (desligado), rascunho (ligado mas ainda nao utilizavel)
+        e ativo (ligado e pronto).
+        """
         DocumentTemplate.objects.filter(pk=comum.pk).update(is_active=False)
+        rascunho = DocumentTemplate.objects.create(
+            type=tipo, name="Sem desenho", slug="sem-desenho", language="fr"
+        )
+        pronto = DocumentTemplate.objects.create(
+            type=tipo, name="Pronto", slug="pronto", language="en",
+            layout={
+                "version": 1,
+                "elements": [{
+                    "id": "e1", "type": "text", "x": 10.0, "y": 10.0,
+                    "width": 100.0, "height": 20.0,
+                    "properties": {"content": {"kind": "text", "value": "Olá"}},
+                }],
+            },
+        )
 
-        inativos = cliente.get(BIBLIOTECA, {"active": "0"}).content.decode()
-        ativos = cliente.get(BIBLIOTECA, {"active": "1"}).content.decode()
+        inativos = cliente.get(BIBLIOTECA, {"situacao": "inativo"}).content.decode()
+        rascunhos = cliente.get(BIBLIOTECA, {"situacao": "rascunho"}).content.decode()
+        ativos = cliente.get(BIBLIOTECA, {"situacao": "ativo"}).content.decode()
 
-        assert comum.slug in inativos and oficiais["fr"].slug not in inativos
-        assert oficiais["fr"].slug in ativos and comum.slug not in ativos
+        assert comum.slug in inativos
+        assert rascunho.slug not in inativos and pronto.slug not in inativos
+        assert rascunho.slug in rascunhos and pronto.slug not in rascunhos
+        assert pronto.slug in ativos
+        assert rascunho.slug not in ativos and comum.slug not in ativos
 
     def test_filtro_por_natureza(self, cliente, comum, oficiais):
         so_oficiais = cliente.get(BIBLIOTECA, {"system": "1"}).content.decode()
@@ -271,7 +294,11 @@ class TestListagem:
 
         for numero in range(POR_PAGINA + 3):
             DocumentTemplate.objects.create(
-                type=tipo, name=f"Modelo {numero:03d}", slug=f"modelo-{numero:03d}", language="pt"
+                type=tipo, name=f"Modelo {numero:03d}", slug=f"modelo-{numero:03d}",
+                language="pt",
+                # Um só pode ficar ativo por idioma; aqui o que conta é
+                # o NÚMERO de linhas na página.
+                is_active=numero == 0,
             )
 
         primeira = cliente.get(BIBLIOTECA)
@@ -382,7 +409,11 @@ class TestDuplicacao:
         assert copia.duplicated_from_id == fr.pk
         assert copia.is_system is False
         assert copia.is_locked is False
-        assert copia.is_active is True
+        # Nasce fora do ar: o francês continua saindo pelo oficial até
+        # alguém ativar a cópia de propósito.
+        assert copia.is_active is False
+        fr.refresh_from_db()
+        assert fr.is_active is True
 
     def test_o_layout_da_copia_e_independente(self, cliente, oficiais):
         """

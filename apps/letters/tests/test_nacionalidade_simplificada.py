@@ -235,7 +235,7 @@ class TestNadaDeFormasNemGenero:
 
     @pytest.mark.parametrize("idioma", IDIOMAS)
     def test_o_schema_oficial_nao_tem_campo_de_genero(self, idioma):
-        modelo = services.official_document_template(idioma)
+        modelo = services.active_document_template(idioma)
         chaves = {c["key"] for c in modelo.field_schema["fields"]}
 
         assert "guest_gender" not in chaves
@@ -404,7 +404,7 @@ class TestAteOPdf:
 
     @pytest.mark.parametrize("idioma", IDIOMAS)
     def test_os_quatro_modelos_oficiais_continuam_de_pe(self, idioma):
-        modelo = services.official_document_template(idioma)
+        modelo = services.active_document_template(idioma)
 
         assert modelo is not None
         assert modelo.is_system is True

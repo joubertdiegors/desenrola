@@ -544,6 +544,9 @@ class TestComandoDePrevia:
 
         DocumentTemplate.objects.create(
             type=modelo.type, name="Sem desenho", slug="sem-desenho", language="pt",
+            # Inativo: o oficial PT é o ativo deste idioma. O comando
+            # desenha por slug, não por "estar em uso".
+            is_active=False,
         )
 
         with pytest.raises(CommandError, match="não tem layout"):

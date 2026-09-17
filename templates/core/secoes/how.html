@@ -9,13 +9,19 @@ mesma dupla que o CMS já guarda -- `title` e `lead` --, apenas com os
 papéis visuais que a referência dá a cada uma. Nenhum campo novo,
 nenhum texto escrito no código.
 
-O NÚMERO É DESENHO, NÃO CONTEÚDO
---------------------------------
+O NÚMERO E O ÍCONE SÃO DESENHO, NÃO CONTEÚDO
+---------------------------------------------
 `01`, `02`, `03` saem da POSIÇÃO do passo na lista, não de um campo.
 Por isso `sem_numeracao` tira a numeração que porventura esteja escrita
 no título cadastrado: sem ela a tela mostraria "01" ao lado de
 "1. Preencha". O texto no banco continua como está -- quem administra
 pode escrever com ou sem número, e a tela sai igual dos dois jeitos.
+
+O ícone segue a mesma regra: os três da referência (preencher, idioma,
+receber) entram pela ordem do passo. Não há campo de ícone no CMS, e
+criar um mudaria o cadastro por causa de um desenho. Com mais de três
+passos cadastrados, o ciclo recomeça -- nenhum cartão fica sem ícone
+no meio de uma fileira que tem.
 
 Contexto: secoes.how.
 {% endcomment %}
@@ -29,12 +35,13 @@ Contexto: secoes.how.
     </div>
     <ol class="how-grid">
       {% for card in secoes.how.cards %}
+      {% cycle "ph-pencil-simple" "ph-globe" "ph-download-simple" as icone_do_passo silent %}
       <li class="how-card">
-        <span class="how-card-numero">{{ forloop.counter|stringformat:"02d" }}</span>
-        <div class="how-card-texto">
-          <b>{{ card.title|sem_numeracao }}</b>
-          <span>{{ card.text }}</span>
+        <div class="how-card-topo">
+          <span class="how-card-icone" aria-hidden="true"><i class="ph {{ icone_do_passo }}"></i></span>
+          <b><span class="how-card-numero">{{ forloop.counter|stringformat:"02d" }}</span> {{ card.title|sem_numeracao }}</b>
         </div>
+        <span class="how-card-texto">{{ card.text }}</span>
       </li>
       {% endfor %}
     </ol>

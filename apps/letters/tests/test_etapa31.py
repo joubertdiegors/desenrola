@@ -37,7 +37,7 @@ def conteudo_do(pdf_bytes):
 def _modelos_oficiais_prontos(modelos_oficiais_prontos):
     """
     Os quatro modelos oficiais com o logo materializado -- sem eles
-    `official_document_template()` devolve `None` e o assistente
+    `active_document_template()` devolve `None` e o assistente
     recusa criar carta nenhuma (e esta certo: seria uma carta que
     nao viraria PDF).
     """
@@ -303,7 +303,7 @@ class TestDadosDoAnfitriaoNoPerfil:
         assert f'name="{campo}"' not in html
 
     def test_o_schema_nao_tem_mais_esses_campos(self):
-        modelo = services.official_document_template("fr")
+        modelo = services.active_document_template("fr")
         chaves = {f["key"] for f in modelo.field_schema["fields"]}
 
         assert "host_nationality" not in chaves

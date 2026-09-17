@@ -174,7 +174,7 @@ def modelos_oficiais_prontos(tmp_path, settings):
     Os quatro modelos oficiais completos: layout (ja vem da migration) e
     o asset do logo materializado.
 
-    `services.official_document_template()` so devolve um modelo quando o
+    `services.active_document_template()` so devolve um modelo quando o
     asset existe de verdade -- sem isto, `start_draft()` devolveria None
     e nenhuma carta nasceria. E o equivalente, no teste, ao passo de
     deploy `reconstruir_modelos_oficiais`.

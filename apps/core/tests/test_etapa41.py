@@ -543,7 +543,7 @@ class TestIdiomaDaCartaNaoFoiAfetado:
 
     def test_os_quatro_documentos_oficiais_continuam_disponiveis(self, modelos_oficiais_prontos):
         for idioma in IDIOMAS_DO_SITE:
-            assert services.official_document_template(idioma) is not None
+            assert services.active_document_template(idioma) is not None
 
 
 # ---------------------------------------------------------------------------

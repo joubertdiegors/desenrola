@@ -9,7 +9,7 @@ O BACKFILL
 ----------
 Cartas gravadas antes disto nao tem `document_template`. Cada uma recebe
 o modelo oficial do SEU idioma, que e exatamente o que a resolucao por
-idioma faria hoje (`services.official_document_template`). Carta sem
+idioma faria hoje (`services.active_document_template`). Carta sem
 idioma (rascunho abandonado na primeira etapa) cai no idioma padrao.
 
 Se faltar o modelo oficial de algum idioma, a migration PARA em vez de

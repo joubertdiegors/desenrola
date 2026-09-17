@@ -161,7 +161,7 @@ class TestIdiomaPadraoDaCarta:
 class TestCadaIdiomaUsaOSeuDocumento:
     @pytest.mark.parametrize("idioma", IDIOMAS_DO_SITE)
     def test_o_modelo_oficial_e_o_daquele_idioma(self, idioma):
-        modelo = services.official_document_template(idioma)
+        modelo = services.active_document_template(idioma)
 
         assert modelo is not None
         assert modelo.slug == slug_oficial(idioma)
@@ -170,7 +170,7 @@ class TestCadaIdiomaUsaOSeuDocumento:
     @pytest.mark.parametrize("idioma", ["pt", "nl", "en"])
     def test_nenhum_idioma_aponta_para_o_documento_frances(self, idioma):
         """PT, NL e EN nunca podem cair no modelo FR."""
-        modelo = services.official_document_template(idioma)
+        modelo = services.active_document_template(idioma)
 
         assert modelo.slug != slug_oficial("fr")
         assert modelo.language != "fr"
@@ -185,7 +185,7 @@ class TestCadaIdiomaUsaOSeuDocumento:
 
         letter.refresh_from_db()
         assert letter.language == idioma
-        assert letter.document_template == services.official_document_template(idioma)
+        assert letter.document_template == services.active_document_template(idioma)
 
     def test_sem_modelo_pronto_a_troca_e_recusada(self, auth_client, user):
         """

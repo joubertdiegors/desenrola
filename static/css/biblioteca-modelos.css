@@ -1,0 +1,823 @@
+/* --------------------------------------------------------------------------
+   Administração · Modelos (a biblioteca de DocumentTemplate)
+
+   Arquivo próprio, carregado só nesta tela (bloco extra_css). As medidas,
+   cores e tipografia são as do arquivo de referência "Tabela de modelos":
+   cabeçalho com contagem, cartão único com a barra de filtros fundida ao
+   topo, tabela em grade de sete colunas e rodapé de resumo.
+
+   A referência desenha só o desktop (1440). Daqui para baixo a decisão é
+   deste arquivo: a partir de 1180px a grade vira cartão -- sete colunas
+   espremidas num celular não se leem, e uma tabela com rolagem lateral
+   esconde justamente a coluna de ações.
+   -------------------------------------------------------------------------- */
+
+/* As cores ficam em `:root`, e nao em `.mod`: as tres janelas sao
+   `<dialog>` FORA desse bloco (e precisam ser -- `showModal()` as
+   promove para a camada de cima), e de la nao herdariam variavel
+   nenhuma. O prefixo `--mod-` ja isola os nomes. */
+:root {
+  --mod-azul: #1d4ed8;
+  --mod-navy: #10275c;
+  --mod-cinza: #54658c;
+  --mod-cinza-medio: #6a7b9f;
+  --mod-cinza-claro: #93a2be;
+  --mod-borda: rgba(16, 39, 92, .12);
+  --mod-borda-suave: rgba(16, 39, 92, .09);
+  --mod-linha: rgba(16, 39, 92, .055);
+  --mod-fundo-suave: #f7faff;
+  --mod-fundo-cabecalho: #f0f4fc;
+}
+
+.mod {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: Manrope, "Inter", system-ui, sans-serif;
+  color: var(--mod-navy);
+  min-width: 0;
+}
+
+.mod button, .mod select, .mod input { font-family: inherit; }
+
+/* `hidden` tem de esconder. As pilulas e os botoes declaram
+   `display: inline-flex`, e regra de autor ganha do `[hidden]` do
+   navegador -- sem isto, o que o JavaScript manda esconder (a pilula
+   "Oficial" de um modelo que nao e oficial, o botao sem destino)
+   continuaria na tela. */
+.mod [hidden],
+.mod-janela [hidden] { display: none !important; }
+
+/* --- Cabeçalho ----------------------------------------------------------- */
+
+.mod-cabecalho {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.mod-titulos { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.mod-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--mod-cinza-claro);
+}
+
+.mod-titulo-linha { display: flex; align-items: center; gap: 10px; }
+.mod-titulo-linha h1 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--mod-navy);
+}
+
+.mod-contagem {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #e7eefb;
+  color: #17408f;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.mod-descricao {
+  margin: 2px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--mod-cinza-medio);
+  text-wrap: pretty;
+}
+
+.mod-cabecalho-acoes { display: flex; align-items: center; gap: 9px; flex: none; }
+
+/* --- Botões -------------------------------------------------------------- */
+
+.mod-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #3d4f78;
+  text-decoration: none;
+  cursor: pointer;
+}
+.mod-btn:hover { border-color: var(--mod-azul); color: var(--mod-azul); }
+.mod-btn-primario {
+  padding: 0 15px;
+  border-color: var(--mod-azul);
+  background: var(--mod-azul);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgba(29, 78, 216, .95);
+}
+.mod-btn-primario:hover { background: #1a45c2; border-color: #1a45c2; color: #fff; }
+.mod-btn-contorno { color: #3d4f78; }
+
+/* --- O cartão ------------------------------------------------------------ */
+
+.mod-cartao {
+  border: 1px solid var(--mod-borda-suave);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 40px -32px rgba(16, 39, 92, .55), 0 1px 2px rgba(16, 39, 92, .04);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* --- Barra de filtros ---------------------------------------------------- */
+
+.mod-filtros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: linear-gradient(#fbfcff, #f6f9fe);
+  flex-wrap: wrap;
+}
+
+.mod-sep { width: 1px; height: 24px; background: rgba(16, 39, 92, .1); margin: 0 2px; }
+.mod-sep-curto { width: 1px; height: 14px; background: var(--mod-borda); }
+
+.mod-busca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 10px;
+  background: #fff;
+}
+.mod-busca input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--mod-navy);
+}
+.mod-busca input::placeholder { color: var(--mod-cinza-claro); font-weight: 600; }
+.mod-busca svg { flex: none; }
+.mod-busca-limpar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: #eef3fb;
+  color: var(--mod-cinza);
+}
+/* O botão existe para quem navega por teclado e para quem não tem
+   JavaScript: a busca é um formulário de verdade. */
+.mod-busca-ir {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.mod-busca-ir:focus-visible {
+  position: static;
+  width: auto;
+  height: 28px;
+  padding: 0 10px;
+  margin: 0;
+  clip-path: none;
+  border-radius: 8px;
+  background: var(--mod-azul);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.mod-segmentado {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: #eaf0fa;
+}
+.mod-seg {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--mod-cinza-medio);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mod-seg:hover { color: var(--mod-navy); }
+.mod-seg.is-ativa {
+  background: #fff;
+  color: var(--mod-navy);
+  box-shadow: 0 1px 2px rgba(16, 39, 92, .14);
+}
+
+.mod-pilula-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mod-navy);
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+.mod-pilula-filtro::-webkit-details-marker { display: none; }
+.mod-pilula-filtro.is-ativa { border-color: #b9cdf3; }
+.mod-pilula-rotulo { color: var(--mod-cinza-claro); font-weight: 600; }
+.mod-ponto-filtro { width: 6px; height: 6px; border-radius: 50%; background: var(--mod-azul); }
+
+.mod-limpar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--mod-azul);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.mod-limpar:hover { background: #eef3fb; }
+
+/* --- Menus (filtros e ações) --------------------------------------------- */
+
+.mod-menu { position: relative; }
+.mod-menu > summary { cursor: pointer; }
+.mod-menu > summary::-webkit-details-marker { display: none; }
+.mod-menu[open] > summary { border-color: #b9cdf3; }
+
+.mod-menu-lista {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 184px;
+  padding: 5px;
+  border: 1px solid rgba(16, 39, 92, .1);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 40px -18px rgba(16, 39, 92, .45);
+}
+.mod-menu-acoes { right: 0; left: auto; width: 212px; }
+
+.mod-menu-titulo {
+  padding: 7px 9px 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--mod-cinza-claro);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mod-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #3d4f78;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.mod-menu-item:hover { background: #f3f7fe; color: var(--mod-navy); }
+.mod-menu-item.is-ativa { background: #f3f7fe; color: var(--mod-navy); font-weight: 700; }
+.mod-menu-item.is-desativar { color: #a1620a; }
+.mod-menu-item svg { flex: none; }
+.mod-menu-risco { height: 1px; margin: 4px 6px; background: rgba(16, 39, 92, .08); }
+
+/* --- Tabela -------------------------------------------------------------- */
+
+.mod-tabela { display: flex; flex-direction: column; min-width: 0; }
+
+.mod-cabecalho-tabela,
+.mod-linha {
+  display: grid;
+  grid-template-columns: minmax(220px, 2.4fr) 140px 128px 100px 116px 138px 104px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+}
+
+.mod-cabecalho-tabela {
+  height: 38px;
+  background: var(--mod-fundo-cabecalho);
+  border-top: 1px solid var(--mod-borda-suave);
+  border-bottom: 1px solid var(--mod-borda-suave);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #7d8cab;
+}
+.mod-col-ordenada { display: inline-flex; align-items: center; gap: 5px; }
+.mod-col-acoes { text-align: right; }
+
+.mod-linha { padding: 13px 18px; border-bottom: 1px solid var(--mod-linha); }
+.mod-linha:hover { background: var(--mod-fundo-suave); }
+.mod-linha.is-inativo .mod-nome,
+.mod-linha.is-inativo .mod-celula-idioma { color: var(--mod-cinza-medio); }
+
+.mod-celula-nome { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.mod-icone-doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 9px;
+  background: #eef3fb;
+  color: #4a6ab5;
+}
+.mod-icone-grande { width: 36px; height: 36px; border-radius: 10px; background: #e7eefb; color: var(--mod-azul); }
+
+.mod-nome-bloco { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mod-nome {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  color: var(--mod-navy);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-nome:hover { color: var(--mod-azul); }
+.mod-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--mod-cinza-claro);
+}
+/* O identificador cede espaço (reticências) para o nome do tipo caber
+   inteiro na mesma linha -- duas linhas aqui desalinhariam a grade. */
+.mod-tipo { flex: none; white-space: nowrap; }
+.mod-slug {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-ponto { width: 3px; height: 3px; flex: none; border-radius: 50%; background: #c4cede; }
+
+.mod-celula-idioma {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d4f78;
+  min-width: 0;
+}
+.mod-bandeira {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  flex: none;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--mod-fundo-cabecalho);
+  color: var(--mod-cinza);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
+.mod-pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px 0 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mod-pilula-oficial { background: #e7eefb; color: #17408f; }
+.mod-pilula-copia { background: #f1f0fb; color: #4a3f96; }
+
+.mod-edicao {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mod-cinza-medio);
+}
+
+.mod-situacao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mod-farol { width: 7px; height: 7px; flex: none; border-radius: 50%; }
+.mod-situacao.is-ativo { color: #146c43; }
+.mod-situacao.is-ativo .mod-farol { background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, .16); }
+.mod-situacao.is-inativo { color: #8a93a6; }
+.mod-situacao.is-inativo .mod-farol { background: #c4cede; box-shadow: 0 0 0 3px rgba(148, 162, 190, .16); }
+.mod-situacao.is-rascunho { color: #a1620a; cursor: help; }
+.mod-situacao.is-rascunho .mod-farol { background: #e9a23b; box-shadow: 0 0 0 3px rgba(233, 162, 59, .18); }
+
+.mod-atualizado { display: flex; flex-direction: column; gap: 1px; }
+.mod-data { font-size: 13px; font-weight: 600; color: #3d4f78; }
+.mod-relativo { font-size: 11.5px; font-weight: 600; color: var(--mod-cinza-claro); }
+
+.mod-acoes { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.mod-acao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  padding: 0;
+  border: 1px solid rgba(16, 39, 92, .1);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--mod-cinza);
+  cursor: pointer;
+  list-style: none;
+}
+.mod-acao:hover { border-color: #b9cdf3; background: #e7eefb; color: #17408f; }
+.mod-acao-menu { border-color: transparent; background: none; color: var(--mod-cinza-claro); }
+.mod-menu[open] > .mod-acao-menu { background: #eef3fb; color: var(--mod-navy); }
+
+/* --- Rodapé e vazio ------------------------------------------------------ */
+
+.mod-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 11px 18px;
+  background: #fbfcff;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mod-cinza-medio);
+}
+.mod-rodape-dir { display: flex; align-items: center; gap: 8px; }
+.mod-rodape-ativos { display: inline-flex; align-items: center; gap: 6px; }
+.mod-rodape-ativos .mod-farol { background: #16a34a; }
+
+.mod-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 20px 46px;
+  text-align: center;
+  background: #fbfcff;
+  border-top: 1px solid var(--mod-borda-suave);
+}
+.mod-vazio-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eef3fb;
+  color: var(--mod-cinza-claro);
+}
+.mod-vazio-titulo { font-size: 15px; font-weight: 700; color: var(--mod-navy); }
+.mod-vazio-texto { font-size: 13px; font-weight: 500; color: var(--mod-cinza-medio); }
+
+.mod-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mod-cinza-medio);
+}
+
+/* --- Janelas sobrepostas -------------------------------------------------- */
+
+.mod-janela {
+  width: min(840px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(660px, calc(100vh - 40px));
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 40px 90px -30px rgba(7, 18, 43, .6);
+  color: var(--mod-navy);
+  font-family: Manrope, "Inter", system-ui, sans-serif;
+  overflow: hidden;
+}
+.mod-janela::backdrop { background: rgba(11, 25, 58, .52); backdrop-filter: blur(3px); }
+/* `minmax(0, 1fr)` na coluna: sem isso a coluna e `auto` = conteudo,
+   e um rodape largo estica a grade para alem da janela -- que corta o
+   que passa (`overflow: hidden`). */
+.mod-janela[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+.mod-janela form {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+.mod-janela-detalhes { width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 40px)); }
+.mod-janela-novo { width: min(480px, calc(100vw - 32px)); max-height: none; }
+
+.mod-janela-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--mod-borda-suave);
+  background: linear-gradient(#fbfcff, #f6f9fe);
+}
+.mod-janela-identidade { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mod-janela-topo h3 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--mod-navy);
+}
+.mod-janela-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--mod-cinza-claro);
+}
+.mod-janela-sub .mod-pilula { height: 20px; padding: 0 7px; font-size: 10.5px; }
+.mod-kicker-janela {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--mod-cinza-claro);
+}
+.mod-janela-topo-acoes { display: flex; align-items: center; gap: 6px; flex: none; }
+
+.mod-exemplo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3d4f78;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mod-exemplo input { width: 15px; height: 15px; margin: 0; accent-color: var(--mod-azul); }
+
+.mod-fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--mod-cinza-medio);
+  cursor: pointer;
+}
+.mod-fechar:hover { background: #eef3fb; color: var(--mod-navy); }
+
+.mod-janela-corpo { overflow: auto; padding: 24px; background: #eef3fb; min-height: 0; }
+.mod-documento {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  border: none;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 14px 34px -22px rgba(16, 39, 92, .5), 0 0 0 1px rgba(16, 39, 92, .07);
+}
+
+.mod-janela-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 13px 18px;
+  border-top: 1px solid var(--mod-borda-suave);
+  background: #fbfcff;
+}
+.mod-janela-nota { font-size: 12.5px; font-weight: 600; color: var(--mod-cinza-medio); }
+.mod-janela-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mod-janela-rodape .mod-btn { height: 36px; }
+
+/* Detalhes */
+.mod-detalhes-corpo { background: #fff; padding: 16px 17px 18px; display: flex; flex-direction: column; gap: 14px; }
+.mod-fichas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mod-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #f6f9fe;
+}
+.mod-ficha-rotulo {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--mod-cinza-claro);
+}
+.mod-ficha-valor { font-size: 12.5px; font-weight: 700; color: var(--mod-navy); overflow: hidden; text-overflow: ellipsis; }
+.mod-detalhes-titulo {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--mod-cinza-claro);
+}
+.mod-lista-dados {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+}
+.mod-lista-dados dt,
+.mod-lista-dados dd {
+  margin: 0;
+  padding: 9px 0;
+  border-top: 1px solid rgba(16, 39, 92, .07);
+  font-size: 13px;
+}
+.mod-lista-dados dt { font-weight: 600; color: var(--mod-cinza-medio); }
+.mod-lista-dados dd { font-weight: 700; color: var(--mod-navy); text-align: right; }
+.mod-detalhes-nota { margin: 0; font-size: 12px; font-weight: 500; line-height: 1.5; color: var(--mod-cinza-claro); }
+
+/* Novo modelo */
+.mod-novo-corpo { background: #fff; display: flex; flex-direction: column; gap: 14px; }
+.mod-novo-texto { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.55; color: var(--mod-cinza-medio); }
+.mod-campo { display: flex; flex-direction: column; gap: 5px; }
+.mod-campo > span { font-size: 12px; font-weight: 700; color: var(--mod-navy); }
+.mod-campo select,
+.mod-campo input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--mod-navy);
+}
+
+/* --- Telas menores: a grade vira cartão ---------------------------------- */
+
+@media (max-width: 1180px) {
+  .mod-cabecalho-tabela { display: none; }
+  /* A barra de filtros ja quebra em duas linhas aqui: um risco
+     vertical no fim da primeira nao separa nada. */
+  .mod-sep { display: none; }
+  .mod-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "nome acoes"
+      "marcas marcas"
+      "rodape rodape";
+    gap: 10px 12px;
+    padding: 14px 16px;
+  }
+  .mod-celula-nome { grid-area: nome; }
+  /* O cartao tem altura de sobra: o nome inteiro vale mais do que a
+     linha unica que a grade exigia. */
+  .mod-nome {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+  }
+  .mod-acoes { grid-area: acoes; align-self: start; }
+  .mod-linha > span:nth-child(2),
+  .mod-linha > span:nth-child(3),
+  .mod-linha > span:nth-child(4) { grid-area: marcas; }
+  /* As três marcas dividem a mesma faixa, lado a lado. */
+  .mod-linha > span:nth-child(2) { justify-self: start; }
+  .mod-linha > span:nth-child(3) { justify-self: center; }
+  .mod-linha > span:nth-child(4) { justify-self: end; }
+  .mod-linha > span:nth-child(5) { grid-area: rodape; justify-self: start; }
+  .mod-atualizado { grid-area: rodape; justify-self: end; flex-direction: row; align-items: baseline; gap: 6px; }
+}
+
+@media (max-width: 720px) {
+  .mod-titulo-linha h1 { font-size: 23px; }
+  .mod-filtros { padding: 10px 12px; }
+  .mod-busca { flex: 1 1 100%; }
+  .mod-segmentado { flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; }
+  .mod-segmentado::-webkit-scrollbar { display: none; }
+  .mod-seg { flex: 1 0 auto; justify-content: center; }
+  .mod-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "nome acoes"
+      "marcas marcas"
+      "situacao situacao"
+      "rodape rodape";
+  }
+  .mod-linha > span:nth-child(5) { grid-area: situacao; }
+  .mod-atualizado { grid-area: rodape; justify-self: start; }
+  .mod-linha > span:nth-child(2),
+  .mod-linha > span:nth-child(3),
+  .mod-linha > span:nth-child(4) { justify-self: start; }
+  .mod-linha > span:nth-child(3) { justify-self: center; }
+  .mod-linha > span:nth-child(4) { justify-self: end; }
+  /* Sem grade para alinhar, o identificador ocupa a linha inteira e o
+     tipo desce -- melhor do que "carta-c...". Uma coluna, e nao
+     `wrap`, para o ponto separador nao sobrar no fim da primeira. */
+  .mod-sub { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .mod-sub .mod-ponto { display: none; }
+  .mod-slug { overflow: visible; text-overflow: clip; }
+  .mod-janela-corpo { padding: 14px; }
+  .mod-fichas { grid-template-columns: minmax(0, 1fr); }
+  /* Topo em duas faixas: identidade em cima, controles embaixo -- em
+     vez do rotulo do interruptor espremendo o nome do modelo. */
+  .mod-janela-topo { flex-wrap: wrap; gap: 10px; padding: 14px; }
+  .mod-janela-topo-acoes { width: 100%; justify-content: space-between; }
+  .mod-janela-identidade { width: 100%; }
+  .mod-janela-sub .mod-ponto { display: none; }
+  .mod-janela-rodape { flex-direction: column; align-items: stretch; }
+  /* Tres botoes nao cabem lado a lado em 360px: empilham, cada um em
+     largura cheia, na ordem em que se leem. */
+  .mod-janela-acoes { flex-direction: column; align-items: stretch; width: 100%; }
+  .mod-janela-acoes .mod-btn { width: 100%; justify-content: center; }
+  .mod-menu-acoes { right: 0; width: min(212px, calc(100vw - 48px)); }
+}

@@ -173,6 +173,18 @@ class DocumentTemplate(TimeStampedModel):
     Um MODELO da biblioteca: um documento A4 completo, descrito por
     `field_schema` (o que o formulario pergunta) e `layout` (como a pagina
     e desenhada). Um registro so; edita-se e salva-se diretamente.
+
+    UM ATIVO POR IDIOMA
+    -------------------
+    Dentro de um tipo de documento, cada idioma tem no MAXIMO um modelo
+    ativo -- e ele que o assistente usa para emitir a carta naquele
+    idioma. A troca (ativar outro do mesmo idioma desativa o anterior)
+    e `services.ativacao.ativar()`; a garantia de que nunca existam
+    dois e o indice parcial declarado em `Meta.constraints`, que vale
+    para QUALQUER caminho de escrita -- view, shell, admin ou migration.
+
+    Inativo nao e apagado: o modelo continua existindo, editavel e
+    duplicavel. So esta fora de uso.
     """
 
     # O que um modelo TRAVADO nao pode mais mudar. `is_locked` em si nao
@@ -240,6 +252,16 @@ class DocumentTemplate(TimeStampedModel):
         verbose_name = _("modelo de documento")
         verbose_name_plural = _("modelos de documento")
         ordering = ["type", "-is_system", "language", "name"]
+        constraints = [
+            # A regra do ativo unico, no banco. Indice PARCIAL: so as
+            # linhas ativas entram nele, entao quantos modelos inativos
+            # o mesmo idioma tiver, continua valendo.
+            models.UniqueConstraint(
+                fields=["type", "language"],
+                condition=models.Q(is_active=True),
+                name="uniq_documenttemplate_ativo_por_idioma",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_language_display()})"

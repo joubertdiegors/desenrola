@@ -89,12 +89,20 @@ class TestCopia:
         assert copia.name == "Minha Carta Convite"
         assert copia.slug == "minha-carta-convite"
 
-    def test_nasce_comum_destravada_e_ativa(self, origem):
+    def test_nasce_comum_destravada_e_inativa(self, origem):
+        """
+        Comum e destravada para poder ser editada; INATIVA porque
+        duplicar não pode tirar a origem do ar. Quem quiser usar a
+        cópia ativa ela na biblioteca -- e é aí, num clique só, que a
+        troca acontece.
+        """
         copia = duplicar_modelo(origem, "Cópia")
 
         assert copia.is_system is False
         assert copia.is_locked is False
-        assert copia.is_active is True
+        assert copia.is_active is False
+        origem.refresh_from_db()
+        assert origem.is_active is True
 
     def test_linhagem_e_autor(self, origem, user):
         copia = duplicar_modelo(origem, "Cópia", created_by=user)
@@ -302,8 +310,14 @@ class TestSlug:
         assert origem.slug == "contrato-base"
 
     def test_o_primeiro_buraco_e_reaproveitado(self, origem, tipo):
-        DocumentTemplate.objects.create(type=tipo, name="x", slug="copia", language="pt")
-        DocumentTemplate.objects.create(type=tipo, name="y", slug="copia-3", language="pt")
+        # Inativos: são dois modelos do mesmo idioma, e o banco só
+        # aceita um ativo por idioma. O que se mede aqui é a slug.
+        DocumentTemplate.objects.create(
+            type=tipo, name="x", slug="copia", language="pt", is_active=False
+        )
+        DocumentTemplate.objects.create(
+            type=tipo, name="y", slug="copia-3", language="pt", is_active=False
+        )
 
         assert duplicar_modelo(origem, "Cópia").slug == "copia-2"
 

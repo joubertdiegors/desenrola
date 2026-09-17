@@ -162,7 +162,7 @@ def available_languages(config=None):
     disponiveis = []
     for code in offered_languages(config):
         try:
-            modelo = official_document_template(code)
+            modelo = active_document_template(code)
         except DefaultDocumentTemplateMissingError:
             continue
         if modelo is not None:
@@ -170,13 +170,25 @@ def available_languages(config=None):
     return disponiveis
 
 
-def official_document_template(language):
+def active_document_template(language):
     """
-    O `DocumentTemplate` oficial do idioma pedido, SE ele ja tiver
-    conteudo real para desenhar -- `None` se ainda nao tiver.
+    O `DocumentTemplate` que o assistente usa naquele idioma -- o ATIVO
+    --, se ele ja tiver conteudo real para desenhar. `None` se nao
+    tiver, ou se o idioma nao tiver nenhum modelo ativo.
 
     E a UNICA resolucao de modelo do assistente: nao ha selecao manual,
     nao ha segundo mecanismo, e o cliente nunca escolhe um id de modelo.
+
+    O ATIVO, E NAO O OFICIAL
+    ------------------------
+    Ate esta etapa a resolucao era pelo SLUG do oficial
+    (`carta-convite-fr`), e isso tinha uma consequencia que so aparecia
+    no uso real: desativar o oficial frances derrubava o idioma inteiro
+    -- "ainda nao disponivel" -- mesmo com outro modelo frances ativo na
+    biblioteca, que era exatamente o que o administrador tinha acabado
+    de preparar. Agora quem responde e `doctemplates.services.ativacao`,
+    e a regra e uma so: cada idioma tem UM modelo ativo, oficial ou
+    copia, e e ele que emite a carta.
 
     "Ter conteudo real" e DUAS condicoes, nao uma:
 
@@ -190,56 +202,46 @@ def official_document_template(language):
     logo: renderizar assim levanta `AssetAusenteError` no meio da
     finalizacao da carta.
 
-    Devolver `None` nos dois casos -- em vez de devolver o modelo mesmo
+    Devolver `None` nesses casos -- em vez de devolver o modelo mesmo
     assim -- e o que faz o assistente avisar "documento ainda nao
     disponivel" em vez de deixar nascer uma carta que falharia na hora
     de gerar, ou produzir um PDF incompleto marcado como gerado com
     sucesso -- o tipo de erro silencioso que este projeto rejeita em
     toda outra etapa.
 
-    So levanta `DefaultDocumentTemplateMissingError` quando o slug
-    oficial (`biblioteca.slug_oficial`) nao existe ou esta inativo -- a
-    seed da biblioteca (migration 0010) sempre o cria, entao essa falta
-    e sinal de banco fora do estado esperado, nao de "conteudo ainda nao
-    pronto".
-    """
-    from apps.doctemplates.services import biblioteca
+    NENHUM ATIVO x NENHUM MODELO
+    ----------------------------
+    Sao coisas diferentes, e so a segunda e erro:
 
-    slug = biblioteca.slug_oficial(language)
-    modelo = DocumentTemplate.objects.filter(slug=slug).select_related("type").first()
-    if modelo is None or not modelo.is_active:
-        raise DefaultDocumentTemplateMissingError(
-            f'O modelo estrutural oficial "{slug}" não existe ou está inativo; '
-            "a biblioteca de modelos não foi semeada corretamente."
-        )
-    if not (modelo.layout or {}).get("elements"):
+      * o idioma tem modelos, nenhum ativo -> `None`. E uma decisao
+        administrativa legitima ("este idioma esta fora do ar"), e o
+        assistente avisa;
+      * o idioma nao tem modelo NENHUM -> `DefaultDocumentTemplate
+        MissingError`. A seed da biblioteca (migration 0010) sempre cria
+        os quatro, entao isso e banco fora do estado esperado, e falhar
+        alto e melhor do que fingir indisponibilidade.
+    """
+    from apps.doctemplates.services import ativacao, biblioteca
+
+    modelo = ativacao.modelo_ativo(language)
+    if modelo is None:
+        existe_algum = DocumentTemplate.objects.filter(
+            type__code=biblioteca.CODIGO_CARTA_CONVITE, language=language
+        ).exists()
+        if not existe_algum:
+            raise DefaultDocumentTemplateMissingError(
+                f'Não há nenhum modelo de Carta Convite em "{language}" '
+                f'(nem "{biblioteca.slug_oficial(language)}"); a biblioteca de '
+                "modelos não foi semeada corretamente."
+            )
         return None
-    if not _os_assets_do_layout_existem(modelo.layout):
+    # "Pronto para uso" e regra de doctemplates, nao de letters: e a
+    # MESMA pergunta que a biblioteca faz para mostrar "Rascunho" em vez
+    # de "Ativo". Duas copias dela dariam duas respostas no dia em que
+    # uma delas mudasse.
+    if not ativacao.pronto_para_uso(modelo):
         return None
     return modelo
-
-
-def _os_assets_do_layout_existem(layout):
-    """
-    Todo elemento de imagem do layout aponta para um `Asset` que existe.
-
-    `layout_schema.assets_referenciados()` NAO serve aqui: para ele
-    `asset_id: 0` significa "sem asset" e simplesmente nao entra no
-    conjunto. Para esta pergunta zero e justamente o caso que interessa
-    -- o layout recem-semeado, ainda sem o binario.
-    """
-    exigidos = set()
-    for elemento in (layout or {}).get("elements", []):
-        if not isinstance(elemento, dict) or elemento.get("type") != "image":
-            continue
-        origem = (elemento.get("properties") or {}).get("source") or {}
-        exigidos.add(int(origem.get("asset_id") or 0))
-
-    if not exigidos:
-        return True
-    if 0 in exigidos:
-        return False
-    return Asset.objects.filter(pk__in=exigidos).count() == len(exigidos)
 
 
 # ---------------------------------------------------------------------------
@@ -249,18 +251,20 @@ def _os_assets_do_layout_existem(layout):
 
 def start_draft(user, language):
     """
-    Cria uma Letter em rascunho para `user`, no modelo oficial do idioma
-    pedido -- resolvido pelo slug, nunca escolhido pelo cliente.
+    Cria uma Letter em rascunho para `user`, no modelo ATIVO do idioma
+    pedido -- resolvido pelo servidor, nunca escolhido pelo cliente.
 
-    `None` se aquele idioma ainda nao tem documento pronto: e o que faz
-    a view avisar em vez de deixar nascer uma carta que nao geraria PDF.
+    `None` se aquele idioma nao tem documento pronto (nenhum modelo
+    ativo, ou o ativo ainda sem desenho): e o que faz a view avisar em
+    vez de deixar nascer uma carta que nao geraria PDF.
 
-    A resolucao roda ANTES do `create()`: se o modelo oficial faltar ou
-    estiver inativo (erro de infraestrutura, nao "conteudo ainda nao
-    pronto"), a excecao sobe e NENHUMA carta chega a existir -- nunca
-    uma parcialmente criada, presa sem modelo por um bug de semeadura.
+    A resolucao roda ANTES do `create()`: se a biblioteca nao tiver
+    modelo nenhum naquele idioma (erro de infraestrutura, nao "conteudo
+    ainda nao pronto"), a excecao sobe e NENHUMA carta chega a existir
+    -- nunca uma parcialmente criada, presa sem modelo por um bug de
+    semeadura.
     """
-    modelo = official_document_template(language)
+    modelo = active_document_template(language)
     if modelo is None:
         return None
 
@@ -274,7 +278,8 @@ def start_draft(user, language):
 
 def change_language(letter, language):
     """
-    Troca o idioma da carta e, com ele, o documento oficial de destino.
+    Troca o idioma da carta e, com ele, o documento de destino -- o
+    modelo ativo do idioma novo.
 
     Os dados preenchidos ficam intactos: os quatro modelos oficiais tem
     exatamente as mesmas chaves de campo. Devolve False (sem gravar nada)
@@ -298,7 +303,7 @@ def change_language(letter, language):
     if language not in offered_languages():
         return False
 
-    modelo = official_document_template(language)
+    modelo = active_document_template(language)
     if modelo is None:
         return False
 
@@ -638,7 +643,7 @@ def capture_document_template_snapshot(letter, document_template):
     Congela o MODELO; `build_snapshot()` acima congela os DADOS. As duas
     rodam no mesmo instante da finalizacao, nessa ordem (ver
     `views._finalize()`). O modelo vem do IDIOMA da carta, resolvido em
-    `official_document_template()` -- nunca de um id enviado pelo cliente.
+    `active_document_template()` -- nunca de um id enviado pelo cliente.
 
     PROTEGIDA CONTRA EDICAO CONCORRENTE DO MODELO
     -----------------------------------------------

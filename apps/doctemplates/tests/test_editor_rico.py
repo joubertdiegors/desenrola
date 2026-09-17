@@ -1252,6 +1252,10 @@ class TestOsCincoEstados:
         comum_travado = DocumentTemplate.objects.create(
             type=tipo, name="Comum travado", slug="comum-travado", language="pt",
             layout=layout(rico(misto(texto("x")))),
+            # Inativo porque "comum" já é o ativo deste (tipo, idioma).
+            # O que este estado testa é o cadeado, e travado continua
+            # travado ligado ou desligado.
+            is_active=False,
         )
         DocumentTemplate.objects.filter(pk=comum_travado.pk).update(is_locked=True)
         return {

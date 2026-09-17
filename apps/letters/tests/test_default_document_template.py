@@ -2,7 +2,7 @@
 O pipeline estrutural como ÚNICO caminho das Cartas Convite.
 
 Não há mais um segundo pipeline para onde cair: `start_draft()`
-resolve `official_document_template()` e o rascunho JÁ NASCE
+resolve `active_document_template()` e o rascunho JÁ NASCE
 vinculado ao `DocumentTemplate` oficial do idioma -- sem tela nova,
 sem segundo mecanismo de escolha, e sem rascunho possível sem modelo
 (`Letter.document_template` não aceita nulo).
@@ -14,11 +14,13 @@ ativo e, desde a Etapa 3.6, tem desenho. O que ainda falta é o BINÁRIO
 do logo: a migration semeia o layout com `asset_id: 0` de propósito
 (migration não escreve em MEDIA_ROOT) e só `reconstruir_modelos_oficiais`
 materializa o arquivo, no deploy. Por isso
-`official_document_template()` distingue três coisas:
+`active_document_template()` distingue três coisas:
 
-  * "ausente/inativo"       -> falha EXPLÍCITA (`DefaultDocumentTemplate
-                               MissingError`) -- é erro de infraestrutura,
+  * "idioma sem modelo      -> falha EXPLÍCITA (`DefaultDocumentTemplate
+     nenhum"                   MissingError`) -- é erro de infraestrutura,
                                a semeadura sempre cria os quatro oficiais;
+  * "nenhum ativo"          -> devolve `None`: desativar é decisão
+                               administrativa, não banco quebrado;
   * "sem layout"            -> devolve `None`, SEM levantar;
   * "com layout, sem asset" -> devolve `None` também -- é o estado real
                                logo após um `migrate`, e tratá-lo como
@@ -42,6 +44,7 @@ from django.utils import timezone
 from pypdf import PdfReader
 
 from apps.doctemplates.models import DocumentTemplate
+from apps.doctemplates.services import ativacao
 from apps.letters import services
 from apps.letters.models import DefaultDocumentTemplateMissingError, Letter
 
@@ -85,8 +88,8 @@ def en_reconstruido():
     que o próprio `services/carta_convite.py` lida com o mesmo caso.
 
     Sem imagem nenhuma no layout: é o que dispensa MEDIA_ROOT aqui e
-    faz `_os_assets_do_layout_existem()` passar sem materializar
-    binário algum.
+    faz `ativacao.pronto_para_uso()` passar sem materializar binário
+    algum.
     """
     DocumentTemplate.objects.filter(slug=SLUG_EN).update(layout=LAYOUT_MINIMO)
     return DocumentTemplate.objects.get(slug=SLUG_EN)
@@ -298,13 +301,34 @@ class TestFalhaExplicitaQuandoAusenteOuInativo:
 
         assert not Letter.objects.filter(user=user).exists()
 
-    def test_template_inativo_levanta_e_nao_cria_letter(self, user):
+    def test_template_inativo_deixa_o_idioma_indisponivel_sem_levantar(self, user):
+        """
+        Desativar o único modelo do idioma NÃO é erro de
+        infraestrutura: é uma decisão administrativa, e a resposta
+        certa é "ainda não disponível". Antes isto levantava
+        `DefaultDocumentTemplateMissingError` -- o mesmo sinal de
+        "a semeadura falhou" --, e por isso a tela dizia que o idioma
+        tinha sumido mesmo quando ele estava apenas fora do ar.
+        """
         DocumentTemplate.objects.filter(slug=SLUG_EN).update(is_active=False)
 
-        with pytest.raises(DefaultDocumentTemplateMissingError):
-            services.start_draft(user, "en")
-
+        assert services.active_document_template("en") is None  # não levanta
+        assert services.start_draft(user, "en") is None
         assert not Letter.objects.filter(user=user).exists()
+
+    def test_com_outro_modelo_ativo_o_idioma_continua_de_pe(self, user, en_reconstruido):
+        """
+        O outro lado: desativar o oficial com uma cópia ativa é uma
+        TROCA, não o fim do idioma -- e a carta nasce pela cópia.
+        """
+        from apps.doctemplates.services.duplicacao import duplicar_modelo
+
+        copia = duplicar_modelo(en_reconstruido, "Inglês revisado")
+        ativacao.ativar(copia)
+
+        assert DocumentTemplate.objects.get(slug=SLUG_EN).is_active is False
+        assert services.active_document_template("en") == copia
+        assert services.start_draft(user, "en").document_template_id == copia.pk
 
     def test_a_mensagem_identifica_o_slug_que_faltou(self, user):
         DocumentTemplate.objects.filter(slug=SLUG_EN).delete()
@@ -328,15 +352,15 @@ class TestFalhaExplicitaQuandoAusenteOuInativo:
         O caso REAL logo após um `migrate`: o EN tem desenho (Etapa
         3.6) mas o logo só vira arquivo quando
         `reconstruir_modelos_oficiais` roda, no deploy. Até lá
-        `official_document_template()` devolve `None` -- silencioso,
+        `active_document_template()` devolve `None` -- silencioso,
         não a exceção. São coisas diferentes, e `start_draft()`
         devolve `None` em vez de criar uma carta condenada.
         """
         modelo = DocumentTemplate.objects.get(slug=SLUG_EN)
         assert modelo.layout["elements"], "o EN passou a ter desenho na Etapa 3.6"
-        assert not services._os_assets_do_layout_existem(modelo.layout)
+        assert not ativacao.pronto_para_uso(modelo)
 
-        assert services.official_document_template("en") is None
+        assert services.active_document_template("en") is None
         assert services.start_draft(user, "en") is None  # não deve levantar
         assert not Letter.objects.filter(user=user).exists()
 
@@ -363,7 +387,7 @@ class TestBancoRecemMigrado:
         modelo = DocumentTemplate.objects.get(slug=SLUG_EN)
 
         assert len(modelo.layout["elements"]) == 23
-        assert not services._os_assets_do_layout_existem(modelo.layout)
+        assert not ativacao.pronto_para_uso(modelo)
 
     def test_start_draft_nao_cria_carta_nenhuma(self, user):
         assert services.start_draft(user, "en") is None
@@ -497,10 +521,10 @@ class TestQuandoOLogoEMaterializado:
         return DocumentTemplate.objects.get(slug=SLUG_EN)
 
     def test_o_modelo_fica_pronto(self, reconstruido):
-        assert services._os_assets_do_layout_existem(reconstruido.layout)
+        assert ativacao.pronto_para_uso(reconstruido)
 
-    def test_official_document_template_passa_a_devolver_o_modelo(self, reconstruido):
-        assert services.official_document_template("en") == reconstruido
+    def test_active_document_template_passa_a_devolver_o_modelo(self, reconstruido):
+        assert services.active_document_template("en") == reconstruido
 
     def test_o_rascunho_novo_ja_nasce_vinculado(self, user, reconstruido):
         letter = services.start_draft(user, "en")

@@ -496,17 +496,6 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .step-line { flex: 1; height: 2px; background: #dfe6f1; min-width: 6px; }
 .step-line.is-done { background: var(--p); }
 
-.step-labels {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  font-size: 11.5px;
-  color: var(--mu);
-}
-.step-labels span:first-child { text-align: left; }
-.step-labels span:last-child { text-align: right; }
-.step-labels span:not(:first-child):not(:last-child) { text-align: center; }
-.step-labels .is-current { color: var(--p); font-weight: 600; }
-
 .step-big {
   width: 36px;
   height: 36px;
