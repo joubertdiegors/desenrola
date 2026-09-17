@@ -1122,9 +1122,19 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
   .wizard-actions.is-final { flex-direction: column; }
   .wizard-actions.is-final .btn-secondary { width: 100%; }
   .review-grid { display: flex; flex-direction: column; }
-  .review-block { padding: 14px 0; border: 0; border-bottom: 1px solid var(--bd); }
+  /* O padding lateral era ZERO: cada bloco encostava nas duas bordas do
+     cartao, e as declaracoes da etapa 4 -- que sao paragrafos inteiros
+     -- chegavam colados na moldura. 16px dos dois lados e o mesmo
+     respiro que os demais cartoes do celular ja tem. */
+  .review-block { padding: 18px 16px; border: 0; border-bottom: 1px solid var(--bd); }
   .review-block:last-child { border-bottom: 0; }
-  .review-dl { font-size: 13px; gap: 4px 14px; }
+  .review-block-head { margin-bottom: 12px; }
+  /* Rotulo em cima, valor embaixo: em 375px as duas colunas deixavam o
+     valor com quatro ou cinco caracteres por linha. */
+  .review-dl { grid-template-columns: minmax(0, 1fr); font-size: 13.5px; gap: 2px; }
+  .review-dl dt { grid-column: 1; }
+  .review-dl dd { grid-column: 1; margin-bottom: 10px; }
+  .review-dl dd:last-child { margin-bottom: 0; }
 }
 
 
@@ -1176,7 +1186,13 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
 
 @media (max-width: 767px) {
   .done-wrap { padding: 20px 20px 0; }
-  .done-card { padding: 0; border: 0; box-shadow: none; gap: 14px; }
+  /* `padding: 0` encostava o selo no topo do cartao: o circulo ficava
+     rente a borda e o ANEL de 6px (o `box-shadow` abaixo) sangrava para
+     fora do branco, sobre o fundo da pagina -- era o "check saindo do
+     container". O respiro de 14px e estrutural: cabe o anel inteiro com
+     folga, e o selo continua sendo a primeira coisa da tela. Nada de
+     `overflow: hidden`, que so esconderia o transbordo. */
+  .done-card { padding: 14px 0 0; border: 0; box-shadow: none; gap: 14px; }
   /* No celular o selo era MAIOR que no desktop (88px contra 84), e
      empurrava a referencia e o botao de baixar para fora da primeira
      tela. Aqui ele encolhe mais ainda: a tela e menor, e o que precisa
