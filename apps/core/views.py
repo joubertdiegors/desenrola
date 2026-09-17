@@ -341,8 +341,19 @@ def backoffice_letter_policy(request):
     else:
         form = LetterPolicyForm(instance=config)
 
+    # As declaracoes da etapa 4 moram nesta mesma tela: sao a outra
+    # metade do "o que vale para todas as cartas". O CRUD delas esta em
+    # `letters.backoffice_views`, junto do modelo que le.
+    from apps.letters.backoffice_views import declaracoes_com_pontas
+
     context = _backoffice_context("letter_policy")
-    context.update({"form": form, "pode_editar": pode_editar})
+    context.update(
+        {
+            "form": form,
+            "pode_editar": pode_editar,
+            "declaracoes": declaracoes_com_pontas(),
+        }
+    )
     return render(request, "backoffice/letter_policy.html", context)
 
 

@@ -345,8 +345,37 @@ def get_owned_editable_letter(user, letter_uuid):
 # ---------------------------------------------------------------------------
 
 
+# A secao cujo conteudo NAO vem do `field_schema`, e sim do cadastro de
+# declaracoes (`letters.LetterNotice`) -- ver `fields_for_section`.
+SECAO_DAS_DECLARACOES = "avisos"
+
+
+def campos_das_declaracoes():
+    """
+    Os campos da etapa 4, montados a partir das declaracoes ATIVAS.
+
+    Sem nenhuma ativa a lista e vazia, e a etapa 4 fica sem caixas para
+    marcar -- que e o que "desativar todas" significa. Nao ha queda para
+    o `field_schema`: ela faria uma declaracao desativada reaparecer, e
+    e justamente isso que o Backoffice precisa poder impedir.
+    """
+    from apps.letters.models import LetterNotice
+
+    return [nota.como_campo() for nota in LetterNotice.objects.publicadas()]
+
+
 def fields_for_section(letter, section):
-    """Os campos do field_schema da secao indicada, na ordem definida por `order`."""
+    """
+    Os campos da secao indicada, na ordem definida por `order`.
+
+    Quase todas vem do `field_schema` do documento -- estrutura, que so
+    muda por migration. A excecao e a secao das declaracoes (etapa 4):
+    o TEXTO delas e cadastro administravel no Backoffice, e por isso vem
+    de `LetterNotice`. O formato entregue e o mesmo nos dois casos, entao
+    o formulario dinamico, a validacao e a revisao nao sabem a diferenca.
+    """
+    if section == SECAO_DAS_DECLARACOES:
+        return campos_das_declaracoes()
     return fields_for_section_in(letter.document_template.field_schema, section)
 
 

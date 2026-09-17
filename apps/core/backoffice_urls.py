@@ -58,6 +58,34 @@ urlpatterns = [
     ),
     # Politica do ciclo de vida das cartas (editabilidade e expiracao).
     path("cartas/politica/", views.backoffice_letter_policy, name="letter_policy"),
+    # As declaracoes da etapa 4 do assistente. A tela delas e a propria
+    # Politica das cartas (ver `letters.backoffice_views`), entao nao ha
+    # rota de lista: toda acao volta para la.
+    path(
+        "cartas/declaracoes/nova/",
+        letters_backoffice.backoffice_letter_notice_new,
+        name="letter_notice_new",
+    ),
+    path(
+        "cartas/declaracoes/<int:pk>/",
+        letters_backoffice.backoffice_letter_notice_edit,
+        name="letter_notice_edit",
+    ),
+    path(
+        "cartas/declaracoes/<int:pk>/situacao/",
+        letters_backoffice.backoffice_letter_notice_activation,
+        name="letter_notice_activation",
+    ),
+    path(
+        "cartas/declaracoes/<int:pk>/ordem/",
+        letters_backoffice.backoffice_letter_notice_move,
+        name="letter_notice_move",
+    ),
+    path(
+        "cartas/declaracoes/<int:pk>/excluir/",
+        letters_backoffice.backoffice_letter_notice_delete,
+        name="letter_notice_delete",
+    ),
     # Configuracao de envio de e-mail (SMTP). Tres rotas separadas de
     # proposito: salvar os dados, ligar/desligar o envio e disparar um
     # teste sao tres decisoes diferentes, e o teste nao pode ser um

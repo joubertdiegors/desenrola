@@ -581,3 +581,99 @@ class DocumentLanguageSettings(TimeStampedModel):
         # `apps.letters.services.configuracao_de_idiomas()`.
         self.pk = self.SINGLETON_ID
         super().save(*args, **kwargs)
+
+
+class LetterNoticeQuerySet(models.QuerySet):
+    def publicadas(self):
+        """As declaracoes que a etapa 4 mostra: ativas, na ordem definida."""
+        return self.filter(is_active=True)
+
+
+class LetterNotice(TimeStampedModel):
+    """
+    Uma declaracao que o usuario aceita na etapa 4 do assistente.
+
+    POR QUE SAIU DO `field_schema`
+    ------------------------------
+    Os dois textos nasceram como constantes Python dentro do
+    `field_schema` do modelo oficial (`doctemplates.official_templates`).
+    Ali eles eram inalcancaveis para quem administra: o `field_schema` e
+    estrutura do DOCUMENTO -- `DocumentTemplate.save()` recusa altera-lo
+    depois que existe carta emitida, justamente para a reproducao
+    historica continuar valendo --, e mudar um texto juridico nao pode
+    depender de uma migration.
+
+    Aqui eles sao CADASTRO, no mesmo formato que o projeto ja usa para
+    `content.FaqItem`, `content.MenuItem` e `content.Partner`: texto,
+    ativo e ordem, administrados no Backoffice.
+
+    O QUE ESTE MODELO NAO DECIDE
+    ----------------------------
+    Nada sobre o PDF. Estas declaracoes sao aceites de ciencia, exibidos
+    e gravados em `Letter.data` -- o documento gerado nao as imprime (a
+    declaracao do anfitriao que sai no PDF e outra coisa, montada em
+    `doctemplates.services.carta_convite`). Desativar uma aqui nao muda
+    nenhuma carta ja emitida.
+
+    A CHAVE E ESTAVEL
+    -----------------
+    `key` e o nome com que a resposta fica gravada em `Letter.data`, e
+    por isso nao acompanha o texto: reescrever a declaracao mantem o
+    historico das cartas que ja a aceitaram. As duas chaves originais
+    (`notice_informal`, `notice_prise_en_charge`) continuam sendo as
+    mesmas depois da migracao.
+    """
+
+    key = models.SlugField(
+        _("identificador"),
+        max_length=60,
+        unique=True,
+        help_text=_(
+            "Nome interno com que a resposta fica gravada na carta. "
+            "Não muda quando o texto muda."
+        ),
+    )
+    text = models.TextField(
+        _("texto da declaração"),
+        help_text=_("Texto simples, na primeira pessoa (\"Declaro estar ciente...\")."),
+    )
+    is_active = models.BooleanField(
+        _("ativa"),
+        default=True,
+        help_text=_("Só declarações ativas aparecem no assistente."),
+    )
+    order = models.PositiveIntegerField(
+        _("ordem"), default=0, help_text=_("Menor aparece primeiro.")
+    )
+
+    objects = LetterNoticeQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("declaração do assistente")
+        verbose_name_plural = _("declarações do assistente")
+        # `pk` desempata: duas declaracoes com a mesma ordem trocariam de
+        # lugar entre uma visita e outra sem isto.
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return self.key
+
+    def como_campo(self):
+        """
+        A declaracao no formato que o assistente entende -- o mesmo dict
+        que `field_schema` produz para um checkbox.
+
+        E aqui que os dois mundos se encontram: o formulario dinamico
+        (`letters.forms.build_dynamic_form`), a validacao e a revisao da
+        etapa 6 continuam recebendo a mesma estrutura de sempre, sem
+        saber que a origem mudou.
+        """
+        return {
+            "key": self.key,
+            "type": "checkbox",
+            "required": True,
+            "order": self.order,
+            "section": "avisos",
+            "full_width": True,
+            "label": self.text,
+        }

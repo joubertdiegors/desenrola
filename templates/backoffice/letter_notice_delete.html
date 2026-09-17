@@ -1,0 +1,65 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Política das cartas · confirmação de remoção de uma
+declaração da etapa 4.
+
+UMA TELA, E NÃO UM `confirm()`
+------------------------------
+Mesma razão das outras exclusões do projeto: uma caixa do navegador
+depende de JavaScript e desaparece num toque errado. Aqui se PERDE o
+texto -- que é jurídico --, e a alternativa quase sempre certa
+(desativar) fica ao lado.
+
+O QUE NÃO É APAGADO
+-------------------
+As cartas que já aceitaram esta declaração. A resposta está gravada em
+`Letter.data` pela chave, e continua lá.
+
+Contexto: declaracao.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Remover declaração" %}</h1>
+    <p class="text-muted">{% translate "Esta ação não tem volta." %}</p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'backoffice:letter_policy' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar" %}</a>
+</div>
+<p class="m-only text-muted">{% translate "Esta ação não tem volta." %}</p>
+
+<div class="notice notice-error">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{% blocktranslate trimmed %}
+    Remover apaga o texto para sempre. Se a intenção é só tirá-lo da etapa 4, desative-o: ele some do assistente na hora e o texto continua aqui.
+  {% endblocktranslate %}</span>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{{ declaracao.key }}</h2>
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Texto" %}</dt><dd>{{ declaracao.text }}</dd>
+    <dt>{% translate "Na etapa 4" %}</dt><dd>{% if declaracao.is_active %}{% translate "Aparece" %}{% else %}{% translate "Oculta" %}{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="bo-actions">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover definitivamente" %}</button>
+  </form>
+
+  {% if declaracao.is_active %}
+  <form method="post" action="{% url 'backoffice:letter_notice_activation' declaracao.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="ativo" value="0">
+    <button type="submit" class="btn btn-secondary"><i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Só desativar" %}</button>
+  </form>
+  {% endif %}
+
+  <a class="btn btn-ghost" href="{% url 'backoffice:letter_policy' %}">{% translate "Cancelar" %}</a>
+</div>
+{% endblock %}

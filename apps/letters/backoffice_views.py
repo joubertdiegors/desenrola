@@ -33,15 +33,20 @@ exatamente o que esta arquitetura evita.
 import datetime
 from functools import wraps
 
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
+from apps.core.forms import LetterNoticeForm
 from apps.core.views import backoffice_required
 from apps.letters import lifecycle, presentation
-from apps.letters.models import Letter
+from apps.letters.models import Letter, LetterNotice
 
 # Quantas cartas por página. A filtragem por estado acontece depois da
 # consulta (ver o cabeçalho), então paginar aqui é o que impede a tela de
@@ -229,3 +234,190 @@ def _revisao_da_carta(carta):
     from apps.letters import services
 
     return services.grouped_review(carta)
+
+
+# ---------------------------------------------------------------------------
+# Declaracoes da etapa 4 do assistente
+# ---------------------------------------------------------------------------
+#
+# A tela delas e a Politica das cartas (`backoffice/letter_policy.html`):
+# as duas respondem a mesma pergunta -- "o que vale para TODAS as Cartas
+# Convite" --, e uma tela nova no menu para dois textos seria uma porta a
+# mais para o mesmo lugar. Toda acao volta para la.
+#
+# PERMISSAO
+# ---------
+# A mesma da politica (`letters.change_letterpolicy`): ver as regras que
+# valem para todo mundo e uma coisa, muda-las e outra -- e quem pode
+# mudar o prazo de expiracao e quem pode mudar o texto que o usuario
+# aceita. A checagem e no servidor, em cada rota, nunca so no botao.
+
+
+LETTER_POLICY_PERM = "letters.change_letterpolicy"
+
+
+def _url_da_politica():
+    return reverse("backoffice:letter_policy")
+
+
+def exige_politica(view):
+    """Backoffice + permissao de alterar a politica das cartas."""
+
+    @wraps(view)
+    @backoffice_required
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.has_perm(LETTER_POLICY_PERM):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def declaracoes_com_pontas():
+    """
+    Cada declaracao sabendo se e a primeira ou a ultima -- e o que
+    permite a tela nao desenhar "subir" no topo nem "descer" no fim.
+    Mesma forma de `content.backoffice_views._linhas_com_pontas`.
+    """
+    itens = list(LetterNotice.objects.all())
+    return [
+        {"objeto": item, "primeiro": i == 0, "ultimo": i == len(itens) - 1}
+        for i, item in enumerate(itens)
+    ]
+
+
+def _chave_disponivel(texto):
+    """
+    Uma `key` estavel a partir do texto, sem repetir uma que ja exista.
+
+    A chave nasce do primeiro pedaco do texto so para ser legivel no
+    banco e no `Letter.data`; ela NUNCA muda depois (o formulario nao a
+    edita), entao reescrever a declaracao nao desliga o historico.
+    """
+    base = slugify(texto)[:48].strip("-") or "declaracao"
+    chave = base
+    sufixo = 2
+    while LetterNotice.objects.filter(key=chave).exists():
+        chave = f"{base[:52]}-{sufixo}"
+        sufixo += 1
+    return chave
+
+
+@exige_politica
+def backoffice_letter_notice_new(request):
+    """Acrescenta uma declaracao a etapa 4."""
+    if request.method == "POST":
+        form = LetterNoticeForm(request.POST)
+        if form.is_valid():
+            declaracao = form.save(commit=False)
+            declaracao.key = _chave_disponivel(declaracao.text)
+            # Entra no fim da lista: quem acrescenta decide a posicao
+            # depois, com as setas, em vez de a nova declaracao aparecer
+            # no meio das que ja estavam.
+            ultima = LetterNotice.objects.order_by("-order").first()
+            declaracao.order = (ultima.order + 1) if ultima else 1
+            declaracao.save()
+            messages.success(request, _("Declaração acrescentada."))
+            return redirect(_url_da_politica())
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = LetterNoticeForm()
+
+    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto.update(
+        {"form": form, "declaracao": None, "titulo": _("Nova declaração")}
+    )
+    return render(request, "backoffice/letter_notice_form.html", contexto)
+
+
+@exige_politica
+def backoffice_letter_notice_edit(request, pk):
+    """Altera o texto (ou a situacao) de uma declaracao."""
+    declaracao = get_object_or_404(LetterNotice, pk=pk)
+
+    if request.method == "POST":
+        form = LetterNoticeForm(request.POST, instance=declaracao)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Declaração salva."))
+            return redirect(_url_da_politica())
+        messages.error(request, _("Corrija os campos destacados antes de salvar."))
+    else:
+        form = LetterNoticeForm(instance=declaracao)
+
+    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto.update(
+        {"form": form, "declaracao": declaracao, "titulo": _("Editar declaração")}
+    )
+    return render(request, "backoffice/letter_notice_form.html", contexto)
+
+
+@exige_politica
+@require_POST
+def backoffice_letter_notice_activation(request, pk):
+    """
+    Liga e desliga uma declaracao.
+
+    Desligada, ela some da etapa 4 na hora -- e nao e apagada nem some
+    das cartas que ja a aceitaram: `Letter.data` guarda a resposta pela
+    chave, que continua existindo.
+    """
+    declaracao = get_object_or_404(LetterNotice, pk=pk)
+    declaracao.is_active = request.POST.get("ativo") == "1"
+    declaracao.save(update_fields=["is_active", "updated_at"])
+
+    if declaracao.is_active:
+        messages.success(request, _("Declaração ativada. Volta a aparecer na etapa 4."))
+    else:
+        messages.success(request, _("Declaração desativada. Deixa de aparecer na etapa 4."))
+    return redirect(_url_da_politica())
+
+
+@exige_politica
+@require_POST
+def backoffice_letter_notice_move(request, pk):
+    """
+    Sobe ou desce uma declaracao na etapa 4.
+
+    Renumera pela POSICAO, e nao troca dois `order`: a ordem nasce igual
+    para todo mundo e o desempate e o `pk` -- trocar o numero de dois
+    empatados nao moveria ninguem, e o botao pareceria quebrado. Mesma
+    razao (e mesma forma) de `content.backoffice_views._reordenar`.
+    """
+    declaracao = get_object_or_404(LetterNotice, pk=pk)
+    ordenadas = list(LetterNotice.objects.all())
+    atual = next((i for i, o in enumerate(ordenadas) if o.pk == declaracao.pk), None)
+    if atual is None:
+        return redirect(_url_da_politica())
+
+    destino = atual - 1 if request.POST.get("direcao") == "subir" else atual + 1
+    if 0 <= destino < len(ordenadas):
+        ordenadas[atual], ordenadas[destino] = ordenadas[destino], ordenadas[atual]
+        for posicao, item in enumerate(ordenadas, start=1):
+            if item.order != posicao:
+                item.order = posicao
+                item.save(update_fields=["order", "updated_at"])
+        messages.success(request, _("Ordem atualizada."))
+
+    return redirect(_url_da_politica())
+
+
+@exige_politica
+def backoffice_letter_notice_delete(request, pk):
+    """
+    Apaga uma declaracao, depois de confirmar.
+
+    GET pergunta; POST apaga. Para tirar da etapa 4 sem perder o texto o
+    caminho e desativar, e a tela de confirmacao diz isso -- aqui SE
+    PERDE o texto, e ele e juridico.
+    """
+    declaracao = get_object_or_404(LetterNotice, pk=pk)
+
+    if request.method == "POST":
+        declaracao.delete()
+        messages.success(request, _("Declaração removida."))
+        return redirect(_url_da_politica())
+
+    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto.update({"declaracao": declaracao})
+    return render(request, "backoffice/letter_notice_delete.html", contexto)

@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.content.models import REDES_SOCIAIS, Asset, SiteSettings
 from apps.core.models import EmailSettings
-from apps.letters.models import DocumentLanguageSettings, LetterPolicy
+from apps.letters.models import DocumentLanguageSettings, LetterNotice, LetterPolicy
 
 # O que aparece esmaecido dentro dos campos. Endereço de exemplo,
 # deliberadamente genérico: nada que se pareça com um endereço de
@@ -56,6 +56,27 @@ class LetterPolicyForm(forms.ModelForm):
                 "Ignorado nas políticas que não usam número."
             ),
         }
+
+
+class LetterNoticeForm(forms.ModelForm):
+    """
+    Uma declaração da etapa 4 do assistente.
+
+    `key` não entra aqui: é o nome com que a resposta fica gravada em
+    `Letter.data`, e renomeá-lo numa tela de cadastro desligaria o
+    histórico das cartas que já aceitaram aquela declaração. A chave é
+    gerada na criação (ver `backoffice_letter_notice_new`) e não muda
+    mais -- o mesmo tratamento que `content.Asset.key` recebe.
+
+    O texto é TEXTO: nada de HTML. Quem o desenha é o `<label>` do
+    checkbox, com autoescape ligado.
+    """
+
+    class Meta:
+        model = LetterNotice
+        fields = ("text", "is_active")
+        widgets = {"text": forms.Textarea(attrs={"class": "input", "rows": 5})}
+        labels = {"text": _("Texto da declaração"), "is_active": _("Ativa")}
 
 
 # Prefixo dos campos de rede social no formulário: `social__facebook`.
