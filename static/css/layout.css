@@ -1017,6 +1017,11 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
 .lang-card input { position: absolute; opacity: 0; width: 0; height: 0; }
 .lang-card:has(input:checked) { border: 2px solid var(--p); background: var(--p10); padding: 17px 15px; }
 .lang-flag { width: 48px; height: 48px; border-radius: 50%; flex: none; position: relative; overflow: hidden; }
+/* A bandeira cadastrada no Backoffice e uma IMAGEM, no lugar do desenho
+   em CSS (ver `letters.LanguageFlag`). `cover` porque o circulo tem
+   proporcao 1:1 e uma bandeira nao: encaixar por dentro deixaria duas
+   faixas vazias, e o que se reconhece numa bandeira em 48px e a cor. */
+img.lang-flag { object-fit: cover; display: block; }
 .lang-flag-fr { background: linear-gradient(90deg, #000 33%, #fae042 33% 66%, #ed2939 66%); }
 .lang-flag-pt { background: linear-gradient(90deg, #006600 40%, #ff0000 40%); }
 .lang-flag-en {
@@ -1659,6 +1664,13 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
    uma resposta -- quebra entre palavras, como texto. */
 .bo-item-do-menu-destino { word-break: break-all; }
 .bo-parceiro-acoes { margin-left: auto; }
+
+/* O envio de uma bandeira: rotulo, arquivo e botao na mesma linha
+   enquanto couber. `min-width: 0` no campo de arquivo porque o nome do
+   arquivo escolhido pode ser longo e, sem isso, ele empurra o botao
+   para fora do cartao. */
+.bo-envio-de-bandeira { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bo-envio-de-bandeira .input[type="file"] { min-width: 0; flex: 1 1 200px; padding: 6px 8px; }
 
 /* Desligado continua legivel -- quem administra precisa ler o que vai
    religar --, so nao compete com os que estao no ar. */

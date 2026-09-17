@@ -260,7 +260,14 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
           {% for lang in language_options %}
           <label class="card lang-card{% if not lang.available %} is-unavailable{% endif %}">
             <input type="radio" name="language" value="{{ lang.code }}"{% if lang.code == selected_language %} checked{% endif %}{% if not lang.available %} disabled{% endif %} required>
-            <span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>
+            {% comment %}
+            A bandeira e uma IMAGEM quando ha uma cadastrada no
+            Backoffice (Idiomas), e o desenho em CSS de sempre quando
+            nao ha -- ver `letters.LanguageFlag`. `aria-hidden` nos dois
+            casos: o nome do idioma esta logo ao lado, e uma bandeira
+            anunciada duas vezes nao informa nada.
+            {% endcomment %}
+            {% if lang.flag_url %}<img class="lang-flag" src="{{ lang.flag_url }}" alt="" aria-hidden="true">{% else %}<span class="lang-flag {{ lang.flag }}" aria-hidden="true"></span>{% endif %}
             <span class="lang-card-name">{{ lang.name }}</span>
             {% if not lang.available %}<span class="lang-card-desc">{% translate "Ainda não disponível" %}</span>{% endif %}
             <span class="lang-card-radio"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
@@ -292,7 +299,7 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
       <div class="review-block">
         <div class="review-block-head"><h3>{% translate "Idioma selecionado" %}</h3><a href="{% url 'letters:step' letter_uuid=letter.uuid step=5 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> {% translate "Editar" %}</a></div>
         {% if review_language %}
-        <div class="review-lang-row"><span class="lang-flag lang-flag-sm {{ review_language.flag }}" aria-hidden="true"></span>{{ review_language.name }}</div>
+        <div class="review-lang-row">{% if review_language.flag_url %}<img class="lang-flag lang-flag-sm" src="{{ review_language.flag_url }}" alt="" aria-hidden="true">{% else %}<span class="lang-flag lang-flag-sm {{ review_language.flag }}" aria-hidden="true"></span>{% endif %}{{ review_language.name }}</div>
         {% else %}
         <p class="text-muted">{% translate "Nenhum idioma selecionado ainda." %}</p>
         {% endif %}

@@ -934,6 +934,8 @@ def _onde_esta_em_uso(imagem, excluir_parceiro=None):
         parceiros = parceiros.exclude(pk=excluir_parceiro.pk)
     if parceiros.exists():
         usos.append(_("um parceiro"))
+    if imagem.language_flags.exists():
+        usos.append(_("a bandeira de um idioma"))
     return usos
 
 
@@ -970,7 +972,11 @@ def backoffice_assets(request):
     modelos -- quem precisa de imagem aponta para cá.
     """
     imagens = Asset.objects.prefetch_related(
-        "page_sections", "partners", "letter_references", "template_references"
+        "page_sections",
+        "partners",
+        "letter_references",
+        "template_references",
+        "language_flags",
     )
     linhas = [{"imagem": imagem, "usos": _onde_esta_em_uso(imagem)} for imagem in imagens]
 

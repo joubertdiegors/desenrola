@@ -549,6 +549,39 @@ LANGUAGE_META = {
 }
 
 
+def bandeiras_administradas():
+    """
+    `{codigo: url}` das bandeiras com imagem cadastrada no Backoffice.
+
+    So os codigos que TEM imagem entram: o assistente cai na bandeira de
+    CSS para os demais, e um dicionario com valores vazios obrigaria o
+    template a distinguir "vazio" de "ausente" (ver `LanguageFlag`).
+    """
+    from apps.letters.models import LanguageFlag
+
+    return {
+        bandeira.language: bandeira.url
+        for bandeira in LanguageFlag.objects.select_related("asset")
+        if bandeira.url
+    }
+
+
+def meta_do_idioma(code, bandeiras=None):
+    """
+    Os metadados de exibicao de um idioma, com a bandeira administrada
+    quando houver.
+
+    `bandeiras` e opcional so para quem monta uma LISTA: carregar o
+    dicionario uma vez e passa-lo evita uma consulta por idioma.
+    """
+    meta = LANGUAGE_META.get(code)
+    if meta is None:
+        return None
+    if bandeiras is None:
+        bandeiras = bandeiras_administradas()
+    return {**meta, "flag_url": bandeiras.get(code, "")}
+
+
 def build_snapshot(letter, user):
     """
     Congela tudo que influenciou a geracao no momento do fechamento: os

@@ -158,6 +158,11 @@ urlpatterns = [
     # Idiomas dos DOCUMENTOS (nao os da interface, que e so
     # portuguesa). Deixou de ser o placeholder na Etapa E.
     path("idiomas/", views.backoffice_languages, name="languages"),
+    path(
+        "idiomas/<str:code>/bandeira/",
+        letters_backoffice.backoffice_language_flag,
+        name="language_flag",
+    ),
     # Itens da barra superior do SITE (nao deste menu lateral). A tela
     # deles e o editor da secao "navbar" -- ver `cadastro="menu"` em
     # `content.section_schema` --, entao nao ha rota de lista propria.

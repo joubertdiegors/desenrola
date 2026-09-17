@@ -413,11 +413,14 @@ def _opcoes_de_idioma(letter, prontos, config=None):
     (que exige uma escolha) nao teria como ser enviado.
     """
     mostrar = set(services.offered_languages(config)) | {letter.language}
+    # As bandeiras administradas de uma vez so: uma consulta para a
+    # lista inteira, em vez de uma por idioma (ver `meta_do_idioma`).
+    bandeiras = services.bandeiras_administradas()
     return [
         {
             "code": code,
             "available": code in prontos or code == letter.language,
-            **services.LANGUAGE_META[code],
+            **services.meta_do_idioma(code, bandeiras),
         }
         for code, _label in settings.LANGUAGES
         if code in mostrar
@@ -430,7 +433,7 @@ def _handle_review_step(request, letter):
 
     context = _steps_context(letter, services.REVIEW_STEP)
     context["review_sections"] = services.grouped_review(letter)
-    context["review_language"] = services.LANGUAGE_META.get(letter.language)
+    context["review_language"] = services.meta_do_idioma(letter.language)
     return render(request, "letters/wizard.html", context)
 
 

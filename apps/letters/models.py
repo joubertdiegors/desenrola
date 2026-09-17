@@ -677,3 +677,64 @@ class LetterNotice(TimeStampedModel):
             "full_width": True,
             "label": self.text,
         }
+
+
+class LanguageFlag(TimeStampedModel):
+    """
+    A bandeira de um idioma do documento, quando administrada no
+    Backoffice.
+
+    O QUE ELA SUBSTITUI
+    -------------------
+    As quatro bandeiras do assistente eram desenhos em CSS puro
+    (`.lang-flag-pt`, `.lang-flag-fr`, ...), em `static/css/layout.css`:
+    faixas de cor num gradiente. Bonitas, mas inalcancaveis -- trocar
+    uma exigia editar CSS e publicar.
+
+    Aqui a bandeira passa a ser uma IMAGEM da biblioteca
+    (`content.Asset`), como toda imagem administravel deste projeto. Nao
+    ha sistema de imagens novo: mesmo modelo, mesmo armazenamento, mesma
+    validacao de formato e tamanho, mesma limpeza de orfaos.
+
+    O CSS CONTINUA SENDO A QUEDA
+    ----------------------------
+    Sem imagem cadastrada, o assistente desenha a bandeira de CSS de
+    sempre. Por isso este cadastro nasce vazio e nao quebra nada: quem
+    nao quiser trocar bandeira nenhuma nao precisa fazer nada.
+
+    O IDIOMA NAO NASCE AQUI
+    -----------------------
+    Quais idiomas existem continua sendo `settings.LANGUAGES`, e quais o
+    assistente oferece continua sendo `DocumentLanguageSettings`. Esta
+    tabela so responde "qual imagem usar", e so para os codigos que ja
+    existem.
+    """
+
+    language = models.CharField(
+        _("idioma"),
+        max_length=8,
+        choices=settings.LANGUAGES,
+        unique=True,
+    )
+    asset = models.ForeignKey(
+        "content.Asset",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="language_flags",
+        verbose_name=_("imagem da bandeira"),
+        help_text=_("Sem imagem, o assistente desenha a bandeira padrão."),
+    )
+
+    class Meta:
+        verbose_name = _("bandeira de idioma")
+        verbose_name_plural = _("bandeiras dos idiomas")
+        ordering = ["language"]
+
+    def __str__(self):
+        return self.language
+
+    @property
+    def url(self):
+        """O endereco da imagem, ou vazio -- o template decide pela queda."""
+        return self.asset.file.url if self.asset_id and self.asset.file else ""

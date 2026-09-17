@@ -25,7 +25,17 @@ Não se acrescenta nem se remove idioma: os quatro oficiais vêm de
 Os valores vão para `letters.DocumentLanguageSettings`. Quem faz a conta
 com eles é `apps.letters.services` -- este template não decide nada.
 
-Contexto: form (DocumentLanguagesForm), pode_editar (bool).
+AS BANDEIRAS
+------------
+O terceiro cartão, fora do formulário acima, troca a IMAGEM que o
+assistente mostra ao lado de cada idioma (etapas 5 e 6). Fica aqui
+porque é aqui que se decide o que cada idioma é na tela.
+
+Fora do `<form>` de propósito: cada bandeira tem envio próprio, e
+formulário dentro de formulário não existe em HTML.
+
+Contexto: form (DocumentLanguagesForm), pode_editar (bool),
+bandeiras (lista de dicts: codigo, nome, classe, url).
 {% endcomment %}
 
 {% block bo_main %}
@@ -88,4 +98,46 @@ Contexto: form (DocumentLanguagesForm), pode_editar (bool).
   </div>
   {% endif %}
 </form>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{% translate "Bandeiras" %}</h2>
+    <span class="note d-only">{% translate "A imagem que aparece ao lado de cada idioma no assistente" %}</span>
+  </div>
+  <p class="text-muted">{% blocktranslate trimmed %}
+    Sem imagem enviada, o assistente desenha a bandeira padrão do idioma. Envie uma imagem só quando quiser trocá-la.
+  {% endblocktranslate %}</p>
+
+  <ul class="bo-itens-do-menu">
+    {% for bandeira in bandeiras %}
+    <li class="bo-item-do-menu">
+      {% if bandeira.url %}
+        <img class="lang-flag" src="{{ bandeira.url }}" alt="">
+      {% else %}
+        <span class="lang-flag {{ bandeira.classe }}" aria-hidden="true"></span>
+      {% endif %}
+      <div class="bo-item-do-menu-texto">
+        <strong>{{ bandeira.nome }}</strong>
+        <span class="text-muted">{% if bandeira.url %}{% translate "Imagem enviada" %}{% else %}{% translate "Bandeira padrão" %}{% endif %}</span>
+      </div>
+
+      {% if pode_editar %}
+      <form method="post" action="{% url 'backoffice:language_flag' bandeira.codigo %}" enctype="multipart/form-data" class="bo-parceiro-acoes bo-envio-de-bandeira">
+        {% csrf_token %}
+        <label class="field-hint" for="bandeira_{{ bandeira.codigo }}">{% translate "Trocar a imagem" %}</label>
+        <input class="input" id="bandeira_{{ bandeira.codigo }}" type="file" name="bandeira" accept="image/png,image/jpeg,image/gif,image/webp" required>
+        <button type="submit" class="btn btn-secondary btn-sm"><i class="ph ph-upload-simple" aria-hidden="true"></i>{% translate "Enviar" %}</button>
+      </form>
+      {% if bandeira.url %}
+      <form method="post" action="{% url 'backoffice:language_flag' bandeira.codigo %}">
+        {% csrf_token %}
+        <input type="hidden" name="remover" value="1">
+        <button type="submit" class="btn btn-ghost btn-sm"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>{% translate "Voltar à padrão" %}</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
 {% endblock %}

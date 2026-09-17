@@ -392,8 +392,20 @@ def backoffice_languages(request):
     else:
         form = DocumentLanguagesForm(instance=config)
 
+    # As bandeiras moram nesta mesma tela: sao a cara de cada idioma no
+    # assistente, e nao ha onde mais procura-las. O envio de cada uma e
+    # uma rota propria (ver `letters.backoffice_views`), porque e um
+    # POST de arquivo -- nao cabe no `<form>` desta configuracao.
+    from apps.letters.backoffice_views import bandeiras_para_administrar
+
     context = _backoffice_context("languages")
-    context.update({"form": form, "pode_editar": pode_editar})
+    context.update(
+        {
+            "form": form,
+            "pode_editar": pode_editar,
+            "bandeiras": bandeiras_para_administrar(),
+        }
+    )
     return render(request, "backoffice/languages.html", context)
 
 

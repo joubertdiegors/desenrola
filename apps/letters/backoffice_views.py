@@ -33,8 +33,9 @@ exatamente o que esta arquitetura evita.
 import datetime
 from functools import wraps
 
+from django import forms
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -45,8 +46,8 @@ from django.views.decorators.http import require_POST
 
 from apps.core.forms import LetterNoticeForm
 from apps.core.views import backoffice_required
-from apps.letters import lifecycle, presentation
-from apps.letters.models import Letter, LetterNotice
+from apps.letters import lifecycle, presentation, services
+from apps.letters.models import LanguageFlag, Letter, LetterNotice
 
 # Quantas cartas por página. A filtragem por estado acontece depois da
 # consulta (ver o cabeçalho), então paginar aqui é o que impede a tela de
@@ -421,3 +422,126 @@ def backoffice_letter_notice_delete(request, pk):
     contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
     contexto.update({"declaracao": declaracao})
     return render(request, "backoffice/letter_notice_delete.html", contexto)
+
+
+# ---------------------------------------------------------------------------
+# Bandeiras dos idiomas do documento
+# ---------------------------------------------------------------------------
+#
+# A tela delas e a de Idiomas (`backoffice/languages.html`): e la que se
+# decide o que cada idioma e' no assistente, e a bandeira e a cara dele.
+#
+# O ENVIO REUSA A BIBLIOTECA DE IMAGENS
+# -------------------------------------
+# Nao ha sistema de imagens novo: o arquivo vira um `content.Asset`,
+# com a MESMA validacao de formato e tamanho de todo upload do projeto
+# (`content.forms._validar_arquivo_de_imagem`) e a MESMA limpeza de
+# orfaos (`content.backoffice_views._apagar_asset_se_orfao`) que o
+# upload direto de Parceiros e Banners usa.
+
+
+DOCUMENT_LANGUAGES_PERM = "letters.change_documentlanguagesettings"
+
+
+def _url_dos_idiomas():
+    return reverse("backoffice:languages")
+
+
+def exige_idiomas(view):
+    """Backoffice + permissao de alterar os idiomas dos documentos."""
+
+    @wraps(view)
+    @backoffice_required
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.has_perm(DOCUMENT_LANGUAGES_PERM):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def bandeiras_para_administrar():
+    """
+    Um item por idioma de `settings.LANGUAGES`, com a imagem cadastrada
+    quando houver.
+
+    A lista vem das CONFIGURACOES, nao da tabela: um idioma sem linha em
+    `LanguageFlag` continua precisando aparecer na tela -- e' justamente
+    nele que alguem vai querer enviar a primeira bandeira.
+    """
+    from django.conf import settings
+
+    cadastradas = {b.language: b for b in LanguageFlag.objects.select_related("asset")}
+    itens = []
+    for codigo, _rotulo in settings.LANGUAGES:
+        meta = services.LANGUAGE_META.get(codigo) or {}
+        bandeira = cadastradas.get(codigo)
+        itens.append(
+            {
+                "codigo": codigo,
+                "nome": meta.get("name") or codigo,
+                "classe": meta.get("flag") or "",
+                "url": bandeira.url if bandeira else "",
+            }
+        )
+    return itens
+
+
+@exige_idiomas
+@require_POST
+def backoffice_language_flag(request, code):
+    """
+    Envia (ou remove) a bandeira de um idioma.
+
+    O codigo vem da URL e e conferido contra `settings.LANGUAGES`: um
+    idioma que o produto nao tem nao ganha bandeira por um POST montado
+    a mao.
+
+    Remover nao apaga a imagem cegamente -- `_apagar_asset_se_orfao`
+    confere antes se mais alguem a usa, exatamente como no upload direto
+    de Parceiros e Banners.
+    """
+    from django.conf import settings
+
+    from apps.content.backoffice_views import _apagar_asset_se_orfao
+    from apps.content.forms import _validar_arquivo_de_imagem
+    from apps.content.models import Asset
+
+    if code not in {codigo for codigo, _rotulo in settings.LANGUAGES}:
+        raise Http404("idioma desconhecido")
+
+    bandeira, _criada = LanguageFlag.objects.get_or_create(language=code)
+    anterior = bandeira.asset
+
+    if request.POST.get("remover") == "1":
+        bandeira.asset = None
+        bandeira.save(update_fields=["asset", "updated_at"])
+        _apagar_asset_se_orfao(anterior)
+        messages.success(request, _("Bandeira removida. Volta a bandeira padrão."))
+        return redirect(_url_dos_idiomas())
+
+    arquivo = request.FILES.get("bandeira")
+    if not arquivo:
+        messages.error(request, _("Escolha uma imagem para enviar."))
+        return redirect(_url_dos_idiomas())
+
+    formulario = forms.ImageField(required=True)
+    try:
+        # As duas conferencias, na ordem: o Pillow ABRE o arquivo (e
+        # recusa o que nao for imagem de verdade, por mais que a
+        # extensao diga o contrario), e depois valem tamanho e formato.
+        arquivo = formulario.clean(arquivo)
+        _validar_arquivo_de_imagem(arquivo)
+    except ValidationError as erro:
+        messages.error(request, erro.messages[0])
+        return redirect(_url_dos_idiomas())
+
+    bandeira.asset = Asset.objects.create(
+        file=arquivo, kind=Asset.Kind.CONTENT, alt_text=f"{code}"
+    )
+    bandeira.save(update_fields=["asset", "updated_at"])
+    if anterior and anterior.pk != bandeira.asset_id:
+        _apagar_asset_se_orfao(anterior)
+
+    messages.success(request, _("Bandeira atualizada."))
+    return redirect(_url_dos_idiomas())
