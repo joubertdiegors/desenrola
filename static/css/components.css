@@ -235,6 +235,32 @@ textarea.input { height: auto; min-height: 96px; padding-top: 12px; padding-bott
   line-height: 1;
 }
 .pw-toggle:hover { color: var(--p); }
+/* O SEGUNDO OLHO ERA DO NAVEGADOR, NAO NOSSO
+   -------------------------------------------
+   Edge e Chromium desenham um botao PROPRIO de revelar senha dentro do
+   `input[type=password]` -- mas so depois que ha texto digitado. Dai o
+   sintoma: um olho ao abrir a tela, dois ao comecar a digitar. Nao ha
+   nada duplicado no DOM (ha um `button` so, e `app.js` trabalha por
+   delegacao, sem criar elemento nenhum); o que havia era o controle
+   nativo aparecendo ao lado do nosso.
+
+   Escondemos o nativo porque o projeto ja oferece o proprio, com
+   `aria-pressed`, alvo de 40px e rotulo traduzido -- dois controles
+   para a mesma acao e que seria o problema de acessibilidade.
+
+   Vale para qualquer campo de senha do sistema (cadastro, login, perfil,
+   redefinicao), por isso a regra e do elemento, nao de uma tela. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
+/* O equivalente do WebKit/Safari: os botoes de preenchimento automatico
+   de senha, que tambem aparecem DENTRO do campo, sobre o nosso olho. */
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
+  margin: 0;
+}
 
 select.input {
   appearance: none;

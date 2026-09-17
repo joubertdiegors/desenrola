@@ -42,7 +42,7 @@ credencial aparecem no aviso de erro, acima dos campos.
         <label for="id_password">{% translate "Senha" %}</label>
         <div class="pw-wrap">
           <input class="input" id="id_password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
-          <button type="button" class="pw-toggle" data-pw-toggle aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
+          <button type="button" class="pw-toggle" data-pw-toggle aria-pressed="false" aria-label="{% translate 'Mostrar ou ocultar a senha' %}"><i class="ph ph-eye" aria-hidden="true"></i></button>
         </div>
         {% include "components/field_errors.html" with errors=form.password.errors %}
       </div>
