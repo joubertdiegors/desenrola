@@ -139,12 +139,24 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
 
     {% if missing_profile_fields %}
     {# Perfil incompleto: a etapa não avança e o modal diz exatamente o que falta. #}
-    <div class="notice notice-error" id="perfil-incompleto">
+    {% comment %}
+    O botão fica NA MENSAGEM, e não só no rodapé do cartão: quem lê
+    "faltam dados" quer resolver ali, sem procurar. O link "Editar meus
+    dados", mais abaixo, continua existindo -- ele serve a outra
+    intenção (conferir/corrigir um dado que ESTÁ lá), e some quando não
+    há pendência nenhuma, o que este botão também faz.
+
+    A rota vem de `{% templatetag openblock %} url {% templatetag closeblock %}`
+    com o `next` que a própria view calcula, nunca de um caminho escrito
+    à mão: quem completa o perfil volta exatamente para esta etapa.
+    {% endcomment %}
+    <div class="notice notice-error notice-com-acao" id="perfil-incompleto">
       <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
       <span>
         <strong>{% translate "Faltam dados no seu perfil." %}</strong>
         {% blocktranslate with campos=missing_profile_fields|join:", " %}Para continuar, informe: {{ campos }}.{% endblocktranslate %}
       </span>
+      <a class="btn btn-danger btn-sm notice-acao" href="{{ profile_url }}?next={{ profile_return_url|urlencode }}"><i class="ph ph-user-circle-plus" aria-hidden="true"></i>{% translate "Completar perfil" %}</a>
     </div>
     {% endif %}
 

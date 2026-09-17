@@ -545,6 +545,17 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .notice-error { background: color-mix(in srgb, var(--error) 10%, white); }
 .notice-error > .ph { color: var(--error-dark); }
 .notice-sm { font-size: 12.5px; padding: 10px 12px; }
+/* Aviso com uma ACAO ao lado do texto (ex.: "Faltam dados no seu
+   perfil" + "Completar perfil"). O botao nao encolhe e nao estica: no
+   desktop fica na direita do texto; abaixo de 640px a linha quebra e
+   ele desce, alinhado a esquerda, em vez de espremer a frase em duas
+   palavras por linha. */
+.notice-com-acao { flex-wrap: wrap; align-items: center; }
+.notice-com-acao > span { flex: 1 1 260px; }
+.notice-com-acao .notice-acao { flex: none; margin-left: auto; }
+@media (max-width: 640px) {
+  .notice-com-acao .notice-acao { margin-left: 0; }
+}
 
 
 /* --------------------------------------------------------------------------
