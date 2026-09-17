@@ -328,9 +328,9 @@
     caixa.classList.toggle("is-invalid", passou);
     caixa.classList.toggle("is-ok", !passou);
 
-    var etiqueta = caixa.querySelector("[data-duration-over]");
-    if (etiqueta) { etiqueta.hidden = !passou; }
-
+    // Nao ha etiqueta "> 90 dias" aqui: a cor da caixa e o aviso abaixo
+    // ja dizem a mesma coisa, e o selo compacto repetia o numero que a
+    // frase do aviso ja traz por extenso.
     var aviso = form.querySelector("[data-duration-warning]");
     if (aviso) { aviso.hidden = !passou; }
 

@@ -113,7 +113,6 @@ O indicador "Rascunho salvo" fica: e informacao, nao controle.
             <div class="duration-label">{% translate "Duração da estadia" %}</div>
             <div class="duration-value" data-duration-value>{% if duration_days %}{% blocktranslate count n=duration_days trimmed %}{{ n }} dia{% plural %}{{ n }} dias{% endblocktranslate %}{% endif %}</div>
           </div>
-          <span class="tag tag-error push" data-duration-over{% if not duration_exceeded %} hidden{% endif %}>{% blocktranslate %}&gt; {{ max_stay_days }} dias{% endblocktranslate %}</span>
         </div>
         <div class="notice notice-error span-2" data-duration-warning{% if not duration_exceeded %} hidden{% endif %}><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{% blocktranslate %}A estadia não pode ultrapassar {{ max_stay_days }} dias. Ajuste as datas para continuar.{% endblocktranslate %}</span></div>
         <div class="notice span-2"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A data de partida deve ser posterior à data de chegada. Cartas de curta duração valem para estadias de até 90 dias." %}</span></div>
