@@ -264,12 +264,16 @@ class TestLimiteDeNoventaDias:
         assert "stay_departure" not in draft.data
 
     def test_acima_de_noventa_dias_avisa_e_destaca_em_vermelho(self, auth_client, draft):
+        """
+        A etiqueta "> 90 dias" saiu (ver `test_ajustes_do_assistente.py`);
+        o que diz que há um problema é a caixa em vermelho e a frase que
+        explica o quê -- não um rótulo técnico.
+        """
         _fill_until(auth_client, draft, 2)
 
         html = auth_client.post(_step_url(draft, 2), self.ACIMA).content.decode()
 
         assert "is-invalid" in html
-        assert "tag-error" in html
         assert f"não pode ultrapassar {MAX_STAY_DAYS} dias" in html
 
     def test_o_limite_vale_tambem_no_backend(self, auth_client, draft):

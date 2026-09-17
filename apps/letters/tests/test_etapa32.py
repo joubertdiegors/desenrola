@@ -351,7 +351,9 @@ class TestDuracaoAoVivo:
         aviso = aviso[: aviso.index(">")]
 
         assert "hidden" not in aviso
-        assert "tag-error" in html
+        # A etiqueta "> 90 dias" saiu: o aviso acima e a caixa em
+        # vermelho já dizem o que há, e em português.
+        assert "is-invalid" in html
 
     @pytest.mark.parametrize(
         "chegada,partida",

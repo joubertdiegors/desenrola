@@ -128,6 +128,7 @@ def mundo(db, modelos_oficiais_prontos, user, other_user):
     )
     from apps.doctemplates.models import DocumentTemplate
     from apps.letters import services as letras
+    from apps.letters.models import LetterNotice
 
     minha = letras.start_draft(user, "fr")
     dela = letras.start_draft(other_user, "fr")
@@ -157,6 +158,7 @@ def mundo(db, modelos_oficiais_prontos, user, other_user):
         "imagem": Asset.objects.filter(kind=Asset.Kind.LOGO).first()
         or Asset.objects.first(),
         "modelo": DocumentTemplate.objects.filter(is_system=True).first(),
+        "declaracao": LetterNotice.objects.first(),
     }
 
 
@@ -180,6 +182,12 @@ def _argumento(tipo, nome, mundo):
         return mundo["secao"].pk
     if "document" in nome or "template" in nome:
         return mundo["modelo"].pk
+    if "letter_notice" in nome:
+        return mundo["declaracao"].pk
+    if nome == "backoffice:language_flag":
+        # Um codigo de idioma, e nao um `pk`: a rota confere o valor
+        # contra `settings.LANGUAGES`.
+        return "pt"
     raise AssertionError(
         f"a rota {nome!r} pede um argumento que esta auditoria não sabe montar -- "
         "acrescente-o em `_argumento` em vez de deixá-la de fora"
