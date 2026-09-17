@@ -900,8 +900,13 @@ img.partner-image { object-fit: contain; padding: 28px; box-sizing: border-box; 
 .letter-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .letter-card h2, .letter-card h3 { font-size: 16px; }
 .letter-card p { font-size: 13px; color: var(--mu); }
-.letter-card .btn { min-height: 42px; font-size: 14px; flex: 1; }
-.letter-card-actions { display: flex; gap: 8px; margin-top: 6px; }
+/* `1 1 auto` e nao `1`: com base ZERO os tres botoes de uma carta
+   finalizada (Ver PDF, Editar, Detalhes) "cabiam" na conta do flex e
+   iam todos para a mesma linha -- onde nenhum podia encolher abaixo do
+   proprio texto, e o ultimo saia pela direita da tela em 375 e 390. Com
+   base no conteudo a linha sabe que nao cabe, e o terceiro desce. */
+.letter-card .btn { min-height: 42px; font-size: 14px; flex: 1 1 auto; }
+.letter-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 
 /* Estado vazio de "Minhas cartas": mesma moldura .card do resto do
    dashboard, so centrada. */
