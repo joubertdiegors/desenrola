@@ -198,14 +198,15 @@ class TestNenhumaAcaoFalsa:
 
     def test_cada_parte_com_cadastro_leva_ao_cadastro_dela(self, cliente):
         """
-        As duas que administram registros próprios (`section_schema`)
+        As que administram registros próprios (`section_schema`)
         precisam oferecer o caminho -- senão a declaração seria letra
-        morta na tela.
+        morta na tela. O rodapé saiu da lista: virou conteúdo rico, sem
+        cadastro próprio (ver `test_rodape.py`).
         """
         com_cadastro = {
             chave for chave, s in section_schema.SECOES.items() if s.cadastro
         }
-        assert com_cadastro == {"navbar", "partners", "faq", "footer"}
+        assert com_cadastro == {"navbar", "partners", "faq"}
 
         corpo_navbar = cliente.get(
             reverse("backoffice:content_section", args=[secao("navbar").pk])

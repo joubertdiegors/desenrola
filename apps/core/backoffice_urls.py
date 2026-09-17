@@ -223,16 +223,6 @@ urlpatterns = [
     # tela deles e o editor da secao "footer" (ver `cadastro="rodape"`
     # em `content.section_schema`) -- so que os "itens" sao os quatro
     # blocos fixos, identificados pela chave, nao por um `pk` de banco.
-    path(
-        "conteudo/rodape/bloco/situacao/",
-        content_backoffice.backoffice_footer_bloco_activation,
-        name="footer_bloco_activation",
-    ),
-    path(
-        "conteudo/rodape/bloco/ordem/",
-        content_backoffice.backoffice_footer_bloco_move,
-        name="footer_bloco_move",
-    ),
     # Biblioteca de imagens: toda imagem administravel do projeto.
     path("imagens/", content_backoffice.backoffice_assets, name="assets"),
     path("imagens/nova/", content_backoffice.backoffice_asset_new, name="asset_new"),

@@ -72,6 +72,22 @@ class Texto:
 
 
 @dataclass(frozen=True)
+class TextoRico:
+    """
+    Um conteúdo com MARCAÇÃO -- títulos, links, listas, alinhamento.
+
+    Editado no editor rico do Backoffice e reduzido a uma lista fechada
+    de tags por `content.rodape.sanitizar`, antes de gravar e antes de
+    desenhar. Só o rodapé usa isto hoje; é o único lugar do projeto em
+    que quem administra escreve HTML.
+    """
+
+    chave: str
+    rotulo: str
+    ajuda: str = ""
+
+
+@dataclass(frozen=True)
 class Lista:
     """
     Uma lista de itens iguais dentro da seção (os cartões).
@@ -100,51 +116,6 @@ class Layout:
     nome: str
     descricao: str
     campos: tuple = field(default_factory=tuple)
-
-
-@dataclass(frozen=True)
-class Bloco:
-    """
-    Um pedaço do rodapé que se liga, desliga e reordena.
-
-    O CMS controla a COMPOSIÇÃO; os dados continuam vindo de onde já
-    vinham. `origem` é o que a tela mostra para deixar isso claro --
-    quem quiser mudar o telefone sabe onde ir.
-    """
-
-    chave: str
-    nome: str
-    origem: str
-
-
-# Os blocos do rodapé, na ordem em que ele nasce.
-BLOCOS_DO_RODAPE = (
-    Bloco("marca", _("Marca"), _("Aparência (logotipo) e Sistema (nome do site)")),
-    Bloco("legais", _("Links legais"), _("Páginas legais")),
-    Bloco("contato", _("Contato"), _("Sistema (e-mail, telefone e endereço)")),
-    Bloco("redes", _("Redes sociais"), _("Sistema (redes sociais)")),
-)
-
-ORDEM_PADRAO_DO_RODAPE = tuple(bloco.chave for bloco in BLOCOS_DO_RODAPE)
-
-
-def blocos_do_rodape(conteudo):
-    """
-    Os blocos que o rodapé desenha, na ordem escolhida.
-
-    Sem escolha gravada -- rodapé recém-semeado, ou conteúdo estranho no
-    banco -- vale a ordem padrão com tudo ligado. Um rodapé vazio por
-    acidente seria pior do que um rodapé completo.
-    """
-    escolhidos = (conteudo or {}).get("blocos")
-    if not isinstance(escolhidos, list) or not escolhidos:
-        return list(ORDEM_PADRAO_DO_RODAPE)
-    conhecidos = set(ORDEM_PADRAO_DO_RODAPE)
-    vistos = []
-    for chave in escolhidos:
-        if chave in conhecidos and chave not in vistos:
-            vistos.append(chave)
-    return vistos or list(ORDEM_PADRAO_DO_RODAPE)
 
 
 @dataclass(frozen=True)
@@ -544,13 +515,22 @@ SECOES = {
         chave="footer",
         nome=_("Rodapé"),
         descricao=_(
-            "O fim de toda página. O nome, o contato, as redes e os links "
-            "legais vêm de Sistema e das páginas legais -- aqui se controla "
-            "a composição."
+            "O fim de toda página, escrito livremente: títulos, links, "
+            "listas e colunas. Nome, contato, redes e páginas legais entram "
+            "por atalhos -- os dados continuam em Sistema e nas páginas "
+            "legais."
         ),
         grupo=FINAL,
-        campos=(Texto("contato_label", _("Texto do link de contato")),),
-        cadastro="rodape",
+        campos=(
+            TextoRico(
+                "html",
+                _("Conteúdo do rodapé"),
+                ajuda=_(
+                    "Escreva livremente. Use os atalhos para o nome do site, "
+                    "o contato e os links legais -- assim nada fica duplicado."
+                ),
+            ),
+        ),
     ),
 }
 

@@ -1,75 +1,46 @@
-{% load i18n %}{% comment %}
-Rodapé -- marca, links e copyright, CENTRADOS, em três linhas.
-
-É a forma da referência visual: fundo branco, uma borda fina no topo, o
-nome do site em destaque, os links numa linha que quebra sozinha quando
-precisa, e o copyright pequeno por último. A mesma composição nas duas
-larguras -- não há uma versão de desktop e outra de celular.
+{% load i18n conteudo %}{% comment %}
+Rodapé -- conteúdo rico, escrito no Backoffice.
 
 O QUE O CMS CONTROLA AQUI
 -------------------------
-A COMPOSIÇÃO, e só ela: quais blocos aparecem e em que ordem
-(`blocos_do_rodape`, editado em Central de Conteúdo → Final → Rodapé),
-mais o rótulo do link de contato. O rodapé inteiro some quando a parte
-"footer" está desativada -- e some o ELEMENTO, sem deixar faixa vazia
-no lugar.
+O CONTEÚDO, inteiro: a parte "footer" guarda um HTML (`html`) escrito no
+editor rico da Central de Conteúdo. Títulos, links, listas, alinhamento,
+colunas -- o que o administrador compuser é o que sai aqui. A parte
+desativada tira o rodapé inteiro do site: some o ELEMENTO, sem faixa
+vazia no lugar.
 
 O QUE ELE NÃO CONTROLA
 ----------------------
-Os DADOS. Nome e logotipo vêm de `SiteSettings` (Aparência e Sistema);
-contato e redes, também de `SiteSettings`; os links legais, dos
-`ContentBlock` legais. Nada disso é duplicado aqui: cada dado tem um
-dono só, e o rodapé apenas decide se mostra e em que ordem.
+Os DADOS. Nome do site, e-mail, telefone, endereço e redes vêm de
+Sistema; os links legais vêm das páginas legais publicadas; os links de
+navegação vêm do cadastro de itens da barra superior. O conteúdo os
+chama por ATALHOS (`{nome_do_site}`, `{url_privacidade}`, `{menu}`...)
+que `content.rodape.renderizar` troca pelos dados de verdade na hora de
+desenhar. Nada é duplicado: o rodapé cita, não copia.
 
-A MARCA É O NOME, E NÃO O LOGOTIPO
+O HTML PASSA POR UMA LISTA FECHADA
 ----------------------------------
-A referência põe o nome do site em texto, e não a marca desenhada --
-que já abre a página, no alto. `site_config.name` é a mesma fonte das
-duas.
+Antes de gravar E antes de desenhar, `content.rodape.sanitizar` reduz a
+marcação ao que o editor oferece. `<script>`, `on*`, `javascript:` e
+afins não sobrevivem. É a única exceção do projeto ao escape automático,
+e mora num módulo só -- ver o cabeçalho de `content/rodape.py`.
 
-O ANO É DO SERVIDOR
--------------------
-`{% templatetag openblock %} now "Y" {% templatetag closeblock %}`, e não
-uma configuração: o ano corrente não é uma decisão editorial, e um campo
-para ele só criaria uma coisa a mais para alguém esquecer de atualizar.
+LINK MORTO NÃO É DESENHADO
+--------------------------
+Página legal sem texto, e-mail de contato em branco: o atalho resolve
+para vazio e o link inteiro sai, com o rótulo. É a mesma regra do resto
+do site.
 
-TERMOS DE USO E PRIVACIDADE
----------------------------
-Cada um só aparece quando o documento correspondente TEM TEXTO
-publicado (`content.ContentBlock`, chaves `legal.*`). Sem texto, o link
-não existe -- e não vira um `#`. Um link que leva a lugar nenhum é pior
-do que link nenhum.
+A MESMA COMPOSIÇÃO NAS DUAS LARGURAS
+------------------------------------
+A referência visual põe o rodapé numa coluna centrada: fundo branco,
+borda fina no topo, texto pequeno. O CSS (`.site-footer-conteudo`)
+veste os elementos genéricos que o editor produz -- `h3` vira a marca,
+`p` vira a linha de links, `font size=2` vira o copyright.
 
-Contexto: partes.footer, blocos_do_rodape, paginas_legais, site_config.
+Contexto: partes.footer, site_config, paginas_legais, menu_itens.
 {% endcomment %}{% if partes.footer %}
-{% with rodape=partes.footer.conteudo %}
 <footer class="site-footer">
-  <div class="home-largura site-footer-conteudo">
-    {% if "marca" in blocos_do_rodape %}
-    <a class="site-footer-marca" href="{% url 'core:home' %}">{{ site_config.name }}</a>
-    {% endif %}
-
-    {% if "legais" in blocos_do_rodape or "contato" in blocos_do_rodape or "redes" in blocos_do_rodape %}
-    <nav class="site-footer-links" aria-label="{% translate 'Links do rodapé' %}">
-      {% for bloco in blocos_do_rodape %}
-        {% if bloco == "legais" %}
-          {% if paginas_legais.termos_de_uso %}<a href="{% url 'core:legal_termos' %}">{% translate "Termos de uso" %}</a>{% endif %}
-          {% if paginas_legais.privacidade %}<a href="{% url 'core:legal_privacidade' %}">{% translate "Privacidade" %}</a>{% endif %}
-        {% elif bloco == "contato" %}
-          {% if site_config.contact.email %}<a href="mailto:{{ site_config.contact.email }}">{{ rodape.contato_label|default:_("Contato") }}</a>{% endif %}
-          {% if site_config.contact.phone %}<span>{{ site_config.contact.phone }}</span>{% endif %}
-          {% if site_config.contact.address %}<span>{{ site_config.contact.address|linebreaksbr }}</span>{% endif %}
-        {% elif bloco == "redes" %}
-          {% for rede in site_config.social %}
-          <a class="site-footer-social" href="{{ rede.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ rede.nome }}"><i class="ph {{ rede.icone }}" aria-hidden="true"></i></a>
-          {% endfor %}
-        {% endif %}
-      {% endfor %}
-    </nav>
-    {% endif %}
-
-    <span class="site-footer-copyright">&copy; {% now "Y" %} {{ site_config.name }}</span>
-  </div>
+  <div class="home-largura site-footer-conteudo">{% rodape_renderizado partes.footer.conteudo %}</div>
 </footer>
-{% endwith %}
 {% endif %}

@@ -24,6 +24,28 @@ from django import template
 
 register = template.Library()
 
+
+@register.simple_tag(takes_context=True)
+def rodape_renderizado(context, conteudo):
+    """
+    O HTML do rodapé pronto para a página: sanitizado, com os atalhos
+    trocados pelos dados de Sistema, das páginas legais e do menu.
+
+    Lê `site_config`, `paginas_legais` e `menu_itens` do contexto da
+    página -- os mesmos que a barra superior usa. É o que faz a prévia
+    do Backoffice e a Home pública desenharem o mesmo rodapé: ambas
+    passam por aqui, com o mesmo contexto.
+    """
+    from apps.content import rodape
+
+    html_gravado = (conteudo or {}).get("html") if hasattr(conteudo, "get") else None
+    return rodape.renderizar(
+        html_gravado,
+        context.get("site_config"),
+        context.get("paginas_legais"),
+        context.get("menu_itens") or (),
+    )
+
 # Até onde o desenho "Editorial" numera. Três é o que a referência
 # visual pede, e é o que o schema declara em campos.
 QUANTOS_PASSOS = 3

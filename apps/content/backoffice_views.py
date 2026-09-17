@@ -37,7 +37,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.views import exige_permissao
 
-from . import section_schema, services
+from . import rodape, section_schema, services
 from .forms import (
     FormularioDeImagem,
     FormularioDeItemDoMenu,
@@ -262,11 +262,9 @@ def backoffice_content_section(request, pk):
                 if declarada.cadastro == "faq"
                 else None
             ),
-            "blocos_do_rodape_admin": (
-                _linhas_dos_blocos_do_rodape(traducao.content if traducao else {})
-                if declarada.cadastro == "rodape"
-                else None
-            ),
+            # Os atalhos que o editor rico oferece -- so nas secoes que tem
+            # conteudo rico (hoje, o rodape).
+            "atalhos_do_editor": rodape.ATALHOS if form.tem_editor_rico() else None,
         },
     )
 
@@ -435,10 +433,6 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=No
     contexto = dict(contexto)
     contexto["partes"] = {**contexto["partes"], chave: proposto}
     contexto["secoes"] = {**contexto["secoes"], chave: proposto.conteudo}
-    if chave == "footer":
-        from .section_schema import blocos_do_rodape
-
-        contexto["blocos_do_rodape"] = blocos_do_rodape(proposto.conteudo)
     return contexto
 
 
@@ -1240,124 +1234,3 @@ def backoffice_faq_item_delete(request, pk):
             "url_do_faq": _url_do_faq(idioma_pedido(request)),
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Rodapé
-# ---------------------------------------------------------------------------
-#
-# A tela dele é o editor da seção "footer" (ver `cadastro="rodape"` em
-# `section_schema`), mesma forma dos itens do menu e das perguntas --
-# só que os "itens" aqui são os QUATRO blocos fixos de
-# `section_schema.BLOCOS_DO_RODAPE`, e não registros de um cadastro que
-# cresce. Ligar/desligar/reordenar grava em `content["blocos"]`, a
-# MESMA lista que `blocos_do_rodape()` já lê para desenhar o rodapé --
-# nenhum dado novo, só a tela que faltava para editá-lo.
-
-
-def _url_do_rodape(idioma=None):
-    secao = PageSection.objects.filter(page__key=CHAVE_DA_HOME, key="footer").first()
-    if secao is None:
-        return _url_da_lista(idioma or settings.LANGUAGE_CODE)
-    url = reverse("backoffice:content_section", args=[secao.pk])
-    return f"{url}?idioma={idioma}" if idioma else url
-
-
-def _linhas_dos_blocos_do_rodape(conteudo):
-    """
-    Os quatro blocos, como a tela de administração apresenta: os
-    ativos primeiro, na ordem escolhida, depois os desligados.
-
-    Subir/descer só faz sentido entre os ativos -- por isso eles vêm
-    com `primeiro`/`ultimo` (mesma ideia de `_linhas_com_pontas`, mas
-    aqui a lista não vem de um `QuerySet`) e os desligados não vêm com
-    posição nenhuma para trocar.
-    """
-    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
-
-    ativos = blocos_do_rodape(conteudo)
-    por_chave = {bloco.chave: bloco for bloco in BLOCOS_DO_RODAPE}
-    desligados = [chave for chave in por_chave if chave not in ativos]
-
-    linhas = [
-        {
-            "bloco": por_chave[chave],
-            "ativo": True,
-            "primeiro": indice == 0,
-            "ultimo": indice == len(ativos) - 1,
-        }
-        for indice, chave in enumerate(ativos)
-    ]
-    linhas += [
-        {"bloco": por_chave[chave], "ativo": False, "primeiro": False, "ultimo": False}
-        for chave in desligados
-    ]
-    return linhas
-
-
-def _traducao_do_rodape(idioma):
-    """A tradução do rodapé naquele idioma, criando-a vazia se faltar."""
-    secao = get_object_or_404(PageSection, page__key=CHAVE_DA_HOME, key="footer")
-    traducao, _criada = PageSectionTranslation.objects.get_or_create(
-        section=secao, language=idioma, defaults={"content": {}}
-    )
-    return traducao
-
-
-@exige_permissao(EDITAR_PERM)
-@require_POST
-def backoffice_footer_bloco_activation(request):
-    """
-    Liga e desliga um bloco do rodapé. Desligado, some do rodapé na
-    hora -- sem apagar dado nenhum: `marca`/`legais`/`contato`/`redes`
-    continuam existindo em `BLOCOS_DO_RODAPE`, só saem da lista gravada.
-    """
-    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
-
-    chave = request.POST.get("chave")
-    if chave not in {bloco.chave for bloco in BLOCOS_DO_RODAPE}:
-        raise Http404("bloco desconhecido")
-
-    idioma = idioma_pedido(request)
-    traducao = _traducao_do_rodape(idioma)
-    atuais = blocos_do_rodape(traducao.content)
-    ligar = request.POST.get("ativo") == "1"
-
-    if ligar and chave not in atuais:
-        atuais = [*atuais, chave]
-    elif not ligar and chave in atuais:
-        atuais = [c for c in atuais if c != chave]
-    traducao.content = {**traducao.content, "blocos": atuais}
-    traducao.save(update_fields=["content"])
-
-    if ligar:
-        messages.success(request, _("Bloco ativado. Volta a aparecer no rodapé."))
-    else:
-        messages.success(request, _("Bloco desativado. Deixa de aparecer no rodapé."))
-    return redirect(_url_do_rodape(idioma))
-
-
-@exige_permissao(EDITAR_PERM)
-@require_POST
-def backoffice_footer_bloco_move(request):
-    """Sobe ou desce um bloco ativo do rodapé."""
-    from .section_schema import BLOCOS_DO_RODAPE, blocos_do_rodape
-
-    chave = request.POST.get("chave")
-    if chave not in {bloco.chave for bloco in BLOCOS_DO_RODAPE}:
-        raise Http404("bloco desconhecido")
-
-    idioma = idioma_pedido(request)
-    traducao = _traducao_do_rodape(idioma)
-    atuais = blocos_do_rodape(traducao.content)
-
-    if chave in atuais:
-        atual = atuais.index(chave)
-        destino = atual - 1 if request.POST.get("direcao") == "subir" else atual + 1
-        if 0 <= destino < len(atuais):
-            atuais = list(atuais)
-            atuais[atual], atuais[destino] = atuais[destino], atuais[atual]
-            traducao.content = {**traducao.content, "blocos": atuais}
-            traducao.save(update_fields=["content"])
-            messages.success(request, _("Ordem atualizada."))
-    return redirect(_url_do_rodape(idioma))

@@ -1,25 +1,26 @@
 """
-Bloco C: o rodapé em três linhas, configurável de verdade no Backoffice.
+O rodapé como conteúdo rico: o que se escreve no Backoffice é o que o
+site desenha -- passando por uma lista fechada.
 
 O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 ------------------------------------
-1. **Que o rodapé duplique dado que já tem dono.** Marca vem de
-   Aparência/Sistema, links legais das páginas legais, contato e redes
-   de Sistema -- mudar em um desses lugares tem de mudar o rodapé sem
-   um segundo campo para escrever o mesmo valor;
-2. **Que o Backoffice não consiga, de verdade, ligar/desligar e
-   reordenar os quatro blocos.** Até este bloco a composição só existia
-   no código -- não havia tela;
-3. **Que desativar um bloco apague alguma coisa.** `marca`/`legais`/
-   `contato`/`redes` continuam existindo em `BLOCOS_DO_RODAPE`; só saem
-   da lista gravada;
-4. **Que o ano fique hardcoded** -- e não que a suíte de
-   `test_sistema.py` seja a única a notar;
-5. **Que a prévia do rodapé desenhe algo diferente da Home pública.**
+1. **Que HTML cru do editor chegue à página.** `<script>`, `on*`,
+   `javascript:`, `<iframe>`, `style` com `url(`: nada disso sobrevive
+   ao sanitizador -- nem gravado, nem desenhado;
+2. **Que o rodapé vire uma segunda fonte de verdade.** Nome, contato,
+   redes e páginas legais entram por ATALHOS; o HTML padrão não grava
+   dado nenhum;
+3. **Que um link leve a lugar nenhum.** Página legal sem texto, e-mail
+   em branco: o `<a>` inteiro sai;
+4. **Que a prévia mostre um rodapé diferente do público.** Os dois
+   passam pelo mesmo parcial e pelo mesmo renderizador;
+5. **Que a tela perca o editor, o interruptor ou a prévia** -- ou ganhe
+   um controle que não faz nada;
+6. **Que o antigo sistema de blocos volte pela porta dos fundos.**
 """
 
+import datetime
 import pathlib
-import re
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -27,15 +28,19 @@ from django.contrib.auth.models import Permission
 from django.test import Client
 from django.urls import reverse
 
-from apps.content.models import PageSection, PageSectionTranslation, SiteSettings
+from apps.content import rodape
+from apps.content.models import (
+    ContentBlock,
+    ContentTranslation,
+    PageSection,
+    PageSectionTranslation,
+    SiteSettings,
+)
 
 pytestmark = pytest.mark.django_db
 
 HOME = reverse("core:home")
-BLOCO_ATIVACAO = reverse("backoffice:footer_bloco_activation")
-BLOCO_MOVER = reverse("backoffice:footer_bloco_move")
-
-TODOS_OS_BLOCOS = ("marca", "legais", "contato", "redes")
+RAIZ = pathlib.Path(__file__).resolve().parents[3]
 
 
 def config():
@@ -53,21 +58,28 @@ def traducao():
     return t
 
 
-def blocos_gravados():
-    """Os blocos ativos, na ordem gravada -- direto do banco."""
-    from apps.content.section_schema import blocos_do_rodape
-
-    return blocos_do_rodape(traducao().content)
-
-
-def corpo(client):
-    return client.get(HOME).content.decode()
+def escrever(html):
+    t = traducao()
+    t.content = {**(t.content or {}), "html": html}
+    t.save(update_fields=["content"])
+    return t
 
 
-def rodape_html(client):
-    html = corpo(client)
-    inicio = html.index("<footer")
-    return html[inicio : html.index("</footer>") + len("</footer>")]
+def publicar_privacidade():
+    bloco, _criado = ContentBlock.objects.get_or_create(
+        key="legal.privacy_policy", defaults={"kind": ContentBlock.Kind.TEXT}
+    )
+    ContentTranslation.objects.update_or_create(
+        block=bloco, language="pt", defaults={"content": "Texto da política."}
+    )
+
+
+def rodape_html(client, url=HOME):
+    html = client.get(url).content.decode()
+    if 'class="site-footer"' not in html:
+        return ""
+    inicio = html.index('class="site-footer"')
+    return html[inicio : html.index("</footer>", inicio)]
 
 
 def url_do_editor():
@@ -115,321 +127,383 @@ def cliente(editora):
     return c
 
 
-def _ligar(cliente, chave, ligado=True):
-    return cliente.post(
-        BLOCO_ATIVACAO, {"chave": chave, "ativo": "1" if ligado else "0", "idioma": "pt"}
+def _payload(html):
+    return {"idioma": "pt", "html": html}
+
+
+# ===========================================================================
+# 1. O sanitizador: a lista fechada
+# ===========================================================================
+
+
+class TestSanitizador:
+    @pytest.mark.parametrize(
+        "veneno",
+        [
+            "<script>alert(1)</script>",
+            '<img src="x" onerror="alert(1)">',
+            '<a href="javascript:alert(1)">x</a>',
+            '<a href="java\tscript:alert(1)">x</a>',
+            '<a href="data:text/html,x">x</a>',
+            '<p onclick="alert(1)">x</p>',
+            '<div style="background:url(javascript:alert(1))">x</div>',
+            '<iframe src="https://x"></iframe>',
+            '<svg onload="alert(1)"><path d="M1 1"/></svg>',
+            "<style>body{display:none}</style>",
+            '<a href="https://x" target="_blank" rel="opener">x</a>',
+        ],
     )
+    def test_nada_executavel_sobrevive(self, veneno):
+        limpo = rodape.sanitizar(veneno)
 
+        for marca in ("script", "onerror", "onclick", "onload", "javascript:", "data:",
+                      "iframe", "url(", "<style", 'rel="opener"'):
+            assert marca not in limpo, (veneno, limpo)
 
-def _mover(cliente, chave, direcao):
-    return cliente.post(BLOCO_MOVER, {"chave": chave, "direcao": direcao, "idioma": "pt"})
-
-
-# ===========================================================================
-# 1. Três linhas -- marca, links, copyright
-# ===========================================================================
-
-
-class TestTresLinhas:
-    def test_as_tres_linhas_existem(self, client):
-        html = rodape_html(client)
-
-        assert "site-footer-marca" in html
-        assert "site-footer-links" in html
-        assert "site-footer-copyright" in html
-
-    def test_a_marca_vem_antes_dos_links_e_o_copyright_por_ultimo(self, client):
-        html = rodape_html(client)
-
-        assert (
-            html.index("site-footer-marca")
-            < html.index("site-footer-links")
-            < html.index("site-footer-copyright")
+    def test_o_que_o_editor_produz_passa_inteiro(self):
+        marcacao = (
+            '<h3 style="text-align:center">Marca</h3>'
+            '<p style="text-align:center"><a href="https://x.example" target="_blank" '
+            'rel="noopener noreferrer">Site</a> <a href="/pt/parceiros/">Parceiros</a></p>'
+            '<ul><li><strong>a</strong> <em>b</em> <u>c</u></li></ul>'
+            '<blockquote>d</blockquote><hr>'
+            '<p><font size="2">© 2026</font></p>'
         )
+
+        assert rodape.sanitizar(marcacao) == marcacao
+
+    def test_e_idempotente(self):
+        sujo = '<p style="text-align:center;color:red">a &amp; b</p><b>aberto'
+        uma = rodape.sanitizar(sujo)
+
+        assert rodape.sanitizar(uma) == uma
+
+    def test_tag_desconhecida_some_e_o_texto_fica(self):
+        assert rodape.sanitizar("<marquee>fica</marquee>") == "fica"
+
+    def test_nova_aba_exige_noopener(self):
+        limpo = rodape.sanitizar('<a href="https://x" target="_blank">x</a>')
+
+        assert 'rel="noopener noreferrer"' in limpo
+
+    def test_so_estilos_da_lista(self):
+        limpo = rodape.sanitizar(
+            '<p style="text-align:center;position:fixed;color:#10275c;top:0">x</p>'
+        )
+
+        assert "text-align:center" in limpo
+        assert "color:#10275c" in limpo
+        assert "position" not in limpo
+        assert "top:" not in limpo
+
+    def test_os_atalhos_passam_como_endereco_de_link(self):
+        assert '<a href="{url_termos}">' in rodape.sanitizar('<a href="{url_termos}">T</a>')
+        assert 'href="mailto:{email_contato}"' in rodape.sanitizar(
+            '<a href="mailto:{email_contato}">C</a>'
+        )
+
+    def test_texto_e_escapado(self):
+        assert rodape.sanitizar("a < b & c") == "a &lt; b &amp; c"
+
+    def test_tamanho_maximo(self):
+        assert len(rodape.sanitizar("x" * 100_000)) <= rodape.TAMANHO_MAXIMO
+
+    def test_o_padrao_e_estavel_sob_o_sanitizador(self):
+        assert rodape.sanitizar(rodape.HTML_PADRAO) == rodape.HTML_PADRAO
+
+
+# ===========================================================================
+# 2. Os atalhos: nada duplicado
+# ===========================================================================
+
+
+class TestAtalhos:
+    def test_o_padrao_nao_grava_dado_nenhum(self):
+        """Nome, e-mail, ano: só atalhos. O dado continua em Sistema."""
+        assert "Desenrola" not in rodape.HTML_PADRAO
+        assert "@" not in rodape.HTML_PADRAO.replace("{email_contato}", "")
+        assert str(datetime.date.today().year) not in rodape.HTML_PADRAO
+        assert "{nome_do_site}" in rodape.HTML_PADRAO
+        assert "{ano}" in rodape.HTML_PADRAO
+
+    def test_o_nome_muda_junto_com_sistema(self, client):
+        atual = config()
+        atual.site_name = "Outro Nome"
+        atual.save()
+
+        html = rodape_html(client)
+
+        assert "Outro Nome" in html
+        assert "{nome_do_site}" not in html
+
+    def test_o_email_muda_junto_com_sistema(self, client):
+        atual = config()
+        atual.contact_email = "novo@exemplo.test"
+        atual.save()
+
+        assert 'href="mailto:novo@exemplo.test"' in rodape_html(client)
+
+    def test_o_ano_e_do_servidor(self, client):
+        assert f"© {datetime.date.today().year}" in rodape_html(client)
+
+    def test_o_menu_e_o_da_barra_superior(self, client):
+        """Os mesmos itens, com a Home na frente da âncora."""
+        from apps.content.models import MenuItem
+
+        item = MenuItem.objects.filter(is_active=True).first()
+        assert item is not None
+        html = rodape_html(client)
+
+        assert item.label in html
+        assert f'href="{HOME}#' in html or f'href="{item.destination}"' in html
+
+    def test_o_link_legal_aparece_so_com_texto_publicado(self, client):
+        escrever('<p><a href="{url_privacidade}">Privacidade</a> <a href="/pt/">Início</a></p>')
+
+        sem = rodape_html(client)
+        publicar_privacidade()
+        com = rodape_html(client)
+
+        assert "Privacidade" not in sem
+        assert "Início" in sem
+        assert reverse("core:legal_privacidade") in com
+        assert "Privacidade" in com
+
+    def test_sem_email_o_link_de_contato_sai_inteiro(self, client):
+        atual = config()
+        atual.contact_email = ""
+        atual.save()
+        escrever('<p><a href="mailto:{email_contato}">Contato</a> <a href="/pt/">Início</a></p>')
+
+        html = rodape_html(client)
+
+        assert "Contato" not in html
+        assert 'href="mailto:"' not in html
+        assert "Início" in html
+
+    def test_as_redes_vem_de_sistema(self, client):
+        atual = config()
+        atual.social_links = {"instagram": "https://instagram.com/x"}
+        atual.save()
+        escrever("<p>{redes_sociais}</p>")
+
+        html = rodape_html(client)
+
+        assert 'href="https://instagram.com/x"' in html
+        assert "ph-instagram-logo" in html
+        assert 'rel="noopener noreferrer"' in html
+
+    def test_atalho_desconhecido_nao_vira_texto(self, client):
+        escrever("<p>{isto_nao_existe} fica</p>")
+
+        html = rodape_html(client)
+
+        assert "{isto_nao_existe}" not in html
+        assert "fica" in html
+
+    def test_nao_ha_campo_de_nome_proprio_do_rodape(self):
+        """O CMS oferece um conteúdo rico -- e nenhum campo de nome ou e-mail."""
+        from apps.content.section_schema import SECOES, TextoRico
+
+        campos = SECOES["footer"].campos
+        assert len(campos) == 1
+        assert isinstance(campos[0], TextoRico)
+        assert campos[0].chave == "html"
+
+
+# ===========================================================================
+# 3. O público
+# ===========================================================================
+
+
+class TestPublico:
+    def test_sem_nada_gravado_sai_o_padrao(self, client):
+        html = rodape_html(client)
+
+        assert "<h3" in html
+        assert "©" in html
+        assert "{" not in html.split('class="site-footer"')[-1]
+
+    def test_o_que_foi_gravado_e_o_que_sai(self, client):
+        escrever('<h4>Coluna</h4><p><a href="/pt/parceiros/">Parceiros</a></p>')
+
+        html = rodape_html(client)
+
+        assert "<h4>Coluna</h4>" in html
+        assert 'href="/pt/parceiros/"' in html
+
+    def test_o_banco_nao_e_confiavel(self, client):
+        """Gravado por fora do editor, o veneno passa pelo sanitizador de novo."""
+        traducao().content = {"html": '<script>alert(1)</script><p onclick="x">ok</p>'}
+        traducao().save()
+        t = traducao()
+        t.content = {"html": '<script>alert(1)</script><p onclick="x">ok</p>'}
+        t.save(update_fields=["content"])
+
+        html = rodape_html(client)
+
+        assert "<script" not in html
+        assert "onclick" not in html
+        assert "<p>ok</p>" in html
 
     def test_sem_a_secao_ativa_o_rodape_inteiro_some(self, client):
         PageSection.objects.filter(pk=secao().pk).update(is_active=False)
 
-        assert "<footer" not in corpo(client)
+        assert rodape_html(client) == ""
 
-    def test_reativar_devolve_o_rodape(self, client):
-        PageSection.objects.filter(pk=secao().pk).update(is_active=False)
-        PageSection.objects.filter(pk=secao().pk).update(is_active=True)
+    def test_aparece_na_pagina_de_parceiros_e_nas_legais(self, client):
+        from apps.content.models import Partner
 
-        assert "<footer" in corpo(client)
+        Partner.objects.create(name="P", url="https://p.example")
+        publicar_privacidade()
 
+        assert "<h3" in rodape_html(client, reverse("core:parceiros"))
+        assert "<h3" in rodape_html(client, reverse("core:legal_privacidade"))
 
-# ===========================================================================
-# 2. Nenhum dado duplicado -- tudo vem de onde já tinha dono
-# ===========================================================================
-
-
-class TestSemDuplicacao:
-    def test_o_nome_muda_junto_com_sistema(self, client):
-        atual = config()
-        atual.site_name = "Nome Trocado Agora"
-        atual.save()
-
-        assert "Nome Trocado Agora" in rodape_html(client)
-
-    def test_o_email_muda_junto_com_sistema(self, client):
-        atual = config()
-        atual.contact_email = "novo@mail.com"
-        atual.save()
-
-        assert "mailto:novo@mail.com" in rodape_html(client)
-
-    def test_a_rede_social_muda_junto_com_sistema(self, client):
-        atual = config()
-        atual.social_links = {"instagram": "https://instagram.example/perfil"}
-        atual.save()
-
-        assert "https://instagram.example/perfil" in rodape_html(client)
-
-    def test_nao_ha_campo_de_nome_proprio_do_rodape(self):
-        """
-        Se existisse, seria um segundo lugar para escrever o mesmo nome
-        -- exatamente a duplicação que o requisito proíbe.
-        """
-        from apps.content import section_schema
-
-        campos = {texto.chave for texto in section_schema.SECOES["footer"].campos}
-
-        assert "site_name" not in campos
-        assert "nome" not in campos
-        assert "brand" not in campos
-
-
-# ===========================================================================
-# 3. O ano nunca é hardcoded
-# ===========================================================================
-
-
-class TestAno:
-    def test_o_ano_e_calculado_uma_vez_so(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        fonte = (
-            raiz / "templates" / "components" / "site_footer.html"
-        ).read_text(encoding="utf-8")
-        markup = fonte[fonte.index("{% endcomment %}") :]
-
-        assert re.search(r"20\d\d", markup) is None
-        assert markup.count('{% now "Y" %}') == 1
-
-
-# ===========================================================================
-# 4. O Backoffice liga, desliga e reordena de verdade
-# ===========================================================================
-
-
-class TestConfiguracaoReal:
-    def test_estado_inicial_tem_os_quatro_ativos(self):
-        assert set(blocos_gravados()) == set(TODOS_OS_BLOCOS)
-
-    @pytest.mark.parametrize("bloco", TODOS_OS_BLOCOS)
-    def test_desligar_um_bloco_tira_ele_da_home(self, cliente, client, bloco):
-        _ligar(cliente, bloco, ligado=False)
-
-        assert bloco not in blocos_gravados()
-
-    def test_desligar_marca_esconde_a_linha_da_marca(self, cliente, client):
-        _ligar(cliente, "marca", ligado=False)
-
-        assert "site-footer-marca" not in rodape_html(client)
-        # As outras linhas continuam -- desligar uma nao apaga as demais.
-        assert "site-footer-copyright" in rodape_html(client)
-
-    def test_religar_devolve_o_bloco_ao_fim_da_lista(self, cliente):
-        _ligar(cliente, "redes", ligado=False)
-        _ligar(cliente, "redes", ligado=True)
-
-        assert blocos_gravados()[-1] == "redes"
-
-    def test_desligar_nao_apaga_o_bloco_do_conjunto_conhecido(self, cliente):
-        """
-        `BLOCOS_DO_RODAPE` é fixo no código -- desligar só tira da lista
-        gravada, nunca apaga a declaração do bloco em si.
-        """
-        from apps.content.section_schema import BLOCOS_DO_RODAPE
-
-        _ligar(cliente, "contato", ligado=False)
-
-        assert {b.chave for b in BLOCOS_DO_RODAPE} == set(TODOS_OS_BLOCOS)
-
-    def test_bloco_desconhecido_e_recusado(self, cliente):
-        resposta = _ligar(cliente, "inventado", ligado=True)
-
-        assert resposta.status_code == 404
-        assert "inventado" not in blocos_gravados()
-
-    def test_mover_para_cima_troca_a_ordem(self, cliente):
-        antes = blocos_gravados()
-        segundo = antes[1]
-
-        _mover(cliente, segundo, "subir")
-
-        depois = blocos_gravados()
-        assert depois[0] == segundo
-        assert depois[1] == antes[0]
-
-    def test_mover_o_primeiro_para_cima_nao_faz_nada(self, cliente):
-        antes = blocos_gravados()
-
-        _mover(cliente, antes[0], "subir")
-
-        assert blocos_gravados() == antes
-
-    def test_a_ordem_escolhida_aparece_na_home(self, cliente, client):
-        from apps.content.models import ContentBlock, ContentTranslation
-
-        for chave in ("legal.terms_of_use", "legal.privacy_policy"):
-            bloco = ContentBlock.objects.get(key=chave)
-            trad, _c = ContentTranslation.objects.get_or_create(block=bloco, language="pt")
-            trad.content = "Texto publicado."
-            trad.save()
-        config_obj = config()
-        config_obj.social_links = {"instagram": "https://instagram.example/perfil"}
-        config_obj.save()
-
-        # Poe "redes" antes de "legais": duas trocas para cima a partir
-        # da ordem padrao (marca, legais, contato, redes).
-        _mover(cliente, "redes", "subir")
-        _mover(cliente, "redes", "subir")
-
-        assert blocos_gravados().index("redes") < blocos_gravados().index("legais")
-
+    def test_nenhum_link_ficticio(self, client):
         html = rodape_html(client)
-        assert html.index("site-footer-social") < html.index("Termos de uso")
 
-    def test_permissao_e_a_mesma_de_editar_secao(self, leitora):
-        c = Client()
-        c.force_login(leitora)
-
-        resposta = c.post(
-            BLOCO_ATIVACAO, {"chave": "redes", "ativo": "0", "idioma": "pt"}
-        )
-
-        assert resposta.status_code == 403
-
-    def test_anonimo_e_barrado(self, client):
-        resposta = client.post(
-            BLOCO_ATIVACAO, {"chave": "redes", "ativo": "0", "idioma": "pt"}
-        )
-
-        assert resposta.status_code == 302
-
-    def test_get_nao_e_aceito(self, cliente):
-        assert cliente.get(BLOCO_ATIVACAO).status_code == 405
-        assert cliente.get(BLOCO_MOVER).status_code == 405
+        assert 'href="#"' not in html
+        assert 'href=""' not in html
 
 
 # ===========================================================================
-# 5. A tela de edição mostra os quatro blocos
+# 4. A tela de edição
 # ===========================================================================
 
 
 class TestTelaDeEdicao:
-    def test_os_quatro_nomes_amigaveis_aparecem(self, cliente):
-        corpo_html = cliente.get(url_do_editor()).content.decode()
+    def test_a_tela_traz_o_editor_rico(self, cliente):
+        corpo = cliente.get(url_do_editor()).content.decode()
 
-        for nome in ("Marca", "Links legais", "Contato", "Redes sociais"):
-            assert nome in corpo_html
+        assert "data-editor-rico" in corpo
+        assert 'name="html"' in corpo
+        assert "editor-rico.js" in corpo
 
-    def test_bloco_desligado_mostra_a_etiqueta(self, cliente):
-        _ligar(cliente, "redes", ligado=False)
+    def test_o_campo_nasce_com_o_padrao(self, cliente):
+        """Uma área vazia ao lado de uma prévia cheia confundiria."""
+        corpo = cliente.get(url_do_editor()).content.decode()
 
-        corpo_html = cliente.get(url_do_editor()).content.decode()
+        assert "{nome_do_site}" in corpo
 
-        assert "Oculto" in corpo_html
+    def test_os_atalhos_sao_oferecidos(self, cliente):
+        corpo = cliente.get(url_do_editor()).content.decode()
 
-    def test_o_primeiro_bloco_ativo_nao_oferece_subir(self, cliente):
-        corpo_html = cliente.get(url_do_editor()).content.decode()
+        for atalho, _explicacao in rodape.ATALHOS:
+            assert f'data-atalho="{atalho}"' in corpo
 
-        assert 'name="chave" value="marca"' in corpo_html
-        # O primeiro ativo (marca) nao tem formulario de "subir".
-        antes_de_marca = corpo_html[: corpo_html.index('value="marca"')]
-        assert "Subir Marca" not in antes_de_marca
+    def test_os_blocos_antigos_nao_existem_mais(self, cliente):
+        corpo = cliente.get(url_do_editor()).content.decode()
 
-    def test_quem_so_ve_nao_recebe_botoes_de_acao(self, leitora):
+        assert "Blocos do rodapé" not in corpo
+        assert "footer_bloco" not in corpo
+
+    def test_salvar_grava_sanitizado(self, cliente):
+        cliente.post(
+            url_do_editor(),
+            _payload('<p onclick="x">Olá</p><script>alert(1)</script>'),
+        )
+
+        gravado = traducao().content["html"]
+        assert gravado == "<p>Olá</p>"
+
+    def test_salvar_reflete_no_site(self, cliente, client):
+        cliente.post(url_do_editor(), _payload("<h3>Rodapé novo</h3>"))
+
+        assert "Rodapé novo" in rodape_html(client)
+
+    def test_quem_so_ve_nao_grava(self, leitora):
         c = Client()
         c.force_login(leitora)
 
-        corpo_html = c.get(url_do_editor()).content.decode()
+        resposta = c.post(url_do_editor(), _payload("<p>invadido</p>"))
 
-        assert ">Ativar<" not in corpo_html
-        assert ">Desativar<" not in corpo_html
+        assert resposta.status_code == 403
+        assert "invadido" not in (traducao().content.get("html") or "")
 
-    def test_nenhum_link_morto_na_tela(self, cliente):
-        corpo_html = cliente.get(url_do_editor()).content.decode()
+    def test_anonimo_vai_para_o_login(self, client):
+        resposta = client.get(url_do_editor())
 
-        assert 'href="#"' not in corpo_html
+        assert resposta.status_code == 302
+        assert reverse("accounts:login") in resposta.url
+
+    def test_o_interruptor_da_secao_continua_valendo(self, cliente, client):
+        """Ativo/inativo do rodapé inteiro é o da parte, como sempre."""
+        PageSection.objects.filter(pk=secao().pk).update(is_active=False)
+
+        assert rodape_html(client) == ""
+        assert "data-editor-rico" in cliente.get(url_do_editor()).content.decode()
 
 
 # ===========================================================================
-# 6. A prévia usa a mesma composição da Home
+# 5. A prévia
 # ===========================================================================
 
 
 class TestPrevia:
-    def test_a_previa_mostra_os_blocos_salvos(self, cliente):
-        _ligar(cliente, "redes", ligado=False)
+    def test_a_previa_usa_o_parcial_publico(self, cliente):
+        corpo = cliente.get(url_da_previa()).content.decode()
 
-        html = cliente.get(url_da_previa()).content.decode()
+        assert 'class="site-footer"' in corpo
+        assert "site-footer-conteudo" in corpo
+        assert 'class="bo-previa publico"' in corpo
 
-        assert "site-footer-social" not in html
-        assert "site-footer-marca" in html
+    def test_a_previa_mostra_o_digitado_sem_gravar(self, cliente):
+        corpo = cliente.post(url_da_previa(), _payload("<h3>Só na prévia</h3>")).content.decode()
 
-    def test_a_previa_muda_depois_de_reordenar(self, cliente):
-        from apps.content.models import ContentBlock, ContentTranslation
+        assert "Só na prévia" in corpo
+        assert "Só na prévia" not in (traducao().content.get("html") or "")
 
-        bloco = ContentBlock.objects.get(key="legal.terms_of_use")
-        trad, _c = ContentTranslation.objects.get_or_create(block=bloco, language="pt")
-        trad.content = "Texto publicado."
-        trad.save()
-        atual = config()
-        atual.social_links = {"instagram": "https://instagram.example/perfil"}
-        atual.save()
+    def test_a_previa_tambem_sanitiza(self, cliente):
+        corpo = cliente.post(
+            url_da_previa(), _payload('<p onclick="x">a</p><script>b</script>')
+        ).content.decode()
 
-        _mover(cliente, "redes", "subir")
-        _mover(cliente, "redes", "subir")
+        assert "onclick" not in corpo
+        assert "<script>b" not in corpo
 
-        html = cliente.get(url_da_previa()).content.decode()
-        assert html.index("site-footer-social") < html.index("Termos de uso")
+    def test_a_previa_troca_os_atalhos(self, cliente):
+        corpo = cliente.post(url_da_previa(), _payload("<p>{nome_do_site}</p>")).content.decode()
+
+        assert "{nome_do_site}" not in corpo
+        assert config().site_name in corpo
+
+    @pytest.mark.parametrize("nome", ["desktop", "tablet", "mobile"])
+    def test_as_tres_larguras_respondem(self, cliente, nome):
+        resposta = cliente.get(f"{url_da_previa()}?viewport={nome}")
+
+        assert resposta.status_code == 200
+        assert f'data-viewport="{nome}"' in resposta.content.decode()
 
 
 # ===========================================================================
-# 7. Toque, teclado e nenhum link fictício
+# 6. Acessibilidade e o desenho
 # ===========================================================================
 
 
 class TestAcessibilidade:
     def test_links_do_rodape_tem_altura_minima_de_toque(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        css = (raiz / "static" / "css" / "layout.css").read_text(encoding="utf-8")
+        css = (RAIZ / "static" / "css" / "layout.css").read_text(encoding="utf-8")
 
-        assert "min-height: 40px" in css.split(".site-footer-links a {")[1].split("}")[0]
+        assert "min-height: 40px" in css.split(".site-footer-conteudo a {")[1].split("}")[0]
 
     def test_icones_de_rede_social_tem_area_de_toque_quadrada(self):
-        """
-        Só ícone, sem texto ao lado -- sem largura mínima também, a
-        altura de 40px sozinha deixaria um alvo estreito demais.
-        """
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        css = (raiz / "static" / "css" / "layout.css").read_text(encoding="utf-8")
+        css = (RAIZ / "static" / "css" / "layout.css").read_text(encoding="utf-8")
         regra = css.split(".site-footer-social {")[1].split("}")[0]
 
-        assert "min-height: 40px" in regra
         assert "min-width: 40px" in regra
+        assert "min-height: 40px" in regra
 
-    def test_foco_visivel_existe_no_projeto(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        css = (raiz / "static" / "css" / "base.css").read_text(encoding="utf-8")
+    def test_o_rodape_e_a_coluna_centrada_da_referencia(self):
+        css = (RAIZ / "static" / "css" / "layout.css").read_text(encoding="utf-8")
+        regra = css.split(".site-footer-conteudo {")[1].split("}")[0]
 
-        assert ":focus-visible" in css
+        assert "align-items: center" in regra
+        assert "text-align: center" in regra
 
-    def test_nenhum_link_ficticio_no_rodape(self, client):
-        html = rodape_html(client)
+    def test_o_unico_mark_safe_do_projeto_esta_no_renderizador(self):
+        """O sanitizador é a proteção; `mark_safe` só entra depois dele."""
+        fonte = (RAIZ / "apps" / "content" / "rodape.py").read_text(encoding="utf-8")
 
-        assert 'href="#"' not in html
-        assert "example.com" not in html
-        assert "lorem" not in html.lower()
+        assert fonte.count("mark_safe(") == 1
+        assert fonte.index("def sanitizar") < fonte.index("mark_safe(")

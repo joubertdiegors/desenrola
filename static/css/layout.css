@@ -651,7 +651,13 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
 }
 .home-cta-botao:hover { color: color-mix(in srgb, var(--p) 60%, #0b1a33); background: color-mix(in srgb, #fff 92%, var(--p)); }
 
-/* RODAPE -- tres linhas centradas, nas duas larguras. */
+/* RODAPE -- conteudo rico, na coluna centrada da referencia.
+
+   O que esta dentro e' o HTML escrito no Backoffice (ver
+   `components/site_footer.html`). O CSS veste os elementos GENERICOS
+   que o editor produz: `h3` e' a marca, `p` e' uma linha de links ou de
+   texto, `font size=2` e' o copyright, `h4` e' o rotulo de uma coluna.
+   Nada aqui depende de classe -- o editor nao produz classes. */
 .site-footer { background: #fff; border-top: 1px solid var(--pub-bd); display: flex; justify-content: center; }
 .site-footer-conteudo {
   display: flex;
@@ -660,19 +666,30 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   gap: 10px;
   padding-top: 24px;
   padding-bottom: 24px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--mu);
   text-align: center;
 }
-.site-footer-marca { font-size: 15px; font-weight: 700; color: var(--navy); }
-.site-footer-marca:hover { color: var(--p); }
-.site-footer-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 20px; font-size: 13.5px; color: var(--mu); }
-/* Alvo de toque de pelo menos 40px, mesmo com o texto pequeno (13.5px):
-   a altura fica no LINK, nao no texto dentro dele -- e como a linha tem
-   `gap` vertical pequeno, o resultado na tela continua sendo a linha
-   compacta da referencia. */
-.site-footer-links a { display: inline-flex; align-items: center; min-height: 40px; color: var(--mu); }
-.site-footer-links a:hover { color: var(--p); }
+.site-footer-conteudo > * { margin: 0; max-width: 100%; min-width: 0; }
+.site-footer-conteudo h3 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--navy); }
+.site-footer-conteudo h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mu); }
+.site-footer-conteudo p { font-size: 13.5px; }
+/* Alvo de toque de pelo menos 40px, mesmo com o texto pequeno: a altura
+   fica no LINK, nao no texto dentro dele. As margens laterais somam os
+   20px de distancia entre links da referencia. */
+.site-footer-conteudo a { display: inline-flex; align-items: center; min-height: 40px; margin: 0 10px; color: var(--mu); }
+.site-footer-conteudo a:hover { color: var(--p); }
+.site-footer-conteudo font[size="2"] { font-size: 12px; color: color-mix(in srgb, var(--mu) 70%, #fff); }
+.site-footer-conteudo font[size="4"] { font-size: 15px; }
+.site-footer-conteudo font[size="5"] { font-size: 17px; }
+.site-footer-conteudo hr { width: 100%; border: 0; border-top: 1px solid var(--pub-bd); margin: 6px 0; }
+.site-footer-conteudo ul,
+.site-footer-conteudo ol { padding-left: 20px; text-align: left; }
+.site-footer-conteudo blockquote { padding-left: 14px; border-left: 3px solid var(--pub-bd); }
+.site-footer-conteudo svg { vertical-align: -3px; }
+.site-footer-conteudo div[style*="display:flex"] { width: 100%; text-align: left; }
 .site-footer-social { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: 16px; line-height: 1; }
-.site-footer-copyright { font-size: 12px; color: color-mix(in srgb, var(--mu) 70%, #fff); }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hero { grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 110px 32px 0; background: none; }
@@ -825,7 +842,11 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
 
   .site-footer { margin-top: auto; }
   .site-footer-conteudo { padding-top: 22px; padding-bottom: 22px; gap: 10px; }
-  .site-footer-links { max-width: 300px; gap: 9px 18px; }
+  /* A linha de links quebra numa coluna de 300px, como na referencia. */
+  .site-footer-conteudo p { max-width: 300px; }
+  .site-footer-conteudo a { margin: 0 9px; }
+  /* As colunas do rodape (o atalho "+ 3 colunas") empilham. */
+  .site-footer-conteudo div[style*="display:flex"] { flex-direction: column; text-align: center; }
 }
 
 
@@ -1590,6 +1611,97 @@ img.lang-flag { object-fit: cover; display: block; }
    --------------------------------------------------------------------- */
 
 .bo-editor { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+/* Com o editor rico a coluna dos campos precisa de largura para a barra
+   de ferramentas: metade para cada lado, como na referencia do editor. */
+.bo-editor.tem-editor-rico { grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr); }
+
+/* O EDITOR RICO
+   -------------
+   Barra, area editavel e os paineis de link, icones e HTML. Sem o script
+   (`editor-rico.js`) so o `<textarea>` aparece; com ele, `.is-ligado`
+   esconde o `<textarea>` e mostra o resto. */
+.editor-rico { display: flex; flex-direction: column; gap: 8px; }
+.editor-rico-barra,
+.editor-rico-caixa,
+.editor-rico-area,
+.editor-rico-atalhos,
+.editor-rico-rodape { display: none; }
+.editor-rico.is-ligado .editor-rico-barra,
+.editor-rico.is-ligado .editor-rico-atalhos { display: flex; }
+.editor-rico.is-ligado .editor-rico-area { display: block; }
+.editor-rico.is-ligado .editor-rico-caixa:not([hidden]) { display: flex; }
+.editor-rico.is-ligado .editor-rico-rodape { display: flex; }
+.editor-rico.is-ligado textarea[data-editor-rico-campo] { display: none; }
+.editor-rico-barra { flex-direction: column; gap: 6px; padding: 10px 12px; background: color-mix(in srgb, var(--p) 4%, #fff); border: 1px solid var(--pub-bd, var(--bd)); border-radius: 10px; }
+.editor-rico-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.editor-rico-grupo { display: flex; gap: 2px; }
+.editor-rico-separador { width: 1px; height: 24px; background: var(--bd); }
+.editor-rico-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--mu);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.editor-rico-botao:hover { border-color: var(--p); color: var(--p); }
+.editor-rico-botao-texto { padding: 0 11px; font-size: 12.5px; font-weight: 600; color: var(--navy); }
+.editor-rico-botao.is-negrito { font-weight: 800; color: var(--navy); }
+.editor-rico-botao.is-italico { font-style: italic; font-weight: 700; color: var(--navy); }
+.editor-rico-botao.is-sublinhado { text-decoration: underline; font-weight: 700; color: var(--navy); }
+.editor-rico-botao.is-riscado { text-decoration: line-through; font-weight: 700; color: var(--navy); }
+.editor-rico-seletor { height: 32px; padding: 0 8px; border: 1px solid var(--bd); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: var(--navy); cursor: pointer; }
+.editor-rico-cores { display: flex; align-items: center; gap: 5px; height: 32px; padding: 0 8px; border: 1px solid var(--bd); border-radius: 8px; background: #fff; }
+.editor-rico-cor { width: 16px; height: 16px; padding: 0; border: 1px solid rgba(16, 39, 92, 0.2); border-radius: 999px; cursor: pointer; }
+.editor-rico-caixa { flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 14px 16px; background: var(--pub-azul, var(--bg)); border: 1px solid var(--pub-bd, var(--bd)); border-radius: 10px; }
+.editor-rico-caixa .field { margin: 0; }
+.editor-rico-caixa .field > span { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 700; color: var(--navy); }
+.editor-rico-campo-curto { flex: 1 1 160px; }
+.editor-rico-campo-longo { flex: 1.4 1 200px; }
+.editor-rico-nova-aba { display: flex; align-items: center; gap: 7px; height: 40px; font-size: 12.5px; font-weight: 600; color: var(--mu); }
+.editor-rico-rotulo { width: 100%; font-size: 12px; font-weight: 700; color: var(--navy); }
+.editor-rico-paleta { display: flex; flex-wrap: wrap; gap: 6px; }
+.editor-rico-icone { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--bd); border-radius: 9px; background: #fff; color: var(--navy); cursor: pointer; }
+.editor-rico-icone:hover { border-color: var(--p); color: var(--p); }
+.editor-rico-atalhos { flex-wrap: wrap; align-items: center; gap: 8px; padding: 11px 12px; border: 1px solid var(--bd); border-radius: 10px; background: #fff; }
+.editor-rico-atalhos .editor-rico-rotulo { width: auto; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mu); }
+.editor-rico-atalho { height: 28px; padding: 0 10px; border: 1px solid var(--p20); border-radius: 999px; background: var(--p10); font: inherit; font-size: 12px; font-weight: 600; color: var(--p); cursor: pointer; }
+.editor-rico-atalho:hover { background: var(--p20); }
+.editor-rico-area {
+  min-height: 300px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding: 18px 20px;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--navy);
+}
+.editor-rico-area:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }
+.editor-rico-area:empty::before { content: attr(data-placeholder); color: var(--mu); opacity: 0.7; }
+.editor-rico-area a { color: var(--p); text-decoration: underline; }
+.editor-rico-area h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--navy); margin: 0 0 8px; }
+.editor-rico-area h4 { font-size: 15px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mu); margin: 0 0 8px; }
+.editor-rico-area p { margin: 0 0 10px; }
+.editor-rico-area ul,
+.editor-rico-area ol { margin: 0 0 10px; padding-left: 20px; }
+.editor-rico-area blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--bd); color: var(--mu); }
+.editor-rico-area hr { border: 0; border-top: 1px solid var(--bd); margin: 16px 0; }
+.editor-rico-area svg { vertical-align: -3px; }
+.editor-rico-caixa-fonte { flex-direction: column; align-items: stretch; }
+.editor-rico-fonte { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.6; background: #0f1b33; color: #cfe0ff; border-color: #0f1b33; resize: vertical; }
+.editor-rico-acoes { display: flex; align-items: center; gap: 10px; }
+.editor-rico-rodape { justify-content: space-between; gap: 16px; }
 .bo-editor-campos { min-width: 0; }
 
 .bo-editor-previa {

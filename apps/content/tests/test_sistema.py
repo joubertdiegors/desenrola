@@ -530,6 +530,18 @@ class TestTela:
 # ===========================================================================
 
 
+def _escrever_rodape(html):
+    """Grava um conteúdo de rodapé para o teste olhar um atalho específico."""
+    from apps.content.models import PageSection, PageSectionTranslation
+
+    secao = PageSection.objects.get(page__key="home", key="footer")
+    t, _criada = PageSectionTranslation.objects.get_or_create(
+        section=secao, language="pt", defaults={"content": {}}
+    )
+    t.content = {**(t.content or {}), "html": html}
+    t.save(update_fields=["content"])
+
+
 class TestSitePublico:
     def test_o_nome_vem_do_cms(self, client, cliente):
         cliente.post(TELA, {**BASE, "site_name": "Desenrola Bélgica"})
@@ -554,11 +566,19 @@ class TestSitePublico:
         assert "· Desenrola<" not in corpo
 
     def test_o_contato_vem_do_cms(self, client):
+        """
+        O rodapé é conteúdo rico e cita o contato por ATALHOS
+        (`{telefone}`, `{endereco}`, `mailto:{email_contato}`): o dado
+        continua em Sistema, e muda aqui quando muda lá.
+        """
         atual = config()
         atual.contact_email = "contato@mail.com"
         atual.contact_phone = "+32 000 00 00 00"
         atual.contact_address = "Rua de Exemplo, 1"
         atual.save()
+        _escrever_rodape(
+            '<p><a href="mailto:{email_contato}">Contato</a> {telefone} {endereco}</p>'
+        )
 
         corpo = client.get(HOME).content.decode()
 
@@ -576,6 +596,7 @@ class TestSitePublico:
         atual = config()
         atual.social_links = {"instagram": "https://exemplo.test/perfil"}
         atual.save()
+        _escrever_rodape("<p>{redes_sociais}</p>")
 
         corpo = client.get(HOME).content.decode()
 
@@ -586,6 +607,7 @@ class TestSitePublico:
         atual = config()
         atual.social_links = {"instagram": "https://exemplo.test/perfil"}
         atual.save()
+        _escrever_rodape("<p>{redes_sociais}</p>")
 
         corpo = client.get(HOME).content.decode()
 
@@ -625,7 +647,13 @@ class TestSitePublico:
         markup = fonte[fonte.index("{% endcomment %}") :]
 
         assert re.search(r"20\d\d", markup) is None
-        assert markup.count('{% now "Y" %}') == 1
+        # O ano entra pelo atalho `{ano}` do conteúdo rico, resolvido
+        # pelo servidor (`content.rodape.valores_dos_atalhos`) -- nem o
+        # template nem o HTML padrão trazem um ano escrito.
+        from apps.content import rodape
+
+        assert re.search(r"20\d\d", rodape.HTML_PADRAO) is None
+        assert "{ano}" in rodape.HTML_PADRAO
 
     def test_o_nome_do_rodape_movel_vem_do_cms(self, client):
         atual = config()
@@ -634,7 +662,7 @@ class TestSitePublico:
 
         corpo = client.get(HOME).content.decode()
 
-        rodape = corpo[corpo.index("site-footer-copyright") :][:200]
+        rodape = corpo[corpo.index("©") :][:200]
         assert "Outro Nome" in rodape
 
     def test_sem_documento_publicado_o_rodape_nao_traz_link_legal(self, client):

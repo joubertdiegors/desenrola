@@ -256,8 +256,11 @@ class TestPaginas:
 
         corpo = client.get(TERMOS).content.decode()
 
-        assert "#como-funciona" not in corpo
-        assert "#parceiros" not in corpo
+        # Ancora RELATIVA e' a morta. O rodape rico leva os links do
+        # menu com o caminho da Home na frente (`/pt/#como-funciona`),
+        # e esses levam a Home -- ver `content.rodape._menu_renderizado`.
+        assert 'href="#como-funciona"' not in corpo
+        assert 'href="#parceiros"' not in corpo
 
     def test_o_custo_nao_cresce_com_o_texto(self, client):
         publicar(CHAVE_TERMOS, "Cláusulas.")

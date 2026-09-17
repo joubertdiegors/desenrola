@@ -421,9 +421,15 @@ class TestFinalDaPagina:
         html = corpo(client)
         rodape = html[html.index('class="site-footer"') :]
 
-        assert "site-footer-marca" in rodape
-        assert "site-footer-links" in rodape
-        assert "site-footer-copyright" in rodape
+        # Marca (h3), a linha de links e o copyright -- o conteúdo padrão
+        # do rodapé rico, escrito só com atalhos (ver `content.rodape`).
+        assert "<h3" in rodape
+        assert "<p" in rodape
+        assert "©" in rodape
+        # Sem texto legal publicado e sem e-mail cadastrado, os links
+        # correspondentes SAEM inteiros -- nunca um link para o nada.
+        assert 'href=""' not in rodape
+        assert 'href="mailto:"' not in rodape
 
     def test_a_marca_do_rodape_e_o_nome_do_sistema(self, client):
         nome = SiteSettings.load().site_name
@@ -436,6 +442,6 @@ class TestFinalDaPagina:
         import datetime
 
         html = corpo(client)
-        rodape = html[html.index("site-footer-copyright") :][:200]
+        rodape = html[html.index("©") :][:200]
 
         assert str(datetime.date.today().year) in rodape

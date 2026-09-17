@@ -28,7 +28,8 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from .models import Asset, FaqItem, MenuItem, PageSection, Partner
-from .section_schema import Lista, campos_da_secao, secao_declarada
+from .rodape import HTML_PADRAO, sanitizar
+from .section_schema import Lista, TextoRico, campos_da_secao, secao_declarada
 from .services import ANCORAS_DA_HOME
 
 # Separa as partes do nome de um campo de lista: `cards__0__title`.
@@ -43,6 +44,26 @@ def _widget(texto):
     if texto.longo:
         return forms.Textarea(attrs={"class": "input", "rows": 3})
     return forms.TextInput(attrs={"class": "input"})
+
+
+def _campo_rico(texto, valor):
+    """
+    O conteúdo rico: um `<textarea>` que o editor (`editor-rico.js`)
+    esconde e alimenta. O que chega aqui é sanitizado em `clean` -- o
+    navegador nunca decide o que é HTML aceitável.
+    """
+    campo = forms.CharField(
+        label=texto.rotulo,
+        help_text=texto.ajuda,
+        required=False,
+        # Nunca editado: a tela abre com o rodape PADRAO -- o mesmo que o
+        # site esta desenhando --, e nao com uma area vazia ao lado de
+        # uma previa cheia.
+        initial=valor or HTML_PADRAO,
+        widget=forms.Textarea(attrs={"class": "input", "rows": 10, "data-editor-rico-campo": "1"}),
+    )
+    campo.editor_rico = True
+    return campo
 
 
 def _campo(texto, valor):
@@ -88,10 +109,25 @@ class FormularioDeSecao(forms.Form):
         for declaracao in campos_da_secao(secao):
             if isinstance(declaracao, Lista):
                 self._montar_lista(declaracao)
+            elif isinstance(declaracao, TextoRico):
+                self.fields[declaracao.chave] = _campo_rico(
+                    declaracao, self.conteudo_atual.get(declaracao.chave, "")
+                )
             else:
                 self.fields[declaracao.chave] = _campo(
                     declaracao, self.conteudo_atual.get(declaracao.chave, "")
                 )
+
+    def clean(self):
+        """O conteúdo rico passa pela lista fechada ANTES de virar dado."""
+        dados = super().clean()
+        for declaracao in campos_da_secao(self.secao):
+            if isinstance(declaracao, TextoRico) and declaracao.chave in dados:
+                dados[declaracao.chave] = sanitizar(dados[declaracao.chave])
+        return dados
+
+    def tem_editor_rico(self):
+        return any(getattr(campo, "editor_rico", False) for campo in self.fields.values())
 
     def _montar_campos_da_secao(self, secao):
         """

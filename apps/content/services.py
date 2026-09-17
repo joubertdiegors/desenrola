@@ -202,13 +202,15 @@ def contexto_do_rodape(language=None):
     não desenharia -- que foi exatamente o que aconteceu quando a
     composição passou a vir do CMS.
     """
-    from .section_schema import blocos_do_rodape
-
-    rodape = partes_da_pagina(CHAVE_DA_HOME, language).get("footer")
-    blocos = blocos_do_rodape(rodape.conteudo) if rodape else []
+    partes = partes_da_pagina(CHAVE_DA_HOME, language)
+    rodape = partes.get("footer")
+    parceiros = list(Partner.objects.publicados())
+    perguntas = list(FaqItem.objects.publicadas())
     return {
         "partes": {"footer": rodape} if rodape else {},
-        "blocos_do_rodape": blocos,
+        # O atalho `{menu}` do rodape reusa os itens da barra -- ja sem
+        # as ancoras mortas, pela mesma regra da barra.
+        "menu_itens": _menu_sem_ancora_morta(partes, parceiros, perguntas),
     }
 
 
@@ -228,13 +230,9 @@ def contexto_dos_parceiros(language=None):
     parceiros = list(Partner.objects.publicados())
     perguntas = list(FaqItem.objects.publicadas())
 
-    from .section_schema import blocos_do_rodape
-
-    rodape = partes.get("footer")
     return {
         "partes": partes,
         "secoes": {chave: parte.conteudo for chave, parte in partes.items()},
-        "blocos_do_rodape": blocos_do_rodape(rodape.conteudo) if rodape else [],
         "menu_itens": _menu_sem_ancora_morta(partes, parceiros, perguntas),
         "parceiros": parceiros,
     }
@@ -249,7 +247,7 @@ def contexto_da_home(language=None):
     """
     from apps.letters import statistics
 
-    from .section_schema import blocos_do_rodape, template_do_desenho
+    from .section_schema import template_do_desenho
 
     partes = partes_da_pagina(CHAVE_DA_HOME, language)
     parceiros = list(Partner.objects.publicados())
@@ -263,13 +261,9 @@ def contexto_da_home(language=None):
         template_do_desenho("hero", banner.desenho) if banner else None
     )
 
-    rodape = partes.get("footer")
-    blocos = blocos_do_rodape(rodape.conteudo) if rodape else []
-
     return {
         "partes": partes,
         "template_do_banner": template_do_banner,
-        "blocos_do_rodape": blocos,
         # `secoes` continua no contexto: e o que os templates ja leem, e
         # trocar tudo de uma vez seria mexer em marcacao que funciona.
         "secoes": {chave: parte.conteudo for chave, parte in partes.items()},

@@ -1,0 +1,124 @@
+{% load i18n %}{% comment %}
+O editor de conteúdo rico -- a barra, a área editável e o `<textarea>`
+que de fato vai no formulário.
+
+Recebe `campo` (o BoundField) e, opcionalmente, `atalhos` (a lista de
+`content.rodape.ATALHOS`).
+
+SEM JAVASCRIPT
+--------------
+Só o `<textarea>` aparece, e edita-se o HTML à mão. Com o script
+(`editor-rico.js`) a barra e a área editável assumem, e o `<textarea>`
+é escondido -- mas continua sendo ele o campo do formulário.
+
+NADA AQUI É SEGURANÇA
+---------------------
+O que sai do editor passa por `content.rodape.sanitizar` no servidor,
+antes de gravar e antes de desenhar. A barra só oferece o que a lista
+fechada aceita, para não prometer o que o servidor vai tirar.
+{% endcomment %}
+<div class="editor-rico" data-editor-rico>
+  <div class="editor-rico-barra" role="toolbar" aria-label="{% translate 'Formatação' %}">
+    <div class="editor-rico-linha">
+      <div class="editor-rico-grupo">
+        <button type="button" class="editor-rico-botao" data-comando="undo" title="{% translate 'Desfazer' %}" aria-label="{% translate 'Desfazer' %}"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i></button>
+        <button type="button" class="editor-rico-botao" data-comando="redo" title="{% translate 'Refazer' %}" aria-label="{% translate 'Refazer' %}"><i class="ph ph-arrow-u-up-right" aria-hidden="true"></i></button>
+      </div>
+      <span class="editor-rico-separador"></span>
+      <select class="editor-rico-seletor" data-comando="formatBlock" title="{% translate 'Estilo do texto' %}" aria-label="{% translate 'Estilo do texto' %}">
+        <option value="P">{% translate "Parágrafo" %}</option>
+        <option value="H3">{% translate "Título" %}</option>
+        <option value="H4">{% translate "Rótulo de coluna" %}</option>
+        <option value="BLOCKQUOTE">{% translate "Destaque" %}</option>
+      </select>
+      <select class="editor-rico-seletor" data-comando="fontSize" title="{% translate 'Tamanho' %}" aria-label="{% translate 'Tamanho' %}">
+        <option value="3">{% translate "Normal" %}</option>
+        <option value="2">{% translate "Pequeno" %}</option>
+        <option value="4">{% translate "Médio" %}</option>
+        <option value="5">{% translate "Grande" %}</option>
+      </select>
+      <span class="editor-rico-separador"></span>
+      <div class="editor-rico-grupo">
+        <button type="button" class="editor-rico-botao is-negrito" data-comando="bold" title="{% translate 'Negrito' %}" aria-label="{% translate 'Negrito' %}">B</button>
+        <button type="button" class="editor-rico-botao is-italico" data-comando="italic" title="{% translate 'Itálico' %}" aria-label="{% translate 'Itálico' %}">I</button>
+        <button type="button" class="editor-rico-botao is-sublinhado" data-comando="underline" title="{% translate 'Sublinhado' %}" aria-label="{% translate 'Sublinhado' %}">S</button>
+        <button type="button" class="editor-rico-botao is-riscado" data-comando="strikeThrough" title="{% translate 'Riscado' %}" aria-label="{% translate 'Riscado' %}">S</button>
+      </div>
+      <span class="editor-rico-separador"></span>
+      <div class="editor-rico-cores">
+        <button type="button" class="editor-rico-cor" data-comando="foreColor" data-valor="#10275c" style="background:#10275c" title="{% translate 'Azul escuro' %}" aria-label="{% translate 'Azul escuro' %}"></button>
+        <button type="button" class="editor-rico-cor" data-comando="foreColor" data-valor="#5b6b8c" style="background:#5b6b8c" title="{% translate 'Cinza-azulado' %}" aria-label="{% translate 'Cinza-azulado' %}"></button>
+        <button type="button" class="editor-rico-cor" data-comando="foreColor" data-valor="#1d4ed8" style="background:#1d4ed8" title="{% translate 'Azul do site' %}" aria-label="{% translate 'Azul do site' %}"></button>
+        <button type="button" class="editor-rico-cor" data-comando="foreColor" data-valor="#b4262a" style="background:#b4262a" title="{% translate 'Alerta' %}" aria-label="{% translate 'Alerta' %}"></button>
+      </div>
+    </div>
+    <div class="editor-rico-linha">
+      <div class="editor-rico-grupo">
+        <button type="button" class="editor-rico-botao" data-comando="justifyLeft" title="{% translate 'Alinhar à esquerda' %}" aria-label="{% translate 'Alinhar à esquerda' %}"><i class="ph ph-text-align-left" aria-hidden="true"></i></button>
+        <button type="button" class="editor-rico-botao" data-comando="justifyCenter" title="{% translate 'Centralizar' %}" aria-label="{% translate 'Centralizar' %}"><i class="ph ph-text-align-center" aria-hidden="true"></i></button>
+        <button type="button" class="editor-rico-botao" data-comando="justifyRight" title="{% translate 'Alinhar à direita' %}" aria-label="{% translate 'Alinhar à direita' %}"><i class="ph ph-text-align-right" aria-hidden="true"></i></button>
+      </div>
+      <div class="editor-rico-grupo">
+        <button type="button" class="editor-rico-botao" data-comando="insertUnorderedList" title="{% translate 'Lista com marcadores' %}" aria-label="{% translate 'Lista com marcadores' %}"><i class="ph ph-list-bullets" aria-hidden="true"></i></button>
+        <button type="button" class="editor-rico-botao" data-comando="insertOrderedList" title="{% translate 'Lista numerada' %}" aria-label="{% translate 'Lista numerada' %}"><i class="ph ph-list-numbers" aria-hidden="true"></i></button>
+      </div>
+      <span class="editor-rico-separador"></span>
+      <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="abrir-link"><i class="ph ph-link" aria-hidden="true"></i>{% translate "Link" %}</button>
+      <button type="button" class="editor-rico-botao" data-comando="unlink" title="{% translate 'Remover link' %}" aria-label="{% translate 'Remover link' %}"><i class="ph ph-link-break" aria-hidden="true"></i></button>
+      <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="icones"><i class="ph ph-star" aria-hidden="true"></i>{% translate "Ícone" %}</button>
+      <span class="editor-rico-separador"></span>
+      <button type="button" class="editor-rico-botao" data-comando="insertHorizontalRule" title="{% translate 'Linha divisória' %}" aria-label="{% translate 'Linha divisória' %}"><i class="ph ph-minus" aria-hidden="true"></i></button>
+      <button type="button" class="editor-rico-botao" data-comando="espaco" title="{% translate 'Espaço em branco' %}" aria-label="{% translate 'Espaço em branco' %}"><i class="ph ph-arrows-out-line-vertical" aria-hidden="true"></i></button>
+      <select class="editor-rico-seletor" data-comando="entrelinha" title="{% translate 'Espaçamento entre linhas' %}" aria-label="{% translate 'Espaçamento entre linhas' %}">
+        <option value="1.5">{% translate "Entrelinha normal" %}</option>
+        <option value="1.2">{% translate "Entrelinha compacta" %}</option>
+        <option value="1.9">{% translate "Entrelinha ampla" %}</option>
+      </select>
+      <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="removeFormat"><i class="ph ph-eraser" aria-hidden="true"></i>{% translate "Limpar" %}</button>
+      <span class="push"></span>
+      <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="fonte"><i class="ph ph-code" aria-hidden="true"></i>HTML</button>
+    </div>
+  </div>
+
+  <div class="editor-rico-caixa" data-editor-caixa-link hidden>
+    <label class="field editor-rico-campo-curto"><span>{% translate "Texto do link" %}</span><input class="input" type="text" data-link-texto placeholder="{% translate 'Termos de uso' %}"></label>
+    <label class="field editor-rico-campo-longo"><span>{% translate "Endereço" %}</span><input class="input" type="text" data-link-endereco placeholder="https://… , /pt/… ou {url_termos}"></label>
+    <label class="field-check editor-rico-nova-aba"><input type="checkbox" data-link-nova-aba> {% translate "Nova aba" %}</label>
+    <button type="button" class="btn btn-primary btn-sm" data-comando="aplicar-link">{% translate "Inserir link" %}</button>
+    <button type="button" class="btn btn-ghost btn-sm" data-comando="fechar-link">{% translate "Cancelar" %}</button>
+  </div>
+
+  <div class="editor-rico-caixa" data-editor-caixa-icones hidden>
+    <span class="editor-rico-rotulo">{% translate "Inserir ícone na posição do cursor" %}</span>
+    <div class="editor-rico-paleta" data-editor-icones></div>
+    <span class="field-hint">{% translate "Os ícones entram como desenho inline e herdam a cor do texto." %}</span>
+  </div>
+
+  {% if atalhos %}
+  <div class="editor-rico-atalhos">
+    <span class="editor-rico-rotulo">{% translate "Atalhos" %}</span>
+    {% for atalho, explicacao in atalhos %}
+    <button type="button" class="editor-rico-atalho" data-atalho="{{ atalho }}" title="{{ explicacao }}">{{ atalho }}</button>
+    {% endfor %}
+    <button type="button" class="editor-rico-atalho" data-comando="colunas" title="{% translate 'Três colunas lado a lado, que empilham no celular' %}">+ {% translate "3 colunas" %}</button>
+  </div>
+  {% endif %}
+
+  <div class="editor-rico-area" data-editor-area contenteditable="true" spellcheck="true" aria-label="{{ campo.label }}" data-placeholder="{% translate 'Escreva o conteúdo do rodapé…' %}"></div>
+
+  <div class="editor-rico-caixa editor-rico-caixa-fonte" data-editor-caixa-fonte hidden>
+    <span class="editor-rico-rotulo">{% translate "HTML gerado" %}</span>
+    <textarea class="input editor-rico-fonte" data-editor-fonte spellcheck="false" rows="8"></textarea>
+    <div class="editor-rico-acoes">
+      <button type="button" class="btn btn-secondary btn-sm" data-comando="aplicar-fonte">{% translate "Aplicar HTML" %}</button>
+      <span class="field-hint">{% translate "Cole aqui o HTML salvo para continuar a edição." %}</span>
+    </div>
+  </div>
+
+  {{ campo }}
+
+  <div class="editor-rico-rodape">
+    <span class="field-hint" data-editor-contador data-palavras="{% translate 'palavras' %}"></span>
+    <span class="field-hint">{% translate "Ctrl/⌘ + B, I, U funcionam normalmente" %}</span>
+  </div>
+</div>

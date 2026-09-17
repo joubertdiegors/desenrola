@@ -118,6 +118,12 @@ class TestEnquadramento:
 # Onde `|safe`, `mark_safe` e `autoescape off` são aceitos -- e por quê.
 # A lista está VAZIA de propósito: o projeto não tem nenhum caso. Um
 # acréscimo aqui exige que alguém escreva a razão ao lado.
+# Onde `mark_safe` e' aceito no PYTHON -- e por que. Um so lugar, e ele
+# sanitiza antes: ver o cabecalho de `apps/content/rodape.py`.
+MARCA_SEGURO_PERMITIDO = {
+    "apps/content/rodape.py",
+}
+
 ESCAPE_DESLIGADO_PERMITIDO = {
     # O corpo de TEXTO do e-mail de recuperação: texto puro não
     # interpreta marcação, então desligar o escape ali é inofensivo -- e
@@ -145,10 +151,18 @@ class TestNadaDeHtmlCru:
         assert not culpados, f"{padrao} em: {culpados}"
 
     def test_nenhum_python_marca_html_como_seguro(self):
+        """
+        A UNICA excecao e' `content/rodape.py`: o rodape e' conteudo rico
+        escrito no Backoffice, e o que recebe `mark_safe` la e' o
+        resultado de `sanitizar` -- uma lista fechada de tags e
+        atributos. O cabecalho daquele modulo explica; a suite do rodape
+        (`content/tests/test_rodape.py`) prova que a lista fecha.
+        """
         culpados = [
             caminho.as_posix()
             for caminho, texto in arquivos(CODIGO, ".py")
-            if "mark_safe" in texto or "SafeString(" in texto
+            if ("mark_safe" in texto or "SafeString(" in texto)
+            and caminho.as_posix() not in MARCA_SEGURO_PERMITIDO
         ]
 
         assert not culpados
