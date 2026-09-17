@@ -76,8 +76,6 @@ class FormularioDeSecao(forms.Form):
         "contador_posicao",
         "contador_ao_vivo_ativo",
         "parceiros_posicao_botao",
-        "parceiros_carrossel_ativo",
-        "parceiros_carrossel_controles_ativo",
         "parceiros_ver_todos_ativo",
     )
 
@@ -176,28 +174,13 @@ class FormularioDeSecao(forms.Form):
                 choices=PageSection.Posicao9.choices,
                 widget=forms.Select(attrs={"class": "input"}),
             )
-            self.fields["parceiros_carrossel_ativo"] = forms.BooleanField(
-                label=_("Carrossel com mais de 4 parceiros"),
-                required=False,
-                initial=secao.partners_carousel_enabled,
-                help_text=_(
-                    "Desligado, a seção mostra só os 4 primeiros parceiros "
-                    "ativos e o botão \"Ver todos\", sem criar uma segunda "
-                    "fileira."
-                ),
-            )
-            self.fields["parceiros_carrossel_controles_ativo"] = forms.BooleanField(
-                label=_("Setas do carrossel"),
-                required=False,
-                initial=secao.partners_carousel_controls_enabled,
-            )
             self.fields["parceiros_ver_todos_ativo"] = forms.BooleanField(
                 label=_("Botão \"Ver todos os parceiros\""),
                 required=False,
                 initial=secao.partners_view_all_enabled,
                 help_text=_(
-                    "Só aparece com um destino preenchido em \"Destino do "
-                    "botão 'Ver todos'\", abaixo."
+                    "Aparece quando há mais de 4 parceiros cadastrados e leva "
+                    "à página com todos eles."
                 ),
             )
 
@@ -295,16 +278,6 @@ class FormularioDeSecao(forms.Form):
             if secao.partners_button_position != posicao:
                 secao.partners_button_position = posicao
                 mudou.append("partners_button_position")
-        if "parceiros_carrossel_ativo" in self.fields:
-            ativo = bool(self.cleaned_data.get("parceiros_carrossel_ativo"))
-            if secao.partners_carousel_enabled != ativo:
-                secao.partners_carousel_enabled = ativo
-                mudou.append("partners_carousel_enabled")
-        if "parceiros_carrossel_controles_ativo" in self.fields:
-            ativo = bool(self.cleaned_data.get("parceiros_carrossel_controles_ativo"))
-            if secao.partners_carousel_controls_enabled != ativo:
-                secao.partners_carousel_controls_enabled = ativo
-                mudou.append("partners_carousel_controls_enabled")
         if "parceiros_ver_todos_ativo" in self.fields:
             ativo = bool(self.cleaned_data.get("parceiros_ver_todos_ativo"))
             if secao.partners_view_all_enabled != ativo:

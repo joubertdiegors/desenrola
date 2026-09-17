@@ -18,6 +18,8 @@ e o terceiro passo veria "01" e "03" na tela. O filtro devolve apenas os
 passos com texto, e o `forloop` numera o que sobrou.
 """
 
+import re
+
 from django import template
 
 register = template.Library()
@@ -26,11 +28,11 @@ register = template.Library()
 # visual pede, e é o que o schema declara em campos.
 QUANTOS_PASSOS = 3
 
-# Quantos parceiros a composição principal mostra sem carrossel -- o
-# desenho de referência (2a) cabe quatro por fileira sem espichar nem
-# espremer. Acima disso, ou rola (carrossel) ou "Ver todos" leva ao
-# resto -- nunca uma segunda fileira.
-QUANTOS_PARCEIROS_SEM_CARROSSEL = 4
+# Quantos parceiros a Home mostra: UMA fileira de quatro, que é o que a
+# referência visual desenha. Acima disso o "Ver todos" leva à página de
+# parceiros -- nunca uma segunda fileira, nunca um carrossel com barra
+# de rolagem.
+QUANTOS_PARCEIROS_NA_HOME = 4
 
 
 @register.filter
@@ -55,24 +57,36 @@ def passos_do_banner(conteudo):
     return escritos
 
 
+# Uma numeracao escrita no comeco do texto: "1. ", "01 - ", "2) ".
+# Ancorada no inicio e com o separador obrigatorio, para nao comer um
+# titulo que COMECE com numero de verdade ("2026 em diante").
+NUMERACAO_NO_COMECO = re.compile(r"^\s*\d{1,2}\s*[.)\-–]\s+")
+
+
 @register.filter
-def parceiros_visiveis(parceiros, parte):
+def sem_numeracao(texto):
     """
-    Os parceiros que a composição SEM carrossel desenha.
+    O texto sem a numeracao escrita a mao no comeco.
 
-    Até quatro, é a lista inteira -- a grade cabe sem espichar nem
-    criar fileira vazia. Com mais de quatro e o carrossel LIGADO, quem
-    desenha o resto é `partners.html`, direto de `parceiros`: este
-    filtro não entra nesse caminho. Com o carrossel DESLIGADO, só os
-    quatro primeiros saem daqui -- é o botão "Ver todos" que leva ao
-    resto, e a seção nunca ganha uma segunda fileira.
-
-    `parte` é o `ParteDaPagina` de "partners" -- `parceiros_carrossel_ativo`
-    é estrutural (`PageSection.partners_carousel_enabled`), não um texto.
+    O passo ja e numerado pelo DESENHO (ver `core/secoes/how.html`), a
+    partir da posicao na lista. Um titulo cadastrado como "1. Preencha"
+    apareceria como "01  1. Preencha" -- entao a numeracao do texto sai
+    na hora de desenhar, e o que esta no banco continua como esta.
     """
-    parceiros = list(parceiros)
-    if len(parceiros) <= QUANTOS_PARCEIROS_SEM_CARROSSEL:
-        return parceiros
-    if parte is not None and getattr(parte, "parceiros_carrossel_ativo", True):
-        return parceiros
-    return parceiros[:QUANTOS_PARCEIROS_SEM_CARROSSEL]
+    return NUMERACAO_NO_COMECO.sub("", str(texto or ""))
+
+
+@register.filter
+def parceiros_visiveis(parceiros):
+    """
+    Os parceiros que a Home desenha: no máximo QUATRO.
+
+    Uma fileira, sempre. Acima de quatro, os demais não somem do site --
+    eles estão na página pública de parceiros, para onde o "Ver todos"
+    leva (ver `core/secoes/partners.html`).
+
+    O corte mora AQUI, e não no template, porque é uma regra: "a Home
+    mostra uma fileira" tem um número, e um número escrito no meio da
+    marcação é um número que ninguém encontra quando ele muda.
+    """
+    return list(parceiros)[:QUANTOS_PARCEIROS_NA_HOME]

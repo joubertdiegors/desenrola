@@ -1,22 +1,20 @@
 """
-Bloco B: só imagem e botão, carrossel acima de quatro, "Ver todos".
+Nossos Parceiros: uma fileira de quatro, o botão do cartão e o "Ver todos".
 
 O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 ------------------------------------
-1. **Que uma segunda fileira nasça.** Acima de quatro parceiros, o
-   requisito é claro: carrossel horizontal, nunca mais uma fileira --
-   com o carrossel desligado, a composição CONTINUA travada em quatro,
-   e o resto só existe atrás do carrossel ou do "Ver todos";
-2. **Que a posição do botão vire coordenada livre.** Só as nove de
+1. **Que uma segunda fileira nasça.** A referência visual desenha UMA
+   linha: acima de quatro parceiros a Home mostra os quatro primeiros e
+   o "Ver todos" leva à página com todos eles;
+2. **Que o carrossel volte.** Ele rolava de lado e mostrava os demais
+   ali mesmo -- a referência não o tem, e a página de parceiros faz o
+   papel dele;
+3. **Que a posição do botão vire coordenada livre.** Só as nove de
    `PageSection.Posicao9` -- a MESMA classe do contador do banner;
-3. **Que o carrossel dependa só do arraste do mouse.** A trilha é
-   focável (teclado) e rola por toque/roda do mouse por CSS puro, antes
-   de qualquer script;
-4. **Que "Ver todos" apareça sem destino, ou com poucos parceiros.** Só
-   surge com mais de quatro, o interruptor ligado E um destino real
-   escrito na seção;
-5. **Que a animação do carrossel ignore `prefers-reduced-motion`;**
-6. **Que a prévia do Backoffice desenhe uma composição diferente da
+4. **Que "Ver todos" vire um link morto.** O destino padrão é a página
+   de parceiros, que existe; o CMS pode trocá-lo, mas não precisa
+   preenchê-lo;
+5. **Que a prévia do Backoffice desenhe uma composição diferente da
    Home pública.**
 """
 
@@ -137,8 +135,6 @@ def _payload_do_editor(**extra):
         "idioma": "pt",
         **traducao().content,
         "parceiros_posicao_botao": secao().partners_button_position,
-        "parceiros_carrossel_ativo": "on",
-        "parceiros_carrossel_controles_ativo": "on",
         "parceiros_ver_todos_ativo": "on",
     }
     base.update(extra)
@@ -154,66 +150,61 @@ class TestQuantidades:
     def test_zero_parceiros_a_secao_some(self, client):
         assert 'id="parceiros"' not in corpo(client)
 
-    def test_um_parceiro_grade_sem_carrossel(self, client):
-        criar(1)
+    @pytest.mark.parametrize("quantos", [1, 2, 3, 4])
+    def test_ate_quatro_aparecem_todos(self, client, quantos):
+        criar(quantos)
 
         html = secao_dos_parceiros(client)
 
         assert "partners-grid" in html
-        assert "partners-carrossel" not in html
+        assert html.count("partner-item") == quantos
 
-    def test_quatro_parceiros_grade_sem_carrossel(self, client):
-        criar(4)
-
-        html = secao_dos_parceiros(client)
-
-        assert 'class="partners-grid"' in html
-        assert "partners-carrossel" not in html
-
-    def test_cinco_parceiros_vira_carrossel(self, client):
-        criar(5)
-
-        html = secao_dos_parceiros(client)
-
-        assert "partners-carrossel" in html
-
-    def test_muitos_parceiros_continuam_todos_no_carrossel(self, client):
-        criar(12)
-
-        html = secao_dos_parceiros(client)
-
-        assert html.count("partner-item") == 12
-
-
-# ===========================================================================
-# 2. Nunca uma segunda fileira
-# ===========================================================================
-
-
-class TestSemSegundaFileira:
-    def test_carrossel_ligado_a_grade_nao_e_desenhada(self, client):
-        criar(6)
-
-        html = secao_dos_parceiros(client)
-
-        assert "partners-grid" not in html
-
-    def test_carrossel_desligado_trava_em_quatro(self, client):
-        criar(9)
-        PageSection.objects.filter(pk=secao().pk).update(partners_carousel_enabled=False)
+    @pytest.mark.parametrize("quantos", [5, 9, 12])
+    def test_acima_de_quatro_a_home_mostra_quatro(self, client, quantos):
+        criar(quantos)
 
         html = secao_dos_parceiros(client)
 
         assert html.count("partner-item") == 4
+
+    def test_os_quatro_sao_os_PRIMEIROS_da_ordem(self, client):
+        criar(6)
+
+        html = secao_dos_parceiros(client)
+
+        assert "Parceiro 1" in html
+        assert "Parceiro 5" not in html
+
+
+# ===========================================================================
+# 2. Nunca uma segunda fileira, nunca um carrossel
+# ===========================================================================
+
+
+class TestUmaFileiraSo:
+    @pytest.mark.parametrize("quantos", [5, 9, 12])
+    def test_a_grade_continua_sendo_uma_grade_de_quatro(self, client, quantos):
+        criar(quantos)
+
+        html = secao_dos_parceiros(client)
+
         assert 'class="partners-grid"' in html
-        assert "partners-carrossel" not in html
+        assert html.count("partner-item") == 4
 
-    def test_carrossel_desligado_mostra_o_ver_todos(self, client):
+    def test_nao_ha_carrossel_nem_barra_de_rolagem(self, client):
+        criar(12)
+
+        html = secao_dos_parceiros(client)
+
+        assert "carrossel" not in html
+        assert "overflow" not in html
+
+    def test_acima_de_quatro_o_ver_todos_leva_a_pagina_de_parceiros(self, client):
         criar(9)
-        PageSection.objects.filter(pk=secao().pk).update(partners_carousel_enabled=False)
-        escrever(ver_todos_label="Ver todos os parceiros", ver_todos_destino="/parceiros/")
 
-        assert "parceiros-rodape" in secao_dos_parceiros(client)
+        html = secao_dos_parceiros(client)
+
+        assert reverse("core:parceiros") in html
 
 
 # ===========================================================================
@@ -274,28 +265,46 @@ class TestPosicaoDoBotao:
 
 
 class TestVerTodos:
-    def test_aparece_com_mais_de_quatro_e_destino_configurado(self, client):
+    def test_aparece_com_mais_de_quatro(self, client):
         criar(5)
-        escrever(ver_todos_label="Ver todos os parceiros", ver_todos_destino="/parceiros/")
 
         html = secao_dos_parceiros(client)
 
-        assert "parceiros-rodape" in html
-        assert "Ver todos os parceiros" in html
-        assert 'href="/parceiros/"' in html
+        assert "home-link-forte" in html
+        assert reverse("core:parceiros") in html
 
-    def test_sem_destino_nao_aparece_mesmo_com_rotulo(self, client):
+    def test_nao_aparece_com_quatro_ou_menos(self, client):
+        criar(4)
+
+        assert "home-link-forte" not in secao_dos_parceiros(client)
+
+    def test_sem_destino_escrito_ele_vai_para_a_pagina_de_parceiros(self, client):
+        """
+        O botão não depende mais de um destino digitado: a página de
+        parceiros existe, e é para lá que ele vai por padrão.
+        """
         criar(5)
-        escrever(ver_todos_label="Ver todos os parceiros", ver_todos_destino="")
+        escrever(ver_todos_label="", ver_todos_destino="")
 
-        assert "parceiros-rodape" not in secao_dos_parceiros(client)
+        html = secao_dos_parceiros(client)
+
+        assert reverse("core:parceiros") in html
+        assert "Ver todos" in html
+
+    def test_o_cms_pode_trocar_o_texto_e_o_destino(self, client):
+        criar(5)
+        escrever(ver_todos_label="Conheça todos", ver_todos_destino="/outro-lugar/")
+
+        html = secao_dos_parceiros(client)
+
+        assert "Conheça todos" in html
+        assert 'href="/outro-lugar/"' in html
 
     def test_desligado_no_backoffice_nao_aparece(self, client):
         criar(5)
-        escrever(ver_todos_label="Ver todos", ver_todos_destino="/parceiros/")
         PageSection.objects.filter(pk=secao().pk).update(partners_view_all_enabled=False)
 
-        assert "parceiros-rodape" not in secao_dos_parceiros(client)
+        assert "home-link-forte" not in secao_dos_parceiros(client)
 
     def test_o_backoffice_liga_e_desliga(self, cliente):
         escrever(ver_todos_label="Ver todos", ver_todos_destino="/parceiros/")
@@ -331,8 +340,8 @@ class TestCasosDoParceiro:
 
         html = secao_dos_parceiros(client)
 
-        assert "partners-carrossel" not in html
         assert html.count("partner-item") == 4
+        assert "Parceiro 5" not in html
 
     def test_parceiro_sem_imagem_mostra_a_moldura_vazia(self, client):
         criar(1)
@@ -341,99 +350,6 @@ class TestCasosDoParceiro:
 
         assert "img-slot" in html
         assert "partner-botao" in html
-
-
-# ===========================================================================
-# 6. Controles do carrossel -- setas e configuração
-# ===========================================================================
-
-
-class TestControlesDoCarrossel:
-    def test_setas_aparecem_por_padrao(self, client):
-        criar(6)
-
-        assert "partners-seta" in secao_dos_parceiros(client)
-
-    def test_setas_desligadas_no_backoffice_somem(self, client):
-        criar(6)
-        PageSection.objects.filter(pk=secao().pk).update(
-            partners_carousel_controls_enabled=False
-        )
-
-        assert "partners-seta" not in secao_dos_parceiros(client)
-
-    def test_a_trilha_e_focavel_pelo_teclado(self, client):
-        """Sem isso, quem navega só pelo teclado não alcança o resto."""
-        criar(6)
-
-        html = secao_dos_parceiros(client)
-
-        assert 'id="parceiros-trilho"' in html
-        assert 'tabindex="0"' in html
-
-    def test_o_backoffice_liga_e_desliga_o_carrossel(self, cliente):
-        criar(9)
-
-        cliente.post(url_do_editor(), _payload_do_editor(parceiros_carrossel_ativo=""))
-        assert secao().partners_carousel_enabled is False
-
-        cliente.post(url_do_editor(), _payload_do_editor(parceiros_carrossel_ativo="on"))
-        assert secao().partners_carousel_enabled is True
-
-    def test_o_backoffice_liga_e_desliga_as_setas(self, cliente):
-        cliente.post(
-            url_do_editor(), _payload_do_editor(parceiros_carrossel_controles_ativo="")
-        )
-        assert secao().partners_carousel_controls_enabled is False
-
-        cliente.post(
-            url_do_editor(), _payload_do_editor(parceiros_carrossel_controles_ativo="on")
-        )
-        assert secao().partners_carousel_controls_enabled is True
-
-
-# ===========================================================================
-# 7. Sem overflow horizontal -- o scroll fica preso à trilha
-# ===========================================================================
-
-
-class TestSemOverflowHorizontal:
-    def test_a_trilha_contem_o_proprio_scroll(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        css = (raiz / "static" / "css" / "layout.css").read_text(encoding="utf-8")
-        inicio = css.index("overflow-x: auto;")
-        regra = css[inicio : css.index("}", inicio)]
-
-        # Sem `min-width: 0`, um item flexivel recusa encolher e a
-        # pagina toda -- nao so a trilha -- e' que ganharia a barra
-        # horizontal.
-        assert "min-width: 0" in regra
-
-    def test_respeita_movimento_reduzido(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        css = (raiz / "static" / "css" / "layout.css").read_text(encoding="utf-8")
-
-        assert "prefers-reduced-motion: reduce" in css
-        indice = css.index("prefers-reduced-motion: reduce")
-        bloco = css[indice : indice + 200]
-        assert ".partners-carrossel" in bloco
-
-    def test_o_script_respeita_o_mesmo_ajuste_no_clique(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        script = (raiz / "static" / "js" / "carrossel-de-parceiros.js").read_text(
-            encoding="utf-8"
-        )
-
-        assert "prefers-reduced-motion" in script
-
-    def test_o_script_nao_monta_html(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        script = (raiz / "static" / "js" / "carrossel-de-parceiros.js").read_text(
-            encoding="utf-8"
-        )
-
-        assert "innerHTML" not in script
-        assert "createElement" not in script
 
 
 # ===========================================================================
@@ -463,12 +379,13 @@ class TestPermissao:
 
 
 class TestPrevia:
-    def test_a_previa_mostra_o_carrossel_com_cinco(self, cliente):
-        criar(5)
+    def test_a_previa_para_em_quatro_como_a_home(self, cliente):
+        criar(9)
 
         html = cliente.get(url_da_previa()).content.decode()
 
-        assert "partners-carrossel" in html
+        assert html.count("partner-item") == 4
+        assert "carrossel" not in html
 
     def test_a_previa_mostra_a_grade_com_quatro(self, cliente):
         criar(4)
@@ -488,15 +405,15 @@ class TestPrevia:
         assert 'pos-superior-direita"' in html
         assert secao().partners_button_position != "superior-direita"
 
-    def test_a_previa_reflete_o_carrossel_desligado_sem_salvar(self, cliente):
+    def test_a_previa_reflete_o_ver_todos_desligado_sem_salvar(self, cliente):
         criar(9)
 
         html = cliente.post(
-            url_da_previa(), _payload_do_editor(parceiros_carrossel_ativo="")
+            url_da_previa(), _payload_do_editor(parceiros_ver_todos_ativo="")
         ).content.decode()
 
-        assert "partners-carrossel" not in html
-        assert secao().partners_carousel_enabled is True
+        assert "home-link-forte" not in html
+        assert secao().partners_view_all_enabled is True
 
     def test_previa_e_salvamento_desenham_a_mesma_composicao(self, cliente):
         criar(6)

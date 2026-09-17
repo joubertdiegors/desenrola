@@ -93,20 +93,19 @@ class TestGradeDinamica:
         assert 'class="partners-grid"' in html
 
     @pytest.mark.parametrize("quantos", (5, 9))
-    def test_mais_de_quatro_vira_carrossel_em_vez_de_segunda_fileira(
+    def test_mais_de_quatro_para_em_quatro_em_vez_de_segunda_fileira(
         self, client, quantos
     ):
         """
-        O carrossel vem ligado por padrão (`PageSection.partners_carousel_enabled`).
-        A cobertura do interruptor desligado mora em
-        `test_parceiros_carrossel_e_botao.py`.
+        A Home desenha UMA fileira. O resto está na página de parceiros,
+        para onde o "Ver todos" leva -- ver `test_parceiros_uma_fileira.py`.
         """
         criar(quantos)
 
         html = secao_dos_parceiros(client)
 
-        assert "partners-carrossel" in html
-        assert 'class="partners-grid"' not in html
+        assert 'class="partners-grid"' in html
+        assert html.count("partner-item") == 4
 
     def test_a_contagem_vem_do_banco(self, client):
         """Desativar um parceiro muda a grade -- o número não está escrito."""
@@ -118,8 +117,9 @@ class TestGradeDinamica:
         assert "partners-grid-2" in html
         assert "Parceiro 3" not in html
 
-    @pytest.mark.parametrize("quantos", (1, 2, 3, 4, 7))
+    @pytest.mark.parametrize("quantos", (1, 2, 3, 4))
     def test_todos_os_ativos_sao_desenhados(self, client, quantos):
+        """Até quatro; acima disso a fileira para, e o "Ver todos" leva ao resto."""
         criar(quantos)
 
         html = secao_dos_parceiros(client)
@@ -150,13 +150,13 @@ class TestSemParceiro:
 
 
 class TestCabecalho:
-    def test_titulo_e_apoio_ficam_num_bloco_proprio(self, client):
+    def test_o_titulo_fica_num_bloco_proprio_acima_da_grade(self, client):
         criar(2)
 
         html = secao_dos_parceiros(client)
 
-        assert "parceiros-cabeca" in html
-        assert html.index("parceiros-cabeca") < html.index("partners-grid")
+        assert "home-secao-cabeca" in html
+        assert html.index("home-secao-cabeca") < html.index("partners-grid")
 
     def test_ate_quatro_nao_ha_botao_ver_todos(self, client):
         """
@@ -169,21 +169,26 @@ class TestCabecalho:
 
         html = secao_dos_parceiros(client)
 
-        assert "parceiros-rodape" not in html
+        assert "home-link-forte" not in html
 
-    def test_sem_texto_de_apoio_o_paragrafo_nao_sai(self, client):
+    def test_o_texto_de_apoio_nao_entra_no_cabecalho_da_secao(self, client):
+        """
+        A referência desenha título e "Ver todos" numa linha só -- sem
+        parágrafo de apoio entre eles e a grade. O campo continua no CMS
+        e sai na PÁGINA de parceiros, onde há lugar para ele.
+        """
         from apps.content.models import PageSectionTranslation
 
         criar(2)
         traducao = PageSectionTranslation.objects.get(
             section__page__key="home", section__key="partners", language="pt"
         )
-        traducao.content = {**traducao.content, "lead": ""}
+        traducao.content = {**traducao.content, "lead": "Um apoio qualquer."}
         traducao.save(update_fields=["content"])
 
         html = secao_dos_parceiros(client)
 
-        assert "section-lead" not in html
+        assert "Um apoio qualquer." not in html
 
 
 # ===========================================================================
@@ -275,28 +280,37 @@ class TestMiniBanner:
 
         css = pathlib.Path("static/css/layout.css").read_text(encoding="utf-8")
         blocos = re.findall(r"@media \(max-width: 767px\) \{(.*?)\n\}", css, re.S)
-        return "\n".join(bloco for bloco in blocos if ".cta-banner" in bloco)
+        return "\n".join(bloco for bloco in blocos if ".home-cta" in bloco)
 
-    def test_o_botao_nao_e_mais_escondido(self):
+    def test_o_botao_nao_e_escondido(self):
+        """
+        Uma chamada para ação sem a ação é o "botão sem função" que o
+        projeto proíbe. Ele já foi escondido no celular; não volta a ser.
+        """
         regra = self._regra_do_celular()
 
-        assert ".cta-banner .btn { display: none; }" not in regra
+        assert ".home-cta-botao { display: none" not in regra
+        assert ".home-cta-botao" in regra
 
     def test_o_botao_ocupa_a_largura_inteira(self):
-        assert ".cta-banner .btn { width: 100%" in self._regra_do_celular()
+        assert ".home-cta-botao { width: 100%" in self._regra_do_celular()
 
     def test_a_faixa_sangra_ate_as_bordas(self):
         """
-        -20px cancela o `padding` lateral de `.section`; qualquer outro
-        valor sobra ou falta, e sobrar faz a página rolar de lado.
+        A faixa é a SEÇÃO inteira, de ponta a ponta: o respiro lateral
+        mora na coluna de dentro, e não há margem negativa nenhuma para
+        acertar -- que era justamente o que podia fazer a página rolar
+        de lado.
         """
-        regra = self._regra_do_celular()
+        import pathlib
 
-        assert "margin: 22px -20px 26px;" in regra
-        assert "border-radius: 0;" in regra
+        css = pathlib.Path("static/css/layout.css").read_text(encoding="utf-8")
+        bloco = css[css.index(".home-secao-gradiente {") : css.index(".home-cta {")]
+
+        assert "background: linear-gradient" in bloco
+        assert "margin" not in bloco
 
     def test_o_botao_continua_no_html(self, client):
         html = area(client)
 
-        assert "cta-banner" in html
-        assert html.count("cta-banner") >= 2
+        assert "home-cta-botao" in html

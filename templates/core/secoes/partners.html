@@ -1,68 +1,48 @@
 {% load i18n conteudo %}{% comment %}
-Nossos Parceiros -- modelo 2a (Bloco B: só imagem e botão por cartão).
+Nossos Parceiros -- uma fileira, nunca duas.
 
-Cabecalho da secao (titulo e apoio) sobre uma linha, e abaixo dela os
-parceiros: até quatro, uma grade só; com mais, um carrossel horizontal
--- NUNCA uma segunda fileira (ver `parceiros_visiveis`, o filtro que
-decide isso, e `_partner_card.html`, o cartão em si).
+QUATRO, E O RESTO NUMA PÁGINA PRÓPRIA
+--------------------------------------
+Até quatro cadastrados, a grade mostra todos. Acima de quatro, a Home
+mostra os QUATRO PRIMEIROS e o "Ver todos" leva à página pública de
+parceiros (`core:parceiros`), que lista o resto.
 
-Sem parceiro cadastrado a secao inteira sai do ar -- titulo e grade
-vazios seriam uma promessa nao cumprida. O item "Parceiros" do menu some
-junto (ver `content.services._menu_sem_ancora_morta`), senao a ancora
+Não há carrossel, não há barra de rolagem horizontal e não há segunda
+fileira: a referência visual desta rodada desenha uma linha só, e é ela
+que manda.
+
+O "VER TODOS" NUNCA É UM LINK MORTO
+------------------------------------
+O destino padrão é a página de parceiros, que existe de verdade e sai
+dos mesmos dados. O CMS pode apontá-lo para outro lugar
+(`ver_todos_destino`) e trocar o texto (`ver_todos_label`), mas não
+precisa preencher nada para o botão funcionar.
+
+Sem parceiro cadastrado a seção inteira sai do ar -- título e grade
+vazios seriam uma promessa não cumprida. O item "Parceiros" do menu some
+junto (ver `content.services._menu_sem_ancora_morta`), senão a âncora
 levaria a lugar nenhum.
-
-O CARROSSEL É UM CONTROLE DA SEÇÃO, NÃO DA PÁGINA
---------------------------------------------------
-`overflow-x: auto` só na trilha (`.partners-carrossel`) -- a página em
-volta não ganha barra de rolagem nenhuma. Funciona por toque, roda do
-mouse, teclado (a trilha é focável) e pelas setas, quando ligadas: nunca
-só arraste do mouse.
-
-"VER TODOS" É CMS, NUNCA UM LINK MORTO
-----------------------------------------
-Só aparece com mais de quatro parceiros, o interruptor ligado E um
-destino de verdade escrito na seção -- as mesmas regras de qualquer
-outro botão do projeto: sem destino, ele não é desenhado.
 
 Contexto: secoes.partners, partes.partners, parceiros.
 {% endcomment %}
 {% if parceiros %}
+{% url 'core:parceiros' as pagina_dos_parceiros %}
 {% with parte=partes.partners total=parceiros|length %}
-<section class="section container" id="parceiros">
-  <div class="parceiros-cabeca">
-    <h2>{{ secoes.partners.title }}</h2>
-    {% if secoes.partners.lead %}<p class="section-lead">{{ secoes.partners.lead }}</p>{% endif %}
-  </div>
+<section class="home-secao home-secao-branca" id="parceiros">
+  <div class="home-largura">
+    <div class="home-secao-cabeca">
+      <h2>{{ secoes.partners.title }}</h2>
+      {% if total > 4 and parte.parceiros_ver_todos_ativo %}
+      <a class="home-link-forte" href="{{ secoes.partners.ver_todos_destino|default:pagina_dos_parceiros }}">{{ secoes.partners.ver_todos_label|default:_("Ver todos") }} <span aria-hidden="true">→</span></a>
+      {% endif %}
+    </div>
 
-  {% if total > 4 and parte.parceiros_carrossel_ativo %}
-  <div class="partners-carrossel-caixa">
-    {% if parte.parceiros_carrossel_controles_ativo %}
-    <button type="button" class="partners-seta partners-seta-prev" data-partners-seta="-1" aria-controls="parceiros-trilho" aria-label="{% translate "Parceiro anterior" %}"><i class="ph-bold ph-caret-left" aria-hidden="true"></i></button>
-    {% endif %}
-    <ul class="partners-carrossel" id="parceiros-trilho" tabindex="0" role="group" aria-label="{% translate "Parceiros -- role para o lado para ver mais" %}">
-      {% for parceiro in parceiros %}
+    <ul class="partners-grid{% if total < 4 %} partners-grid-{{ total }}{% endif %}">
+      {% for parceiro in parceiros|parceiros_visiveis %}
       <li class="partner-item">{% include "core/secoes/_partner_card.html" %}</li>
       {% endfor %}
     </ul>
-    {% if parte.parceiros_carrossel_controles_ativo %}
-    <button type="button" class="partners-seta partners-seta-next" data-partners-seta="1" aria-controls="parceiros-trilho" aria-label="{% translate "Próximo parceiro" %}"><i class="ph-bold ph-caret-right" aria-hidden="true"></i></button>
-    {% endif %}
   </div>
-  {% else %}
-  {% with visiveis=parceiros|parceiros_visiveis:parte %}
-  <ul class="partners-grid{% if visiveis|length < 4 %} partners-grid-{{ visiveis|length }}{% endif %}">
-    {% for parceiro in visiveis %}
-    <li class="partner-item">{% include "core/secoes/_partner_card.html" %}</li>
-    {% endfor %}
-  </ul>
-  {% endwith %}
-  {% endif %}
-
-  {% if total > 4 and parte.parceiros_ver_todos_ativo and secoes.partners.ver_todos_label and secoes.partners.ver_todos_destino %}
-  <div class="parceiros-rodape">
-    <a class="btn btn-secondary" href="{{ secoes.partners.ver_todos_destino }}">{{ secoes.partners.ver_todos_label }}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
-  </div>
-  {% endif %}
 </section>
 {% endwith %}
 {% endif %}

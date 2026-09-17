@@ -392,7 +392,7 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=No
         """
         O que está no formulário, quando o campo existe nele -- senão o
         que já está gravado. Mesma regra da `imagem`, generalizada: os
-        campos estruturais (contador, botão e carrossel de parceiros)
+        campos estruturais (contador e botão dos parceiros)
         só aparecem no formulário das seções que os declaram, e a prévia
         de uma seção sem eles não pode inventar um valor.
         """
@@ -429,14 +429,6 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=No
         ),
         parceiros_posicao_botao=_proposto_ou_atual(
             "parceiros_posicao_botao", "parceiros_posicao_botao"
-        ),
-        parceiros_carrossel_ativo=bool(
-            _proposto_ou_atual("parceiros_carrossel_ativo", "parceiros_carrossel_ativo")
-        ),
-        parceiros_carrossel_controles_ativo=bool(
-            _proposto_ou_atual(
-                "parceiros_carrossel_controles_ativo", "parceiros_carrossel_controles_ativo"
-            )
         ),
         parceiros_ver_todos_ativo=bool(
             _proposto_ou_atual("parceiros_ver_todos_ativo", "parceiros_ver_todos_ativo")

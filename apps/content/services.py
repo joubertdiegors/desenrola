@@ -69,14 +69,17 @@ class ParteDaPagina:
     imagem: object = None
     # Estrutural, das colunas de `PageSection` -- não do JSON de
     # conteúdo. Valem em qualquer idioma, e por isso não moram em
-    # `conteudo`. Ver os campos equivalentes em `PageSection`
-    # (Bloco A: contador; Bloco B: botão e carrossel de parceiros).
+    # `conteudo`. Ver os campos equivalentes em `PageSection`.
+    #
+    # `partners_carousel_enabled` e `partners_carousel_controls_enabled`
+    # continuam no modelo, com os valores gravados, mas não são lidos:
+    # a Home passou a mostrar uma fileira de quatro e o "Ver todos", sem
+    # carrossel (ver `core/secoes/partners.html`). As colunas ficaram
+    # para que a mudança seja reversível sem perder configuração.
     contador_ativo: bool = False
     contador_posicao: str = PageSection.Posicao9.SUPERIOR_ESQUERDA
     contador_ao_vivo_ativo: bool = True
     parceiros_posicao_botao: str = PageSection.Posicao9.INFERIOR_CENTRO
-    parceiros_carrossel_ativo: bool = True
-    parceiros_carrossel_controles_ativo: bool = True
     parceiros_ver_todos_ativo: bool = True
 
 
@@ -144,8 +147,6 @@ def _parte_de(secao, conteudo):
         contador_posicao=secao.counter_position,
         contador_ao_vivo_ativo=secao.counter_live_enabled,
         parceiros_posicao_botao=secao.partners_button_position,
-        parceiros_carrossel_ativo=secao.partners_carousel_enabled,
-        parceiros_carrossel_controles_ativo=secao.partners_carousel_controls_enabled,
         parceiros_ver_todos_ativo=secao.partners_view_all_enabled,
     )
 
