@@ -71,4 +71,12 @@ lateral; no celular vai dentro do dropdown do botao de menu
   `content.change_sitesettings`, conferido no servidor.
   {% endcomment %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %}" href="{% url 'backoffice:system' %}"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-gear" aria-hidden="true"></i>{% translate "Sistema" %}</a>
+  {% comment %}
+  A saída da administração, depois de um risco: os itens acima são
+  lugares DENTRO do Backoffice; este leva de volta ao painel de quem
+  está usando (`core:dashboard`, a mesma rota da barra superior e da
+  barra do celular). "Início" é como o produto chama aquela tela.
+  {% endcomment %}
+  {% if in_dropdown %}<div class="dropdown-sep"></div>{% endif %}
+  <a class="{% if in_dropdown %}dropdown-item{% else %}hr-item{% endif %}" href="{% url 'core:dashboard' %}"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>{% translate "Voltar ao início" %}</a>
 </nav>

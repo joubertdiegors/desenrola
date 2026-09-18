@@ -1329,64 +1329,165 @@ img.lang-flag { object-fit: cover; display: block; }
    Conclusao (carta gerada / visualizacao)
    -------------------------------------------------------------------------- */
 
-/* UMA COLUNA, CENTRADA.
+/* A FAIXA ESCURA E O FUNDO DA TELA, NAO UMA CAIXA.
 
-   Eram duas -- 460px para o cartao e `1fr` para a pre-visualizacao da
-   carta ao lado. Aquela pre-visualizacao era o mock `paper_letter.html`,
-   que saiu no Bloco L (era orfao, e carregava dado pessoal de aparencia
-   real em codigo versionado). A coluna ficou: o cartao encostado a
-   esquerda com meia tela vazia a direita, sem nada que explicasse a
-   folga. */
-.done-wrap { max-width: 560px; margin: 0 auto; padding: 44px 24px 60px; }
-.done-card { padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; }
+   `linear-gradient` com parada dura na altura da faixa: o documento
+   nao ganha um elemento vazio so para pintar o alto, e o cartao nao
+   precisa de margem negativa para subir por cima dela. A altura e
+   variavel porque o bloco do titulo tem uma linha no desktop e duas
+   no celular. */
+.done {
+  --done-faixa: 196px;
+  background: linear-gradient(var(--navy) 0 var(--done-faixa), var(--bg) var(--done-faixa));
+}
+/* UMA COLUNA, CENTRADA -- 620px, a medida da referencia.
+
+   Eram duas colunas: 460px para o cartao e `1fr` para a
+   pre-visualizacao da carta, que saiu do projeto no Bloco L. A coluna
+   vazia ficou por um tempo, com o cartao encostado a esquerda. */
+.done-wrap { max-width: 620px; margin: 0 auto; padding: 34px 24px 56px; }
+
+/* O bloco que fica SOBRE a faixa: selo, titulo e a linha de apoio. */
+.done-cabeca { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 26px; text-align: center; }
 /* O selo do "pronto": 84px era um circulo verde do tamanho da mao
-   ocupando a primeira dobra inteira antes de qualquer informacao. 64
+   ocupando a primeira dobra inteira antes de qualquer informacao. 58
    continua sendo a primeira coisa que se ve, sem ser a unica. */
 .done-icon {
-  width: 64px;
-  height: 64px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background: var(--s);
   color: #fff;
   display: grid;
   place-items: center;
-  font-size: 32px;
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--s) 14%, white);
+  font-size: 27px;
+  border: 5px solid rgba(255, 255, 255, .14);
+  box-sizing: border-box;
+  box-shadow: 0 12px 26px rgba(12, 30, 74, .4);
 }
-.done-card h1 { font-size: 26px; }
-.done-info { width: 100%; padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; text-align: left; box-sizing: border-box; }
-.done-info-row { display: flex; gap: 10px; align-items: center; }
-.done-info-row.is-multiline { align-items: flex-start; }
-.done-info-row .ph { color: var(--p); font-size: 18px; flex: none; }
-.done-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-.done-actions .btn { min-height: 50px; }
+.done-cabeca h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+.done-sub { margin: 0; font-size: 14.5px; line-height: 1.45; color: color-mix(in srgb, #fff 62%, var(--navy)); }
+
+/* O CARTAO -- o comprovante em si. Sem respiro proprio: cada faixa
+   dele (topo, dados, acoes) traz o seu. */
+.done-card { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.done-card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--bd);
+}
+.done-ref { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.done-ref-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
+.done-ref-valor { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: var(--navy); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.done-card-topo .tag { flex: none; }
+
+/* OS DADOS, EM DUAS COLUNAS.
+
+   O filete separa as linhas, e some nas duas ultimas -- com um numero
+   impar de dados, a ultima ocupa a linha sozinha e tambem fica sem
+   filete. */
+.done-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; padding: 6px 26px 18px; }
+.done-info-row { display: flex; align-items: center; gap: 11px; padding: 14px 0; border-bottom: 1px solid var(--bd); min-width: 0; }
+.done-info-row:last-child,
+.done-info-row:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+.done-info-row .ph { color: var(--p); font-size: 17px; flex: none; }
+.done-info-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.done-info-rotulo { font-size: 11.5px; font-weight: 600; color: var(--mu); }
+.done-info-valor { font-size: 14.5px; font-weight: 700; color: var(--navy); overflow-wrap: anywhere; }
+.done-info-valor.is-numero { font-variant-numeric: tabular-nums; }
+
+/* AS ACOES, na faixa clara do pe -- as mesmas rotas do painel e do
+   historico (ver `letters/_letter_actions.html`). */
+.done-actions {
+  display: flex;
+  /* UMA LINHA no desktop: com "Baixar" reduzido a capsula de icone, a
+     fileira inteira (com ou sem "Editar") cabe na largura do cartao.
+     Quem cresce e o principal; quem encolhe, tambem. */
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 26px;
+  background: var(--p10);
+  border-top: 1px dashed var(--bd);
+}
+.done-actions .btn { min-height: 48px; }
+/* `min-width: 0` para poder encolher onde o cartao e menor (768-1023px):
+   sem isso o flex respeita a largura do conteudo e empurra o ultimo
+   botao para fora da faixa. */
+.done-acao-principal { flex: 1 1 200px; min-width: 0; }
+/* "Editar" tem a largura do proprio rotulo -- nao cresce nem encolhe:
+   sem ele, a sobra toda vai para o principal. */
+.done-acao-editar { flex: 0 0 auto; }
 .letter-actions-extra { display: flex; flex-wrap: wrap; gap: 8px; }
 .letter-actions-extra .btn { flex: 1 1 140px; }
-.done-actions-row { display: flex; gap: 8px; justify-content: center; }
-.done-actions-row .btn { min-height: 40px; font-size: 14px; }
-.done-thanks { font-size: 13px; color: var(--navy); font-weight: 600; margin-top: 4px; }
-.done-thanks-sub { font-size: 12.5px; color: var(--mu); margin-top: -12px; }
+/* Na variante comprovante os secundarios entram na MESMA fileira do
+   principal (`display: contents`) e nao esticam: quem ocupa a sobra e
+   o "Ver PDF". Os seletores levam `.done-actions` na frente de
+   proposito -- sem isso `.letter-actions-extra .btn`, mais especifico,
+   continuaria esticando cada um para 140px. */
+.done-acoes-extra { display: contents; }
+.done-actions .done-acoes-extra .btn { flex: 0 0 auto; }
+/* As tres capsulas de icone: o rotulo continua no documento (e o nome
+   do botao para quem usa leitor de tela, e e nele que o JavaScript
+   escreve o aviso de "PDF baixado"), so nao ocupa espaco. */
+.done-actions .done-acao-icone { width: 48px; padding: 0; gap: 0; font-size: 0; }
+.done-actions .done-acao-icone .ph { font-size: 18px; }
+
+.done-actions-row { display: flex; align-items: center; gap: 18px; justify-content: center; padding-top: 22px; }
+.done-actions-row .btn { min-height: 40px; font-size: 14px; font-weight: 700; }
+.done-link-forte { color: var(--p); }
+.done-risco { width: 1px; height: 16px; background: var(--bd); flex: none; }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .done-wrap { max-width: 520px; padding: 30px 32px 40px; }
+  .done-wrap { max-width: 560px; padding: 30px 32px 44px; }
 }
 
 @media (max-width: 767px) {
-  .done-wrap { padding: 20px 20px 0; }
-  /* `padding: 0` encostava o selo no topo do cartao: o circulo ficava
-     rente a borda e o ANEL de 6px (o `box-shadow` abaixo) sangrava para
-     fora do branco, sobre o fundo da pagina -- era o "check saindo do
-     container". O respiro de 14px e estrutural: cabe o anel inteiro com
-     folga, e o selo continua sendo a primeira coisa da tela. Nada de
-     `overflow: hidden`, que so esconderia o transbordo. */
-  .done-card { padding: 14px 0 0; border: 0; box-shadow: none; gap: 14px; }
+  /* No celular o titulo ocupa duas linhas: a faixa cresce junto. */
+  .done { --done-faixa: 208px; }
+  .done-wrap { padding: 22px 16px 0; }
+  .done-cabeca { gap: 7px; padding-bottom: 20px; }
   /* No celular o selo era MAIOR que no desktop (88px contra 84), e
      empurrava a referencia e o botao de baixar para fora da primeira
      tela. Aqui ele encolhe mais ainda: a tela e menor, e o que precisa
      caber nela e a acao, nao a comemoracao. */
-  .done-icon { width: 52px; height: 52px; font-size: 26px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--s) 14%, white); }
-  .done-card h1 { font-size: 22px; }
-  .done-info { padding: 14px; font-size: 13.5px; gap: 8px; }
+  .done-icon { width: 50px; height: 50px; font-size: 24px; border-width: 4px; }
+  .done-cabeca h1 { font-size: 22px; }
+  .done-sub { font-size: 13px; }
+  /* O cartao encosta nas laterais e so arredonda em cima -- e a folha
+     que sobe sobre a faixa, como na referencia. */
+  .done-card { border-radius: 16px 16px 0 0; }
+  .done-card-topo { padding: 15px 18px; }
+  .done-ref-valor { font-size: 14.5px; }
+  /* UMA coluna, e cada dado vira uma linha de rotulo e valor: em 360px
+     duas colunas dariam menos de 150px para cada. */
+  .done-info { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 18px 12px; }
+  .done-info-row { align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0; }
+  .done-info-row .ph { display: none; }
+  .done-info-texto { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; }
+  .done-info-rotulo { font-size: 12.5px; flex: none; }
+  .done-info-valor { font-size: 13.5px; text-align: right; }
+  /* No celular as faixas se empilham: e o `wrap` que faz isso. */
+  .done-actions { flex-wrap: wrap; padding: 14px 18px 18px; gap: 9px; }
+  /* PRIMEIRA LINHA: o principal ocupa a sobra dela -- a linha inteira
+     quando nao ha "Editar", o que restar ao lado dele quando ha.
+     SEGUNDA LINHA: as quatro capsulas numa grade de quatro colunas,
+     que desce sozinha porque a grade tem `width: 100%`. */
+  .done-acao-principal { flex: 1 1 auto; min-width: 0; min-height: 50px; }
+  /* "Editar" fica AO LADO do principal, so com o lapis: o quadrado tem
+     a largura da altura, nao cresce nem encolhe, e o rotulo continua
+     no documento (nome do botao para leitor de tela) sem ocupar
+     espaco -- o mesmo recurso das outras capsulas. */
+  .done-acao-editar { flex: 0 0 auto; width: 50px; min-height: 50px; padding: 0; gap: 0; font-size: 0; }
+  .done-acao-editar .ph { font-size: 19px; }
+  .done-acoes-extra { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .done-actions .done-acoes-extra .btn { flex: none; width: auto; min-height: 46px; padding: 0; gap: 0; font-size: 0; }
+  .done-actions .done-acoes-extra .btn .ph { font-size: 19px; }
+  .done-actions-row { flex-direction: column; gap: 6px; padding-top: 16px; }
+  .done-risco { display: none; }
 }
 
 

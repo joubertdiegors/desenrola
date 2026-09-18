@@ -1,66 +1,150 @@
 {% extends "app_base.html" %}
 {% load i18n %}
 {% comment %}
-Detalhe de uma carta. Reaproveita o visual da conclusão da v2 (card
-centrado, `done-*`), com dados reais e só as ações que existem de fato.
+A carta em si -- o COMPROVANTE, no desenho do arquivo de referência
+"Confirmacao carta".
+
+A FAIXA ESCURA É DA PÁGINA, NÃO DA CASCA
+----------------------------------------
+A referência abre com uma faixa azul escura e o cartão branco subindo
+por cima dela. A faixa é desenhada aqui (`.done`, em layout.css), e não
+trocando a cor da barra superior: aquela barra veste o produto inteiro
+(painel, histórico, perfil, assistente), e mudá-la por causa desta tela
+mudaria todas as outras.
+
+UMA TELA, QUATRO ESTADOS
+------------------------
+Esta é a mesma tela de qualquer carta -- finalizada, rascunho,
+cancelada ou expirada. O selo verde e o "está pronta!" são do caso
+FINALIZADA; os outros trazem o seu próprio título, e o estado aparece
+por extenso na etiqueta do cartão (`_status_tag.html`), calculada pelo
+servidor (`apps.letters.lifecycle`), nunca por um `{% templatetag openblock %} if {% templatetag closeblock %}` daqui.
+
+TUDO O QUE APARECE É DADO REAL
+------------------------------
+Referência, convidado, idioma, período, geração e prazos vêm do
+`card` (`presentation.LetterCard`) montado pela view. Não há valor
+escrito no template -- os do arquivo de referência ("DSR-202609-...",
+"Ricardo Costa Silva") são do desenho, não do produto.
+
+AS AÇÕES SÃO AS QUE JÁ EXISTEM
+------------------------------
+`_letter_actions.html` é o mesmo include do painel e do histórico, aqui
+na variante `comprovante`: as rotas, os `data-*` e os ganchos de
+JavaScript (imprimir, compartilhar, WhatsApp) são exatamente os mesmos.
+O que muda é o arranjo.
+
+Contexto: card.
 {% endcomment %}
 
 {% block title %}{{ card.reference }} · {{ site_config.name }}{% endblock %}
 
-{% block content %}
-<div class="container">
-<div class="done-wrap">
-  <div class="card done-card">
-    {% if card.is_expired %}
-      <h1>{% translate "Carta expirada" %}</h1>
-      <p class="text-muted">{% translate "Esta carta expirou e o documento não pode mais ser aberto." %}</p>
-    {% elif card.is_generated %}
-      <span class="done-icon"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
-      <h1>{% translate "Sua Carta Convite está pronta!" %}</h1>
-      <p class="text-muted">{% translate "Confira o documento antes de utilizá-lo." %}</p>
-    {% elif card.is_cancelled %}
-      <h1>{% translate "Carta cancelada" %}</h1>
-      <p class="text-muted">{% translate "Esta carta não está mais em uso." %}</p>
-    {% elif card.is_draft %}
-      <h1>{% translate "Rascunho em andamento" %}</h1>
-      <p class="text-muted">{% translate "Ainda faltam informações para finalizar esta carta." %}</p>
-    {% else %}
-      <h1>{% translate "Carta registrada" %}</h1>
-      <p class="text-muted">{% translate "Os dados foram registrados, mas o PDF ainda não foi gerado." %}</p>
-    {% endif %}
+{% comment %}
+O aviso de e-mail não confirmado (a casca da área logada o desenha em
+`pre_content`) não entra aqui: ele ficaria ACIMA da faixa azul, entre a
+barra e a confirmação, empurrando para baixo justamente o que a pessoa
+acabou de pedir. O aviso continua em todas as outras telas da área
+logada -- painel, perfil, histórico e assistente --, com o botão
+"Enviar de novo".
+{% endcomment %}
+{% block pre_content %}{% endblock %}
 
-    <div class="tint done-info">
-      <span class="done-info-row"><i class="ph ph-hash" aria-hidden="true"></i><strong>{% translate "Referência:" %}</strong> {{ card.reference }}</span>
-      <span class="done-info-row"><i class="ph ph-tag" aria-hidden="true"></i><strong>{% translate "Status:" %}</strong> {% include "letters/_status_tag.html" with card=card %}</span>
-      {% if card.guest_name %}<span class="done-info-row"><i class="ph ph-user" aria-hidden="true"></i><strong>{% translate "Convidado:" %}</strong> {{ card.guest_name }}</span>{% endif %}
-      {% if card.has_period %}<span class="done-info-row"><i class="ph ph-calendar-blank" aria-hidden="true"></i><strong>{% translate "Período:" %}</strong> {{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</span>{% endif %}
-      <span class="done-info-row"><i class="ph ph-globe" aria-hidden="true"></i><strong>{% translate "Idioma:" %}</strong> {{ card.language_name }}</span>
-      {% if card.generated_at %}<span class="done-info-row"><i class="ph ph-clock" aria-hidden="true"></i><strong>{% translate "Gerado em:" %}</strong> {{ card.generated_at|date:"d/m/Y · H:i" }}</span>{% endif %}
-      {% comment %}
-      Os prazos, quando existem. Vêm calculados de
-      `apps.letters.lifecycle` -- este template não conta dia nenhum.
-      {% endcomment %}
-      {% if card.can_edit and card.editable_until %}<span class="done-info-row"><i class="ph ph-pencil-simple" aria-hidden="true"></i><strong>{% translate "Editável até:" %}</strong> {{ card.editable_until|date:"d/m/Y · H:i" }}</span>{% endif %}
-      {% if card.expires_at and not card.is_draft %}<span class="done-info-row"><i class="ph ph-clock-countdown" aria-hidden="true"></i><strong>{% if card.is_expired %}{% translate "Expirou em:" %}{% else %}{% translate "Válida até:" %}{% endif %}</strong> {{ card.expires_at|date:"d/m/Y · H:i" }}</span>{% endif %}
+{% block content %}
+<div class="done">
+  <div class="done-wrap">
+
+    <div class="done-cabeca">
+      {% if card.is_expired %}
+        <h1>{% translate "Carta expirada" %}</h1>
+        <p class="done-sub">{% translate "Esta carta expirou e o documento não pode mais ser aberto." %}</p>
+      {% elif card.is_generated %}
+        <span class="done-icon"><i class="ph-bold ph-check" aria-hidden="true"></i></span>
+        <h1>{% translate "Sua Carta Convite está pronta!" %}</h1>
+        <p class="done-sub">{% translate "Guarde o comprovante abaixo — ele também ficou salvo em Minhas cartas." %}</p>
+      {% elif card.is_cancelled %}
+        <h1>{% translate "Carta cancelada" %}</h1>
+        <p class="done-sub">{% translate "Esta carta não está mais em uso." %}</p>
+      {% elif card.is_draft %}
+        <h1>{% translate "Rascunho em andamento" %}</h1>
+        <p class="done-sub">{% translate "Ainda faltam informações para finalizar esta carta." %}</p>
+      {% else %}
+        <h1>{% translate "Carta registrada" %}</h1>
+        <p class="done-sub">{% translate "Os dados foram registrados, mas o PDF ainda não foi gerado." %}</p>
+      {% endif %}
     </div>
 
-    <div class="done-actions">
+    <div class="card done-card">
+      <div class="done-card-topo">
+        <span class="done-ref">
+          <span class="done-ref-rotulo">{% translate "Referência do documento" %}</span>
+          <span class="done-ref-valor">{{ card.reference }}</span>
+        </span>
+        {% include "letters/_status_tag.html" with card=card %}
+      </div>
+
       {% comment %}
-      Todas as ações da carta vêm do mesmo include que o painel e o
-      histórico usam -- aqui na versão completa (`compacto` não é
-      passado), com baixar, imprimir, compartilhar e WhatsApp.
+      Os dados em duas colunas, como na referência. Cada linha só
+      existe quando há o que mostrar -- um rascunho sem período não
+      desenha um "Período: —".
       {% endcomment %}
-      {% include "letters/_letter_actions.html" with card=card %}
-      {% comment %}
-      "Voltar ao inicio", e nao "Dashboard": o resto do produto chama
-      aquela tela de "Inicio" (barra superior, barra do celular), e
-      "dashboard" e palavra de quem constroi, nao de quem usa.
-      {% endcomment %}
-      <div class="done-actions-row">
-        <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar ao início" %}</a>
+      <div class="done-info">
+        {% if card.guest_name %}
+        <span class="done-info-row">
+          <i class="ph ph-user" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% translate "Convidado" %}</span><span class="done-info-valor">{{ card.guest_name }}</span></span>
+        </span>
+        {% endif %}
+        <span class="done-info-row">
+          <i class="ph ph-globe" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% translate "Idioma" %}</span><span class="done-info-valor">{{ card.language_name }}</span></span>
+        </span>
+        {% if card.has_period %}
+        <span class="done-info-row">
+          <i class="ph ph-calendar-blank" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% translate "Período da visita" %}</span><span class="done-info-valor is-numero">{{ card.arrival|date:"d/m/Y" }} – {{ card.departure|date:"d/m/Y" }}</span></span>
+        </span>
+        {% endif %}
+        {% if card.generated_at %}
+        <span class="done-info-row">
+          <i class="ph ph-clock" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% translate "Gerado em" %}</span><span class="done-info-valor is-numero">{{ card.generated_at|date:"d/m/Y · H:i" }}</span></span>
+        </span>
+        {% endif %}
+        {% comment %}
+        Os prazos, quando existem. Vêm calculados de
+        `apps.letters.lifecycle` -- este template não conta dia nenhum.
+        {% endcomment %}
+        {% if card.can_edit and card.editable_until %}
+        <span class="done-info-row">
+          <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% translate "Editável até" %}</span><span class="done-info-valor is-numero">{{ card.editable_until|date:"d/m/Y · H:i" }}</span></span>
+        </span>
+        {% endif %}
+        {% if card.expires_at and not card.is_draft %}
+        <span class="done-info-row">
+          <i class="ph ph-clock-countdown" aria-hidden="true"></i>
+          <span class="done-info-texto"><span class="done-info-rotulo">{% if card.is_expired %}{% translate "Expirou em" %}{% else %}{% translate "Válida até" %}{% endif %}</span><span class="done-info-valor is-numero">{{ card.expires_at|date:"d/m/Y · H:i" }}</span></span>
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="done-actions">
+        {% include "letters/_letter_actions.html" with card=card comprovante=True %}
       </div>
     </div>
+
+    {% comment %}
+    "Voltar ao inicio", e nao "Dashboard": o resto do produto chama
+    aquela tela de "Inicio" (barra superior, barra do celular), e
+    "dashboard" e palavra de quem constroi, nao de quem usa. Ao lado,
+    o caminho para a proxima carta -- a mesma rota do botao do painel.
+    {% endcomment %}
+    <div class="done-actions-row">
+      <a class="btn btn-text" href="{% url 'core:dashboard' %}"><i class="ph ph-arrow-left" aria-hidden="true"></i>{% translate "Voltar ao início" %}</a>
+      <span class="done-risco" aria-hidden="true"></span>
+      <a class="btn btn-text done-link-forte" href="{% url 'letters:new' %}">{% translate "Gerar outra carta" %}</a>
+    </div>
+
   </div>
-</div>
 </div>
 {% endblock %}

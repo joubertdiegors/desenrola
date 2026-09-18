@@ -73,6 +73,10 @@ def finalizar(client, user):
     return carta
 
 
+def _sem_recado(resposta):
+    return [str(m) for m in resposta.context["messages"]]
+
+
 def expirar(carta):
     config = lifecycle.policy()
     config.expiration = LetterPolicy.Expiration.NA_DATA_DA_VIAGEM
@@ -81,6 +85,44 @@ def expirar(carta):
     carta.snapshot = {**carta.snapshot, "data": {**carta.snapshot["data"], "stay_arrival": passado}}
     carta.save(update_fields=["snapshot", "updated_at"])
     return carta
+
+
+# ===========================================================================
+# Finalizar não deixa recado repetido
+# ===========================================================================
+
+
+class TestSemRecadoRepetido:
+    """
+    Finalizar levava a uma faixa "Carta Convite gerada com sucesso." em
+    cima da tela que diz, em letras garrafais e com selo verde,
+    exatamente isso.
+
+    A mensagem saiu da ORIGEM (`letters.views`), e não do template: uma
+    mensagem enfileirada que ninguém desenha não some -- ela espera a
+    próxima tela e aparece lá, fora de contexto. O segundo teste é
+    justamente sobre isso.
+    """
+
+    def test_a_tela_da_carta_nao_traz_recado(self, auth_client, user):
+        carta = criar_rascunho(auth_client, user)
+        for numero in (2, 3, 4):
+            auth_client.post(_step(carta, numero), PASSOS[numero])
+        auth_client.post(_step(carta, 5), {"language": "fr"})
+
+        resposta = auth_client.post(_step(carta, 6), follow=True)
+
+        carta.refresh_from_db()
+        assert carta.status == Letter.Status.GENERATED
+        assert resposta.redirect_chain[-1][0] == reverse("letters:detail", args=[carta.uuid])
+        assert _sem_recado(resposta) == []
+
+    def test_e_nao_sobra_recado_para_a_tela_seguinte(self, auth_client, user):
+        finalizar(auth_client, user)
+
+        seguinte = auth_client.get(reverse("core:dashboard"))
+
+        assert _sem_recado(seguinte) == []
 
 
 # ===========================================================================
@@ -460,7 +502,11 @@ class TestJavaScript:
         html, carta = corpo
         url = reverse("letters:pdf", args=[carta.uuid])
 
-        assert f'class="btn btn-secondary js-print-pdf" href="{url}"' in html
+        # O gancho e a URL, e nao a lista inteira de classes: na tela
+        # da carta o mesmo botao ganha a cápsula só-ícone da referência
+        # (`done-acao-icone`).
+        assert "js-print-pdf" in html
+        assert f'href="{url}"' in html
         assert f'data-pdf-url="{url}"' in html
 
     def test_os_botoes_de_compartilhar_tem_os_dados_que_o_script_le(self, corpo):

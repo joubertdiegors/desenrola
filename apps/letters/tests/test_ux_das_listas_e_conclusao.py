@@ -207,14 +207,16 @@ class TestConclusao:
         ficou, e o cartão encostado à esquerda com meia tela em branco.
         """
         css = LAYOUT.read_text(encoding="utf-8")
-        bloco = css[css.index(".done-wrap {") : css.index(".done-card {")]
+        inicio = css.index(".done-wrap {")
+        bloco = css[inicio : css.index("}", inicio)]
 
         assert "margin: 0 auto" in bloco
         assert "grid-template-columns" not in bloco
 
     def test_o_selo_encolheu(self):
         css = LAYOUT.read_text(encoding="utf-8")
-        bloco = css[css.index(".done-icon {") : css.index(".done-card h1")]
+        inicio = css.index(".done-icon {")
+        bloco = css[inicio : css.index("}", inicio)]
         largura = int(re.search(r"width: (\d+)px", bloco).group(1))
 
         assert largura <= 64, f"{largura}px -- o selo voltou a crescer"
@@ -258,3 +260,22 @@ class TestConclusao:
         assert carta_pronta.reference in html
         assert "Maria Santos da Silva" in html
         assert "Français" in html
+
+    def test_nada_se_mete_entre_a_barra_e_a_confirmacao(self, auth_client, carta_pronta):
+        """
+        A tela começa pela própria confirmação. O aviso de e-mail não
+        confirmado -- que a casca da área logada desenha nas outras
+        telas -- não entra aqui: ele ficaria ACIMA da faixa azul,
+        empurrando para baixo o que a pessoa acabou de pedir.
+        """
+        html = auth_client.get(
+            reverse("letters:detail", kwargs={"letter_uuid": carta_pronta.uuid})
+        ).content.decode()
+
+        assert "aviso-do-email" not in html
+        assert 'class="messages"' not in html
+
+    def test_o_aviso_de_email_continua_nas_outras_telas(self, auth_client, carta_pronta):
+        """A remoção é DESTA tela, e de mais nenhuma."""
+        for rota in (PAINEL, CARTAS):
+            assert "aviso-do-email" in auth_client.get(rota).content.decode(), rota

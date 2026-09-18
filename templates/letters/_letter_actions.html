@@ -10,42 +10,60 @@ O que cada estado permite vem calculado de `apps.letters.lifecycle`
 include não decide nada, só desenha.
 
 Parâmetros opcionais:
-  compacto=True   só os ícones essenciais (usado nas listas)
+  compacto=True      só os ícones essenciais (usado nas listas)
+  comprovante=True   o arranjo da tela da carta (referência visual):
+                     "Ver PDF" em destaque, "Baixar" ao lado e os três
+                     restantes como cápsulas de ícone. Mesmas rotas,
+                     mesmos ganchos de JavaScript -- muda a roupa.
 {% endcomment %}
 {% if card.is_draft %}
   <a class="btn btn-primary" href="{% url 'letters:step' card.uuid card.resume_step %}">{% translate "Continuar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
 {% else %}
   {% if card.can_download_pdf %}
-    <a class="btn btn-success" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>
+    <a class="btn {% if comprovante %}btn-primary done-acao-principal{% else %}btn-success{% endif %}" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener"><i class="ph {% if comprovante %}ph-eye{% else %}ph-file-pdf{% endif %}" aria-hidden="true"></i>{% translate "Ver PDF" %}</a>
+  {% endif %}
+  {% comment %}
+  "Editar" vem logo depois do principal -- e a ação da mesma natureza
+  (fazer algo COM a carta), enquanto as de baixo são sobre o
+  documento. Fica FORA do `can_download_pdf` de propósito: uma carta
+  expirada não abre o PDF e ainda assim pode estar dentro do prazo de
+  edição.
+  {% endcomment %}
+  {% if card.can_edit %}
+    <a class="btn btn-secondary{% if comprovante %} done-acao-editar{% endif %}" href="{% url 'letters:step' card.uuid 1 %}" title="{% translate 'Editar' %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>
+  {% endif %}
+  {% if card.can_download_pdf %}
     {% if not compacto %}
       {% comment %}
       Os quatro secundários vão num grupo próprio: onde as ações são
       empilhadas (a tela da carta), eles formam UMA linha que quebra, em
       vez de seis botões de largura inteira, um embaixo do outro.
       {% endcomment %}
-      <div class="letter-actions-extra">
+      <div class="letter-actions-extra{% if comprovante %} done-acoes-extra{% endif %}">
         {% comment %}
         Baixar aponta para a rota de ANEXO, que manda
         `Content-Disposition: attachment` -- é o servidor que decide baixar,
         não um atributo `download` no link, que o navegador pode ignorar em
         resposta de outra origem ou em iframe.
         {% endcomment %}
-        <a class="btn btn-secondary" href="{% url 'letters:pdf_download' card.uuid %}"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Baixar PDF" %}</a>
-        <a class="btn btn-secondary js-print-pdf" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener" data-pdf-url="{% url 'letters:pdf' card.uuid %}"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</a>
+        <a class="btn btn-secondary{% if comprovante %} done-acao-icone{% endif %}" href="{% url 'letters:pdf_download' card.uuid %}" title="{% translate 'Baixar PDF' %}"><i class="ph ph-download-simple" aria-hidden="true"></i>{% translate "Baixar PDF" %}</a>
+        <a class="btn btn-secondary{% if comprovante %} done-acao-icone{% endif %} js-print-pdf" href="{% url 'letters:pdf' card.uuid %}" target="_blank" rel="noopener" title="{% translate 'Imprimir' %}" data-pdf-url="{% url 'letters:pdf' card.uuid %}"><i class="ph ph-printer" aria-hidden="true"></i>{% translate "Imprimir" %}</a>
         {% comment %}
         Compartilhar e WhatsApp são progressivos: o JavaScript (static/js/app.js)
         decide o melhor caminho que o navegador oferece e, sem JavaScript,
         os dois continuam levando ao PDF -- que é o que a pessoa quer
         enviar de todo jeito.
         {% endcomment %}
-        <a class="btn btn-secondary js-share-pdf" href="{% url 'letters:pdf_download' card.uuid %}"
+        <a class="btn btn-secondary{% if comprovante %} done-acao-icone{% endif %} js-share-pdf" href="{% url 'letters:pdf_download' card.uuid %}"
+           title="{% translate 'Compartilhar' %}"
            data-pdf-url="{% url 'letters:pdf' card.uuid %}"
            data-download-url="{% url 'letters:pdf_download' card.uuid %}"
            data-filename="{{ card.reference }}.pdf"
            data-title="{% translate 'Carta Convite' %}"
            data-text="{% blocktranslate with nome=card.guest_name %}Carta Convite para {{ nome }}{% endblocktranslate %}"
            data-aviso="{% translate 'PDF baixado — anexe para enviar' %}"><i class="ph ph-share-network" aria-hidden="true"></i><span class="js-rotulo">{% translate "Compartilhar" %}</span></a>
-        <a class="btn btn-secondary js-share-whatsapp" href="{% url 'letters:pdf_download' card.uuid %}"
+        <a class="btn btn-secondary{% if comprovante %} done-acao-icone{% endif %} js-share-whatsapp" href="{% url 'letters:pdf_download' card.uuid %}"
+           title="{% translate 'WhatsApp' %}"
            data-pdf-url="{% url 'letters:pdf' card.uuid %}"
            data-download-url="{% url 'letters:pdf_download' card.uuid %}"
            data-filename="{{ card.reference }}.pdf"
@@ -54,8 +72,5 @@ Parâmetros opcionais:
            data-aviso="{% translate 'PDF baixado — anexe na conversa' %}"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i><span class="js-rotulo">{% translate "WhatsApp" %}</span></a>
       </div>
     {% endif %}
-  {% endif %}
-  {% if card.can_edit %}
-    <a class="btn btn-secondary" href="{% url 'letters:step' card.uuid 1 %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>
   {% endif %}
 {% endif %}

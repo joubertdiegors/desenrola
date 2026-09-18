@@ -495,7 +495,11 @@ def _finalize(request, letter):
         )
         return redirect("letters:detail", letter_uuid=letter.uuid)
 
-    messages.success(request, _("Carta Convite gerada com sucesso."))
+    # Sem mensagem de sucesso: a tela de destino JA e o aviso -- selo
+    # verde, "Sua Carta Convite esta pronta!" e a etiqueta "Finalizada".
+    # Uma faixa em cima dizendo a mesma coisa so empurrava a
+    # confirmacao para baixo. O aviso de ERRO acima continua, porque
+    # aquele a tela nao conta.
     return redirect("letters:detail", letter_uuid=letter.uuid)
 
 
