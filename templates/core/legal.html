@@ -3,20 +3,25 @@
 {% comment %}
 Uma página legal: Termos de uso ou Privacidade.
 
-O TEXTO É TEXTO
----------------
-`linebreaks` e mais nada: converte parágrafos e quebras de linha em
-`<p>`/`<br>` e ESCAPA todo o resto. Não há `|safe`, não há HTML, não há
-Markdown -- o que o cliente escrever no Django Admin aparece como
-escreveu, e uma marcação digitada ali sai visível na página em vez de
-virar marcação.
+DOIS FORMATOS, NENHUM `|safe`
+----------------------------
+Texto simples (o formato de sempre): `linebreaks` e mais nada -- converte
+parágrafos e quebras de linha em `<p>`/`<br>` e ESCAPA todo o resto. Uma
+marcação digitada ali sai visível na página em vez de virar marcação.
+
+Texto formatado (escrito em Sistema › Documentos legais): `texto_rico`,
+o HTML que `content.rodape.renderizar_documento` devolve -- reduzido,
+na view, à lista fechada dos documentos (títulos, listas, links, imagem
+da biblioteca do site; nenhum script). Chega aqui já marcado como
+seguro pelo único ponto do projeto que faz isso; o template não liga
+nem desliga escape nenhum.
 
 SÓ CHEGA AQUI O QUE ESTÁ PUBLICADO
 ----------------------------------
 A view responde 404 quando o documento não tem texto. Este template
 nunca desenha uma página legal em branco.
 
-Contexto: titulo, texto.
+Contexto: titulo, texto, texto_rico (ou None).
 {% endcomment %}
 
 {% block title %}{{ titulo }} · {{ site_config.name }}{% endblock %}
@@ -39,7 +44,7 @@ classes das telas de autenticação.
 {% block content %}
 <article class="home-largura legal-page">
   <h1>{{ titulo }}</h1>
-  <div class="legal-texto">{{ texto|linebreaks }}</div>
+  <div class="legal-texto">{% if texto_rico %}{{ texto_rico }}{% else %}{{ texto|linebreaks }}{% endif %}</div>
 </article>
 {% endblock %}
 

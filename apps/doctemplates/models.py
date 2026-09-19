@@ -200,6 +200,13 @@ class DocumentTemplate(TimeStampedModel):
     # aprovar.
     SYSTEM_MUTABLE_FIELDS = ("description", "is_active", "is_locked")
 
+    # ... e o que ele aceita alterar enquanto DESTRAVADO (Rodada 19): o
+    # desenho. O oficial destravado se edita direto no editor; travado,
+    # o `layout` volta a ser recusado pela regra do `is_locked`. A
+    # identidade (nome, slug, idioma, tipo) e a configuracao dos campos
+    # (`field_schema`) continuam protegidas, travado ou nao.
+    SYSTEM_MUTABLE_WHEN_UNLOCKED = ("layout",)
+
     type = models.ForeignKey(
         DocumentType,
         on_delete=models.PROTECT,
@@ -298,17 +305,21 @@ class DocumentTemplate(TimeStampedModel):
                             "Modelo travado: não é possível alterar " + ", ".join(alterados)
                         )
                 if anterior["is_system"]:
+                    permitidos = self.SYSTEM_MUTABLE_FIELDS
+                    if not anterior["is_locked"]:
+                        permitidos += self.SYSTEM_MUTABLE_WHEN_UNLOCKED
                     todos = [
                         f.attname
                         for f in self._meta.concrete_fields
                         if f.attname not in ("id", "created_at", "updated_at")
                     ]
-                    proibidos = [c for c in todos if c not in self.SYSTEM_MUTABLE_FIELDS]
+                    proibidos = [c for c in todos if c not in permitidos]
                     alterados = self._campos_alterados(proibidos)
                     if alterados:
+                        lista = ", ".join(permitidos[:-1]) + " e " + permitidos[-1]
                         raise DocumentTemplateLockedError(
-                            "Modelo do sistema: só description, is_active e is_locked "
-                            "podem mudar; tentou alterar " + ", ".join(alterados)
+                            f"Modelo do sistema: só {lista} podem mudar; tentou alterar "
+                            + ", ".join(alterados)
                         )
         super().save(*args, **kwargs)
         # Os vinculos com os assets do layout acompanham cada gravacao:

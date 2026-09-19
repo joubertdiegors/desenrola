@@ -725,24 +725,44 @@ class TestCatalogo:
 class TestCelular:
     """
     A tela tinha SÓ a tabela, e seis colunas não cabem em 390px -- a
-    página inteira rolava para o lado. A convenção do projeto (ver
-    `users.html`) é tabela no desktop e lista de cartões no celular.
+    página inteira rolava para o lado. Até a Rodada 15 a saída era uma
+    tabela no desktop e uma lista à parte no celular; desde então a tela
+    usa o desenho da tabela de Modelos, em que a MESMA linha vira cartão
+    abaixo de 1180px -- com as ações junto, sem uma segunda marcação.
     """
 
-    def test_a_tabela_e_so_do_desktop(self, cliente):
+    def test_uma_marcacao_so_no_desenho_de_modelos(self, cliente):
         criar("Padaria")
 
         corpo = cliente.get(LISTA).content.decode()
 
-        assert 'class="card table-wrap d-only"' in corpo
+        assert 'class="mod-tabela mod-tabela-lista mod-tabela-parceiros"' in corpo
+        assert 'class="card table-wrap d-only"' not in corpo
+        assert 'class="list m-only"' not in corpo
 
-    def test_ha_uma_lista_para_o_celular(self, cliente):
-        criar("Padaria")
+    def test_a_linha_vira_cartao_no_celular(self, cliente):
+        """A regra que faz a linha virar cartão, na folha de Modelos."""
+        import pathlib
+
+        css = pathlib.Path("static/css/biblioteca-modelos.css").read_text(encoding="utf-8")
+        cartao = css[css.index(".mod-celulas-meio { display: contents; }") :]
+
+        assert "@media (max-width: 1180px)" in cartao
+        assert ".mod-tabela-lista .mod-linha {" in cartao
+
+    def test_no_celular_as_acoes_estao_na_propria_linha(self, cliente):
+        """
+        A lista antiga do celular só levava à edição. A linha única traz
+        as ações dela junto -- subir, descer, editar e o menu.
+        """
+        a = criar("Primeira", order=1)
+        criar("Segunda", order=2)
 
         corpo = cliente.get(LISTA).content.decode()
 
-        assert 'class="list m-only"' in corpo
-        assert corpo.count("Padaria") >= 2  # uma na tabela, uma na lista
+        assert _direcoes(corpo, a) == ["descer"]
+        assert reverse("backoffice:partner_activation", args=[a.pk]) in corpo
+        assert reverse("backoffice:partner_delete", args=[a.pk]) in corpo
 
     def test_a_lista_do_celular_leva_a_edicao(self, cliente):
         parceiro = criar("Padaria")

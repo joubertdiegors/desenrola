@@ -28,7 +28,12 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from .models import Asset, FaqItem, MenuItem, PageSection, Partner
-from .rodape import HTML_PADRAO, sanitizar
+from .rodape import (
+    HTML_PADRAO,
+    TAMANHO_MAXIMO_DO_DOCUMENTO,
+    sanitizar,
+    sanitizar_documento,
+)
 from .section_schema import Lista, TextoRico, campos_da_secao, secao_declarada
 from .services import ANCORAS_DA_HOME
 
@@ -96,6 +101,7 @@ class FormularioDeSecao(forms.Form):
         "contador_ativo",
         "contador_posicao",
         "contador_ao_vivo_ativo",
+        "contador_valor_inicial",
         "parceiros_posicao_botao",
         "parceiros_ver_todos_ativo",
     )
@@ -200,6 +206,24 @@ class FormularioDeSecao(forms.Form):
                 label=_("Mostrar o indicador \"ao vivo\""),
                 required=False,
                 initial=secao.counter_live_enabled,
+            )
+            # Configuração, e não o número: a Home mostra este valor
+            # + as cartas emitidas (`services.numero_do_contador`).
+            # Opcional como os outros três -- vazio vale zero.
+            self.fields["contador_valor_inicial"] = forms.IntegerField(
+                label=_("Valor inicial do contador"),
+                required=False,
+                min_value=0,
+                max_value=1_000_000,
+                initial=secao.counter_initial_value,
+                widget=forms.NumberInput(
+                    attrs={"class": "input", "min": 0, "step": 1, "inputmode": "numeric"}
+                ),
+                help_text=_(
+                    "Somado às cartas emitidas pelo sistema: a Home mostra "
+                    "valor inicial + cartas emitidas. Pode ser alterado a "
+                    "qualquer momento."
+                ),
             )
 
         if declarada.cartoes_com_botao:
@@ -314,6 +338,11 @@ class FormularioDeSecao(forms.Form):
             if secao.counter_live_enabled != ao_vivo:
                 secao.counter_live_enabled = ao_vivo
                 mudou.append("counter_live_enabled")
+        if "contador_valor_inicial" in self.fields:
+            inicial = self.cleaned_data.get("contador_valor_inicial") or 0
+            if secao.counter_initial_value != inicial:
+                secao.counter_initial_value = inicial
+                mudou.append("counter_initial_value")
         if "parceiros_posicao_botao" in self.fields:
             posicao = (
                 self.cleaned_data.get("parceiros_posicao_botao")
@@ -645,3 +674,29 @@ class FormularioDeImagem(forms.ModelForm):
         # ja esta no disco -- nao ha envio para conferir (a funcao
         # devolve sem checar quando nao ha `.image` para olhar).
         return _validar_arquivo_de_imagem(self.cleaned_data.get("file"))
+
+
+class FormularioDeDocumentoLegal(forms.Form):
+    """
+    O texto de um documento legal, num idioma.
+
+    Um `<textarea>` só -- o que o editor rico (`editor-rico.js`) esconde
+    e alimenta, como no rodapé. O navegador nunca decide o que é HTML
+    aceitável: `clean_texto` reduz tudo à lista DOS DOCUMENTOS
+    (`rodape.sanitizar_documento`).
+
+    O limite é conferido aqui, com mensagem: um texto jurídico cortado
+    em silêncio seria pior do que um recusado.
+    """
+
+    texto = forms.CharField(
+        label=_("Texto do documento"),
+        required=False,
+        max_length=TAMANHO_MAXIMO_DO_DOCUMENTO,
+        widget=forms.Textarea(
+            attrs={"class": "input", "rows": 16, "data-editor-rico-campo": "1"}
+        ),
+    )
+
+    def clean_texto(self):
+        return sanitizar_documento(self.cleaned_data.get("texto") or "")

@@ -103,29 +103,30 @@ def snapshot_fr(auth_client, user):
 
 
 class TestIdiomaPadraoDaCarta:
-    def test_uma_carta_nova_nasce_em_ingles(self, auth_client, user):
+    def test_uma_carta_nova_nasce_em_frances(self, auth_client, user):
+        """Francês desde a Rodada 18 (antes, inglês)."""
         auth_client.post(reverse("letters:new"), PASSO_1)
 
         letter = Letter.objects.get(user=user)
-        assert letter.language == "en"
+        assert letter.language == "fr"
 
-    def test_o_documento_da_carta_nova_e_o_ingles(self, auth_client, user):
+    def test_o_documento_da_carta_nova_e_o_frances(self, auth_client, user):
         auth_client.post(reverse("letters:new"), PASSO_1)
 
         letter = Letter.objects.get(user=user)
-        assert letter.document_template.slug == slug_oficial("en")
-        assert letter.document_template.language == "en"
+        assert letter.document_template.slug == slug_oficial("fr")
+        assert letter.document_template.language == "fr"
         assert letter.document_template.is_system is True
 
     def test_o_padrao_e_explicito_e_nao_o_idioma_da_interface(self):
         """
         A interface e portuguesa (Etapa 4.1) e o padrao da carta e
-        ingles: sao decisoes separadas, e uma nao pode voltar a derivar
-        da outra.
+        frances (Rodada 18): sao decisoes separadas, e uma nao pode voltar
+        a derivar da outra.
         """
         from django.conf import settings
 
-        assert services.IDIOMA_PADRAO_DA_CARTA == "en"
+        assert services.IDIOMA_PADRAO_DA_CARTA == "fr"
         assert settings.LANGUAGE_CODE == "pt"
         assert services.IDIOMA_PADRAO_DA_CARTA != settings.LANGUAGE_CODE
 
@@ -135,12 +136,13 @@ class TestIdiomaPadraoDaCarta:
     def test_a_interface_nao_muda_mais_o_idioma_da_carta(self, auth_client, user):
         """
         Ate a Etapa 4.1 o rascunho nascia no idioma da navegacao. Chegar
-        por uma URL de outro idioma nao pode mais mudar nada.
+        por uma URL de outro idioma nao pode mais mudar nada. (Com o
+        frances como padrao, o prefixo usado aqui e o holandes.)
         """
-        auth_client.post("/fr/letters/new/", PASSO_1, follow=True)
+        auth_client.post("/nl/letters/new/", PASSO_1, follow=True)
 
         letter = Letter.objects.get(user=user)
-        assert letter.language == "en"
+        assert letter.language == "fr"
 
     def test_a_pessoa_continua_podendo_trocar_na_etapa_5(self, auth_client, user):
         auth_client.post(reverse("letters:new"), PASSO_1)
@@ -202,8 +204,8 @@ class TestCadaIdiomaUsaOSeuDocumento:
         auth_client.post(_step_url(letter, 5), {"language": "nl"})
 
         letter.refresh_from_db()
-        assert letter.language == "en"
-        assert letter.document_template.slug == slug_oficial("en")
+        assert letter.language == "fr"
+        assert letter.document_template.slug == slug_oficial("fr")
 
 
 # ---------------------------------------------------------------------------

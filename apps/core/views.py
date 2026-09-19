@@ -30,6 +30,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from apps.content import rodape
 from apps.content import services as content
 from apps.content.models import SiteSettings
 from apps.letters import lifecycle, presentation
@@ -180,15 +181,30 @@ def legal(request, chave, titulo):
     Publica e sem login, como a landing: um documento legal precisa ser
     legivel antes de a pessoa criar conta -- e o link dele esta,
     justamente, na tela de cadastro.
+
+    DOIS FORMATOS
+    -------------
+    Texto simples (o de sempre) vai para o template como TEXTO, e sai
+    por `linebreaks`. O documento escrito no editor de Documentos legais
+    ("Texto formatado") vai como `texto_rico`: o HTML que
+    `rodape.renderizar_documento` devolve -- sanitizado de novo aqui,
+    porque o banco nao e confiavel por definicao.
     """
-    texto = content.texto_legal(chave)
-    if texto is None:
+    documento = content.documento_legal(chave)
+    if documento is None:
         raise Http404("documento legal sem conteúdo publicado")
 
     return render(
         request,
         "core/legal.html",
-        {"titulo": titulo, "texto": texto, **content.contexto_do_rodape()},
+        {
+            "titulo": titulo,
+            "texto": documento.texto,
+            "texto_rico": (
+                rodape.renderizar_documento(documento.texto) if documento.rico else None
+            ),
+            **content.contexto_do_rodape(),
+        },
     )
 
 
@@ -479,10 +495,10 @@ def backoffice_system(request):
             "url_da_aparencia": reverse("backoffice:appearance"),
             "url_dos_idiomas": reverse("backoffice:languages"),
             "url_do_email": reverse("backoffice:email_settings"),
-            # Onde o texto dos documentos legais e escrito. A tela de
-            # Sistema mostra o ESTADO deles e aponta para ca -- nao
-            # duplica o editor (decisao da Etapa G).
-            "url_dos_blocos": reverse("admin:content_contentblock_changelist"),
+            # Onde o texto dos documentos legais e escrito: a tela de
+            # Documentos legais, no proprio Backoffice. Esta mostra o
+            # ESTADO deles e aponta para la -- nao duplica o editor.
+            "url_dos_documentos_legais": reverse("backoffice:legal_documents"),
         }
     )
     return render(request, "backoffice/system.html", context)

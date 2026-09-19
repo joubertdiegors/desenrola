@@ -372,28 +372,63 @@ class TestRevisaoNoCelular:
 
 
 # ===========================================================================
-# 5. Conclusão · o selo dentro do cartão
+# 5. Conclusão · o selo fora do cartão, sobre a faixa
 # ===========================================================================
 
 
-class TestSeloDaConclusao:
-    def test_o_cartao_tem_respiro_para_o_anel_no_celular(self):
-        css = LAYOUT.read_text(encoding="utf-8")
-        celular = css[css.index("@media (max-width: 767px)", css.index(".done-wrap")) :]
-        regra = celular[celular.index(".done-card {") :][:140]
+def _regra(css, seletor, inicio=0):
+    """A regra de `seletor` a partir de `inicio`, até o fecha-chaves."""
+    comeco = css.index(seletor, inicio)
+    return css[comeco : css.index("}", comeco) + 1]
 
-        assert "padding: 14px 0 0" in regra
+
+def _bloco_do_celular(css):
+    """O bloco de celular da conclusão -- o que vem depois de `.done-wrap`."""
+    return css[css.index("@media (max-width: 767px)", css.index(".done-wrap")) :]
+
+
+class TestSeloDaConclusao:
+    """
+    O anel do selo sangrava para fora do cartão no celular. No desenho
+    atual (referência "Confirmacao carta") o problema deixou de poder
+    acontecer por construção: o selo não está DENTRO do cartão -- fica no
+    bloco acima dele, sobre a faixa escura --, e o anel é uma BORDA
+    contida na caixa do próprio selo, não uma sombra espalhada que
+    ocupava espaço fora dela. As três travas guardam essas duas
+    garantias e as medidas aprovadas.
+    """
+
+    def test_o_cartao_tem_respiro_para_o_anel_no_celular(self):
+        """
+        O selo fica no bloco de cima (`.done-cabeca`), ANTES do cartão --
+        e não dentro dele, onde o recorte do cartão o alcançaria. Entre
+        os dois, no celular, 20px de respiro.
+        """
+        detalhe = pathlib.Path("templates/letters/detail.html").read_text(encoding="utf-8")
+        selo = detalhe.index('class="done-icon"')
+        assert detalhe.index('class="done-cabeca"') < selo < detalhe.index('class="card done-card"')
+
+        regra = _regra(_bloco_do_celular(LAYOUT.read_text(encoding="utf-8")), ".done-cabeca {")
+        assert "padding-bottom: 20px" in regra
 
     def test_o_anel_cabe_no_respiro(self):
         """
-        6px de anel dentro de 14px de folga. Se alguém aumentar o anel
-        sem aumentar a folga, o selo volta a sangrar.
+        O anel é BORDA, contada dentro da caixa do selo (`border-box`):
+        ele não tem como passar dos 58px -- 50px no celular -- do próprio
+        selo. Se alguém voltar a desenhá-lo como sombra espalhada
+        (`box-shadow: 0 0 0 Npx`), o anel volta a ocupar espaço fora da
+        caixa, e é isso que esta trava recusa.
         """
         css = LAYOUT.read_text(encoding="utf-8")
-        celular = css[css.index("@media (max-width: 767px)", css.index(".done-wrap")) :]
-        regra = celular[celular.index(".done-icon {") :][:220]
+        desktop = _regra(css, ".done-icon {")
+        celular = _regra(_bloco_do_celular(css), ".done-icon {")
 
-        assert "0 0 0 6px" in regra
+        assert "width: 58px" in desktop and "height: 58px" in desktop
+        assert "border: 5px solid" in desktop
+        assert "box-sizing: border-box" in desktop
+        assert "width: 50px" in celular and "border-width: 4px" in celular
+        for regra in (desktop, celular):
+            assert not re.search(r"box-shadow:\s*0 0 0 \d", regra), regra
 
     def test_nao_se_escondeu_o_transbordo(self):
         """
@@ -407,7 +442,14 @@ class TestSeloDaConclusao:
         assert "overflow" not in bloco
 
     def test_no_desktop_o_cartao_continua_como_estava(self):
+        """
+        O cartão do desktop não tem respiro próprio: cada faixa dele traz
+        o seu, nas medidas da referência -- topo 18/26, dados 6/26/18 e
+        ações 18/26.
+        """
         css = LAYOUT.read_text(encoding="utf-8")
-        regra = css[css.index(".done-card {") :][:140]
 
-        assert "padding: 36px" in regra
+        assert "padding: 0;" in _regra(css, ".done-card {")
+        assert "padding: 18px 26px" in _regra(css, ".done-card-topo {")
+        assert "padding: 6px 26px 18px" in _regra(css, ".done-info {")
+        assert "padding: 18px 26px" in _regra(css, ".done-actions {")

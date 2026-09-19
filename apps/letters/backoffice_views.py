@@ -36,23 +36,26 @@ from functools import wraps
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.paginator import Paginator
-from django.http import Http404
+from django.db.models import Q
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from apps.core import exportacao_excel, filtros, paginacao
+from apps.core.exportacao_excel import DATA, Coluna
 from apps.core.forms import LetterNoticeForm
 from apps.core.views import backoffice_required
 from apps.letters import lifecycle, presentation, services
 from apps.letters.models import LanguageFlag, Letter, LetterNotice
 
-# Quantas cartas por página. A filtragem por estado acontece depois da
-# consulta (ver o cabeçalho), então paginar aqui é o que impede a tela de
-# crescer sem limite junto com o banco.
-POR_PAGINA = 50
+# Quantas cartas por página, por padrão; quem usa a tela escolhe entre
+# `paginacao.TAMANHOS` (10, 20, 30, 50). A filtragem por estado acontece
+# depois da consulta (ver o cabeçalho), então paginar aqui é o que impede
+# a tela de crescer sem limite junto com o banco.
+POR_PAGINA = paginacao.TAMANHO_PADRAO
 
 # Os estados que o filtro oferece, na ordem em que fazem sentido para
 # quem supervisiona. Os rótulos são os mesmos que a pessoa lê na etiqueta.
@@ -85,12 +88,18 @@ def supervisao_de_cartas(view):
 
 
 def _contexto_do_backoffice(active, titulo):
-    """A casca da área administrativa (menu, cabeçalho)."""
+    """
+    A casca da área administrativa (menu, cabeçalho).
+
+    Sem `bo_action_*` de propósito: esta tela é real, e o botão do
+    cabeçalho do celular só existe nas telas ilustrativas (ver
+    `backoffice/base.html`). Havia um aqui, com o próprio título como
+    rótulo, que não fazia nada -- os controles de verdade são os
+    filtros, no corpo da tela.
+    """
     return {
         "active": active,
         "bo_title": titulo,
-        "bo_action_icon": "ph-files",
-        "bo_action_label": titulo,
     }
 
 
@@ -102,38 +111,27 @@ def backoffice_letters(request):
     Filtros por querystring: `state`, `language`, `user` e o período da
     viagem (`from`/`to`, em ISO). Combináveis; vazio significa "sem
     filtro".
+
+    BUSCA (`q`)
+    -----------
+    Referência, nome e e-mail de quem criou e nome do convidado -- no
+    QUERYSET, junto com os filtros que o banco sabe fazer. O nome do
+    convidado mora nos dados da carta: nos do rascunho (`data`) ou,
+    depois de fechada, nos congelados (`snapshot.data`) -- a busca olha
+    os dois, a mesma escolha de `lifecycle.dados_da_carta`.
     """
-    cartas = Letter.objects.select_related("user", "document_template").order_by("-created_at")
+    cards, busca, idioma, usuario_id, estado, de, ate = _cartas_filtradas(request.GET)
 
-    # --- o que o banco sabe filtrar ---------------------------------------
-    idioma = request.GET.get("language") or ""
-    if idioma:
-        cartas = cartas.filter(language=idioma)
-
-    usuario_id = request.GET.get("user") or ""
-    if usuario_id.isdigit():
-        cartas = cartas.filter(user_id=int(usuario_id))
-
-    # --- o que só o lifecycle sabe responder ------------------------------
-    cards = presentation.build_cards(cartas)
-
-    estado = request.GET.get("state") or ""
-    if estado:
-        cards = [card for card in cards if card.state == estado]
-
-    de = _data_iso(request.GET.get("from"))
-    ate = _data_iso(request.GET.get("to"))
-    if de:
-        cards = [card for card in cards if card.arrival and card.arrival >= de]
-    if ate:
-        cards = [card for card in cards if card.arrival and card.arrival <= ate]
-
-    pagina = Paginator(cards, POR_PAGINA).get_page(request.GET.get("page"))
+    paginada = paginacao.paginar(request, cards, "backoffice:letters", POR_PAGINA)
+    pagina = paginada["pagina"]
 
     # A querystring SEM o `page`, para os links de navegacao nao
     # acumularem um parametro a cada clique (?page=2&page=3&...).
     querystring = request.GET.copy()
     querystring.pop("page", None)
+
+    usuarios = list(_usuarios_com_cartas())
+    rota = "backoffice:letters"
 
     contexto = _contexto_do_backoffice("letters", _("Cartas"))
     contexto.update(
@@ -144,18 +142,168 @@ def backoffice_letters(request):
             "total": pagina.paginator.count,
             "estados": ESTADOS,
             "idiomas": Letter._meta.get_field("language").choices,
-            "usuarios": _usuarios_com_cartas(),
+            "usuarios": usuarios,
             "filtros": {
+                "q": busca,
                 "state": estado,
                 "language": idioma,
                 "user": usuario_id,
                 "from": request.GET.get("from") or "",
                 "to": request.GET.get("to") or "",
+                "page_size": str(paginada["tamanho"]) if request.GET.get("page_size") else "",
             },
+            # A barra do desenho de Modelos (`apps.core.filtros`): o
+            # estado vira o seletor segmentado; idioma e usuario, pilulas
+            # com menu. Cada opcao e um link que preserva os demais
+            # filtros. O periodo da viagem continua sendo um formulario
+            # (duas datas nao cabem num link).
+            "filtros_estado": filtros.opcoes(
+                request, rota, "state", estado, (("", _("Todos")), *ESTADOS)
+            ),
+            "filtros_pilula": [
+                filtros.pilula(
+                    request,
+                    rota,
+                    _("Idioma"),
+                    "language",
+                    idioma,
+                    (("", _("Todos")), *Letter._meta.get_field("language").choices),
+                ),
+                filtros.pilula(
+                    request,
+                    rota,
+                    _("Usuário"),
+                    "user",
+                    usuario_id if usuario_id.isdigit() else "",
+                    (
+                        ("", _("Todos")),
+                        *(
+                            (str(pessoa.pk), pessoa.full_name or pessoa.email)
+                            for pessoa in usuarios
+                        ),
+                    ),
+                ),
+            ],
+            "tem_filtro": bool(busca or estado or idioma or usuario_id or de or ate),
+            "url_limpar": paginacao.url_sem_filtros(request, rota),
+            "url_sem_busca": filtros.url_de_filtro(request, rota, q=""),
+            "paginacao": paginada,
             "politica": lifecycle.policy(),
         }
     )
     return render(request, "backoffice/letters.html", contexto)
+
+
+def _cartas_filtradas(parametros):
+    """
+    Os cartões da listagem com a busca e TODOS os filtros aplicados --
+    ANTES da paginação. Devolve
+    `(cards, busca, idioma, usuario_id, estado, de, ate)`.
+
+    A tela chama com `request.GET` e pagina o resultado; a exportação
+    para Excel chama com `request.POST` e leva o resultado inteiro. Uma
+    filtragem só, para as duas nunca discordarem.
+    """
+    cartas = Letter.objects.select_related("user", "document_template").order_by("-created_at")
+
+    busca = (parametros.get("q") or "").strip()
+    if busca:
+        cartas = cartas.filter(
+            Q(reference__icontains=busca)
+            | Q(user__full_name__icontains=busca)
+            | Q(user__email__icontains=busca)
+            | Q(data__guest_name__icontains=busca)
+            | Q(snapshot__data__guest_name__icontains=busca)
+        )
+
+    # --- o que o banco sabe filtrar ---------------------------------------
+    idioma = parametros.get("language") or ""
+    if idioma:
+        cartas = cartas.filter(language=idioma)
+
+    usuario_id = parametros.get("user") or ""
+    if usuario_id.isdigit():
+        cartas = cartas.filter(user_id=int(usuario_id))
+
+    # --- o que só o lifecycle sabe responder ------------------------------
+    cards = presentation.build_cards(cartas)
+
+    estado = parametros.get("state") or ""
+    if estado:
+        cards = [card for card in cards if card.state == estado]
+
+    de = _data_iso(parametros.get("from"))
+    ate = _data_iso(parametros.get("to"))
+    if de:
+        cards = [card for card in cards if card.arrival and card.arrival >= de]
+    if ate:
+        cards = [card for card in cards if card.arrival and card.arrival <= ate]
+
+    return cards, busca, idioma, usuario_id, estado, de, ate
+
+
+@supervisao_de_cartas
+@require_POST
+def backoffice_letters_export(request):
+    """
+    A listagem em .xlsx: a "Tabela completa" (as colunas da tela, sem
+    Ações) ou os "Contatos".
+
+    CONTATOS: nome, e-mail e telefone de quem CRIOU a carta -- a conta
+    dona dela, a mesma pessoa da coluna "Criada por". É a única pessoa
+    da carta que tem e-mail e telefone: o convidado tem nome, mas nenhum
+    dos dois. Uma linha por carta; faltando um dado, a célula fica vazia.
+    Nada é lido do snapshot nem gravado nele.
+
+    As mesmas portas da listagem (`supervisao_de_cartas`): quem não vê as
+    cartas de todo mundo não baixa a planilha. POST com o token CSRF, e a
+    busca e os filtros chegam no corpo, não na URL. Sai o resultado
+    INTEIRO: `page` e `page_size` não entram aqui.
+    """
+    tipo = request.POST.get("tipo") or ""
+    if tipo not in ("completa", "contatos"):
+        return HttpResponseBadRequest(_("Exportação desconhecida."))
+
+    cards = _cartas_filtradas(request.POST)[0]
+
+    if tipo == "contatos":
+        colunas = exportacao_excel.colunas_de_contato()
+        linhas = (
+            (card.letter.user.full_name, card.letter.user.email, card.letter.user.phone)
+            for card in cards
+        )
+        prefixo = "cartas_contatos"
+    else:
+        rotulos = dict(ESTADOS)
+        colunas = [
+            Coluna(_("Referência"), largura=26),
+            Coluna(_("Criada por"), largura=30),
+            Coluna(_("Para"), largura=30),
+            Coluna(_("Idioma"), largura=14),
+            Coluna(_("Data de ida"), DATA, 13),
+            Coluna(_("Data de volta"), DATA, 14),
+            Coluna(_("Status"), largura=12),
+            Coluna(_("Criada em"), DATA, 13),
+            Coluna(_("Finalizada em"), DATA, 15),
+        ]
+        linhas = (
+            (
+                card.reference,
+                # Como a tabela mostra: o nome, ou o e-mail de quem não tem.
+                card.letter.user.full_name or card.letter.user.email,
+                card.guest_name,
+                card.language_name if card.letter.language else "",
+                card.arrival,
+                card.departure,
+                rotulos.get(card.state, ""),
+                card.letter.created_at,
+                card.letter.finalized_at,
+            )
+            for card in cards
+        )
+        prefixo = "cartas_tabela_completa"
+
+    return exportacao_excel.resposta(colunas, linhas, prefixo, _("Cartas"))
 
 
 @supervisao_de_cartas
@@ -324,7 +472,7 @@ def backoffice_letter_notice_new(request):
     else:
         form = LetterNoticeForm()
 
-    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto = _contexto_do_backoffice("letter_policy", _("Wizzard - gerar carta"))
     contexto.update(
         {"form": form, "declaracao": None, "titulo": _("Nova declaração")}
     )
@@ -346,7 +494,7 @@ def backoffice_letter_notice_edit(request, pk):
     else:
         form = LetterNoticeForm(instance=declaracao)
 
-    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto = _contexto_do_backoffice("letter_policy", _("Wizzard - gerar carta"))
     contexto.update(
         {"form": form, "declaracao": declaracao, "titulo": _("Editar declaração")}
     )
@@ -419,7 +567,7 @@ def backoffice_letter_notice_delete(request, pk):
         messages.success(request, _("Declaração removida."))
         return redirect(_url_da_politica())
 
-    contexto = _contexto_do_backoffice("letter_policy", _("Política das cartas"))
+    contexto = _contexto_do_backoffice("letter_policy", _("Wizzard - gerar carta"))
     contexto.update({"declaracao": declaracao})
     return render(request, "backoffice/letter_notice_delete.html", contexto)
 

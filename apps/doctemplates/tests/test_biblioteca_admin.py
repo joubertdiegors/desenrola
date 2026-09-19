@@ -647,9 +647,26 @@ class TestModelosOficiais:
             with pytest.raises(DocumentTemplateLockedError):
                 recarregado.save()
 
-    def test_o_layout_de_um_oficial_nao_e_alterado_pelo_editor(self, cliente, oficiais):
+    def test_o_layout_de_um_oficial_destravado_e_alterado_pelo_editor(self, cliente, oficiais):
+        """Rodada 19: destravado, o oficial se edita direto no editor."""
         import json
 
+        novo = {"version": 1, "elements": []}
+
+        resposta = cliente.post(
+            reverse("backoffice:template_editor_save", args=[oficiais["fr"].pk]),
+            data=json.dumps({"layout": novo}),
+            content_type="application/json",
+        )
+
+        oficiais["fr"].refresh_from_db()
+        assert resposta.status_code == 200
+        assert oficiais["fr"].layout == novo
+
+    def test_o_layout_de_um_oficial_travado_nao_e_alterado_pelo_editor(self, cliente, oficiais):
+        import json
+
+        DocumentTemplate.objects.filter(pk=oficiais["fr"].pk).update(is_locked=True)
         antes = oficiais["fr"].layout
 
         resposta = cliente.post(

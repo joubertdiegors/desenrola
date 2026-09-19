@@ -340,6 +340,11 @@ class PageSection(TimeStampedModel):
     # em `PageSectionTranslation.content`, como texto comum). O número
     # em si vem sempre de `apps.letters.statistics.cartas_emitidas()` --
     # nunca escrito, nunca gravado, nunca duplicado.
+    #
+    # `counter_initial_value` é CONFIGURAÇÃO, não o número: as cartas de
+    # antes do sistema. A Home mostra valor inicial + `cartas_emitidas()`
+    # (`content.services.numero_do_contador`), e o valor sozinho não vai
+    # para o contexto público (`ParteDaPagina` não o carrega).
     counter_enabled = models.BooleanField(
         _("contador ativo"),
         default=True,
@@ -355,6 +360,14 @@ class PageSection(TimeStampedModel):
         _("indicador \"ao vivo\" ativo"),
         default=True,
         help_text=_("Mostra a nota de atualização ao lado do contador."),
+    )
+    counter_initial_value = models.PositiveIntegerField(
+        _("valor inicial do contador"),
+        default=0,
+        help_text=_(
+            "Somado às cartas emitidas de verdade: a Home mostra valor "
+            "inicial + cartas emitidas."
+        ),
     )
 
     # -- Botão e carrossel de "Nossos parceiros" (Bloco B) -----------------

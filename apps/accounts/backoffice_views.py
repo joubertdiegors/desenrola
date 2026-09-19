@@ -45,14 +45,15 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from apps.accounts import admin_permissions
+from apps.core import exportacao_excel, filtros, paginacao
+from apps.core.exportacao_excel import DATA, NUMERO, Coluna
 from apps.core.views import BACKOFFICE_PERM, backoffice_required
 from apps.letters.lifecycle import SUPERVISION_PERM
 
@@ -60,7 +61,10 @@ from apps.letters.lifecycle import SUPERVISION_PERM
 # view e template, para o dia em que alguém procurar "quem decide isto".
 GERENCIA_PERM = "accounts.manage_users"
 
-POR_PAGINA = 25
+# A quantidade padrão por página; quem usa a tela escolhe entre
+# `paginacao.TAMANHOS` (10, 20, 30, 50).
+POR_PAGINA = paginacao.TAMANHO_PADRAO
+ROTA_DA_LISTA = "backoffice:users"
 
 
 def gerencia_de_usuarios(view):
@@ -108,18 +112,10 @@ def backoffice_users(request):
     Nenhum dado sensível: a senha é um hash que nem aparece na consulta,
     e documento/endereço não têm por que estar numa listagem.
     """
-    User = get_user_model()
-    pessoas = User.objects.annotate(cartas=Count("letters")).order_by("full_name", "email")
+    pessoas, busca, situacao = _pessoas_filtradas(request.GET)
 
-    busca = (request.GET.get("q") or "").strip()
-    if busca:
-        pessoas = pessoas.filter(Q(full_name__icontains=busca) | Q(email__icontains=busca))
-
-    situacao = request.GET.get("status") or ""
-    if situacao in ("ativos", "inativos"):
-        pessoas = pessoas.filter(is_active=(situacao == "ativos"))
-
-    pagina = Paginator(pessoas, POR_PAGINA).get_page(request.GET.get("page"))
+    paginada = paginacao.paginar(request, pessoas, ROTA_DA_LISTA, POR_PAGINA)
+    pagina = paginada["pagina"]
 
     # A querystring sem o `page`, para os links não acumularem o
     # parâmetro a cada clique.
@@ -133,10 +129,53 @@ def backoffice_users(request):
             "querystring": querystring.urlencode(),
             "pessoas": [_resumo(pessoa) for pessoa in pagina.object_list],
             "total": pagina.paginator.count,
-            "filtros": {"q": busca, "status": situacao},
+            "filtros": {
+                "q": busca,
+                "status": situacao,
+                "page_size": str(paginada["tamanho"]) if request.GET.get("page_size") else "",
+            },
+            # A barra do desenho de Modelos (`apps.core.filtros`): a
+            # situação vira o seletor segmentado, e cada opção é um link
+            # que preserva a busca.
+            "filtros_situacao": filtros.opcoes(
+                request,
+                ROTA_DA_LISTA,
+                "status",
+                situacao,
+                (("", _("Todas")), ("ativos", _("Ativos")), ("inativos", _("Inativos"))),
+            ),
+            "tem_filtro": bool(busca or situacao),
+            "url_limpar": paginacao.url_sem_filtros(request, ROTA_DA_LISTA),
+            "url_sem_busca": filtros.url_de_filtro(request, ROTA_DA_LISTA, q=""),
+            "paginacao": paginada,
         }
     )
     return render(request, "backoffice/users.html", contexto)
+
+
+def _pessoas_filtradas(parametros):
+    """
+    As pessoas da listagem com a busca (`q`) e a situação (`status`)
+    aplicadas -- ANTES da paginação. Devolve `(pessoas, busca, situacao)`.
+
+    A tela chama com `request.GET` e pagina o resultado; a exportação
+    para Excel chama com `request.POST` e leva o resultado inteiro. Uma
+    consulta só, para as duas nunca discordarem.
+    """
+    User = get_user_model()
+    pessoas = User.objects.annotate(cartas=Count("letters")).order_by("full_name", "email")
+
+    busca = (parametros.get("q") or "").strip()
+    if busca:
+        pessoas = pessoas.filter(Q(full_name__icontains=busca) | Q(email__icontains=busca))
+
+    situacao = parametros.get("status") or ""
+    if situacao in ("ativos", "inativos"):
+        pessoas = pessoas.filter(is_active=(situacao == "ativos"))
+    else:
+        situacao = ""
+
+    return pessoas, busca, situacao
 
 
 def _resumo(pessoa):
@@ -159,6 +198,65 @@ def _resumo(pessoa):
         "ve_todas_as_cartas": pessoa.has_perm(SUPERVISION_PERM),
         "cartas": pessoa.cartas,
     }
+
+
+# ---------------------------------------------------------------------------
+# Exportação para Excel
+# ---------------------------------------------------------------------------
+
+
+@gerencia_de_usuarios
+@require_POST
+def backoffice_users_export(request):
+    """
+    A listagem em .xlsx: a "Tabela completa" (as colunas da tela, sem
+    Ações) ou os "Contatos" (nome, e-mail e telefone -- nada além).
+
+    As mesmas portas da listagem (`gerencia_de_usuarios`): quem não vê a
+    tabela não baixa a planilha. POST com o token CSRF, e a busca e a
+    situação chegam no corpo, não na URL. Sai o resultado INTEIRO da
+    busca e dos filtros: `page` e `page_size` não entram aqui.
+    """
+    tipo = request.POST.get("tipo") or ""
+    if tipo not in ("completa", "contatos"):
+        return HttpResponseBadRequest(_("Exportação desconhecida."))
+
+    pessoas = _pessoas_filtradas(request.POST)[0]
+
+    if tipo == "contatos":
+        colunas = exportacao_excel.colunas_de_contato()
+        linhas = ((pessoa.full_name, pessoa.email, pessoa.phone) for pessoa in pessoas)
+        prefixo = "usuarios_contatos"
+    else:
+        colunas = [
+            Coluna(_("Nome"), largura=30),
+            Coluna(_("E-mail"), largura=34),
+            Coluna(_("Telefone"), largura=20),
+            Coluna(_("Endereço"), largura=40),
+            Coluna(_("Cidade"), largura=22),
+            Coluna(_("Cadastro"), DATA, 13),
+            Coluna(_("Último acesso"), DATA, 15),
+            Coluna(_("Cartas"), NUMERO, 9),
+            Coluna(_("Status"), largura=11),
+        ]
+        linhas = (
+            (
+                pessoa.full_name,
+                pessoa.email,
+                pessoa.phone,
+                # Como a tabela mostra: endereço e complemento, numa célula.
+                ", ".join(parte for parte in (pessoa.address_line1, pessoa.address_line2) if parte),
+                pessoa.city,
+                pessoa.date_joined,
+                pessoa.last_login,
+                pessoa.cartas,
+                _("Ativo") if pessoa.is_active else _("Inativo"),
+            )
+            for pessoa in pessoas
+        )
+        prefixo = "usuarios_tabela_completa"
+
+    return exportacao_excel.resposta(colunas, linhas, prefixo, _("Usuários"))
 
 
 # ---------------------------------------------------------------------------

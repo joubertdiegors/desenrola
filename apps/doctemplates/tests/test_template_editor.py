@@ -479,18 +479,28 @@ class TestSystemELocked:
         assert resposta.context["editavel"] is False
         assert "travado" in resposta.context["motivo_da_leitura"].lower()
 
-    def test_modelo_do_sistema_abre_em_leitura_mesmo_destravado(self, cliente, oficial):
+    def test_modelo_do_sistema_destravado_abre_editavel(self, cliente, oficial):
         """
-        A reconstrução controlada dos oficiais será feita por um serviço
-        próprio, fora do editor.
+        Rodada 19: o que decide é `is_locked`, oficial ou não. O oficial
+        destravado se edita direto -- sem passar por uma cópia.
         """
         assert oficial.is_locked is False
 
         resposta = cliente.get(_url("template_editor", oficial))
 
         assert resposta.status_code == 200
+        assert resposta.context["editavel"] is True
+        assert resposta.context["config_json"]["editable"] is True
+        assert resposta.context["motivo_da_leitura"] == ""
+
+    def test_modelo_do_sistema_travado_abre_em_leitura(self, cliente, oficial):
+        DocumentTemplate.objects.filter(pk=oficial.pk).update(is_locked=True)
+
+        resposta = cliente.get(_url("template_editor", oficial))
+
+        assert resposta.status_code == 200
         assert resposta.context["editavel"] is False
-        assert "oficial" in resposta.context["motivo_da_leitura"].lower()
+        assert "travado" in resposta.context["motivo_da_leitura"].lower()
 
     def test_modelo_travado_nao_salva(self, cliente, travado):
         resposta = _salvar(cliente, travado, layout_com(elemento_de_texto()))
@@ -499,13 +509,23 @@ class TestSystemELocked:
         travado.refresh_from_db()
         assert travado.layout == {}
 
-    def test_modelo_do_sistema_nao_salva(self, cliente, oficial):
+    def test_modelo_do_sistema_destravado_salva(self, cliente, oficial):
+        novo = layout_com(elemento_de_texto())
+
+        resposta = _salvar(cliente, oficial, novo)
+
+        assert resposta.status_code == 200
+        oficial.refresh_from_db()
+        assert oficial.layout == novo
+
+    def test_modelo_do_sistema_travado_nao_salva(self, cliente, oficial):
         """
         O que este teste afirma e que o salvamento foi RECUSADO e nada
         mudou -- nao que o oficial esteja vazio. Desde a Etapa 3.3 o
-        frances tem o seu layout reconstruido, e e justamente ele que
-        nao pode ser sobrescrito por aqui.
+        frances tem o seu layout reconstruido, e travado e justamente ele
+        que nao pode ser sobrescrito por aqui.
         """
+        DocumentTemplate.objects.filter(pk=oficial.pk).update(is_locked=True)
         antes = oficial.layout
 
         resposta = _salvar(cliente, oficial, layout_com(elemento_de_texto()))
@@ -513,6 +533,23 @@ class TestSystemELocked:
         assert resposta.status_code == 409
         oficial.refresh_from_db()
         assert oficial.layout == antes
+
+    def test_modelo_do_sistema_destravado_nao_muda_de_idioma(self, cliente, oficial):
+        """
+        Destravado, o oficial aceita um layout novo -- nao um idioma novo:
+        o idioma e parte da identidade do oficial (`DocumentTemplate.save()`),
+        e o pedido inteiro e recusado.
+        """
+        antes = DocumentTemplate.objects.filter(pk=oficial.pk).values().first()
+
+        resposta = cliente.post(
+            _url("template_editor_save", oficial),
+            data=json.dumps({"layout": layout_com(elemento_de_texto()), "language": "nl"}),
+            content_type="application/json",
+        )
+
+        assert resposta.status_code == 409
+        assert DocumentTemplate.objects.filter(pk=oficial.pk).values().first() == antes
 
     def test_a_tela_em_leitura_nao_mostra_o_botao_salvar(self, cliente, travado):
         html = cliente.get(_url("template_editor", travado)).content.decode()

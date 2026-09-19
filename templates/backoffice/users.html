@@ -1,106 +1,192 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Administração · Usuários -- lendo o banco de verdade.
 
-Contexto: pessoas (cada uma com `pessoa`, `acessa_backoffice`,
-`ve_todas_as_cartas`, `cartas`), pagina, querystring, total, filtros.
+UMA COLUNA POR INFORMAÇÃO
+-------------------------
+O desenho é o da tabela de "Modelos de cartas" (classes `mod-*` de
+`biblioteca-modelos.css`): cabeçalho com contagem, cartão com a barra de
+filtros fundida ao topo, grade, rodapé. Cada informação ocupa a SUA
+coluna -- nome, e-mail, telefone, endereço, cidade, cadastro, último
+acesso, cartas, status, ações -- e nenhuma célula empilha duas
+(`.mod-tabela-colunas`). Onde a largura útil não comporta as dez
+colunas, a TABELA rola para o lado dentro do cartão (a página não);
+abaixo de 1024px a linha vira cartão, com o rótulo de cada campo.
+Campo vazio é "—"; texto longo, reticências com o valor inteiro no
+`title`.
 
-As permissões de CADA LINHA vêm resolvidas da view. `{% if perms... %}`
-não serve aqui: no template, `perms` é sempre de quem está logado --
-usá-lo numa linha mostraria a resposta errada, a do operador.
+PAGINAÇÃO
+---------
+`backoffice/_paginacao.html`, com a quantidade por página (10, 20, 30,
+50) e as páginas numeradas; o "Mostrando X–Y de N" fica no rodapé do
+cartão. A busca leva escondidos a situação e a quantidade escolhida.
+
+Contexto: pessoas (cada uma com `pessoa`, `acessa_backoffice`,
+`ve_todas_as_cartas`, `cartas`), pagina, paginacao, querystring, total,
+filtros, filtros_situacao, tem_filtro, url_limpar, url_sem_busca.
+
+EXPORTAR EXCEL
+--------------
+No cabeçalho, `backoffice/_exportar_excel.html`: "Tabela completa" ou
+"Contatos", com a busca e a situação em vigor e o resultado inteiro --
+não só a página da tela.
 
 SOMENTE LEITURA NESTA TELA: alterar é no detalhe, por POST.
-Nada sensível: nem senha, nem documento, nem endereço.
+Nem senha, nem documento. Telefone, endereço e cidade aparecem desde a
+Rodada 17, a pedido de quem administra.
 {% endcomment %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/biblioteca-modelos.css' %}">{% endblock %}
+
 {% block bo_main %}
-<div class="bo-head">
-  <h1 class="d-only">{% translate "Usuários" %}</h1>
-  <span class="count d-only">{{ total }}</span>
-</div>
+<div class="mod">
 
-<form class="card bo-filtros" method="get">
-  <div class="field bo-filtros-busca">
-    <label for="f-busca">{% translate "Buscar" %}</label>
-    <input class="input" id="f-busca" type="search" name="q" value="{{ filtros.q }}"
-           placeholder="{% translate 'Nome ou e-mail' %}">
-  </div>
-  <div class="field">
-    <label for="f-status">{% translate "Situação" %}</label>
-    <select class="input" id="f-status" name="status">
-      <option value="">{% translate "Todas" %}</option>
-      <option value="ativos"{% if filtros.status == "ativos" %} selected{% endif %}>{% translate "Ativos" %}</option>
-      <option value="inativos"{% if filtros.status == "inativos" %} selected{% endif %}>{% translate "Inativos" %}</option>
-    </select>
-  </div>
-  <div class="bo-filtros-acoes">
-    <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>{% translate "Buscar" %}</button>
-    <a class="btn btn-ghost" href="{% url 'backoffice:users' %}">{% translate "Limpar" %}</a>
-  </div>
-</form>
-
-{% if not pessoas %}
-  <div class="card letters-empty">
-    <span class="letters-empty-icon"><i class="ph ph-user-circle-dashed" aria-hidden="true"></i></span>
-    <h3>{% translate "Nenhum usuário encontrado" %}</h3>
-    <p>{% translate "Ajuste a busca para ver outras pessoas." %}</p>
-  </div>
-{% else %}
-
-<div class="card table-wrap d-only">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>{% translate "Nome" %}</th>
-        <th>{% translate "E-mail" %}</th>
-        <th>{% translate "Cadastro" %}</th>
-        <th>{% translate "Cartas" %}</th>
-        <th>{% translate "Backoffice" %}</th>
-        <th>{% translate "Vê todas as cartas" %}</th>
-        <th>{% translate "Situação" %}</th>
-        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for linha in pessoas %}
-      <tr{% if not linha.pessoa.is_active %} class="is-inactive"{% endif %}>
-        <td class="cell-name">{{ linha.pessoa.full_name|default:"—" }}</td>
-        <td class="cell-muted">{{ linha.pessoa.email }}</td>
-        <td class="cell-muted">{{ linha.pessoa.date_joined|date:"d/m/Y" }}</td>
-        <td>{{ linha.cartas }}</td>
-        <td>{% if linha.acessa_backoffice %}<span class="tag tag-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Sim" %}</span>{% else %}<span class="cell-muted">—</span>{% endif %}</td>
-        <td>{% if linha.ve_todas_as_cartas %}<span class="tag tag-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Sim" %}</span>{% else %}<span class="cell-muted">—</span>{% endif %}</td>
-        <td>{% if linha.pessoa.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}</td>
-        <td class="cell-actions">
-          <a class="btn btn-ghost btn-icon-sm" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}" aria-label="{% translate 'Ver usuário' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="list m-only">
-  {% for linha in pessoas %}
-  <a class="list-item{% if not linha.pessoa.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}">
-    <span class="avatar avatar-md avatar-neutral">{{ linha.pessoa.get_initials }}</span>
-    <div class="list-body">
-      <div class="list-title">{{ linha.pessoa.full_name|default:linha.pessoa.email }}</div>
-      <div class="list-sub">{{ linha.pessoa.email }}</div>
+  <header class="mod-cabecalho">
+    <div class="mod-titulos">
+      <span class="mod-kicker">Backoffice</span>
+      <div class="mod-titulo-linha">
+        <h1>{% translate "Usuários" %}</h1>
+        <span class="mod-contagem">{{ total }}</span>
+      </div>
+      <p class="mod-descricao">{% translate "Quem tem conta no Desenrola. As permissões e a situação de cada pessoa se alteram no detalhe dela." %}</p>
     </div>
-    {% if linha.pessoa.is_active %}<span class="tag tag-success">{% translate "Ativo" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Inativo" %}</span>{% endif %}
-  </a>
-  {% endfor %}
+    <div class="mod-cabecalho-acoes">
+      {% url "backoffice:users_export" as url_exportar %}
+      {% include "backoffice/_exportar_excel.html" with url=url_exportar filtros=filtros %}
+    </div>
+  </header>
+
+  <section class="mod-cartao">
+
+    {# ---- Barra de filtros, fundida ao topo do cartão ---------------- #}
+    <div class="mod-filtros">
+      <form class="mod-busca" method="get" action="{% url 'backoffice:users' %}" role="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        <input type="search" id="f-busca" name="q" value="{{ filtros.q }}" placeholder="{% translate 'Buscar por nome ou e-mail' %}" aria-label="{% translate 'Buscar usuário' %}">
+        {% comment %}Buscar não pode perder a situação que já estava escolhida.{% endcomment %}
+        {% if filtros.status %}<input type="hidden" name="status" value="{{ filtros.status }}">{% endif %}
+        {% if filtros.page_size %}<input type="hidden" name="page_size" value="{{ filtros.page_size }}">{% endif %}
+        {% if filtros.q %}<a class="mod-busca-limpar" href="{{ url_sem_busca }}" aria-label="{% translate 'Limpar a busca' %}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>{% endif %}
+        <button type="submit" class="mod-busca-ir">{% translate "Buscar" %}</button>
+      </form>
+
+      <span class="mod-sep" aria-hidden="true"></span>
+
+      <div class="mod-segmentado" role="group" aria-label="{% translate 'Situação' %}">
+        {% for opcao in filtros_situacao %}
+        <a class="mod-seg{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.rotulo }}</a>
+        {% endfor %}
+      </div>
+
+      {% if tem_filtro %}
+      <a class="mod-limpar" href="{{ url_limpar }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>{% translate "Limpar filtros" %}
+      </a>
+      {% endif %}
+    </div>
+
+    {% if not pessoas %}
+    <div class="mod-vazio">
+      <span class="mod-vazio-icone" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+      </span>
+      <span class="mod-vazio-titulo">{% translate "Nenhum usuário encontrado" %}</span>
+      <span class="mod-vazio-texto">{% translate "Ajuste a busca para ver outras pessoas." %}</span>
+      {% if tem_filtro %}<a class="mod-btn mod-btn-contorno" href="{{ url_limpar }}">{% translate "Limpar filtros" %}</a>{% endif %}
+    </div>
+    {% else %}
+
+    <div class="mod-tabela mod-tabela-colunas mod-tabela-usuarios" role="table" aria-label="{% translate 'Usuários' %}">
+      <div class="mod-cabecalho-tabela" role="row">
+        <span role="columnheader">{% translate "Nome" %}</span>
+        <span role="columnheader">{% translate "E-mail" %}</span>
+        <span role="columnheader">{% translate "Telefone" %}</span>
+        <span role="columnheader">{% translate "Endereço" %}</span>
+        <span role="columnheader">{% translate "Cidade" %}</span>
+        <span role="columnheader">{% translate "Cadastro" %}</span>
+        <span role="columnheader">{% translate "Último acesso" %}</span>
+        <span role="columnheader">{% translate "Cartas" %}</span>
+        <span role="columnheader">{% translate "Status" %}</span>
+        <span role="columnheader" class="mod-col-acoes">{% translate "Ações" %}</span>
+      </div>
+
+      {% for linha in pessoas %}
+      <div class="mod-linha{% if not linha.pessoa.is_active %} is-inativo{% endif %}" role="row">
+        <div class="mod-celula mod-celula-principal" role="cell">
+          <span class="avatar avatar-sm avatar-neutral" aria-hidden="true">{{ linha.pessoa.get_initials }}</span>
+          {% if linha.pessoa.full_name %}
+          <a class="mod-nome" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}" title="{{ linha.pessoa.full_name }}">{{ linha.pessoa.full_name }}</a>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "E-mail" %}</span>
+          <span class="mod-texto-curto" title="{{ linha.pessoa.email }}">{{ linha.pessoa.email }}</span>
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Telefone" %}</span>
+          {% if linha.pessoa.phone %}
+          <span class="mod-texto-curto" title="{{ linha.pessoa.phone }}">{{ linha.pessoa.phone }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Endereço" %}</span>
+          {% if linha.pessoa.address_line1 or linha.pessoa.address_line2 %}
+          <span class="mod-texto-curto" title="{{ linha.pessoa.address_line1 }}{% if linha.pessoa.address_line1 and linha.pessoa.address_line2 %}, {% endif %}{{ linha.pessoa.address_line2 }}">{{ linha.pessoa.address_line1 }}{% if linha.pessoa.address_line1 and linha.pessoa.address_line2 %}, {% endif %}{{ linha.pessoa.address_line2 }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Cidade" %}</span>
+          {% if linha.pessoa.city %}
+          <span class="mod-texto-curto" title="{{ linha.pessoa.city }}">{{ linha.pessoa.city }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Cadastro" %}</span>
+          <span class="mod-data">{{ linha.pessoa.date_joined|date:"d/m/Y" }}</span>
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Último acesso" %}</span>
+          {% if linha.pessoa.last_login %}
+          <span class="mod-data" title="{{ linha.pessoa.last_login|date:'d/m/Y · H:i' }}">{{ linha.pessoa.last_login|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="mod-nada">{% translate "Nunca" %}</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Cartas" %}</span>
+          <span class="mod-numero">{{ linha.cartas }}</span>
+        </div>
+        <div class="mod-celula" role="cell">
+          {% if linha.pessoa.is_active %}
+          <span class="mod-situacao is-ativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Ativo" %}</span>
+          {% else %}
+          <span class="mod-situacao is-inativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Inativo" %}</span>
+          {% endif %}
+        </div>
+        <div class="mod-acoes" role="cell">
+          <a class="mod-acao" href="{% url 'backoffice:user_detail' linha.pessoa.pk %}" title="{% translate 'Ver usuário' %}" aria-label="{% translate 'Ver usuário' %} {{ linha.pessoa.full_name|default:linha.pessoa.email }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mod-rodape">
+      <span class="mod-rodape-mostrando">{% blocktranslate with inicio=paginacao.inicio fim=paginacao.fim total=paginacao.total %}Mostrando {{ inicio }}–{{ fim }} de {{ total }} registros{% endblocktranslate %}</span>
+    </div>
+    {% endif %}
+  </section>
+
+  {% include "backoffice/_paginacao.html" with paginacao=paginacao %}
 </div>
-
-{% if pagina.has_other_pages %}
-<nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
-  {% if pagina.has_previous %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
-  <span class="text-muted">{% blocktranslate with atual=pagina.number total=pagina.paginator.num_pages %}Página {{ atual }} de {{ total }}{% endblocktranslate %}</span>
-  {% if pagina.has_next %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
-</nav>
-{% endif %}
-
-{% endif %}
 {% endblock %}

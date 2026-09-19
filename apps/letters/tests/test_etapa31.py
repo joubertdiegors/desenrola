@@ -378,7 +378,15 @@ class TestDadosDoAnfitriaoNoPerfil:
         assert "14/03/1985" in texto
         # `Belge` com maiúscula: a nacionalidade do anfitrião passou a
         # sair de `name_fr`, e não mais de uma forma própria em minúscula.
-        assert "titulaire de la carte d’identité Belge" in texto
+        # Rodada 18: o texto oficial da identificação do anfitrião. O
+        # `replace(" ,", ",")` desfaz só um artefato da extração do pypdf
+        # (um espaço antes da vírgula que segue um campo em negrito); no
+        # PDF desenhado a vírgula vem colada ao campo.
+        assert (
+            "Je soussigné(e), Claire Dubois, né(e) le 14/03/1985, nationalité : Belge, "
+            "carte d’identité : 00000000, domicilié(e) à Rue des Exemple 25 - 1200 "
+            "Woluwe-Saint-Lambert, téléphone : +32 470 00 00 00, invite par la présente :"
+        ) in texto.replace(" ,", ",")
         assert "00000000" in texto
 
 

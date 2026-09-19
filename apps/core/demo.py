@@ -42,8 +42,6 @@ BACKOFFICE_SECTIONS = {
     # nao tem acao propria: sem `action`, o cabecalho movel nao
     # renderiza botao nenhum.
     "overview": {"title": _("Visão geral"), "icon": "", "action": ""},
-    "letters": {"title": _("Cartas"), "icon": "ph-magnifying-glass", "action": _("Buscar")},
-    "content": {"title": _("Conteúdo"), "icon": "ph-upload-simple", "action": _("Novo modelo")},
     # Tela real desde a Etapa I: sem `action`, o cabecalho do celular
     # nao renderiza botao nenhum (ver backoffice/base.html). O "Novo
     # parceiro" que havia aqui nao cadastrava nada -- quem cadastra e a
@@ -58,11 +56,11 @@ BACKOFFICE_SECTIONS = {
     # botao nenhum (ver backoffice/base.html). O "Publicar" que havia aqui
     # nao publicava nada.
     "appearance": {"title": _("Aparência"), "icon": "", "action": ""},
-    "letter_policy": {
-        "title": _("Política das cartas"),
-        "icon": "ph-floppy-disk",
-        "action": _("Salvar"),
-    },
+    # Tela real: sem `action`, o cabeçalho do celular não renderiza
+    # botão nenhum (ver backoffice/base.html). O "Salvar" que havia aqui
+    # não salvava nada -- quem salva é o "Salvar política" do formulário,
+    # no corpo da tela.
+    "letter_policy": {"title": _("Wizzard - gerar carta"), "icon": "", "action": ""},
     # Tela real: sem `action`, o cabeçalho do celular não renderiza
     # botão nenhum (ver backoffice/base.html) -- os botões desta tela
     # ficam no corpo, onde fazem alguma coisa.
@@ -70,5 +68,6 @@ BACKOFFICE_SECTIONS = {
     # Tela real desde a Etapa F: sem `action`, o cabecalho do celular
     # nao renderiza botao nenhum. O "Novo modelo" que havia aqui era
     # copia da tela de Modelos e nao fazia nada.
-    "system": {"title": _("Sistema"), "icon": "", "action": ""},
+    "system": {"title": _("Identidade"), "icon": "", "action": ""},
+    "legal_documents": {"title": _("Documentos legais"), "icon": "", "action": ""},
 }

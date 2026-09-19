@@ -821,3 +821,342 @@
   .mod-janela-acoes .mod-btn { width: 100%; justify-content: center; }
   .mod-menu-acoes { right: 0; width: min(212px, calc(100vw - 48px)); }
 }
+
+
+/* --------------------------------------------------------------------------
+   As outras listas do Backoffice no MESMO desenho
+
+   Usam o cabeçalho, a barra de filtros, o cartão, as linhas, as ações e
+   o rodapé de cima. Parceiros usa a faixa do meio descrita aqui
+   (`.mod-tabela-lista`); Usuários e Cartas, uma coluna por informação
+   (`.mod-tabela-colunas`, no fim do arquivo). As peças soltas logo
+   abaixo (rótulo de célula, texto curto, número, data) servem às duas.
+
+   As células do meio vêm dentro de `.mod-celulas-meio`. No desktop o
+   invólucro some da grade (`display: contents`) e cada célula ocupa a
+   sua coluna; no cartão ele vira uma faixa que quebra linha, com o
+   rótulo de cada célula à mostra -- sem o cabeçalho da tabela, um
+   "12/03/2026" solto não diria o que é. Células em `<div>`, e não em
+   `<span>`: as regras de cartão da tabela de Modelos
+   (`.mod-linha > span:nth-child(...)`) são daquela grade, e não alcançam
+   estas.
+
+   CABEM ANTES DE VIRAR CARTÃO
+   ---------------------------
+   A partir de 1181px o Backoffice tem 240px de menu e 40px de respiro de
+   cada lado: sobram 861px. A soma mínima de cada grade abaixo (colunas,
+   vãos e respiro da linha) fica aquém disso -- nada é recortado pelo
+   cartão antes de a linha virar cartão.
+   -------------------------------------------------------------------------- */
+
+.mod-celulas-meio { display: contents; }
+.mod-rotulo-celula { display: none; }
+
+.mod-celula {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d4f78;
+}
+.mod-texto-curto {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-numero { font-weight: 700; color: var(--mod-navy); font-variant-numeric: tabular-nums; }
+.mod-nada { color: var(--mod-cinza-claro); }
+.mod-data { font-variant-numeric: tabular-nums; }
+
+.mod-pilula-alerta { background: #fdf1de; color: #a1620a; }
+
+/* A logomarca do parceiro no lugar do ícone de documento. */
+.mod-miniatura {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  padding: 3px;
+  border: 1px solid var(--mod-borda-suave);
+  border-radius: 9px;
+  background: #fff;
+  object-fit: contain;
+}
+
+/* Os POST de uma linha (subir, descer) são formulários: ficam na fila
+   dos outros botões, sem quebrar a linha. */
+.mod-acoes form { display: flex; }
+.mod-menu-item.is-remover { color: #b4262a; }
+
+/* Um menu de filtro pode ter muitas opções (uma por pessoa): rola. */
+.mod-menu-lista-rolavel { max-height: 320px; overflow-y: auto; }
+
+/* O período da viagem: duas datas no formato das pílulas da barra. */
+.mod-periodo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mod-periodo-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mod-navy);
+}
+.mod-periodo-campo:focus-within { border-color: var(--mod-azul); box-shadow: 0 0 0 3px rgba(29, 78, 216, .14); }
+.mod-periodo-campo input {
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+.mod-periodo-aplicar { height: 36px; }
+
+/* A grade de Parceiros. Soma mínima: 712px. */
+.mod-tabela-parceiros .mod-cabecalho-tabela,
+.mod-tabela-parceiros .mod-linha {
+  grid-template-columns: minmax(220px, 2.2fr) minmax(160px, 1.6fr) 104px 156px;
+}
+
+@media (max-width: 1180px) {
+  /* A linha vira cartão: nome e ações em cima, as outras células numa
+     faixa só, cada uma com o seu rótulo. */
+  .mod-tabela-lista .mod-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "nome acoes"
+      "meio meio";
+  }
+  .mod-tabela-lista .mod-celulas-meio {
+    grid-area: meio;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    min-width: 0;
+  }
+  .mod-tabela-lista .mod-celula { display: inline-flex; align-items: center; max-width: 100%; }
+  .mod-tabela-lista .mod-rotulo-celula {
+    display: inline;
+    margin-right: 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--mod-cinza-claro);
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   Tabelas em colunas -- Usuários e Cartas
+
+   Uma coluna por informação, e cada célula FILHA DIRETA da linha: nada
+   empilhado numa célula só. As regras de cartão da tabela de Modelos (que
+   valem a partir de 1180px) não alcançam estas linhas.
+
+   DUAS FAIXAS
+   -----------
+   1024px ou mais   a grade. Cada uma tem uma largura MÍNIMA (a soma dos
+                    mínimos das colunas, dos vãos e do respiro, anotada ao
+                    lado): onde a largura útil é maior, as colunas
+                    flexíveis crescem; onde é menor -- tablet deitado,
+                    janela estreita --, a TABELA rola para o lado dentro do
+                    cartão. A página nunca rola, e nenhuma coluna some.
+   até 1023px       cartão: a primeira informação e as ações em cima, as
+                    outras em seguida, cada uma com o seu rótulo.
+
+   Estas linhas não têm menu suspenso (a única ação é um link), então a
+   rolagem da tabela não recorta nada.
+
+   Texto que não cabe na coluna ganha reticências; o valor inteiro fica no
+   `title` da célula.
+   -------------------------------------------------------------------------- */
+
+.mod-tabela-colunas { overflow-x: auto; }
+.mod-tabela-colunas .mod-cabecalho-tabela,
+.mod-tabela-colunas .mod-linha {
+  grid-template-areas: none;
+  column-gap: 8px;
+  padding-inline: 14px;
+}
+/* O cabeçalho continua visível em toda a faixa de colunas (a regra de
+   Modelos o esconde abaixo de 1180px) e aceita duas linhas num rótulo
+   longo ("Data de volta") em vez de invadir a coluna vizinha. */
+.mod-tabela-colunas .mod-cabecalho-tabela {
+  display: grid;
+  height: auto;
+  min-height: 38px;
+  padding-block: 7px;
+  line-height: 1.25;
+}
+.mod-tabela-colunas .mod-cabecalho-tabela > span { min-width: 0; }
+.mod-tabela-colunas .mod-celula { display: block; min-width: 0; font-size: 12.5px; }
+.mod-tabela-colunas .mod-celula-principal { display: flex; align-items: center; gap: 8px; }
+.mod-tabela-colunas .mod-nome {
+  display: block;
+  min-width: 0;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-tabela-colunas .mod-acoes { grid-area: auto; align-self: center; }
+.mod-tabela-colunas .mod-celula-idioma { display: flex; }
+.mod-tabela-cartas .mod-idioma-nome { display: none; }
+.mod-referencia {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+/* Abaixo de 1400px o avatar sai da coluna do nome: a coluna inteira fica
+   para o nome. Volta a partir de 1400px e no cartão. */
+.mod-tabela-usuarios .mod-celula-principal .avatar { display: none; }
+
+/* Mínimo: 936px -- cabe numa janela de 1280 com barra de rolagem (943px
+   úteis). Nome, e-mail, endereço e cidade crescem com o que sobrar. */
+.mod-tabela-usuarios .mod-cabecalho-tabela,
+.mod-tabela-usuarios .mod-linha {
+  min-width: 936px;
+  grid-template-columns:
+    minmax(110px, 1.2fr) minmax(110px, 1.5fr) 116px minmax(96px, 1.3fr)
+    minmax(64px, .8fr) 80px 84px 52px 80px 44px;
+}
+/* Mínimo: 940px. O idioma vai pela sigla (o nome fica no `title`); a
+   partir de 1400px, com espaço, o nome aparece ao lado. */
+.mod-tabela-cartas .mod-cabecalho-tabela,
+.mod-tabela-cartas .mod-linha {
+  min-width: 940px;
+  grid-template-columns:
+    142px minmax(90px, 1fr) minmax(90px, 1fr) 52px 80px 80px 98px 80px 84px 44px;
+}
+
+@media (min-width: 1400px) {
+  .mod-tabela-colunas .mod-celula { font-size: 13px; }
+  .mod-tabela-usuarios .mod-celula-principal .avatar { display: inline-flex; }
+  .mod-referencia { font-size: 12px; }
+  /* Mínimo: 1032px (de ~1063 úteis a 1400). */
+  .mod-tabela-cartas .mod-cabecalho-tabela,
+  .mod-tabela-cartas .mod-linha {
+    min-width: 1032px;
+    grid-template-columns:
+      146px minmax(90px, 1fr) minmax(90px, 1fr) 108px 84px 84px 108px 84px 90px 48px;
+  }
+  .mod-tabela-cartas .mod-idioma-nome { display: inline; }
+}
+
+@media (max-width: 1023px) {
+  /* A linha vira cartão: a primeira informação e as ações em cima, as
+     outras em seguida, lado a lado enquanto couberem. Sem largura mínima
+     e sem rolagem: o cartão acompanha a tela. */
+  .mod-tabela-colunas { overflow-x: visible; }
+  .mod-tabela-colunas .mod-cabecalho-tabela { display: none; }
+  .mod-tabela-colunas .mod-linha {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 14px 16px;
+  }
+  .mod-tabela-colunas .mod-celula-principal { order: -2; flex: 1 1 calc(100% - 64px); }
+  .mod-tabela-colunas .mod-acoes { order: -1; flex: none; margin-left: auto; }
+  .mod-tabela-colunas .mod-celula:not(.mod-celula-principal) {
+    display: inline-flex;
+    align-items: baseline;
+    max-width: 100%;
+  }
+  .mod-tabela-colunas .mod-rotulo-celula {
+    display: inline;
+    flex: none;
+    margin-right: 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--mod-cinza-claro);
+  }
+  .mod-referencia { font-size: 12.5px; }
+  .mod-tabela-cartas .mod-idioma-nome { display: inline; }
+  .mod-tabela-usuarios .mod-celula-principal .avatar { display: inline-flex; }
+}
+
+/* --------------------------------------------------------------------------
+   Paginação -- Usuários e Cartas (`backoffice/_paginacao.html`)
+
+   Abaixo do cartão: a quantidade por página (um menu de links, como as
+   pílulas de filtro, que abre para cima) e as páginas numeradas. O
+   "Mostrando X–Y de N" fica no rodapé do próprio cartão. A paginação de
+   Modelos (`.mod-paginacao` sem modificador) continua como era.
+   -------------------------------------------------------------------------- */
+
+.mod-paginacao-completa { justify-content: space-between; flex-wrap: wrap; }
+.mod-menu-lista-acima { top: auto; bottom: calc(100% + 6px); }
+.mod-paginas { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.mod-pagina {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--mod-borda);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3d4f78;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+a.mod-pagina:hover { border-color: var(--mod-azul); color: var(--mod-azul); }
+.mod-pagina.is-atual { border-color: var(--mod-azul); background: var(--mod-azul); color: #fff; }
+.mod-pagina.is-desativada { border-color: transparent; background: none; color: var(--mod-cinza-claro); }
+.mod-pagina-reticencias { min-width: 18px; text-align: center; color: var(--mod-cinza-claro); }
+
+@media (max-width: 720px) {
+  .mod-paginacao-completa { justify-content: center; }
+  /* No celular, só as setas: "Anterior" e "Próxima" continuam no
+     `aria-label` de cada uma. */
+  .mod-pagina-texto { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Modelos de cartas entre 1181 e 1399px
+
+   A grade de Modelos (sete colunas, ali em cima) precisa de 1054px. Nessa
+   faixa o Backoffice tem de 861 a ~1062px úteis, e o cartão -- que tem
+   `overflow: hidden` -- recortava a coluna da direita, a de ações. Aqui a
+   TABELA passa a rolar para o lado, dentro do cartão; a página não rola,
+   nenhuma coluna muda e nada é resumido. Fora desta faixa nada muda:
+   acima dela a grade cabe, abaixo ela já vira cartão.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 1181px) and (max-width: 1399px) {
+  .mod-tabela-modelos { overflow-x: auto; }
+  .mod-tabela-modelos > .mod-cabecalho-tabela,
+  .mod-tabela-modelos > .mod-linha { min-width: 1054px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Exportar Excel -- Usuários e Cartas
+
+   O menu abre sob o botão, com a largura dele (`.mod-menu-acoes` o prende
+   pela direita, na ponta do cabeçalho). No celular o cabeçalho quebra e o
+   botão desce para a esquerda: ali o menu passa a abrir pela esquerda,
+   para nunca sair da tela.
+   -------------------------------------------------------------------------- */
+
+.mod-menu-exportar .mod-menu-lista { width: auto; min-width: 100%; white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .mod-menu-exportar .mod-menu-lista { right: auto; left: 0; }
+}

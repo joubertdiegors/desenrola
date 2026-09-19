@@ -190,14 +190,16 @@ class TestSelecaoDeTemplate:
         e so muda na etapa 5 -- uma escolha da pessoa, nao um efeito
         colateral da URL.
         """
-        resposta = auth_client.post("/fr/letters/new/", VALID_STEP_1, follow=True)
+        # Um prefixo que NAO e o do padrao (frances, desde a Rodada 18):
+        # so assim o teste distingue "veio da URL" de "veio do padrao".
+        resposta = auth_client.post("/nl/letters/new/", VALID_STEP_1, follow=True)
         letter = Letter.objects.get(user=user)
 
         # O envio chega inteiro ao endereco em portugues (307), em vez de
         # virar um GET e perder o que a pessoa preencheu.
         assert resposta.redirect_chain[0] == ("/pt/letters/new/", 307)
         assert letter.language == services.IDIOMA_PADRAO_DA_CARTA
-        assert letter.language != "fr"
+        assert letter.language != "nl"
         assert letter.data["guest_name"] == VALID_STEP_1["guest_name"]
 
     def test_nao_aceita_modelo_arbitrario_enviado_pelo_cliente(

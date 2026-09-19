@@ -1880,6 +1880,7 @@ img.lang-flag { object-fit: cover; display: block; }
 .editor-rico-area:focus-visible { outline: 2px solid var(--p); outline-offset: 1px; }
 .editor-rico-area:empty::before { content: attr(data-placeholder); color: var(--mu); opacity: 0.7; }
 .editor-rico-area a { color: var(--p); text-decoration: underline; }
+.editor-rico-area h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--navy); margin: 0 0 10px; }
 .editor-rico-area h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--navy); margin: 0 0 8px; }
 .editor-rico-area h4 { font-size: 15px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mu); margin: 0 0 8px; }
 .editor-rico-area p { margin: 0 0 10px; }
@@ -1888,6 +1889,13 @@ img.lang-flag { object-fit: cover; display: block; }
 .editor-rico-area blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--bd); color: var(--mu); }
 .editor-rico-area hr { border: 0; border-top: 1px solid var(--bd); margin: 16px 0; }
 .editor-rico-area svg { vertical-align: -3px; }
+.editor-rico-area img { max-width: 100%; height: auto; }
+.legal-texto img { max-width: 100%; height: auto; }
+/* As imagens da biblioteca, no modo "documento" do editor. */
+.editor-rico-imagens { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.editor-rico-imagem { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; padding: 5px; border: 1px solid var(--bd); border-radius: 9px; background: #fff; cursor: pointer; }
+.editor-rico-imagem:hover { border-color: var(--p); }
+.editor-rico-imagem img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .editor-rico-caixa-fonte { flex-direction: column; align-items: stretch; }
 .editor-rico-fonte { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.6; background: #0f1b33; color: #cfe0ff; border-color: #0f1b33; resize: vertical; }
 .editor-rico-acoes { display: flex; align-items: center; gap: 10px; }

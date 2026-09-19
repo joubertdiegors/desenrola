@@ -289,7 +289,6 @@ class TestModeloDoSistema:
     @pytest.mark.parametrize(
         "campo, valor",
         [
-            ("layout", copy.deepcopy(LAYOUT_MINIMO)),
             ("field_schema", {"fields": []}),
             ("language", "fr"),
             ("slug", "outro"),
@@ -302,6 +301,19 @@ class TestModeloDoSistema:
         setattr(modelo_sistema, campo, valor)
         with pytest.raises(DocumentTemplateLockedError, match="sistema"):
             modelo_sistema.save()
+
+    def test_destravado_aceita_layout_novo(self, modelo_sistema):
+        """Rodada 19: o oficial destravado se edita direto -- o desenho muda."""
+        _salvar(modelo_sistema, layout=copy.deepcopy(LAYOUT_MINIMO))
+        assert modelo_sistema.layout == LAYOUT_MINIMO
+
+    def test_travado_recusa_layout_novo(self, modelo_sistema):
+        _salvar(modelo_sistema, is_locked=True)
+        modelo_sistema.layout = copy.deepcopy(LAYOUT_MINIMO)
+        with pytest.raises(DocumentTemplateLockedError):
+            modelo_sistema.save()
+        modelo_sistema.refresh_from_db()
+        assert modelo_sistema.layout == {}
 
     def test_nao_altera_o_tipo(self, modelo_sistema):
         outro = DocumentType.objects.create(code="outro", name="Outro", page=A4)

@@ -767,20 +767,42 @@ class TestCorrenteRica:
         assert "NOVO TRECHO" not in texto_do_pdf(pdf_oficial)
 
     @pytest.mark.parametrize("idioma", carta_convite.IDIOMAS)
-    def test_o_oficial_abre_no_editor_rico_em_leitura(self, cliente, idioma):
+    def test_o_oficial_destravado_abre_no_editor_rico_editavel(self, cliente, idioma):
         oficial = DocumentTemplate.objects.get(slug=carta_convite.slug_do_modelo(idioma))
+        assert oficial.is_locked is False
 
         resposta = cliente.get(_url("template_editor", oficial))
 
         assert resposta.status_code == 200
-        assert resposta.context["editavel"] is False
+        assert resposta.context["editavel"] is True
         assert resposta.context["layout_json"] == oficial.layout
         assert resposta.context["exemplo_json"]["convidado.nome"] == "Carlos Eduardo Silva"
 
-    def test_o_oficial_continua_recusando_o_salvamento(self, cliente):
+    @pytest.mark.parametrize("idioma", carta_convite.IDIOMAS)
+    def test_o_oficial_destravado_salva_reabre_e_gera(self, cliente, idioma):
+        """Rodada 19: a mesma corrente, agora DIRETO no oficial -- sem cópia."""
+        oficial = DocumentTemplate.objects.get(slug=carta_convite.slug_do_modelo(idioma))
+        editado = copy.deepcopy(oficial.layout)
+        self._declaracao(editado)["properties"]["content"]["parts"].insert(
+            0, texto("AJUSTE DIRETO ", font_weight="bold")
+        )
+
+        assert _salvar(cliente, oficial, editado).status_code == 200
+
+        oficial.refresh_from_db()
+        assert oficial.layout == editado
+        assert cliente.get(_url("template_editor", oficial)).context["layout_json"] == editado
+        conteudo = pdf.render_template(oficial, dados_de_exemplo.para(oficial.slug))[0]
+        assert "AJUSTE DIRETO" in texto_do_pdf(conteudo).replace("\n", " ")
+
+    def test_o_oficial_travado_continua_recusando_o_salvamento(self, cliente):
         oficial = DocumentTemplate.objects.get(slug="carta-convite-pt")
+        DocumentTemplate.objects.filter(pk=oficial.pk).update(is_locked=True)
+        antes = copy.deepcopy(oficial.layout)
 
         assert _salvar(cliente, oficial, layout()).status_code == 409
+        oficial.refresh_from_db()
+        assert oficial.layout == antes
 
 
 # ---------------------------------------------------------------------------
@@ -848,6 +870,8 @@ class TestSaidaDoEditor:
         oficial = DocumentTemplate.objects.create(
             type=tipo, name="Oficial", slug="oficial-leitura", language="pt", is_system=True
         )
+        # Rodada 19: destravado, o oficial se edita; em leitura fica o travado.
+        DocumentTemplate.objects.filter(pk=oficial.pk).update(is_locked=True)
 
         html = cliente.get(_url("template_editor", oficial)).content.decode()
 
@@ -1240,6 +1264,10 @@ class TestOsCincoEstados:
 
     Os estados: comum, oficial, oficial ativo, oficial travado, oficial
     com cópias, e a cópia de um oficial.
+
+    Desde a Rodada 19 o que separa edição de leitura é só o cadeado: o
+    oficial destravado se edita direto; travado -- oficial ou comum --,
+    só se lê.
     """
 
     @pytest.fixture
@@ -1274,9 +1302,9 @@ class TestOsCincoEstados:
         [
             ("comum", True),
             ("copia", True),
-            ("oficial", False),
+            ("oficial", True),
             ("oficial_travado", False),
-            ("oficial_com_copia", False),
+            ("oficial_com_copia", True),
             ("comum_travado", False),
         ],
     )
@@ -1291,9 +1319,7 @@ class TestOsCincoEstados:
         if not editavel:
             assert resposta.context["motivo_da_leitura"]
 
-    @pytest.mark.parametrize(
-        "estado", ["oficial", "oficial_travado", "oficial_com_copia", "comum_travado"]
-    )
+    @pytest.mark.parametrize("estado", ["oficial_travado", "comum_travado"])
     def test_nenhum_salvamento_passa_e_nada_muda(self, cliente, estados, estado):
         """Pela URL, sem interface: 409 e o layout intacto."""
         modelo = estados[estado]
@@ -1311,13 +1337,36 @@ class TestOsCincoEstados:
             content_type="application/json",
         ).status_code == 409
 
-    @pytest.mark.parametrize(
-        "estado", ["oficial", "oficial_travado", "oficial_com_copia", "comum_travado"]
-    )
+    @pytest.mark.parametrize("estado", ["oficial_travado", "comum_travado"])
     def test_nem_ids_novos_saem(self, cliente, estados, estado):
         assert cliente.post(_url("template_editor_ids", estados[estado])).status_code == 403
 
-    @pytest.mark.parametrize("estado", ["oficial", "oficial_travado"])
+    @pytest.mark.parametrize("estado", ["oficial", "oficial_com_copia"])
+    def test_o_oficial_destravado_salva_direto(self, cliente, estados, estado):
+        """
+        Pela URL: o layout novo passa, e os ids novos saem. O idioma, não
+        -- ele é a identidade do oficial, destravado ou não.
+        """
+        modelo = estados[estado]
+        novo = layout(rico(misto(texto("AJUSTE"))))
+
+        assert _salvar(cliente, modelo, novo).status_code == 200
+        modelo.refresh_from_db()
+        assert modelo.layout == novo
+        assert cliente.post(_url("template_editor_ids", modelo)).status_code == 200
+
+        idioma = modelo.language
+        assert _salvar(cliente, modelo, novo, language="nl").status_code == 409
+        modelo.refresh_from_db()
+        assert modelo.language == idioma
+
+    def test_a_tela_do_oficial_destravado_traz_os_controles_de_gravar(self, cliente, estados):
+        html = cliente.get(_url("template_editor", estados["oficial"])).content.decode()
+
+        assert 'data-acao="salvar"' in html
+        assert 'data-acao="descartar"' in html
+
+    @pytest.mark.parametrize("estado", ["oficial_travado", "comum_travado"])
     def test_a_tela_em_leitura_nao_traz_os_controles_de_gravar(self, cliente, estados, estado):
         html = cliente.get(_url("template_editor", estados[estado])).content.decode()
 
@@ -1387,3 +1436,14 @@ class TestOsCincoEstados:
         assert client.get(_url("template_editor", comum)).context["editavel"] is False
         assert _salvar(client, comum, layout()).status_code == 403
         assert client.post(_url("template_editor_ids", comum)).status_code == 403
+
+    def test_quem_so_ve_nao_edita_nem_o_oficial_destravado(self, client, leitor, estados):
+        client.force_login(leitor)
+        oficial = estados["oficial"]
+        antes = copy.deepcopy(oficial.layout)
+
+        assert client.get(_url("template_editor", oficial)).context["editavel"] is False
+        assert _salvar(client, oficial, layout()).status_code == 403
+        assert client.post(_url("template_editor_ids", oficial)).status_code == 403
+        oficial.refresh_from_db()
+        assert oficial.layout == antes

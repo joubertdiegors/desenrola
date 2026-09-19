@@ -1,5 +1,13 @@
 /*
- * Editor de conteudo rico -- o do rodape.
+ * Editor de conteudo rico -- o do rodape e o dos documentos legais.
+ *
+ * O MODO "DOCUMENTO"
+ * ------------------
+ * Nos documentos legais o parcial troca a caixa de icones pela de
+ * IMAGENS da biblioteca (`data-editor-caixa-imagens`). Cada botao traz
+ * o endereco em `data-imagem-src`, desenhado pelo servidor; o `<img>` e
+ * montado pelo DOM (`setAttribute`), como o `<a>` do link -- e passa,
+ * como tudo, pelo sanitizador do servidor.
  *
  * O QUE ELE E
  * -----------
@@ -48,6 +56,7 @@
     var caixaFonte = raiz.querySelector("[data-editor-caixa-fonte]");
     var caixaLink = raiz.querySelector("[data-editor-caixa-link]");
     var caixaIcones = raiz.querySelector("[data-editor-caixa-icones]");
+    var caixaImagens = raiz.querySelector("[data-editor-caixa-imagens]");
     var paletaIcones = raiz.querySelector("[data-editor-icones]");
     var contador = raiz.querySelector("[data-editor-contador]");
     if (!campo || !area) { return; }
@@ -99,7 +108,7 @@
     // A barra: cada botao declara o comando em `data-comando` e, quando
     // houver, o valor em `data-valor`.
     raiz.addEventListener("mousedown", function (evento) {
-      if (evento.target.closest("[data-comando], [data-atalho], [data-icone], [data-editor-caixa-icones]")) {
+      if (evento.target.closest("[data-comando], [data-atalho], [data-icone], [data-editor-caixa-icones], [data-editor-caixa-imagens]")) {
         evento.preventDefault();
         guardarSelecao();
       }
@@ -113,7 +122,8 @@
       if (comando === "abrir-link") { abrirLink(); return; }
       if (comando === "fechar-link") { caixaLink.hidden = true; return; }
       if (comando === "aplicar-link") { aplicarLink(); return; }
-      if (comando === "icones") { caixaIcones.hidden = !caixaIcones.hidden; caixaLink.hidden = true; return; }
+      if (comando === "icones") { alternarCaixa(caixaIcones); return; }
+      if (comando === "imagens") { alternarCaixa(caixaImagens); return; }
       if (comando === "fonte") { alternarFonte(); return; }
       if (comando === "aplicar-fonte") { area.innerHTML = fonte.value; sincronizar(); return; }
       if (comando === "espaco") { inserirHtml('<p style="height:18px">&nbsp;</p>'); return; }
@@ -134,6 +144,28 @@
       }
       executar(comando, seletor.value);
       seletor.selectedIndex = 0;
+    });
+
+    // Uma caixa por vez: abrir uma fecha as outras.
+    function alternarCaixa(caixa) {
+      if (!caixa) { return; }
+      var abrir = caixa.hidden;
+      [caixaLink, caixaIcones, caixaImagens].forEach(function (outra) {
+        if (outra) { outra.hidden = true; }
+      });
+      caixa.hidden = !abrir;
+    }
+
+    // Imagens da biblioteca: o `<img>` sai do DOM, com o endereco que o
+    // servidor desenhou no botao.
+    raiz.addEventListener("click", function (evento) {
+      var botao = evento.target.closest("[data-imagem-src]");
+      if (!botao) { return; }
+      var img = document.createElement("img");
+      img.setAttribute("src", botao.getAttribute("data-imagem-src"));
+      img.setAttribute("alt", botao.getAttribute("data-imagem-alt") || "");
+      inserirHtml(img.outerHTML);
+      if (caixaImagens) { caixaImagens.hidden = true; }
     });
 
     // Atalhos: o texto do proprio botao e' o que entra.
@@ -161,7 +193,8 @@
       guardarSelecao();
       var sel = window.getSelection();
       var texto = sel ? String(sel) : "";
-      caixaIcones.hidden = true;
+      if (caixaIcones) { caixaIcones.hidden = true; }
+      if (caixaImagens) { caixaImagens.hidden = true; }
       caixaLink.hidden = false;
       caixaLink.querySelector("[data-link-texto]").value = texto;
       caixaLink.querySelector("[data-link-endereco]").focus();

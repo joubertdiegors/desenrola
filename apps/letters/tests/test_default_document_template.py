@@ -9,8 +9,9 @@ sem segundo mecanismo de escolha, e sem rascunho possível sem modelo
 
 O FATO CENTRAL QUE MOLDA ESTES TESTES
 --------------------------------------
-`carta-convite-en` -- o idioma PADRÃO de toda carta nova -- existe, está
-ativo e, desde a Etapa 3.6, tem desenho. O que ainda falta é o BINÁRIO
+`carta-convite-en` -- o idioma que ESTE arquivo configura como padrão
+(`_padrao_em_ingles`; o da instalação é o francês desde a Rodada 18) --
+existe, está ativo e, desde a Etapa 3.6, tem desenho. O que ainda falta é o BINÁRIO
 do logo: a migration semeia o layout com `asset_id: 0` de propósito
 (migration não escreve em MEDIA_ROOT) e só `reconstruir_modelos_oficiais`
 materializa o arquivo, no deploy. Por isso
@@ -46,7 +47,11 @@ from pypdf import PdfReader
 from apps.doctemplates.models import DocumentTemplate
 from apps.doctemplates.services import ativacao
 from apps.letters import services
-from apps.letters.models import DefaultDocumentTemplateMissingError, Letter
+from apps.letters.models import (
+    DefaultDocumentTemplateMissingError,
+    DocumentLanguageSettings,
+    Letter,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -72,6 +77,17 @@ LAYOUT_MINIMO = {
         },
     ],
 }
+
+
+@pytest.fixture(autouse=True)
+def _padrao_em_ingles(db):
+    """
+    Estes testes provam o pipeline sobre o `carta-convite-en`, e o
+    assistente cria a carta no idioma PADRÃO. Desde a Rodada 18 o padrão
+    de uma instalação é o francês; aqui ele é o inglês, configurado como
+    faria um administrador em Backoffice › Idiomas.
+    """
+    DocumentLanguageSettings.objects.filter(pk=1).update(default_letter_language="en")
 
 
 @pytest.fixture(autouse=True)
@@ -171,9 +187,12 @@ class TestStartDraftVinculaOModeloEstrutural:
 
 
 class TestSemSelecaoManualDeModelo:
-    def test_idioma_padrao_continua_en(self):
-        """O idioma padrão da carta não mudou nesta etapa."""
-        assert services.IDIOMA_PADRAO_DA_CARTA == "en"
+    def test_o_padrao_de_fabrica_e_o_frances(self):
+        """
+        O padrão de fábrica é o francês desde a Rodada 18 (antes, inglês).
+        Este arquivo configura o inglês (`_padrao_em_ingles`).
+        """
+        assert services.IDIOMA_PADRAO_DA_CARTA == "fr"
 
     def test_a_tela_de_nova_carta_nao_ganhou_seletor_de_modelo(
         self, auth_client, en_reconstruido

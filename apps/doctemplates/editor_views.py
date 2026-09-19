@@ -87,15 +87,17 @@ IDS_POR_LOTE = 200
 
 def _pode_editar(modelo):
     """
-    So um modelo comum e destravado aceita edicao pelo fluxo normal.
+    Destravado edita; travado so le -- oficial ou nao.
 
-    Um oficial (`is_system`) abre em leitura mesmo destravado: a
-    reconstrucao controlada dos oficiais sera feita por um servico
-    proprio, fora do editor. As regras de verdade estao em
+    Ate a Rodada 18 um oficial (`is_system`) abria em leitura mesmo
+    destravado, e o ajuste passava por uma copia. Agora o que decide e
+    so `is_locked`: o oficial destravado se edita direto (o cliente
+    ajusta texto e logo na homologacao) e, aprovado, e TRAVADO -- dai
+    em diante, so leitura. As regras de verdade estao em
     `DocumentTemplate.save()`; aqui a checagem existe para a tela abrir
     no modo certo e para o salvamento recusar antes de tentar.
     """
-    return not modelo.is_system and not modelo.is_locked
+    return not modelo.is_locked
 
 
 def _motivo_da_leitura(modelo, user=None):
@@ -107,11 +109,6 @@ def _motivo_da_leitura(modelo, user=None):
         return _(
             "Este modelo está travado. Para alterá-lo, destrave-o na administração "
             "ou duplique-o — a cópia nasce editável."
-        )
-    if modelo.is_system:
-        return _(
-            "Este é um modelo oficial do sistema e não é editado por aqui. "
-            "Duplique-o para trabalhar numa cópia sua."
         )
     return ""
 

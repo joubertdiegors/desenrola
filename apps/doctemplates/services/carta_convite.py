@@ -292,14 +292,17 @@ def _linha_da_tabela(altura, rotulo, valor):
 # ---------------------------------------------------------------------------
 
 # A declaracao do anfitriao alterna literal e campo: literal[0], campo[0],
-# literal[1], campo[1], ... , literal[7]. Os campos e o negrito deles sao
+# literal[1], campo[1], ... , literal[6]. Os campos e o negrito deles sao
 # os mesmos em todos os idiomas; so os literais entre eles mudam.
+#
+# Seis campos, cada dado uma vez (Rodada 18): nome, nascimento,
+# nacionalidade, documento de identidade, endereco e telefone. A versao
+# anterior repetia a nacionalidade ("carte d'identite belge"); o texto
+# novo diz "carte d'identite : <numero>", e a nacionalidade aparece so no
+# seu proprio trecho. O negrito de cada campo e o de antes.
 CAMPOS_DA_DECLARACAO = (
     ("anfitriao.nome", True),
     ("anfitriao.data_nascimento", False),
-    ("anfitriao.nacionalidade", False),
-    # O mesmo dado da nacionalidade: "carte d'identite belge". O
-    # documento nao pergunta um segundo valor para isto.
     ("anfitriao.nacionalidade", False),
     ("anfitriao.documento_identidade", True),
     ("anfitriao.endereco", True),
@@ -339,14 +342,15 @@ CONTEUDO = {
         "titulo": "LETTRE D'INVITATION ET D’HÉBERGEMENT",
         "subtitulo": "(COURT SÉJOUR EN BELGIQUE)",
         "destinatario": "À l’attention des autorités compétentes.",
+        # Rodada 18: a formulacao neutra pedida pelo cliente -- "(e)" em
+        # vez do feminino fixo, e um rotulo com dois-pontos por dado.
         "declaracao": (
-            "Je soussignée, ",
-            ", née le ",
-            ", de nationalité ",
-            ", titulaire de la carte d’identité ",
-            " n° ",
-            ", domiciliée au ",
-            ", téléphone ",
+            "Je soussigné(e), ",
+            ", né(e) le ",
+            ", nationalité : ",
+            ", carte d’identité : ",
+            ", domicilié(e) à ",
+            ", téléphone : ",
             ", invite par la présente :",
         ),
         "tabela_rotulos": (
@@ -400,11 +404,10 @@ CONTEUDO = {
         "declaracao": (
             "I, the undersigned, ",
             ", born on ",
-            ", of ",
-            " nationality, holder of ",
-            " identity card no. ",
+            ", nationality: ",
+            ", identity card: ",
             ", residing at ",
-            ", telephone ",
+            ", telephone: ",
             ", hereby invite:",
         ),
         "tabela_rotulos": (
@@ -457,11 +460,10 @@ CONTEUDO = {
         "declaracao": (
             "Ik, ondergetekende, ",
             ", geboren op ",
-            ", van ",
-            " nationaliteit, houder van de ",
-            " identiteitskaart nr. ",
+            ", nationaliteit: ",
+            ", identiteitskaart: ",
             ", wonende te ",
-            ", telefoon ",
+            ", telefoon: ",
             ", nodig hierbij uit:",
         ),
         "tabela_rotulos": (
@@ -512,13 +514,12 @@ CONTEUDO = {
         "subtitulo": "(ESTADA DE CURTA DURAÇÃO NA BÉLGICA)",
         "destinatario": "À atenção das autoridades competentes.",
         "declaracao": (
-            "Eu, abaixo assinada, ",
-            ", nascida em ",
+            "Eu, ",
+            ", nascido(a) em ",
             ", de nacionalidade ",
-            ", titular do cartão de identidade ",
-            " n.º ",
-            ", residente em ",
-            ", telefone ",
+            ", titular do documento de identidade nº ",
+            ", domiciliado(a) em ",
+            ", telefone: ",
             ", convido pela presente:",
         ),
         "tabela_rotulos": (

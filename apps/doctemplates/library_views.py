@@ -48,6 +48,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
+from apps.core import filtros
 from apps.core.views import exige_permissao
 
 from .models import DocumentTemplate, DocumentTemplateLockedError, DocumentType
@@ -86,20 +87,13 @@ def _url_de_filtro(request, **mudancas):
 
     Os filtros da barra são links, não um formulário com botão: clicar
     em "Inativos" tem de manter a busca e o idioma que já estavam lá, e
-    tem de funcionar sem JavaScript. Montar a querystring aqui é o que
-    permite as duas coisas -- o template só escreve o endereço pronto.
+    tem de funcionar sem JavaScript. Montar a querystring no servidor é o
+    que permite as duas coisas -- o template só escreve o endereço pronto.
+
+    A regra mora em `apps.core.filtros`, compartilhada com as tabelas de
+    Usuários e de Cartas, que usam a mesma barra.
     """
-    parametros = request.GET.copy()
-    for chave, valor in mudancas.items():
-        parametros.pop(chave, None)
-        if valor:
-            parametros[chave] = valor
-    # Trocar de filtro sempre volta para a primeira página: a página 3
-    # do filtro anterior quase nunca existe no novo.
-    parametros.pop("page", None)
-    consulta = parametros.urlencode()
-    caminho = reverse("backoffice:document_library")
-    return f"{caminho}?{consulta}" if consulta else caminho
+    return filtros.url_de_filtro(request, "backoffice:document_library", **mudancas)
 
 
 def _quando(momento):
@@ -137,27 +131,14 @@ def _opcoes(request, parametro, atual, valores):
     `atual` é o valor em vigor; a opção que bate com ele ganha
     `atual=True`, e é ela que a barra mostra na pílula fechada.
     """
-    return [
-        {
-            "valor": valor,
-            "rotulo": rotulo,
-            "url": _url_de_filtro(request, **{parametro: valor}),
-            "atual": (atual or "") == valor,
-        }
-        for valor, rotulo in valores
-    ]
+    return filtros.opcoes(request, "backoffice:document_library", parametro, atual, valores)
 
 
 def _pilula(request, rotulo, parametro, atual, valores):
     """Uma pílula com menu: o rótulo, o valor em vigor e as opções."""
-    opcoes = _opcoes(request, parametro, atual, valores)
-    escolhida = next((o for o in opcoes if o["atual"]), opcoes[0])
-    return {
-        "rotulo": rotulo,
-        "escolhido": bool(atual),
-        "atual": escolhida["rotulo"],
-        "opcoes": opcoes,
-    }
+    return filtros.pilula(
+        request, "backoffice:document_library", rotulo, parametro, atual, valores
+    )
 
 
 @exige_permissao(VER_PERM)
@@ -250,7 +231,7 @@ def document_library(request):
     ativos = sum(1 for m in encontrados if m.situacao == ativacao.ATIVO)
     ultima = max((m.updated_at for m in encontrados), default=None)
 
-    contexto = _contexto_do_backoffice(_("Modelos"))
+    contexto = _contexto_do_backoffice(_("Modelos de cartas"))
     contexto.update(
         {
             "pagina": pagina,

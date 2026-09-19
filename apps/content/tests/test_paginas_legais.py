@@ -10,12 +10,17 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
    sem tradução ou com texto vazio: todos são 404. Uma página de Termos
    vazia é pior do que página nenhuma;
 3. **Que o sistema invente texto jurídico.** A migration cria os dois
-   blocos SEM conteúdo. Quem escreve é o cliente, pelo Django Admin;
-4. **Que o texto vire marcação.** Nada de `|safe`: o que o cliente
-   digitar sai como texto, e HTML digitado aparece visível em vez de ser
-   interpretado;
+   blocos SEM conteúdo. Quem escreve é o cliente -- desde a Rodada 15,
+   pelo Backoffice (Sistema › Documentos legais);
+4. **Que o texto SIMPLES vire marcação.** Nada de `|safe`: o que o
+   cliente digitar num bloco de texto simples sai como texto, e HTML
+   digitado aparece visível em vez de ser interpretado;
 5. **Que um documento dependa do outro.** Publicar Termos não pode fazer
-   Privacidade aparecer, nem o contrário.
+   Privacidade aparecer, nem o contrário;
+6. **Que o texto FORMATADO passe sem a lista fechada.** O documento
+   escrito no editor sai como HTML -- mas só o que
+   `content.rodape.sanitizar_documento` deixa passar, de novo na hora de
+   desenhar.
 """
 
 import pytest
@@ -426,7 +431,7 @@ class TestCadastroIntacto:
 
 
 # ===========================================================================
-# 6. O Backoffice conta o estado, e não edita
+# 6. Identidade conta o estado e aponta para onde se escreve
 # ===========================================================================
 
 
@@ -449,12 +454,103 @@ class TestBackoffice:
         assert "Publicado" in corpo
         assert f'href="{TERMOS}"' in corpo
 
-    def test_a_tela_aponta_para_o_admin_e_nao_edita(self, client, staff_user):
-        """Não há editor paralelo: o texto é escrito no Django Admin."""
+    def test_a_tela_aponta_para_os_documentos_legais_e_nao_edita(
+        self, client, staff_user
+    ):
+        """
+        Não há editor paralelo em Identidade: o texto se escreve em
+        Documentos legais, no próprio Backoffice -- e não mais no Django
+        Admin (Rodada 15).
+        """
+        from django.contrib.auth.models import Permission
+
+        staff_user.user_permissions.add(
+            Permission.objects.get(content_type__app_label="content", codename="view_contentblock")
+        )
         client.force_login(staff_user)
 
         corpo = client.get(reverse("backoffice:system")).content.decode()
 
-        assert reverse("admin:content_contentblock_changelist") in corpo
+        assert f'href="{reverse("backoffice:legal_documents")}"' in corpo
+        assert reverse("admin:content_contentblock_changelist") not in corpo
         assert 'name="legal.terms_of_use"' not in corpo
         assert 'name="termos_de_uso"' not in corpo
+
+    def test_sem_a_permissao_o_nome_aparece_sem_link(self, client, staff_user):
+        """O menu esconde a tela de quem não a abre; o cartão também."""
+        client.force_login(staff_user)
+
+        corpo = client.get(reverse("backoffice:system")).content.decode()
+
+        assert "Documentos legais" in corpo
+        assert reverse("backoffice:legal_documents") not in corpo
+
+
+# ===========================================================================
+# 7. O texto formatado, na página pública
+# ===========================================================================
+
+
+def publicar_formatado(chave, html, idioma="pt"):
+    """O que o editor de Documentos legais grava: HTML e "Texto formatado"."""
+    ContentBlock.objects.filter(key=chave).update(kind=ContentBlock.Kind.RICH_TEXT)
+    return publicar(chave, html, idioma)
+
+
+class TestTextoFormatado:
+    def test_a_marcacao_permitida_vira_marcacao(self, client):
+        publicar_formatado(
+            CHAVE_TERMOS,
+            '<h2>1. Objeto</h2><p style="text-align:center">Texto <strong>forte</strong>.</p>'
+            "<ul><li>item</li></ul>",
+        )
+
+        corpo = client.get(TERMOS).content.decode()
+
+        assert "<h2>1. Objeto</h2>" in corpo
+        assert '<p style="text-align:center">Texto <strong>forte</strong>.</p>' in corpo
+        assert "<ul><li>item</li></ul>" in corpo
+
+    def test_o_que_a_lista_nao_aceita_sai_na_hora_de_desenhar(self, client):
+        """
+        O banco não é confiável por definição: um HTML gravado por fora do
+        editor (o Django Admin, um script) passa pela lista de novo.
+        """
+        publicar_formatado(
+            CHAVE_TERMOS,
+            '<p onclick="roubar()">Oi</p><script>alert(1)</script>'
+            '<a href="javascript:alert(1)">x</a><img src="https://fora.test/p.png">',
+        )
+
+        corpo = client.get(TERMOS).content.decode()
+        texto = corpo[corpo.index('class="legal-texto"') :]
+
+        assert "onclick" not in texto
+        assert "<script>alert(1)</script>" not in texto
+        assert "javascript:" not in texto
+        assert "fora.test" not in texto
+        assert "<p>Oi</p>" in texto
+
+    def test_o_texto_simples_continua_como_era(self, client):
+        """O formato do bloco decide: texto simples não vira HTML."""
+        publicar(CHAVE_TERMOS, "<b>negrito</b>\nLinha dois")
+
+        corpo = client.get(TERMOS).content.decode()
+
+        assert "<p>&lt;b&gt;negrito&lt;/b&gt;<br>Linha dois</p>" in corpo
+
+    def test_formatado_so_com_marcacao_conta_como_sem_texto(self, client):
+        """`<p><br></p>` é o editor vazio -- não é documento publicado."""
+        publicar_formatado(CHAVE_TERMOS, "<p><br></p><p>&nbsp;</p>")
+
+        assert client.get(TERMOS).status_code == 404
+        assert "legal.terms_of_use" not in services.legais_publicadas()
+
+    def test_o_custo_continua_o_mesmo(self, client):
+        publicar_formatado(CHAVE_TERMOS, "<h2>Um</h2><p>Dois</p>")
+        publicar(CHAVE_PRIVACIDADE, "Política.")
+
+        with CaptureQueriesContext(connection) as capturadas:
+            client.get(TERMOS)
+
+        assert len([c for c in capturadas if "contentblock" in c["sql"]]) == 2

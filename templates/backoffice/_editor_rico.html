@@ -5,6 +5,14 @@ que de fato vai no formulário.
 Recebe `campo` (o BoundField) e, opcionalmente, `atalhos` (a lista de
 `content.rodape.ATALHOS`).
 
+O MODO "DOCUMENTO"
+------------------
+`modo="documento"` é o dos documentos legais (Sistema › Documentos
+legais): estilos de documento (Título, Subtítulo, Tópico), sem ícones
+inline -- a lista dos documentos não os aceita -- e com `imagens` (as da
+biblioteca, `[{url, alt, nome}]`) para inserir. `placeholder` troca o
+texto da área vazia. Sem `modo`, o editor é o do rodapé, como sempre foi.
+
 SEM JAVASCRIPT
 --------------
 Só o `<textarea>` aparece, e edita-se o HTML à mão. Com o script
@@ -27,8 +35,14 @@ fechada aceita, para não prometer o que o servidor vai tirar.
       <span class="editor-rico-separador"></span>
       <select class="editor-rico-seletor" data-comando="formatBlock" title="{% translate 'Estilo do texto' %}" aria-label="{% translate 'Estilo do texto' %}">
         <option value="P">{% translate "Parágrafo" %}</option>
+        {% if modo == "documento" %}
+        <option value="H2">{% translate "Título" %}</option>
+        <option value="H3">{% translate "Subtítulo" %}</option>
+        <option value="H4">{% translate "Tópico" %}</option>
+        {% else %}
         <option value="H3">{% translate "Título" %}</option>
         <option value="H4">{% translate "Rótulo de coluna" %}</option>
+        {% endif %}
         <option value="BLOCKQUOTE">{% translate "Destaque" %}</option>
       </select>
       <select class="editor-rico-seletor" data-comando="fontSize" title="{% translate 'Tamanho' %}" aria-label="{% translate 'Tamanho' %}">
@@ -65,7 +79,11 @@ fechada aceita, para não prometer o que o servidor vai tirar.
       <span class="editor-rico-separador"></span>
       <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="abrir-link"><i class="ph ph-link" aria-hidden="true"></i>{% translate "Link" %}</button>
       <button type="button" class="editor-rico-botao" data-comando="unlink" title="{% translate 'Remover link' %}" aria-label="{% translate 'Remover link' %}"><i class="ph ph-link-break" aria-hidden="true"></i></button>
+      {% if modo == "documento" %}
+      <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="imagens"><i class="ph ph-image" aria-hidden="true"></i>{% translate "Imagem" %}</button>
+      {% else %}
       <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="icones"><i class="ph ph-star" aria-hidden="true"></i>{% translate "Ícone" %}</button>
+      {% endif %}
       <span class="editor-rico-separador"></span>
       <button type="button" class="editor-rico-botao" data-comando="insertHorizontalRule" title="{% translate 'Linha divisória' %}" aria-label="{% translate 'Linha divisória' %}"><i class="ph ph-minus" aria-hidden="true"></i></button>
       <button type="button" class="editor-rico-botao" data-comando="espaco" title="{% translate 'Espaço em branco' %}" aria-label="{% translate 'Espaço em branco' %}"><i class="ph ph-arrows-out-line-vertical" aria-hidden="true"></i></button>
@@ -82,17 +100,36 @@ fechada aceita, para não prometer o que o servidor vai tirar.
 
   <div class="editor-rico-caixa" data-editor-caixa-link hidden>
     <label class="field editor-rico-campo-curto"><span>{% translate "Texto do link" %}</span><input class="input" type="text" data-link-texto placeholder="{% translate 'Termos de uso' %}"></label>
-    <label class="field editor-rico-campo-longo"><span>{% translate "Endereço" %}</span><input class="input" type="text" data-link-endereco placeholder="https://… , /pt/… ou {url_termos}"></label>
+    <label class="field editor-rico-campo-longo"><span>{% translate "Endereço" %}</span><input class="input" type="text" data-link-endereco placeholder="{% if modo == 'documento' %}https://… , /pt/… ou mailto:…{% else %}https://… , /pt/… ou {url_termos}{% endif %}"></label>
     <label class="field-check editor-rico-nova-aba"><input type="checkbox" data-link-nova-aba> {% translate "Nova aba" %}</label>
     <button type="button" class="btn btn-primary btn-sm" data-comando="aplicar-link">{% translate "Inserir link" %}</button>
     <button type="button" class="btn btn-ghost btn-sm" data-comando="fechar-link">{% translate "Cancelar" %}</button>
   </div>
 
+  {% if modo == "documento" %}
+  {% comment %}
+  As imagens da BIBLIOTECA -- a única origem que o sanitizador aceita num
+  documento. Cada botão é desenhado aqui, pelo servidor; o script só lê
+  `data-imagem-src`/`data-imagem-alt` e monta o `<img>` pelo DOM.
+  {% endcomment %}
+  <div class="editor-rico-caixa" data-editor-caixa-imagens hidden>
+    <span class="editor-rico-rotulo">{% translate "Inserir imagem da biblioteca na posição do cursor" %}</span>
+    <div class="editor-rico-imagens">
+      {% for imagem in imagens %}
+      <button type="button" class="editor-rico-imagem" data-imagem-src="{{ imagem.url }}" data-imagem-alt="{{ imagem.alt }}" title="{{ imagem.nome }}" aria-label="{{ imagem.nome }}"><img src="{{ imagem.url }}" alt=""></button>
+      {% empty %}
+      <span class="field-hint">{% translate "Nenhuma imagem ativa na biblioteca." %}</span>
+      {% endfor %}
+    </div>
+    <span class="field-hint">{% translate "Só imagens da biblioteca do site. Para usar uma nova, envie-a antes em Sistema › Imagens." %}</span>
+  </div>
+  {% else %}
   <div class="editor-rico-caixa" data-editor-caixa-icones hidden>
     <span class="editor-rico-rotulo">{% translate "Inserir ícone na posição do cursor" %}</span>
     <div class="editor-rico-paleta" data-editor-icones></div>
     <span class="field-hint">{% translate "Os ícones entram como desenho inline e herdam a cor do texto." %}</span>
   </div>
+  {% endif %}
 
   {% if atalhos %}
   <div class="editor-rico-atalhos">
@@ -102,9 +139,14 @@ fechada aceita, para não prometer o que o servidor vai tirar.
     {% endfor %}
     <button type="button" class="editor-rico-atalho" data-comando="colunas" title="{% translate 'Três colunas lado a lado, que empilham no celular' %}">+ {% translate "3 colunas" %}</button>
   </div>
+  {% elif modo == "documento" %}
+  <div class="editor-rico-atalhos">
+    <span class="editor-rico-rotulo">{% translate "Layout" %}</span>
+    <button type="button" class="editor-rico-atalho" data-comando="colunas" title="{% translate 'Três colunas lado a lado, que empilham no celular' %}">+ {% translate "3 colunas" %}</button>
+  </div>
   {% endif %}
 
-  <div class="editor-rico-area" data-editor-area contenteditable="true" spellcheck="true" aria-label="{{ campo.label }}" data-placeholder="{% translate 'Escreva o conteúdo do rodapé…' %}"></div>
+  <div class="editor-rico-area" data-editor-area contenteditable="true" spellcheck="true" aria-label="{{ campo.label }}" data-placeholder="{% if placeholder %}{{ placeholder }}{% else %}{% translate 'Escreva o conteúdo do rodapé…' %}{% endif %}"></div>
 
   <div class="editor-rico-caixa editor-rico-caixa-fonte" data-editor-caixa-fonte hidden>
     <span class="editor-rico-rotulo">{% translate "HTML gerado" %}</span>

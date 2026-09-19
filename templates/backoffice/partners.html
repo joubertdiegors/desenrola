@@ -1,7 +1,19 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Administração · Parceiros.
+
+O DESENHO É O DA TABELA DE MODELOS
+----------------------------------
+Cabeçalho com contagem e ação, cartão único, tabela em grade, rodapé com
+o resumo -- as classes `mod-*` de `biblioteca-modelos.css`, as mesmas de
+"Modelos de cartas". Só a grade de colunas é desta tela
+(`.mod-tabela-parceiros`). A partir de 1180px a linha vira cartão -- a
+MESMA marcação, com todas as ações: não há mais uma lista separada para
+o celular que só levava à edição.
+
+As ações seguem o desenho de Modelos: as do dia a dia à mostra (subir,
+descer, editar) e as de registro no menu "⋮" da linha.
 
 O CADASTRO INTEIRO MORA AQUI
 ----------------------------
@@ -20,124 +32,160 @@ NENHUM BOTÃO INERTE
 -------------------
 Quem está no topo não recebe "subir", quem está no fim não recebe
 "descer", e quem não tem permissão não vê a ação que o servidor
-recusaria. É a mesma regra que tirou daqui os três botões falsos da
-Etapa I.
+recusaria -- nem o menu "⋮", quando ele ficaria vazio. É a mesma regra
+que tirou daqui os três botões falsos da Etapa I.
 
-Contexto: linhas (parceiro, primeiro, ultimo), total, pode_criar,
-pode_editar, pode_excluir.
+Contexto: linhas (parceiro, primeiro, ultimo), total, ativos,
+pode_criar, pode_editar, pode_excluir.
 {% endcomment %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/biblioteca-modelos.css' %}">{% endblock %}
 
 {% block bo_main %}
-<div class="bo-head d-only">
-  <div>
-    <h1>{% translate "Parceiros" %}</h1>
-    <p class="text-muted">{% translate "Os que aparecem na página inicial." %}</p>
-  </div>
-  {% if pode_criar %}
-  <a class="btn btn-primary" href="{% url 'backoffice:partner_new' %}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</a>
-  {% endif %}
-</div>
-<p class="m-only text-muted">{% translate "Os que aparecem na página inicial." %}</p>
-{% if pode_criar %}
-<p class="m-only"><a class="btn btn-primary" href="{% url 'backoffice:partner_new' %}"><i class="ph ph-plus" aria-hidden="true"></i>{% translate "Novo parceiro" %}</a></p>
-{% endif %}
+<div class="mod">
 
-<div class="card table-wrap d-only">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>{% translate "Parceiro" %}</th>
-        <th>{% translate "Imagem" %}</th>
-        <th>{% translate "Endereço" %}</th>
-        <th>{% translate "Na Home" %}</th>
-        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
-      </tr>
-    </thead>
-    <tbody>
+  <header class="mod-cabecalho">
+    <div class="mod-titulos">
+      <span class="mod-kicker">Backoffice</span>
+      <div class="mod-titulo-linha">
+        <h1>{% translate "Parceiros" %}</h1>
+        <span class="mod-contagem">{{ total }}</span>
+      </div>
+      <p class="mod-descricao">{% translate "Os que aparecem na página inicial." %}</p>
+    </div>
+    {% if pode_criar %}
+    <div class="mod-cabecalho-acoes">
+      <a class="mod-btn mod-btn-primario" href="{% url 'backoffice:partner_new' %}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{% translate "Novo parceiro" %}
+      </a>
+    </div>
+    {% endif %}
+  </header>
+
+  <section class="mod-cartao">
+    {% if not linhas %}
+    <div class="mod-vazio">
+      <span class="mod-vazio-icone" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect><path d="m3.5 15 4.5-4.5 4 4 3-3 5.5 5.5"></path></svg>
+      </span>
+      <span class="mod-vazio-titulo">{% translate "Nenhum parceiro cadastrado." %}</span>
+      <span class="mod-vazio-texto">{% translate "Enquanto não houver, a seção inteira não aparece na página inicial." %}</span>
+    </div>
+    {% else %}
+
+    <div class="mod-tabela mod-tabela-lista mod-tabela-parceiros" role="table" aria-label="{% translate 'Parceiros' %}">
+      <div class="mod-cabecalho-tabela" role="row">
+        <span role="columnheader">{% translate "Parceiro" %}</span>
+        <div class="mod-celulas-meio">
+          <span role="columnheader">{% translate "Endereço" %}</span>
+          <span role="columnheader">{% translate "Na Home" %}</span>
+        </div>
+        <span role="columnheader" class="mod-col-acoes">{% translate "Ações" %}</span>
+      </div>
+
       {% for linha in linhas %}
-      <tr>
-        <td class="cell-name">{{ linha.parceiro.name }}<br><span class="cell-muted">{{ linha.parceiro.description|default:"—" }}</span></td>
-        <td>
+      <div class="mod-linha{% if not linha.parceiro.is_active %} is-inativo{% endif %}" role="row">
+        <div class="mod-celula-nome" role="cell">
           {% if linha.parceiro.logo %}
-            <img class="bo-parceiro-logo" src="{{ linha.parceiro.logo.file.url }}" alt="{{ linha.parceiro.logo.alt_text|default:linha.parceiro.name }}">
+            <img class="bo-parceiro-logo mod-miniatura" src="{{ linha.parceiro.logo.file.url }}" alt="{{ linha.parceiro.logo.alt_text|default:linha.parceiro.name }}">
           {% else %}
-            <span class="tag tag-warning">{% translate "Sem imagem" %}</span>
+            <span class="mod-icone-doc" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect><path d="m3.5 15 4.5-4.5 4 4 3-3 5.5 5.5"></path></svg>
+            </span>
           {% endif %}
-        </td>
-        <td class="cell-muted">{{ linha.parceiro.url|default:"—" }}</td>
-        <td>{% if linha.parceiro.is_active %}<span class="tag tag-success">{% translate "Aparece" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}</td>
-        <td>
-          <div class="bo-parceiro-acoes">
-            {% if pode_editar %}
-              {% comment %}
-              Ordem: dois POST, e não um campo de número na lista. Quem
-              organiza a página pensa em "este vem antes daquele", não em
-              qual inteiro digitar. O número continua existindo e é
-              editável no formulário, para quem preferir.
-              {% endcomment %}
-              {% if not linha.primeiro %}
-              <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="direcao" value="subir">
-                <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Subir {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
-              </form>
-              {% endif %}
-              {% if not linha.ultimo %}
-              <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="direcao" value="descer">
-                <button type="submit" class="btn btn-ghost btn-icon-sm" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Descer {{ nome }}{% endblocktranslate %}"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
-              </form>
-              {% endif %}
-            {% endif %}
-
-            <a class="btn btn-secondary btn-sm" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% if pode_editar %}{% translate "Editar" %}{% else %}{% translate "Ver" %}{% endif %}</a>
-
-            {% if pode_editar %}
-            <form method="post" action="{% url 'backoffice:partner_activation' linha.parceiro.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="ativo" value="{% if linha.parceiro.is_active %}0{% else %}1{% endif %}">
-              <button type="submit" class="btn btn-ghost btn-sm">{% if linha.parceiro.is_active %}<i class="ph ph-eye-slash" aria-hidden="true"></i>{% translate "Desativar" %}{% else %}<i class="ph ph-eye" aria-hidden="true"></i>{% translate "Ativar" %}{% endif %}</button>
-            </form>
-            {% endif %}
-
-            {% if pode_excluir %}
-            <a class="btn btn-ghost btn-sm" href="{% url 'backoffice:partner_delete' linha.parceiro.pk %}"><i class="ph ph-trash" aria-hidden="true"></i>{% translate "Remover" %}</a>
+          <span class="mod-nome-bloco">
+            <a class="mod-nome" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}">{{ linha.parceiro.name }}</a>
+            <span class="mod-sub">
+              {% if not linha.parceiro.logo %}<span class="mod-pilula mod-pilula-alerta">{% translate "Sem imagem" %}</span>{% endif %}
+              <span class="mod-texto-curto">{{ linha.parceiro.description|default:"—" }}</span>
+            </span>
+          </span>
+        </div>
+        <div class="mod-celulas-meio">
+          <div class="mod-celula" role="cell"><span class="mod-rotulo-celula">{% translate "Endereço" %}</span><span class="mod-texto-curto mod-endereco">{{ linha.parceiro.url|default:"—" }}</span></div>
+          <div class="mod-celula" role="cell">
+            {% if linha.parceiro.is_active %}
+            <span class="mod-situacao is-ativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Aparece" %}</span>
+            {% else %}
+            <span class="mod-situacao is-inativo"><span class="mod-farol" aria-hidden="true"></span>{% translate "Oculto" %}</span>
             {% endif %}
           </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="cell-muted">{% translate "Nenhum parceiro cadastrado. Enquanto não houver, a seção inteira não aparece na página inicial." %}</td></tr>
+        </div>
+        <div class="mod-acoes" role="cell">
+          {% if pode_editar %}
+            {% comment %}
+            Ordem: dois POST, e não um campo de número na lista. Quem
+            organiza a página pensa em "este vem antes daquele", não em
+            qual inteiro digitar. O número continua existindo e é
+            editável no formulário, para quem preferir.
+            {% endcomment %}
+            {% if not linha.primeiro %}
+            <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="direcao" value="subir">
+              <button type="submit" class="mod-acao" title="{% translate 'Subir' %}" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Subir {{ nome }}{% endblocktranslate %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+            </form>
+            {% endif %}
+            {% if not linha.ultimo %}
+            <form method="post" action="{% url 'backoffice:partner_move' linha.parceiro.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="direcao" value="descer">
+              <button type="submit" class="mod-acao" title="{% translate 'Descer' %}" aria-label="{% blocktranslate with nome=linha.parceiro.name %}Descer {{ nome }}{% endblocktranslate %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M18 13l-6 6-6-6"></path></svg></button>
+            </form>
+            {% endif %}
+          {% endif %}
+
+          <a class="mod-acao" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}"
+             title="{% if pode_editar %}{% translate 'Editar' %}{% else %}{% translate 'Ver' %}{% endif %}"
+             aria-label="{% if pode_editar %}{% translate 'Editar' %}{% else %}{% translate 'Ver' %}{% endif %} {{ linha.parceiro.name }}">
+            {% if pode_editar %}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20v-3.5L15.5 5a2.1 2.1 0 0 1 3 3L7 19.5z"></path></svg>
+            {% else %}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+            {% endif %}
+          </a>
+
+          {% if pode_editar or pode_excluir %}
+          <details class="mod-menu">
+            <summary class="mod-acao mod-acao-menu" title="{% translate 'Mais ações' %}" aria-label="{% translate 'Mais ações para' %} {{ linha.parceiro.name }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5.5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="18.5" r="1.7"></circle></svg>
+            </summary>
+            <div class="mod-menu-lista mod-menu-acoes">
+              <span class="mod-menu-titulo">{{ linha.parceiro.name }}</span>
+              {% if pode_editar %}
+              <form method="post" action="{% url 'backoffice:partner_activation' linha.parceiro.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="ativo" value="{% if linha.parceiro.is_active %}0{% else %}1{% endif %}">
+                <button type="submit" class="mod-menu-item{% if linha.parceiro.is_active %} is-desativar{% endif %}">
+                  {% if linha.parceiro.is_active %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M6 6l12 12"></path></svg>{% translate "Desativar" %}
+                  {% else %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="m8.5 12.5 2.5 2.5 4.5-5"></path></svg>{% translate "Ativar" %}
+                  {% endif %}
+                </button>
+              </form>
+              {% endif %}
+              {% if pode_excluir %}
+              {% if pode_editar %}<span class="mod-menu-risco" aria-hidden="true"></span>{% endif %}
+              <a class="mod-menu-item is-remover" href="{% url 'backoffice:partner_delete' linha.parceiro.pk %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7"></path></svg>{% translate "Remover" %}
+              </a>
+              {% endif %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{% comment %}
-NO CELULAR, UMA LISTA -- NAO A TABELA.
-
-Convencao do projeto (ver `users.html`, `letters.html`): seis colunas nao
-cabem em 390px, e uma tabela que nao cabe faz a PAGINA INTEIRA rolar para
-o lado. Cada item leva a tela de edicao, que e onde ficam as acoes.
-{% endcomment %}
-<div class="list m-only">
-  {% for linha in linhas %}
-  <a class="list-item{% if not linha.parceiro.is_active %} is-inactive{% endif %}" href="{% url 'backoffice:partner_edit' linha.parceiro.pk %}">
-    {% if linha.parceiro.logo %}
-      <img class="bo-parceiro-logo" src="{{ linha.parceiro.logo.file.url }}" alt="">
-    {% else %}
-      <i class="ph ph-image" aria-hidden="true"></i>
-    {% endif %}
-    <div class="list-body">
-      <div class="list-title">{{ linha.parceiro.name }}</div>
-      <div class="list-sub">{{ linha.parceiro.description|default:linha.parceiro.url|default:"—" }}</div>
     </div>
-    {% if linha.parceiro.is_active %}<span class="tag tag-success">{% translate "Aparece" %}</span>{% else %}<span class="tag tag-neutral">{% translate "Oculto" %}</span>{% endif %}
-    <i class="ph ph-caret-right list-caret" aria-hidden="true"></i>
-  </a>
-  {% empty %}
-  <div class="list-item"><span class="cell-muted">{% translate "Nenhum parceiro cadastrado." %}</span></div>
-  {% endfor %}
+
+    <div class="mod-rodape">
+      <span>{% blocktranslate count contagem=total %}{{ contagem }} parceiro{% plural %}{{ contagem }} parceiros{% endblocktranslate %}</span>
+      <span class="mod-rodape-dir">
+        <span class="mod-rodape-ativos"><span class="mod-farol" aria-hidden="true"></span>{% blocktranslate count contagem=ativos %}{{ contagem }} aparece na Home{% plural %}{{ contagem }} aparecem na Home{% endblocktranslate %}</span>
+      </span>
+    </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

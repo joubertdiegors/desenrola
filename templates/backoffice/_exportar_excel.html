@@ -1,0 +1,35 @@
+{% load i18n %}{% comment %}
+"Exportar Excel ▾" -- Usuários e Cartas.
+
+As duas opções baixam um .xlsx: "Tabela completa" (as colunas da tela,
+sem Ações) e "Contatos" (nome, e-mail e telefone). Sai o resultado
+INTEIRO da busca e dos filtros em vigor -- os campos escondidos abaixo
+--, não só a página que está na tela: a quantidade por página e a
+página não vão.
+
+POST com o token CSRF: os filtros seguem no corpo, não na URL. Quem
+decide o que sai, e para quem, é a view da exportação, com as mesmas
+permissões da listagem.
+
+`dropdown`: o menu fecha ao clicar fora e com Esc, como os outros do
+site; e fecha sozinho quando o download começa (static/js/app.js).
+
+Recebe: `url` (a rota da exportação) e `filtros` (os da tela).
+{% endcomment %}
+<details class="mod-menu mod-menu-exportar dropdown">
+  <summary class="mod-btn mod-btn-contorno">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"></path><path d="m7.5 10.5 4.5 4.5 4.5-4.5"></path><path d="M5 19.5h14"></path></svg>{% translate "Exportar Excel" %}
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+  </summary>
+  <form class="mod-menu-lista mod-menu-acoes" method="post" action="{{ url }}">
+    {% csrf_token %}
+    {% for nome, valor in filtros.items %}{% if valor and nome != "page_size" %}
+    <input type="hidden" name="{{ nome }}" value="{{ valor }}">{% endif %}{% endfor %}
+    <button type="submit" class="mod-menu-item" name="tipo" value="completa">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"></path></svg>{% translate "Tabela completa" %}
+    </button>
+    <button type="submit" class="mod-menu-item" name="tipo" value="contatos">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"></circle><path d="M5 19.5c1.2-3.4 4-5 7-5s5.8 1.6 7 5"></path></svg>{% translate "Contatos" %}
+    </button>
+  </form>
+</details>

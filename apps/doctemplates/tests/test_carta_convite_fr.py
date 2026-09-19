@@ -304,15 +304,24 @@ class TestCamposDinamicos:
             "kind": "field", "source": "anfitriao.nome",
         }
 
-    def test_a_nacionalidade_do_anfitriao_serve_aos_dois_trechos(self, elementos):
+    def test_cada_dado_do_anfitriao_aparece_uma_vez(self, elementos):
         """
-        "de nationalité belge" e "carte d'identité belge" são o mesmo
-        dado -- o próprio gerador de PDF diz isso.
+        Até a Rodada 17 a nacionalidade aparecia duas vezes ("de
+        nationalité belge" e "carte d'identité belge"). O texto novo diz
+        "nationalité : ..." e "carte d'identité : <número>": cada um dos
+        seis dados entra uma vez, na ordem do parágrafo.
         """
         partes = por_id(elementos, "fr-declaracao")["properties"]["content"]["parts"]
         referencias = [p.get("source") for p in partes if p["kind"] == "field"]
 
-        assert referencias.count("anfitriao.nacionalidade") == 2
+        assert referencias == [
+            "anfitriao.nome",
+            "anfitriao.data_nascimento",
+            "anfitriao.nacionalidade",
+            "anfitriao.documento_identidade",
+            "anfitriao.endereco",
+            "anfitriao.telefone",
+        ]
 
 
 # ===========================================================================

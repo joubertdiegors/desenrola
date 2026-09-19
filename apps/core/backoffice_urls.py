@@ -33,6 +33,12 @@ urlpatterns = [
     # Gerenciador de usuarios e permissoes. As views ficam em
     # apps.accounts (junto do modelo que leem); so a rota mora aqui.
     path("usuarios/", accounts_backoffice.backoffice_users, name="users"),
+    # Exportacao da listagem para Excel (.xlsx), por POST.
+    path(
+        "usuarios/exportar/",
+        accounts_backoffice.backoffice_users_export,
+        name="users_export",
+    ),
     path(
         "usuarios/<int:pk>/",
         accounts_backoffice.backoffice_user_detail,
@@ -51,12 +57,19 @@ urlpatterns = [
     # Supervisao de cartas: le o banco de verdade. As views ficam em
     # apps.letters (junto do modelo que leem); so a rota mora aqui.
     path("letters/", letters_backoffice.backoffice_letters, name="letters"),
+    # Exportacao da listagem para Excel (.xlsx), por POST.
+    path(
+        "letters/exportar/",
+        letters_backoffice.backoffice_letters_export,
+        name="letters_export",
+    ),
     path(
         "letters/<uuid:letter_uuid>/",
         letters_backoffice.backoffice_letter_detail,
         name="letter_detail",
     ),
     # Politica do ciclo de vida das cartas (editabilidade e expiracao).
+    # No menu, "Wizzard - gerar carta" -- mudou so o nome.
     path("cartas/politica/", views.backoffice_letter_policy, name="letter_policy"),
     # As declaracoes da etapa 4 do assistente. A tela delas e a propria
     # Politica das cartas (ver `letters.backoffice_views`), entao nao ha
@@ -272,4 +285,12 @@ urlpatterns = [
     # Configuracoes globais do site (nome, contato, redes). Deixou de
     # ser o placeholder na Etapa F.
     path("sistema/", views.backoffice_system, name="system"),
+    # Documentos legais (Termos de uso, Privacidade): o texto das duas
+    # paginas publicas, escrito com o editor rico. Uma rota so: o
+    # documento e o idioma se escolhem na propria tela.
+    path(
+        "sistema/documentos-legais/",
+        content_backoffice.backoffice_legal_documents,
+        name="legal_documents",
+    ),
 ]

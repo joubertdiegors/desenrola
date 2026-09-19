@@ -19,3 +19,7 @@ cryptography==46.0.4
 pypdf==6.18.1
 reportlab==5.0.1
 pypdfium2==5.13.0
+
+# Exportacao das tabelas do Backoffice (Usuarios e Cartas) para Excel
+# (.xlsx de verdade, nao CSV renomeado) -- apps/core/exportacao_excel.py.
+openpyxl==3.1.5

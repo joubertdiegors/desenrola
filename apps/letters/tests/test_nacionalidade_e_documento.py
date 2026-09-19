@@ -432,7 +432,15 @@ class TestRegressaoDoPdfOficial:
         with draft.pdf_file.open("rb") as fh:
             texto = " ".join(PdfReader(_io.BytesIO(fh.read())).pages[0].extract_text().split())
 
-        assert "titulaire de la carte d’identité" in texto
+        # Rodada 18: o texto oficial da identificação do anfitrião. O
+        # `replace(" ,", ",")` desfaz só um artefato da extração do pypdf
+        # (um espaço antes da vírgula que segue um campo em negrito); no
+        # PDF desenhado a vírgula vem colada ao campo.
+        assert (
+            "Je soussigné(e), Claire Dubois, né(e) le 14/03/1985, nationalité : Belge, "
+            "carte d’identité : 00000000, domicilié(e) à Rue des Exemple 25 - 1200 "
+            "Woluwe-Saint-Lambert, téléphone : +32 470 00 00 00, invite par la présente :"
+        ) in texto.replace(" ,", ",")
         assert "00000000" in texto
 
     def test_a_nacionalidade_do_anfitriao_alimenta_a_frase_do_documento(

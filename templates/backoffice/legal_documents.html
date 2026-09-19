@@ -1,0 +1,137 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% comment %}
+Administração · Sistema · Documentos legais.
+
+Os Termos de uso e a Política de privacidade: o texto das duas páginas
+públicas (`/legal/termos-de-uso/` e `/legal/privacidade/`, rotas que não
+mudaram), escrito com o MESMO editor rico do rodapé -- `_editor_rico.html`
+no modo "documento".
+
+UM DOCUMENTO E UM IDIOMA POR VEZ
+--------------------------------
+Os dois seletores do topo só trocam o que está aberto. Nada é gravado
+sem "Salvar documento"; abrir o editor não converte nem altera o texto
+que já existe.
+
+O QUE O SERVIDOR GARANTE
+------------------------
+Tudo o que sai do editor passa por `content.rodape.sanitizar_documento`
+-- lista fechada de tags e atributos, imagem só da biblioteca do site,
+nenhum script, nenhum `on*` -- antes de gravar e de novo antes de a
+página pública desenhar. A barra só oferece o que essa lista aceita.
+
+Quem só pode consultar vê o documento como a página o mostra, sem
+formulário.
+
+Contexto: form, pode_editar, documento, documentos, idioma, idiomas,
+e_o_idioma_padrao, bloco, traducao, tem_texto_no_idioma, publicado,
+url_publica, imagens, previa.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{% translate "Documentos legais" %}</h1>
+    <p class="text-muted">{% translate "O texto das páginas de Termos de uso e de Política de privacidade." %}</p>
+  </div>
+  {% if publicado %}
+  <span class="push"></span>
+  <a class="btn btn-secondary" href="{{ url_publica }}"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>{% translate "Ver a página" %}</a>
+  {% endif %}
+</div>
+
+{% comment %}
+Qual documento e em qual idioma. Trocar aqui abre o outro, sem gravar o
+que estiver na tela -- como na edição das partes da Home.
+{% endcomment %}
+<div class="bo-card-head">
+  <span class="card-title">{% translate "Documento" %}</span>
+  <nav class="seg seg-sm" aria-label="{% translate 'Documento' %}">
+    {% for opcao in documentos %}
+    <a class="seg-opt{% if opcao.atual %} is-on{% endif %}" href="?documento={{ opcao.slug }}&amp;idioma={{ idioma }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.titulo }}</a>
+    {% endfor %}
+  </nav>
+</div>
+<div class="bo-card-head">
+  <span class="card-title">{% translate "Editando em" %}</span>
+  <nav class="seg seg-sm" aria-label="{% translate 'Idioma do documento' %}">
+    {% for opcao in idiomas %}
+    <a class="seg-opt{% if opcao.atual %} is-on{% endif %}" href="?documento={{ documento.slug }}&amp;idioma={{ opcao.codigo }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.nome }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if bloco and not bloco.is_active %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Este documento está desativado: a página responde como inexistente mesmo com texto." %}</span></div>
+{% endif %}
+
+{% if not tem_texto_no_idioma %}
+  {% if e_o_idioma_padrao %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Ainda não há texto. Enquanto não houver, a página não abre e o link para ela não aparece no site." %}</span></div>
+  {% else %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Ainda não há texto neste idioma. Enquanto não houver, a página mostra o texto do idioma padrão." %}</span></div>
+  {% endif %}
+{% endif %}
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este documento, mas não tem permissão para alterá-lo." %}</span></div>
+{% endif %}
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{{ documento.titulo }}</h2>
+    {% if publicado %}<span class="tag tag-success">{% translate "Publicado" %}</span>{% else %}<span class="tag tag-warning">{% translate "Sem texto" %}</span>{% endif %}
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Página pública" %}</dt>
+    <dd>{% if publicado %}<a href="{{ url_publica }}">{% translate "Ver a página" %}</a>{% else %}{% translate "Fora do ar enquanto não houver texto" %}{% endif %}</dd>
+    <dt>{% translate "Formato" %}</dt>
+    <dd>{% if bloco %}{{ bloco.get_kind_display }}{% else %}—{% endif %}</dd>
+    <dt>{% translate "Última alteração neste idioma" %}</dt>
+    <dd>{% if traducao %}{{ traducao.updated_at|date:"d/m/Y · H:i" }}{% else %}—{% endif %}</dd>
+  </dl>
+</div>
+
+{% if pode_editar %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="documento" value="{{ documento.slug }}">
+  <input type="hidden" name="idioma" value="{{ idioma }}">
+
+  {% for erro in form.non_field_errors %}
+    <div class="notice notice-error"><i class="ph-fill ph-warning-circle" aria-hidden="true"></i><span>{{ erro }}</span></div>
+  {% endfor %}
+
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h2>{% translate "Texto" %}</h2>
+      <span class="note d-only">{% translate "Títulos, listas, links e imagens -- a página mostra o que você vê aqui" %}</span>
+    </div>
+    <div class="field">
+      <label for="{{ form.texto.id_for_label }}">{{ form.texto.label }}</label>
+      {% include "backoffice/_editor_rico.html" with campo=form.texto modo="documento" imagens=imagens placeholder=_("Escreva o documento…") %}
+      {% for erro in form.texto.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <div class="bo-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>{% translate "Salvar documento" %}</button>
+    <span class="field-hint">{% translate "Salvar com o editor vazio tira o texto deste idioma do ar." %}</span>
+  </div>
+</form>
+{% else %}
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{% translate "Texto" %}</h2>
+  </div>
+  {% if previa %}
+  <div class="legal-texto">{{ previa }}</div>
+  {% else %}
+  <p class="text-muted">{% translate "Sem texto neste idioma." %}</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}{% if pode_editar %}<script src="{% static 'js/editor-rico.js' %}" defer></script>{% endif %}{% endblock %}

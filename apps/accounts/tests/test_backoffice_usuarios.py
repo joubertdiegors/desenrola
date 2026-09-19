@@ -180,16 +180,18 @@ class TestListagem:
         assert operador.email in corpo
 
     def test_nao_mostra_dado_sensivel(self, cliente, alvo):
-        """Nem o hash da senha, nem documento, nem endereço."""
+        """
+        Nem o hash da senha, nem documento. Telefone, endereço e cidade
+        passaram a ser colunas da lista na Rodada 17, a pedido de quem
+        administra -- o documento continua de fora.
+        """
         alvo.document_number = "99988877766"
-        alvo.address_line1 = "Rue Secreta 1"
         alvo.save()
 
         corpo = cliente.get(LISTA).content.decode()
 
         assert alvo.password not in corpo
         assert "99988877766" not in corpo
-        assert "Rue Secreta" not in corpo
 
     def test_busca_por_nome(self, cliente, alvo):
         criar("outra@exemplo.be", "Fernanda Lima")

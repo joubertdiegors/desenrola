@@ -25,12 +25,15 @@ onde editá-lo. Um parcial só, incluído por todos, é o que faz "funciona
 nos sete desenhos" ser verdade sem sete implementações visuais para
 divergir com o tempo.
 
-O NÚMERO NUNCA É DIGITADO
---------------------------
-`cartas_emitidas` vem de `apps.letters.statistics.cartas_emitidas()`,
-calculado em `content.services.contexto_da_home()` -- o MESMO contexto
-que a Home pública e a prévia do Backoffice usam. Não há um segundo
-lugar onde esse número possa ser escrito à mão.
+O NÚMERO CHEGA PRONTO
+---------------------
+`cartas_emitidas` é o total: o valor inicial configurado no Backoffice
+(as cartas de antes do sistema) + a contagem real de
+`apps.letters.statistics.cartas_emitidas()`. A conta é
+`content.services.numero_do_contador()`, feita em `contexto_da_home()`
+-- o MESMO contexto que a Home pública e a prévia do Backoffice usam.
+Este template só recebe o resultado; o valor inicial sozinho não chega
+aqui.
 
 A POSIÇÃO É UMA CLASSE, NÃO UM ESTILO
 ---------------------------------------

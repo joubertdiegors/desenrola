@@ -1,0 +1,52 @@
+{% load i18n %}{% comment %}
+A paginação das tabelas do Backoffice (Usuários, Cartas): a quantidade
+por página e as páginas numeradas, abaixo do cartão da tabela. O
+"Mostrando 21–40 de 87" fica no rodapé do próprio cartão.
+
+Recebe `paginacao`, o dicionário de `apps.core.paginacao.paginar()`:
+cada endereço já vem pronto do servidor, com a busca, os filtros e a
+quantidade preservados. Sem JavaScript: a quantidade é um menu de links,
+como as pílulas de filtro da barra.
+
+Fica FORA do cartão de propósito: o cartão recorta o que passa da borda
+(`overflow: hidden`), e o menu da quantidade abre para cima, sobre ele.
+{% endcomment %}
+{% if paginacao.total %}
+<nav class="mod-paginacao mod-paginacao-completa" aria-label="{% translate 'Paginação' %}">
+  <details class="mod-menu mod-paginacao-tamanho">
+    <summary class="mod-pilula-filtro">
+      <span class="mod-pilula-rotulo">{% translate "Mostrar" %}</span>{{ paginacao.tamanho }}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+    </summary>
+    <div class="mod-menu-lista mod-menu-lista-acima">
+      {% for opcao in paginacao.tamanhos %}
+      <a class="mod-menu-item{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}"{% if opcao.atual %} aria-current="true"{% endif %}>{% blocktranslate with quantidade=opcao.valor %}{{ quantidade }} por página{% endblocktranslate %}</a>
+      {% endfor %}
+    </div>
+  </details>
+
+  {% if paginacao.paginas %}
+  <div class="mod-paginas">
+    {% if paginacao.url_anterior %}
+    <a class="mod-pagina mod-pagina-seta" href="{{ paginacao.url_anterior }}" rel="prev" aria-label="{% translate 'Página anterior' %}">‹<span class="mod-pagina-texto">{% translate "Anterior" %}</span></a>
+    {% else %}
+    <span class="mod-pagina mod-pagina-seta is-desativada" aria-hidden="true">‹<span class="mod-pagina-texto">{% translate "Anterior" %}</span></span>
+    {% endif %}
+    {% for item in paginacao.paginas %}
+      {% if item.reticencias %}
+      <span class="mod-pagina-reticencias" aria-hidden="true">…</span>
+      {% elif item.atual %}
+      <span class="mod-pagina is-atual" aria-current="page">{{ item.numero }}</span>
+      {% else %}
+      <a class="mod-pagina" href="{{ item.url }}" aria-label="{% blocktranslate with numero=item.numero %}Página {{ numero }}{% endblocktranslate %}">{{ item.numero }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if paginacao.url_proxima %}
+    <a class="mod-pagina mod-pagina-seta" href="{{ paginacao.url_proxima }}" rel="next" aria-label="{% translate 'Próxima página' %}"><span class="mod-pagina-texto">{% translate "Próxima" %}</span>›</a>
+    {% else %}
+    <span class="mod-pagina mod-pagina-seta is-desativada" aria-hidden="true"><span class="mod-pagina-texto">{% translate "Próxima" %}</span>›</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</nav>
+{% endif %}

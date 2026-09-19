@@ -39,6 +39,7 @@ from apps.core.views import exige_permissao
 
 from . import rodape, section_schema, services
 from .forms import (
+    FormularioDeDocumentoLegal,
     FormularioDeImagem,
     FormularioDeItemDoMenu,
     FormularioDeParceiro,
@@ -48,6 +49,8 @@ from .forms import (
 from .models import (
     Asset,
     AssetFileImmutableError,
+    ContentBlock,
+    ContentTranslation,
     FaqItem,
     MenuItem,
     Page,
@@ -151,7 +154,7 @@ def backoffice_content(request):
         "backoffice/content.html",
         {
             "active": "content",
-            "bo_title": _("Conteúdo do site"),
+            "bo_title": _("Home - Configurações"),
             "pagina": pagina,
             "grupos": grupos,
             "sem_declaracao": sem_declaracao,
@@ -235,7 +238,7 @@ def backoffice_content_section(request, pk):
         "backoffice/content_section.html",
         {
             "active": "content",
-            "bo_title": _("Conteúdo do site"),
+            "bo_title": _("Home - Configurações"),
             "secao": secao,
             # O nome amigavel, e nao `secao.key`: chave tecnica na tela e
             # vazamento de implementacao para quem administra.
@@ -331,6 +334,13 @@ def backoffice_content_preview(request, pk):
         contexto["secoes"] = {**contexto["secoes"], chave: reposta.conteudo}
         if chave == "footer":
             contexto.update(services.contexto_do_rodape())
+
+    # O contador da prévia faz a MESMA conta da Home, com o valor inicial
+    # DESTA seção -- também quando ela está desativada, e por isso fora
+    # de `contexto_da_home()`.
+    declarada = section_schema.secao_declarada(secao)
+    if declarada and declarada.contador:
+        contexto["cartas_emitidas"] = services.numero_do_contador(secao.counter_initial_value)
 
     if request.method == "POST":
         contexto = _com_o_que_esta_digitado(
@@ -433,6 +443,11 @@ def _com_o_que_esta_digitado(contexto, secao, chave, desenho, dados, arquivos=No
     contexto = dict(contexto)
     contexto["partes"] = {**contexto["partes"], chave: proposto}
     contexto["secoes"] = {**contexto["secoes"], chave: proposto.conteudo}
+    if "contador_valor_inicial" in form.fields:
+        # O valor inicial DIGITADO, ainda não salvo -- na mesma conta.
+        contexto["cartas_emitidas"] = services.numero_do_contador(
+            form.cleaned_data.get("contador_valor_inicial") or 0
+        )
     return contexto
 
 
@@ -531,7 +546,14 @@ def backoffice_partners(request):
     return render(
         request,
         "backoffice/partners.html",
-        _contexto_de_parceiros(request, {"linhas": linhas, "total": len(parceiros)}),
+        _contexto_de_parceiros(
+            request,
+            {
+                "linhas": linhas,
+                "total": len(parceiros),
+                "ativos": sum(1 for parceiro in parceiros if parceiro.is_active),
+            },
+        ),
     )
 
 
@@ -750,7 +772,7 @@ def _url_do_menu(idioma=None):
 def _contexto_do_item(request, form, item, titulo):
     return {
         "active": "content",
-        "bo_title": _("Conteúdo do site"),
+        "bo_title": _("Home - Configurações"),
         "form": form,
         "item": item,
         "titulo": titulo,
@@ -855,7 +877,7 @@ def backoffice_menu_item_delete(request, pk):
         "backoffice/menu_item_delete.html",
         {
             "active": "content",
-            "bo_title": _("Conteúdo do site"),
+            "bo_title": _("Home - Configurações"),
             "item": item,
             "url_do_menu": _url_do_menu(idioma_pedido(request)),
         },
@@ -1122,7 +1144,7 @@ def _url_do_faq(idioma=None):
 def _contexto_da_pergunta(request, form, pergunta, titulo):
     return {
         "active": "content",
-        "bo_title": _("Conteúdo do site"),
+        "bo_title": _("Home - Configurações"),
         "form": form,
         "pergunta": pergunta,
         "titulo": titulo,
@@ -1229,8 +1251,154 @@ def backoffice_faq_item_delete(request, pk):
         "backoffice/faq_item_delete.html",
         {
             "active": "content",
-            "bo_title": _("Conteúdo do site"),
+            "bo_title": _("Home - Configurações"),
             "pergunta": pergunta,
             "url_do_faq": _url_do_faq(idioma_pedido(request)),
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Documentos legais (Sistema › Documentos legais)
+# ---------------------------------------------------------------------------
+#
+# Os MESMOS dois blocos de sempre (`legal.terms_of_use`,
+# `legal.privacy_policy`) e as MESMAS rotas públicas. O que mudou foi
+# onde se escreve: até esta rodada, texto simples no Django Admin; agora,
+# o editor de conteúdo rico do rodapé, aqui.
+#
+# UMA TELA, E NÃO DUAS
+# --------------------
+# São dois documentos fixos. Qual se edita é um seletor no topo
+# (`?documento=`), como o idioma (`?idioma=`) -- sem lista à parte e sem
+# rota com argumento.
+#
+# PERMISSÃO
+# ---------
+# Abrir: `content.view_contentblock`; salvar: `content.change_contentblock`
+# -- as MESMAS que o Django Admin já cobrava destes blocos. A conferência
+# é no servidor, no POST, não só no botão.
+
+VER_DOCUMENTOS_PERM = "content.view_contentblock"
+EDITAR_DOCUMENTOS_PERM = "content.change_contentblock"
+
+# O slug de cada documento e a rota pública dele -- os slugs são os de
+# `services.PAGINAS_LEGAIS`, a única lista dos documentos.
+ROTA_PUBLICA_DO_DOCUMENTO = {
+    "termos-de-uso": "core:legal_termos",
+    "privacidade": "core:legal_privacidade",
+}
+
+
+def _documento_pedido(request):
+    """
+    O documento escolhido, conferido contra `PAGINAS_LEGAIS` -- nunca a
+    querystring como veio. Sem escolha (ou com uma que não existe), o
+    primeiro.
+    """
+    pedido = request.GET.get("documento") or request.POST.get("documento")
+    for slug, chave, titulo in services.PAGINAS_LEGAIS:
+        if slug == pedido:
+            return slug, chave, titulo
+    return services.PAGINAS_LEGAIS[0]
+
+
+def _imagens_para_o_documento():
+    """
+    As imagens que o editor oferece: as ATIVAS da biblioteca, menos o
+    favicon (que não é imagem de ler). Só da biblioteca -- é a única
+    origem que o sanitizador aceita num documento.
+    """
+    return [
+        {"url": imagem.file.url, "alt": imagem.alt_text, "nome": imagem.alt_text or imagem.key}
+        for imagem in Asset.objects.filter(is_active=True)
+        .exclude(kind=Asset.Kind.FAVICON)
+        .exclude(file="")[:100]
+    ]
+
+
+@exige_permissao(VER_DOCUMENTOS_PERM)
+def backoffice_legal_documents(request):
+    """
+    Termos de uso e Política de privacidade: o texto das duas páginas
+    públicas, num idioma, com o editor rico.
+
+    Abrir o editor não muda nada: o texto simples de hoje é mostrado já
+    como parágrafos, do mesmo jeito que a página o desenha. Só SALVAR
+    grava -- e aí o documento passa a "Texto formatado" (ver
+    `services.salvar_documento_legal`).
+    """
+    slug, chave, titulo = _documento_pedido(request)
+    idioma = idioma_pedido(request)
+    pode_editar = request.user.has_perm(EDITAR_DOCUMENTOS_PERM)
+    endereco = f"{reverse('backoffice:legal_documents')}?documento={slug}&idioma={idioma}"
+
+    if request.method == "POST":
+        if not pode_editar:
+            raise PermissionDenied
+        form = FormularioDeDocumentoLegal(request.POST)
+        if form.is_valid():
+            gravado = services.salvar_documento_legal(chave, idioma, form.cleaned_data["texto"])
+            if gravado:
+                messages.success(request, _("%(documento)s salvo.") % {"documento": titulo})
+            else:
+                messages.warning(
+                    request,
+                    _(
+                        "%(documento)s salvo sem texto neste idioma. Sem texto em "
+                        "nenhum idioma, a página sai do ar e os links para ela somem."
+                    )
+                    % {"documento": titulo},
+                )
+            return redirect(endereco)
+        messages.error(request, _("Corrija o texto destacado antes de salvar."))
+    else:
+        form = FormularioDeDocumentoLegal(
+            initial={"texto": services.documento_legal_para_edicao(chave, idioma)}
+        )
+
+    bloco = ContentBlock.objects.filter(key=chave).first()
+    traducao = (
+        ContentTranslation.objects.filter(block=bloco, language=idioma).first() if bloco else None
+    )
+    publicadas = services.legais_publicadas()
+    documentos = [
+        {
+            "slug": outro_slug,
+            "titulo": outro_titulo,
+            "atual": outro_slug == slug,
+            "publicado": outra_chave in publicadas,
+        }
+        for outro_slug, outra_chave, outro_titulo in services.PAGINAS_LEGAIS
+    ]
+
+    return render(
+        request,
+        "backoffice/legal_documents.html",
+        {
+            "active": "legal_documents",
+            "bo_title": _("Documentos legais"),
+            "form": form,
+            "pode_editar": pode_editar,
+            "documento": {"slug": slug, "titulo": titulo},
+            "documentos": documentos,
+            "idioma": idioma,
+            "idiomas": idiomas_disponiveis(idioma),
+            "e_o_idioma_padrao": idioma == settings.LANGUAGE_CODE,
+            "bloco": bloco,
+            "traducao": traducao,
+            "tem_texto_no_idioma": bool(traducao and (traducao.content or "").strip()),
+            "publicado": chave in publicadas,
+            "url_publica": reverse(ROTA_PUBLICA_DO_DOCUMENTO[slug]),
+            "imagens": _imagens_para_o_documento() if pode_editar else [],
+            # Quem só consulta vê o documento como a página o desenha --
+            # pelo mesmo sanitizador, e não o HTML cru.
+            "previa": (
+                None
+                if pode_editar
+                else rodape.renderizar_documento(
+                    services.documento_legal_para_edicao(chave, idioma)
+                )
+            ),
         },
     )

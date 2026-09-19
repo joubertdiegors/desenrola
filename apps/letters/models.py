@@ -454,7 +454,12 @@ def idiomas_oficiais():
 # final: quem decide e `DocumentLanguageSettings`, e este valor e com o
 # que ela nasce. Continua sendo a resposta quando nao ha configuracao
 # alguma -- instalacao nova, ou banco em estado inesperado.
-IDIOMA_PADRAO_DA_CARTA = "en"
+#
+# Frances desde a Rodada 18 (antes, ingles), a pedido do cliente. A
+# interface continua em portugues. A migration `letters.0010` leva a
+# configuracao ja gravada de "en" para "fr" -- so se ela ainda estiver no
+# padrao antigo.
+IDIOMA_PADRAO_DA_CARTA = "fr"
 
 
 class DocumentLanguageSettings(TimeStampedModel):

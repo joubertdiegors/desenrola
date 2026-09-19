@@ -27,11 +27,22 @@ o banco recém-migrado, mostra a Home com as seções vazias em vez de um
 from dataclasses import dataclass
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Prefetch
+from django.utils.html import linebreaks
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
-from .models import ContentTranslation, FaqItem, MenuItem, Page, PageSection, Partner
+from . import rodape
+from .models import (
+    ContentBlock,
+    ContentTranslation,
+    FaqItem,
+    MenuItem,
+    Page,
+    PageSection,
+    Partner,
+)
 
 # A página que a landing pública consome.
 CHAVE_DA_HOME = "home"
@@ -97,6 +108,18 @@ def partes_da_pagina(page_key, language=None):
     tradução no idioma ativo aparece no idioma de origem em vez de
     sumir da página.
     """
+    return _partes_e_secoes(page_key, language)[0]
+
+
+def _partes_e_secoes(page_key, language=None):
+    """
+    `partes_da_pagina` e, junto, as `PageSection` de onde cada parte saiu
+    (`{chave: secao}`), na MESMA consulta.
+
+    As seções servem a quem monta o contexto -- o valor inicial do
+    contador sai delas -- e NÃO vão para o template: o que é público é
+    `ParteDaPagina`, e ela não carrega o valor inicial.
+    """
     idioma = language or _idioma_do_conteudo()
     padrao = settings.LANGUAGE_CODE
 
@@ -116,14 +139,34 @@ def partes_da_pagina(page_key, language=None):
         .first()
     )
     if pagina is None:
-        return {}
+        return {}, {}
 
-    resultado = {}
+    resultado, secoes = {}, {}
     for secao in pagina.sections.all():
         por_idioma = {t.language: t.content for t in secao.translations.all()}
         conteudo = por_idioma.get(idioma) or por_idioma.get(padrao) or {}
         resultado[secao.key or secao.kind] = _parte_de(secao, conteudo)
-    return resultado
+        secoes[secao.key or secao.kind] = secao
+    return resultado, secoes
+
+
+def numero_do_contador(valor_inicial=0):
+    """
+    O número que o contador da Home MOSTRA:
+
+        valor inicial (Home - Configurações › Banner) + cartas emitidas
+
+    As cartas emitidas vêm sempre de `letters.statistics.cartas_emitidas()`
+    -- a contagem real, nunca digitada. O valor inicial é configuração:
+    as cartas de antes do sistema, que o administrador informa e pode
+    mudar a qualquer momento (vale na visita seguinte; só a contagem
+    real tem cache).
+
+    UMA conta, aqui, para a Home pública e para a prévia do Backoffice.
+    """
+    from apps.letters import statistics
+
+    return max(int(valor_inicial or 0), 0) + statistics.cartas_emitidas()
 
 
 def _parte_de(secao, conteudo):
@@ -245,11 +288,9 @@ def contexto_da_home(language=None):
     Carregado aqui, e não no processador de contexto global: são dados
     DESTA página. O processador guarda o que vale para o site inteiro.
     """
-    from apps.letters import statistics
-
     from .section_schema import template_do_desenho
 
-    partes = partes_da_pagina(CHAVE_DA_HOME, language)
+    partes, secoes_gravadas = _partes_e_secoes(CHAVE_DA_HOME, language)
     parceiros = list(Partner.objects.publicados())
     perguntas = list(FaqItem.objects.publicadas())
 
@@ -270,7 +311,12 @@ def contexto_da_home(language=None):
         "menu_itens": _menu_sem_ancora_morta(partes, parceiros, perguntas),
         "parceiros": parceiros,
         "perguntas": perguntas,
-        "cartas_emitidas": statistics.cartas_emitidas(),
+        # O número PRONTO do contador: valor inicial + cartas emitidas
+        # (ver `numero_do_contador`). O valor inicial em si não entra no
+        # contexto -- o template recebe só o resultado da conta.
+        "cartas_emitidas": numero_do_contador(
+            getattr(secoes_gravadas.get("hero"), "counter_initial_value", 0)
+        ),
     }
 
 
@@ -376,9 +422,29 @@ PAGINAS_LEGAIS = (
 CHAVES_LEGAIS = tuple(chave for _slug, chave, _titulo in PAGINAS_LEGAIS)
 
 
+@dataclass(frozen=True)
+class DocumentoLegal:
+    """O texto publicado de um documento legal, e em que formato ele está."""
+
+    texto: str
+    # `True` quando o bloco é "Texto formatado" -- escrito no editor de
+    # Documentos legais, em HTML já sanitizado. `False` é o texto simples
+    # de sempre, que a página mostra com `linebreaks`.
+    rico: bool = False
+
+
 def texto_legal(chave, language=None):
     """
-    O texto publicado daquele documento, ou `None`.
+    O texto publicado daquele documento, ou `None` -- o mesmo contrato
+    de sempre, agora em cima de `documento_legal`.
+    """
+    documento = documento_legal(chave, language)
+    return documento.texto if documento else None
+
+
+def documento_legal(chave, language=None):
+    """
+    O documento publicado (texto e formato), ou `None`.
 
     `None` -- que a view transforma em 404 -- em QUALQUER um destes
     casos, todos legitimos e nenhum deles erro:
@@ -397,23 +463,32 @@ def texto_legal(chave, language=None):
     join nas traducoes responde de uma vez, enquanto
     `prefetch_related` custaria sempre duas idas ao banco. O filtro por
     `block__is_active` faz o bloco desativado simplesmente nao trazer
-    linha nenhuma.
+    linha nenhuma. O formato vem no MESMO join (`block__kind`).
+
+    Texto formatado que so tem marcacao -- um editor esvaziado deixa
+    `<p><br></p>` -- conta como em branco, pela mesma regra.
     """
     idioma = language or _idioma_do_conteudo()
     padrao = settings.LANGUAGE_CODE
 
-    por_idioma = dict(
-        ContentTranslation.objects.filter(
-            block__key=chave,
-            block__is_active=True,
-            language__in={idioma, padrao},
-        ).values_list("language", "content")
-    )
+    textos, tipos = {}, {}
+    for lingua, texto, tipo in ContentTranslation.objects.filter(
+        block__key=chave,
+        block__is_active=True,
+        language__in={idioma, padrao},
+    ).values_list("language", "content", "block__kind"):
+        textos[lingua] = texto
+        tipos[lingua] = tipo
 
-    texto = por_idioma.get(idioma) or por_idioma.get(padrao) or ""
+    lingua = idioma if textos.get(idioma) else padrao
+    texto = textos.get(lingua) or ""
     if not isinstance(texto, str):
         return None
-    return texto.strip() or None
+    texto = texto.strip()
+    rico = tipos.get(lingua) == ContentBlock.Kind.RICH_TEXT
+    if not texto or (rico and not rodape.tem_conteudo(texto)):
+        return None
+    return DocumentoLegal(texto=texto, rico=rico)
 
 
 def legais_publicadas(language=None):
@@ -427,18 +502,99 @@ def legais_publicadas(language=None):
     idioma = language or _idioma_do_conteudo()
     padrao = settings.LANGUAGE_CODE
 
-    por_chave = {}
+    por_chave, ricas = {}, set()
     linhas = ContentTranslation.objects.filter(
         block__key__in=CHAVES_LEGAIS,
         block__is_active=True,
         language__in={idioma, padrao},
-    ).values_list("block__key", "language", "content")
-    for chave, lingua, texto in linhas:
+    ).values_list("block__key", "language", "content", "block__kind")
+    for chave, lingua, texto, tipo in linhas:
         por_chave.setdefault(chave, {})[lingua] = texto
+        if tipo == ContentBlock.Kind.RICH_TEXT:
+            ricas.add(chave)
 
     publicadas = set()
     for chave, por_idioma in por_chave.items():
         texto = por_idioma.get(idioma) or por_idioma.get(padrao) or ""
-        if isinstance(texto, str) and texto.strip():
-            publicadas.add(chave)
+        if not isinstance(texto, str) or not texto.strip():
+            continue
+        # A mesma regra de `documento_legal`: marcação sem texto não é
+        # documento publicado.
+        if chave in ricas and not rodape.tem_conteudo(texto):
+            continue
+        publicadas.add(chave)
     return publicadas
+
+
+# ---------------------------------------------------------------------------
+# A edição dos documentos legais (Sistema › Documentos legais)
+# ---------------------------------------------------------------------------
+
+
+def texto_simples_como_html(texto):
+    """
+    Texto simples no HTML que a página JÁ desenhava para ele: a mesma
+    quebra de parágrafos e linhas do filtro `linebreaks`, com tudo o
+    mais escapado -- e, por fim, a lista dos documentos. O que se lê não
+    muda; só o formato gravado.
+    """
+    return rodape.sanitizar_documento(linebreaks((texto or "").strip(), autoescape=True))
+
+
+def documento_legal_para_edicao(chave, idioma):
+    """
+    O que o editor abre: o texto DAQUELE idioma, já em HTML.
+
+    Sem queda para o idioma padrão: o editor mostra o que está gravado
+    no idioma escolhido, e a tela avisa quando não há nada -- a página
+    pública, essa sim, cai no padrão.
+    """
+    traducao = (
+        ContentTranslation.objects.filter(block__key=chave, language=idioma)
+        .select_related("block")
+        .first()
+    )
+    if traducao is None or not (traducao.content or "").strip():
+        return ""
+    if traducao.block.kind == ContentBlock.Kind.RICH_TEXT:
+        return rodape.sanitizar_documento(traducao.content)
+    return texto_simples_como_html(traducao.content)
+
+
+def salvar_documento_legal(chave, idioma, html_do_editor):
+    """
+    Grava o texto de um documento legal, vindo do editor, num idioma.
+    Devolve o que foi gravado.
+
+    Sanitiza de novo -- o formulário já sanitizou, mas a regra não
+    depende de quem chama. Um editor esvaziado grava "": o estado "sem
+    texto", em que a página responde 404 e os links somem do site.
+
+    A PRIMEIRA GRAVAÇÃO PELO EDITOR converte o bloco para "Texto
+    formatado". As traduções que ainda estiverem em texto simples, nos
+    outros idiomas, são convertidas junto (`texto_simples_como_html`):
+    o que se lê em cada idioma continua idêntico. Tudo numa transação --
+    não existe o meio do caminho em que um idioma está num formato e o
+    bloco diz outro.
+
+    O bloco que alguém tenha apagado volta a existir, pela mesma chave:
+    é o lugar do documento, o mesmo que a migration cria.
+    """
+    limpo = rodape.sanitizar_documento(html_do_editor)
+    if not rodape.tem_conteudo(limpo):
+        limpo = ""
+
+    with transaction.atomic():
+        bloco, _criado = ContentBlock.objects.select_for_update().get_or_create(
+            key=chave, defaults={"kind": ContentBlock.Kind.RICH_TEXT}
+        )
+        if bloco.kind != ContentBlock.Kind.RICH_TEXT:
+            for traducao in bloco.translations.exclude(language=idioma):
+                traducao.content = texto_simples_como_html(traducao.content)
+                traducao.save(update_fields=["content", "updated_at"])
+            bloco.kind = ContentBlock.Kind.RICH_TEXT
+            bloco.save(update_fields=["kind", "updated_at"])
+        ContentTranslation.objects.update_or_create(
+            block=bloco, language=idioma, defaults={"content": limpo}
+        )
+    return limpo

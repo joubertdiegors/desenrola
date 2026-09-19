@@ -222,19 +222,29 @@ class TestAcaoEditar:
 
         assert "Editar no editor" in html
 
-    def test_modelo_oficial_mostra_rotulo_ver(self, cliente, oficiais):
+    def test_modelo_oficial_destravado_mostra_rotulo_editar(self, cliente, oficiais):
         """
-        Um oficial não é editado pelo editor (regra de
-        `editor_views._pode_editar`): a ação oferecida é VER, e a tela
-        explica o porquê.
+        Rodada 19: quem decide é `is_locked` (`editor_views._pode_editar`),
+        oficial ou não. Destravado, a ação oferecida é EDITAR.
         """
         fr = oficiais["fr"]
         html = cliente.get(
             reverse("backoffice:document_detail", args=[fr.pk])
         ).content.decode()
 
+        assert "Editar no editor" in html
+        assert "Ver no editor" not in html
+
+    def test_modelo_oficial_travado_mostra_rotulo_ver(self, cliente, oficiais):
+        """Travado, a ação oferecida é VER, e a tela explica o porquê."""
+        fr = oficiais["fr"]
+        DocumentTemplate.objects.filter(pk=fr.pk).update(is_locked=True)
+        html = cliente.get(
+            reverse("backoffice:document_detail", args=[fr.pk])
+        ).content.decode()
+
         assert "Ver no editor" in html
-        assert "modelo oficial do sistema" in html
+        assert "está travado" in html
 
     def test_seguindo_o_link_o_editor_abre_de_verdade(self, cliente, modelo):
         resposta = cliente.get(

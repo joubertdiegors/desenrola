@@ -43,7 +43,7 @@ botão que não faz nada é pior do que botão nenhum.
     <div class="mod-titulos">
       <span class="mod-kicker">Backoffice</span>
       <div class="mod-titulo-linha">
-        <h1>{% translate "Modelos" %}</h1>
+        <h1>{% translate "Modelos de cartas" %}</h1>
         <span class="mod-contagem">{{ total }}</span>
       </div>
       <p class="mod-descricao">{% translate "Modelos de documento usados na emissão das cartas-convite. Cada idioma usa um modelo por vez: ativar outro do mesmo idioma desativa o anterior." %}</p>
@@ -114,7 +114,7 @@ botão que não faz nada é pior do que botão nenhum.
     </div>
     {% else %}
 
-    <div class="mod-tabela" role="table" aria-label="{% translate 'Modelos' %}">
+    <div class="mod-tabela mod-tabela-modelos" role="table" aria-label="{% translate 'Modelos' %}">
       <div class="mod-cabecalho-tabela" role="row">
         <span role="columnheader">{% translate "Modelo" %}</span>
         <span role="columnheader">{% translate "Idioma" %}</span>
@@ -192,8 +192,8 @@ botão que não faz nada é pior do que botão nenhum.
           </button>
           {% endif %}
           <a class="mod-acao" href="{% url 'backoffice:template_editor' modelo.pk %}"
-             title="{% if modelo.is_locked or modelo.is_system %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %}"
-             aria-label="{% if modelo.is_locked or modelo.is_system %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %} {{ modelo.name }}">
+             title="{% if modelo.is_locked %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %}"
+             aria-label="{% if modelo.is_locked %}{% translate 'Ver no editor' %}{% else %}{% translate 'Editar' %}{% endif %} {{ modelo.name }}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20v-3.5L15.5 5a2.1 2.1 0 0 1 3 3L7 19.5z"></path></svg>
           </a>
           <details class="mod-menu">

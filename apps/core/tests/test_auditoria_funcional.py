@@ -379,6 +379,7 @@ PONTOS_DE_PARTIDA = [
     "backoffice:appearance",
     "backoffice:letter_policy",
     "backoffice:email_settings",
+    "backoffice:legal_documents",
 ]
 
 INTERNO = re.compile(r'href="(/[^"#?]*)')
@@ -399,13 +400,14 @@ def _links_de(corpo):
     }
 
 
-# A única tela do produto que pode apontar para o Django Admin, e por
-# decisão explícita: a de Sistema, no link para os TEXTOS LEGAIS. Quem
-# escreve texto jurídico é o cliente, por lá -- o código cria o lugar; o
-# conteúdo jurídico não se inventa (decisão da Etapa G).
+# Telas do produto que podem apontar para o Django Admin -- nenhuma.
 #
-# Registrada aqui para ser uma decisão VISÍVEL, e não um esquecimento.
-PODE_APONTAR_PARA_O_ADMIN = {"backoffice:system"}
+# Havia uma, por decisão explícita da Etapa G: a de Sistema (hoje
+# "Identidade"), no link para os TEXTOS LEGAIS, que se escreviam no
+# Django Admin. Desde a Rodada 15 eles se escrevem em Sistema ›
+# Documentos legais, no próprio Backoffice, e a exceção saiu. O conjunto
+# continua aqui, vazio, para uma exceção futura ser uma decisão VISÍVEL.
+PODE_APONTAR_PARA_O_ADMIN = set()
 
 
 class TestNenhumLinkMorto:

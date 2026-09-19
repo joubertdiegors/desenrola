@@ -263,34 +263,45 @@ class TestCorrente:
 
 
 # ===========================================================================
-# 2. O oficial continua intocável
+# 2. O oficial travado continua intocável
 # ===========================================================================
 
 
 class TestOficialIntocavel:
-    def test_o_editor_nao_salva_num_modelo_oficial(self, cliente, oficial):
+    """
+    Rodada 19: destravado, o oficial se edita direto no editor; o
+    intocável é o oficial TRAVADO.
+    """
+
+    @pytest.fixture
+    def travado(self, oficial):
+        DocumentTemplate.objects.filter(pk=oficial.pk).update(is_locked=True)
+        oficial.refresh_from_db()
+        return oficial
+
+    def test_o_editor_nao_salva_num_modelo_oficial_travado(self, cliente, travado):
         """
         409, e não 400 nem 403: o pedido está bem formado e a pessoa tem
         permissão -- o que impede é o ESTADO do modelo. É o código certo
         para "este recurso não aceita isto agora", e a aplicação já o
         usava; a primeira versão deste teste é que esperava menos.
         """
-        antes = copy.deepcopy(oficial.layout)
-        layout = copy.deepcopy(oficial.layout)
+        antes = copy.deepcopy(travado.layout)
+        layout = copy.deepcopy(travado.layout)
         layout["elements"][0]["x"] = 999
 
-        resposta = salvar(cliente, oficial, layout)
+        resposta = salvar(cliente, travado, layout)
 
         assert resposta.status_code == 409
-        oficial.refresh_from_db()
-        assert oficial.layout == antes
+        travado.refresh_from_db()
+        assert travado.layout == antes
 
-    def test_o_editor_abre_o_oficial_em_leitura(self, cliente, oficial):
+    def test_o_editor_abre_o_oficial_travado_em_leitura(self, cliente, travado):
         corpo = cliente.get(
-            reverse("backoffice:template_editor", args=[oficial.pk])
+            reverse("backoffice:template_editor", args=[travado.pk])
         ).content.decode()
 
-        assert "modelo oficial do sistema" in corpo
+        assert "está travado" in corpo
 
     def test_editar_a_copia_nao_alcanca_o_oficial_nem_outra_copia(self, cliente, oficial):
         """Duas cópias do mesmo original são independentes entre si."""

@@ -41,7 +41,7 @@ config/            projeto Django (settings/urls/wsgi)
 apps/
   core/            base compartilhada, dashboard, healthcheck
   accounts/        usuario customizado e autenticacao
-  doctemplates/    modelos de documento e versionamento
+  doctemplates/    biblioteca de modelos de documento (um ativo por idioma)
   letters/         cartas geradas
   content/         conteudo editavel do site
 pdfengine/         biblioteca pura de geracao de PDF (sem Django)

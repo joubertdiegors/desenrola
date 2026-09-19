@@ -1,7 +1,8 @@
 {% extends "backoffice/base.html" %}
 {% load i18n %}
 {% comment %}
-Administração · Política das cartas.
+Administração · Wizzard - gerar carta (a tela que se chamava "Política
+das cartas" -- mudou só o nome).
 
 Duas regras independentes, configuradas por quem administra:
 
@@ -17,7 +18,7 @@ Contexto: form (LetterPolicyForm), pode_editar (bool).
 {% block bo_main %}
 <div class="bo-head d-only">
   <div>
-    <h1>{% translate "Política das cartas" %}</h1>
+    <h1>{% translate "Wizzard - gerar carta" %}</h1>
     <p class="text-muted">{% translate "Vale para todas as Cartas Convite do sistema." %}</p>
   </div>
 </div>

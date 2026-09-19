@@ -3,7 +3,8 @@
  * Comportamentos minimos da interface. Sem framework, sem animacoes.
  *
  *   - Dropdowns (<details class="dropdown">): fecham ao clicar fora, ao
- *     pressionar Esc e quando outro dropdown abre.
+ *     pressionar Esc e quando outro dropdown abre. O "Exportar Excel" do
+ *     Backoffice fecha tambem quando o download comeca.
  *   - Dialogos: [data-dialog-open="id"] mostra o backdrop com esse id;
  *     [data-dialog-close] ou Esc fecham.
  *   - Senha: [data-pw-toggle] alterna mostrar/ocultar o campo ao lado;
@@ -39,6 +40,12 @@
 
   document.addEventListener("click", function (event) {
     if (!event.target.closest("details.dropdown")) { closeDropdowns(null); }
+  });
+
+  // O download nao troca de pagina: sem isto o menu ficaria aberto.
+  document.addEventListener("submit", function (event) {
+    var menu = event.target.closest ? event.target.closest("details.mod-menu-exportar") : null;
+    if (menu) { window.setTimeout(function () { menu.removeAttribute("open"); }, 0); }
   });
 
   /* Dialogos ------------------------------------------------------------- */

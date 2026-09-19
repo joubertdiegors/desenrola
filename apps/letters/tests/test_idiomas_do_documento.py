@@ -97,15 +97,15 @@ def cliente(editora):
 
 
 class TestConfiguracao:
-    def test_nasce_com_os_quatro_idiomas_e_padrao_en(self):
+    def test_nasce_com_os_quatro_idiomas_e_padrao_fr(self):
         """
-        O estado inicial é EXATAMENTE o comportamento anterior à etapa:
-        instalar a novidade não muda nada para ninguém.
+        O estado inicial: os quatro idiomas e o francês como padrão. A
+        0006 semeava "en"; a 0010 (Rodada 18) leva a "fr".
         """
         atual = config()
 
         assert atual.available_document_languages == list(OFICIAIS)
-        assert atual.default_letter_language == "en"
+        assert atual.default_letter_language == "fr"
 
     def test_a_migration_ja_deixou_a_linha_pronta(self):
         """Ler não cria: a semente da migration já está lá."""
@@ -412,7 +412,7 @@ class TestTela:
         )
 
         assert resposta.status_code == 200
-        assert config().default_letter_language == "en"
+        assert config().default_letter_language == "fr"
         assert config().available_document_languages == list(OFICIAIS)
 
     @pytest.mark.parametrize("lixo", ["es", "de", "'; DROP TABLE", "PT"])
@@ -435,7 +435,7 @@ class TestTela:
         )
 
         assert resposta.status_code == 200
-        assert config().default_letter_language == "en"
+        assert config().default_letter_language == "fr"
 
 
 # ===========================================================================
@@ -485,13 +485,13 @@ class TestAssistente:
     def test_mudar_o_padrao_muda_as_cartas_novas(self, auth_client, user):
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
         primeira = Letter.objects.get(user=user)
-        assert primeira.language == "en"
+        assert primeira.language == "fr"
 
-        configurar(OFICIAIS, "fr")
+        configurar(OFICIAIS, "nl")
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
 
         segunda = Letter.objects.exclude(pk=primeira.pk).get(user=user)
-        assert segunda.language == "fr"
+        assert segunda.language == "nl"
 
     def test_mudar_o_padrao_nao_toca_nas_cartas_existentes(self, auth_client, user):
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
@@ -501,7 +501,7 @@ class TestAssistente:
         configurar(OFICIAIS, "pt")
 
         carta.refresh_from_db()
-        assert carta.language == "en"
+        assert carta.language == "fr"
         assert carta.document_template_id == modelo_antes
 
     def test_a_etapa_5_so_lista_os_oferecidos(self, auth_client, user):
@@ -619,18 +619,18 @@ class TestOPassadoFicaIntacto:
         auth_client.post(reverse("letters:new"), VALID_STEP_1)
         carta = Letter.objects.get(user=user)
         _ate_a_etapa_5(auth_client, carta)
-        configurar(["fr"], "fr")  # o "en" da carta sai da oferta
+        configurar(["nl"], "nl")  # o "fr" da carta sai da oferta
 
         resposta = auth_client.get(_passo(carta, 5))
         opcoes = {item["code"]: item["available"] for item in resposta.context["language_options"]}
 
-        assert opcoes["en"] is True, "o idioma da própria carta continua escolhível"
+        assert opcoes["fr"] is True, "o idioma da própria carta continua escolhível"
 
-        seguiu = auth_client.post(_passo(carta, 5), {"language": "en"})
+        seguiu = auth_client.post(_passo(carta, 5), {"language": "fr"})
 
         assert seguiu.status_code == 302
         carta.refresh_from_db()
-        assert carta.language == "en"
+        assert carta.language == "fr"
 
     def test_a_carta_finalizada_continua_abrindo(self, auth_client, user, letter):
         """Nem o detalhe nem o histórico dependem da oferta atual."""

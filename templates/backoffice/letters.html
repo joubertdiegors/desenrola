@@ -1,129 +1,232 @@
 {% extends "backoffice/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% comment %}
 Administração · Cartas -- supervisão REAL, lendo o banco.
 
-Contexto: cards (LetterCard da página atual), pagina (Paginator),
-total, estados, idiomas, usuarios, filtros, politica.
+UMA COLUNA POR INFORMAÇÃO
+-------------------------
+O desenho é o da tabela de "Modelos de cartas" (classes `mod-*` de
+`biblioteca-modelos.css`): cabeçalho com contagem, cartão com a barra de
+filtros fundida ao topo, grade, rodapé. Cada informação ocupa a SUA
+coluna -- referência, criada por, para, idioma, data de ida, data de
+volta, status, criada em, finalizada em, ações -- e nenhuma célula
+empilha duas (`.mod-tabela-colunas`). Onde a largura útil não comporta
+as dez colunas, a TABELA rola para o lado dentro do cartão (a página
+não); abaixo de 1024px a linha vira cartão, com o rótulo de cada campo.
+
+"Criada por" é a pessoa dona da carta -- quem a gera no assistente;
+"Para" é o convidado. As datas de ida e de volta são as da estadia, dos
+dados da carta (`card.arrival`, `card.departure`).
+
+BUSCA E FILTROS
+---------------
+A busca (`q`) procura na referência, no nome e no e-mail de quem criou e
+no nome do convidado -- no servidor, junto com os filtros de sempre
+(estado, idioma, usuário, período da viagem). O estado é o seletor
+segmentado; idioma e usuário, pílulas com menu -- links que preservam
+os outros filtros (`apps.core.filtros`). Busca e período são
+formulários: cada um leva os demais filtros e a quantidade por página
+escondidos, e volta para a primeira página.
+
+PAGINAÇÃO
+---------
+`backoffice/_paginacao.html`: quantidade por página (10, 20, 30, 50) e
+páginas numeradas; o "Mostrando X–Y de N" fica no rodapé do cartão.
+
+Contexto: cards (LetterCard da página atual), pagina, paginacao,
+querystring, total, filtros, filtros_estado, filtros_pilula, tem_filtro,
+url_limpar, url_sem_busca, politica.
 
 O estado de cada carta já vem calculado em `card.state`
 (apps/letters/lifecycle.py). Este template NÃO recalcula prazo nenhum --
 só escolhe o que mostrar. A etiqueta é a mesma do dashboard do usuário
 (`letters/_status_tag.html`): um estado, um rótulo, em toda a aplicação.
 
+EXPORTAR EXCEL
+--------------
+No cabeçalho, `backoffice/_exportar_excel.html`: "Tabela completa" ou
+"Contatos", com a busca e os filtros em vigor e o resultado inteiro --
+não só a página da tela.
+
 SOMENTE LEITURA: a única ação é abrir o detalhe. Ver não é editar.
 {% endcomment %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/biblioteca-modelos.css' %}">{% endblock %}
+
 {% block bo_main %}
-<div class="bo-head">
-  <h1 class="d-only">{% translate "Cartas" %}</h1>
-  <span class="count d-only">{{ total }}</span>
-</div>
+<div class="mod">
 
-<form class="card bo-filtros" method="get">
-  <div class="field">
-    <label for="f-estado">{% translate "Estado" %}</label>
-    <select class="input" id="f-estado" name="state">
-      <option value="">{% translate "Todos" %}</option>
-      {% for valor, rotulo in estados %}
-      <option value="{{ valor }}"{% if filtros.state == valor %} selected{% endif %}>{{ rotulo }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-idioma">{% translate "Idioma" %}</label>
-    <select class="input" id="f-idioma" name="language">
-      <option value="">{% translate "Todos" %}</option>
-      {% for codigo, rotulo in idiomas %}
-      <option value="{{ codigo }}"{% if filtros.language == codigo %} selected{% endif %}>{{ rotulo }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-usuario">{% translate "Usuário" %}</label>
-    <select class="input" id="f-usuario" name="user">
-      <option value="">{% translate "Todos" %}</option>
-      {% for pessoa in usuarios %}
-      <option value="{{ pessoa.pk }}"{% if filtros.user == pessoa.pk|stringformat:"s" %} selected{% endif %}>{{ pessoa.full_name|default:pessoa.email }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-de">{% translate "Viagem de" %}</label>
-    <input class="input" id="f-de" type="date" name="from" value="{{ filtros.from }}">
-  </div>
-  <div class="field">
-    <label for="f-ate">{% translate "até" %}</label>
-    <input class="input" id="f-ate" type="date" name="to" value="{{ filtros.to }}">
-  </div>
-  <div class="bo-filtros-acoes">
-    <button type="submit" class="btn btn-primary"><i class="ph ph-funnel" aria-hidden="true"></i>{% translate "Filtrar" %}</button>
-    <a class="btn btn-ghost" href="{% url 'backoffice:letters' %}">{% translate "Limpar" %}</a>
-  </div>
-</form>
-
-{% if not cards %}
-  <div class="card letters-empty">
-    <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
-    <h3>{% translate "Nenhuma carta encontrada" %}</h3>
-    <p>{% translate "Ajuste os filtros para ver outras cartas." %}</p>
-  </div>
-{% else %}
-
-<div class="card table-wrap d-only">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>{% translate "Referência" %}</th>
-        <th>{% translate "Usuário" %}</th>
-        <th>{% translate "Convidado" %}</th>
-        <th>{% translate "Idioma" %}</th>
-        <th>{% translate "Criada" %}</th>
-        <th>{% translate "Finalizada" %}</th>
-        <th>{% translate "Viagem" %}</th>
-        <th>{% translate "Estado" %}</th>
-        <th class="cell-actions"><span class="visually-hidden">{% translate "Ações" %}</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for card in cards %}
-      <tr>
-        <td class="cell-muted">{{ card.reference }}</td>
-        <td class="cell-name">{{ card.letter.user.full_name|default:card.letter.user.email }}</td>
-        <td>{{ card.guest_name|default:"—" }}</td>
-        <td>{{ card.language_name }}</td>
-        <td class="cell-muted">{{ card.letter.created_at|date:"d/m/Y" }}</td>
-        <td class="cell-muted">{% if card.letter.finalized_at %}{{ card.letter.finalized_at|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-        <td class="cell-muted">{% if card.arrival %}{{ card.arrival|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-        <td>{% include "letters/_status_tag.html" with card=card %}</td>
-        <td class="cell-actions">
-          <a class="btn btn-ghost btn-icon-sm" href="{% url 'backoffice:letter_detail' card.uuid %}" aria-label="{% translate 'Ver carta' %}"><i class="ph ph-eye" aria-hidden="true"></i></a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="list m-only">
-  {% for card in cards %}
-  <a class="list-item" href="{% url 'backoffice:letter_detail' card.uuid %}">
-    <div class="list-body">
-      <div class="list-title">{{ card.guest_name|default:card.reference }}</div>
-      <div class="list-sub">{{ card.letter.user.full_name|default:card.letter.user.email }} · {{ card.letter.created_at|date:"d/m/Y" }}</div>
+  <header class="mod-cabecalho">
+    <div class="mod-titulos">
+      <span class="mod-kicker">Backoffice</span>
+      <div class="mod-titulo-linha">
+        <h1>{% translate "Cartas" %}</h1>
+        <span class="mod-contagem">{{ total }}</span>
+      </div>
+      <p class="mod-descricao">{% translate "Todas as Cartas Convite do sistema, de qualquer pessoa, com o estado de cada uma. Somente leitura: abrir uma carta mostra o detalhe dela." %}</p>
     </div>
-    {% include "letters/_status_tag.html" with card=card %}
-  </a>
-  {% endfor %}
+    <div class="mod-cabecalho-acoes">
+      {% url "backoffice:letters_export" as url_exportar %}
+      {% include "backoffice/_exportar_excel.html" with url=url_exportar filtros=filtros %}
+    </div>
+  </header>
+
+  <section class="mod-cartao">
+
+    {# ---- Barra de filtros, fundida ao topo do cartão ---------------- #}
+    <div class="mod-filtros">
+      <form class="mod-busca" method="get" action="{% url 'backoffice:letters' %}" role="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        <input type="search" id="f-busca-cartas" name="q" value="{{ filtros.q }}" placeholder="{% translate 'Buscar por referência, nome, e-mail ou convidado' %}" aria-label="{% translate 'Buscar carta' %}">
+        {% comment %}Buscar não pode perder os filtros que já estavam aplicados.{% endcomment %}
+        {% if filtros.state %}<input type="hidden" name="state" value="{{ filtros.state }}">{% endif %}
+        {% if filtros.language %}<input type="hidden" name="language" value="{{ filtros.language }}">{% endif %}
+        {% if filtros.user %}<input type="hidden" name="user" value="{{ filtros.user }}">{% endif %}
+        {% if filtros.from %}<input type="hidden" name="from" value="{{ filtros.from }}">{% endif %}
+        {% if filtros.to %}<input type="hidden" name="to" value="{{ filtros.to }}">{% endif %}
+        {% if filtros.page_size %}<input type="hidden" name="page_size" value="{{ filtros.page_size }}">{% endif %}
+        {% if filtros.q %}<a class="mod-busca-limpar" href="{{ url_sem_busca }}" aria-label="{% translate 'Limpar a busca' %}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>{% endif %}
+        <button type="submit" class="mod-busca-ir">{% translate "Buscar" %}</button>
+      </form>
+
+      <div class="mod-segmentado" role="group" aria-label="{% translate 'Estado' %}">
+        {% for opcao in filtros_estado %}
+        <a class="mod-seg{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.rotulo }}</a>
+        {% endfor %}
+      </div>
+
+      {% for filtro in filtros_pilula %}
+      <details class="mod-menu mod-menu-filtro">
+        <summary class="mod-pilula-filtro{% if filtro.escolhido %} is-ativa{% endif %}">
+          {% if filtro.escolhido %}<span class="mod-ponto-filtro" aria-hidden="true"></span>{% endif %}
+          <span class="mod-pilula-rotulo">{{ filtro.rotulo }}</span>{{ filtro.atual }}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+        </summary>
+        <div class="mod-menu-lista mod-menu-lista-rolavel">
+          {% for opcao in filtro.opcoes %}
+          <a class="mod-menu-item{% if opcao.atual %} is-ativa{% endif %}" href="{{ opcao.url }}">{{ opcao.rotulo }}</a>
+          {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+
+      <span class="mod-sep" aria-hidden="true"></span>
+
+      {% comment %}
+      O período da viagem: duas datas, um formulário. Leva escondidos os
+      outros filtros, para não perdê-los ao aplicar.
+      {% endcomment %}
+      <form class="mod-periodo" method="get" action="{% url 'backoffice:letters' %}">
+        {% if filtros.state %}<input type="hidden" name="state" value="{{ filtros.state }}">{% endif %}
+        {% if filtros.language %}<input type="hidden" name="language" value="{{ filtros.language }}">{% endif %}
+        {% if filtros.user %}<input type="hidden" name="user" value="{{ filtros.user }}">{% endif %}
+        {% if filtros.q %}<input type="hidden" name="q" value="{{ filtros.q }}">{% endif %}
+        {% if filtros.page_size %}<input type="hidden" name="page_size" value="{{ filtros.page_size }}">{% endif %}
+        <label class="mod-periodo-campo" for="f-de"><span class="mod-pilula-rotulo">{% translate "Viagem de" %}</span><input id="f-de" type="date" name="from" value="{{ filtros.from }}"></label>
+        <label class="mod-periodo-campo" for="f-ate"><span class="mod-pilula-rotulo">{% translate "até" %}</span><input id="f-ate" type="date" name="to" value="{{ filtros.to }}"></label>
+        <button type="submit" class="mod-btn mod-btn-contorno mod-periodo-aplicar">{% translate "Aplicar" %}</button>
+      </form>
+
+      {% if tem_filtro %}
+      <a class="mod-limpar" href="{{ url_limpar }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>{% translate "Limpar filtros" %}
+      </a>
+      {% endif %}
+    </div>
+
+    {% if not cards %}
+    <div class="mod-vazio">
+      <span class="mod-vazio-icone" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+      </span>
+      <span class="mod-vazio-titulo">{% translate "Nenhuma carta encontrada" %}</span>
+      <span class="mod-vazio-texto">{% translate "Ajuste os filtros para ver outras cartas." %}</span>
+      {% if tem_filtro %}<a class="mod-btn mod-btn-contorno" href="{{ url_limpar }}">{% translate "Limpar filtros" %}</a>{% endif %}
+    </div>
+    {% else %}
+
+    <div class="mod-tabela mod-tabela-colunas mod-tabela-cartas" role="table" aria-label="{% translate 'Cartas' %}">
+      <div class="mod-cabecalho-tabela" role="row">
+        <span role="columnheader">{% translate "Referência" %}</span>
+        <span role="columnheader">{% translate "Criada por" %}</span>
+        <span role="columnheader">{% translate "Para" %}</span>
+        <span role="columnheader">{% translate "Idioma" %}</span>
+        <span role="columnheader">{% translate "Data de ida" %}</span>
+        <span role="columnheader">{% translate "Data de volta" %}</span>
+        <span role="columnheader">{% translate "Status" %}</span>
+        <span role="columnheader">{% translate "Criada em" %}</span>
+        <span role="columnheader">{% translate "Finalizada em" %}</span>
+        <span role="columnheader" class="mod-col-acoes">{% translate "Ações" %}</span>
+      </div>
+
+      {% for card in cards %}
+      <div class="mod-linha" role="row">
+        <div class="mod-celula mod-celula-principal" role="cell">
+          <a class="mod-nome mod-referencia" href="{% url 'backoffice:letter_detail' card.uuid %}" title="{{ card.reference }}">{{ card.reference }}</a>
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Criada por" %}</span>
+          <span class="mod-texto-curto" title="{{ card.letter.user.full_name|default:card.letter.user.email }} · {{ card.letter.user.email }}">{{ card.letter.user.full_name|default:card.letter.user.email }}</span>
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Para" %}</span>
+          {% if card.guest_name %}
+          <span class="mod-texto-curto" title="{{ card.guest_name }}">{{ card.guest_name }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula mod-celula-idioma" role="cell" title="{{ card.language_name }}">
+          {% if card.letter.language %}
+          <span class="mod-bandeira">{{ card.letter.language|upper }}</span><span class="mod-idioma-nome">{{ card.language_name }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Data de ida" %}</span>
+          {% if card.arrival %}
+          <span class="mod-data">{{ card.arrival|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Data de volta" %}</span>
+          {% if card.departure %}
+          <span class="mod-data">{{ card.departure|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-celula" role="cell">{% include "letters/_status_tag.html" with card=card %}</div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Criada em" %}</span>
+          <span class="mod-data">{{ card.letter.created_at|date:"d/m/Y" }}</span>
+        </div>
+        <div class="mod-celula" role="cell">
+          <span class="mod-rotulo-celula">{% translate "Finalizada em" %}</span>
+          {% if card.letter.finalized_at %}
+          <span class="mod-data">{{ card.letter.finalized_at|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="mod-nada">—</span>
+          {% endif %}
+        </div>
+        <div class="mod-acoes" role="cell">
+          <a class="mod-acao" href="{% url 'backoffice:letter_detail' card.uuid %}" title="{% translate 'Ver carta' %}" aria-label="{% translate 'Ver carta' %} {{ card.reference }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mod-rodape">
+      <span class="mod-rodape-mostrando">{% blocktranslate with inicio=paginacao.inicio fim=paginacao.fim total=paginacao.total %}Mostrando {{ inicio }}–{{ fim }} de {{ total }} registros{% endblocktranslate %}</span>
+    </div>
+    {% endif %}
+  </section>
+
+  {% include "backoffice/_paginacao.html" with paginacao=paginacao %}
 </div>
-
-{% if pagina.has_other_pages %}
-<nav class="bo-paginacao" aria-label="{% translate 'Páginas' %}">
-  {% if pagina.has_previous %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.previous_page_number }}"><i class="ph-bold ph-arrow-left" aria-hidden="true"></i>{% translate "Anterior" %}</a>{% endif %}
-  <span class="text-muted">{% blocktranslate with atual=pagina.number total=pagina.paginator.num_pages %}Página {{ atual }} de {{ total }}{% endblocktranslate %}</span>
-  {% if pagina.has_next %}<a class="btn btn-ghost" href="?{{ querystring }}&amp;page={{ pagina.next_page_number }}">{% translate "Próxima" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>{% endif %}
-</nav>
-{% endif %}
-
-{% endif %}
 {% endblock %}

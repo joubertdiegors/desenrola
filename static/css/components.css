@@ -624,6 +624,13 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .side-menu a.is-current { background: var(--p10); color: var(--p); }
 .side-menu a.is-current .ph { color: var(--p); }
 .side-menu .hr-item { margin-top: 8px; border-top: 1px solid var(--bd); border-radius: 0; padding-top: 14px; }
+/* O grupo SISTEMA: um titulo pequeno que nao e link, e os itens logo
+   abaixo, um pouco recuados -- a hierarquia se le sem precisar abrir
+   nada. */
+.side-menu-grupo { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--bd); }
+.side-menu-grupo-titulo { padding: 2px 12px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
+.side-menu .side-menu-grupo a { padding-left: 18px; }
+.dropdown-grupo-titulo { display: block; padding: 6px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
 
 /* Barra inferior do celular */
 .tabbar {

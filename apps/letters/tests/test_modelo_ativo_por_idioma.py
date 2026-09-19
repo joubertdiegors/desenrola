@@ -249,7 +249,8 @@ class TestNaTelaDoAssistente:
         assert "Ainda não disponível" not in resposta.content.decode()
 
     def test_a_carta_nova_sai_pela_copia_ativa(self, auth_client, user):
-        copia = copia_pronta("en")
+        # A carta nova nasce no idioma padrao (frances, desde a Rodada 18).
+        copia = copia_pronta(services.idioma_padrao_da_carta())
         ativacao.ativar(copia)
 
         auth_client.post(reverse("letters:new"), DADOS_ETAPA_1)
@@ -257,7 +258,7 @@ class TestNaTelaDoAssistente:
         assert Letter.objects.get(user=user).document_template_id == copia.pk
 
     def test_sem_ativo_a_tela_de_carta_nova_avisa_e_nao_cria(self, auth_client, user):
-        ativacao.desativar(oficial("en"))
+        ativacao.desativar(oficial(services.idioma_padrao_da_carta()))
 
         resposta = auth_client.post(reverse("letters:new"), DADOS_ETAPA_1, follow=True)
 

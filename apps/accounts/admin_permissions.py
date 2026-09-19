@@ -245,6 +245,25 @@ CATALOGO = (
                 aplicada_em="core.views.backoffice_system / django admin",
             ),
             PermissaoAdministrativa(
+                chave="content.view_contentblock",
+                rotulo=_("Ver os documentos legais"),
+                descricao=_(
+                    "Abre a tela de Documentos legais e lê os Termos de uso e a "
+                    "Política de privacidade, em qualquer idioma."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_legal_documents",
+            ),
+            PermissaoAdministrativa(
+                chave="content.change_contentblock",
+                rotulo=_("Editar os documentos legais"),
+                descricao=_(
+                    "Altera o texto dos Termos de uso e da Política de privacidade. "
+                    "Não é uma permissão nova: é a mesma que a administração do "
+                    "Django já cobrava destes textos."
+                ),
+                aplicada_em="content.backoffice_views.backoffice_legal_documents",
+            ),
+            PermissaoAdministrativa(
                 chave="core.view_emailsettings",
                 rotulo=_("Ver a configuração de e-mail"),
                 descricao=_(
