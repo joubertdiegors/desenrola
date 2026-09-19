@@ -108,32 +108,4 @@ Ponteiros, não formulários: o que se edita em outra tela se edita LÁ.
     <dd><a href="{{ url_do_email }}">{% translate "Servidor de envio e remetente" %}</a></dd>
   </dl>
 </div>
-
-{% comment %}
-Links legais: desde a Etapa G existem as duas páginas
-(`/legal/termos-de-uso/` e `/legal/privacidade/`), alimentadas por
-`content.ContentBlock`. O texto é do cliente e se escreve em Sistema ›
-Documentos legais -- aqui só se mostra o estado, e se aponta para lá.
-Não há formulário paralelo.
-
-Sem texto publicado, o link não aparece no site e a página responde 404:
-melhor do que um link que não abre nada.
-{% endcomment %}
-<div class="card bo-card">
-  <div class="bo-card-head">
-    <h2>{% translate "Documentos legais" %}</h2>
-    <span class="note d-only">{% translate "Sem texto, o link não aparece no site" %}</span>
-  </div>
-  <dl class="bo-dados">
-    <dt>{% translate "Termos de uso" %}</dt>
-    <dd>{% if paginas_legais.termos_de_uso %}<span class="tag tag-success">{% translate "Publicado" %}</span> <a href="{% url 'core:legal_termos' %}">{% translate "Ver a página" %}</a>{% else %}<span class="tag tag-warning">{% translate "Sem texto" %}</span>{% endif %}</dd>
-    <dt>{% translate "Privacidade" %}</dt>
-    <dd>{% if paginas_legais.privacidade %}<span class="tag tag-success">{% translate "Publicado" %}</span> <a href="{% url 'core:legal_privacidade' %}">{% translate "Ver a página" %}</a>{% else %}<span class="tag tag-warning">{% translate "Sem texto" %}</span>{% endif %}</dd>
-  </dl>
-  {% if perms.content.view_contentblock %}
-  <p class="field-hint">{% blocktranslate trimmed %}O texto de cada documento é escrito em <a href="{{ url_dos_documentos_legais }}">Documentos legais</a>. Conteúdo jurídico não é escrito pelo sistema.{% endblocktranslate %}</p>
-  {% else %}
-  <p class="field-hint">{% translate "O texto de cada documento é escrito em Documentos legais, por quem tem permissão. Conteúdo jurídico não é escrito pelo sistema." %}</p>
-  {% endif %}
-</div>
 {% endblock %}

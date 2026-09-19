@@ -49,8 +49,20 @@ def publico():
 
 
 def regra(css, seletor, ate=200):
+    """
+    O trecho da FOLHA DE ESTILO a partir de `seletor` -- a regra cujo
+    seletor começa exatamente ali, não qualquer ocorrência da mesma
+    letra por letra. Sem a âncora de início de linha, um seletor curto
+    como `.dropdown-item {` também "aparece" dentro de um composto
+    mais específico que termina do mesmo jeito -- `.side-menu-filho.
+    dropdown-item {` -- e, se esse composto vier antes no arquivo,
+    `str.index` encontra ele primeiro, silenciosamente.
+    """
     texto = css.read_text(encoding="utf-8")
-    onde = texto.index(seletor)
+    if texto.startswith(seletor):
+        onde = 0
+    else:
+        onde = texto.index("\n" + seletor) + 1
     return texto[onde : onde + ate]
 
 

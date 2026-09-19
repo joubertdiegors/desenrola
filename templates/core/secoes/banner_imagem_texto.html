@@ -11,11 +11,17 @@ Vem de `partes.hero.imagem` -- um `content.Asset` escolhido no
 Backoffice. Sem imagem escolhida, sai a moldura vazia de sempre: e o
 estado em que o banner esteve ate a Etapa 11, e continua valido.
 
-Contexto: secoes.hero (o texto), partes.hero.imagem (o Asset),
-cartas_emitidas (o contador real).
+O CONTADOR SAIU DAQUI
+----------------------
+Ate a Rodada 20, `_banner_contador.html` flutuava sobre esta secao
+(`position: absolute`), com o respiro reservado por `data-contador`
+em `core/home.html`. Da Rodada 21 em diante o contador e uma FAIXA
+propria, com fundo e borda proprios, ANTES do banner -- nunca mais
+por cima dele. Ver `core/secoes/_faixa_contador.html`.
+
+Contexto: secoes.hero (o texto), partes.hero.imagem (o Asset).
 {% endcomment %}
 <section class="hero container">
-  {% include "core/secoes/_banner_contador.html" %}
   <div>
     <h1>{{ secoes.hero.title }}</h1>
     <p class="hero-lead">{{ secoes.hero.lead }}</p>

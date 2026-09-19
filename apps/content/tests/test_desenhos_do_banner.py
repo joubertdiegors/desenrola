@@ -143,10 +143,10 @@ class TestImagemCompleta:
 
     def test_desenha_o_contador(self, client):
         """
-        O contador é a ÚNICA coisa que pode sair sobre a imagem neste
-        desenho: é uma cápsula opaca com fundo próprio, não texto solto
-        sobre uma foto arbitrária (a mesma razão pela qual título e
-        chamada não são desenhados aqui -- ver `TestPadrao` acima).
+        O contador continua aparecendo com este desenho -- desde a
+        Rodada 21 ele é uma faixa própria ANTES do banner (nunca mais
+        sobre a imagem), então nem precisa ser "a única coisa que pode
+        sair sobre a foto": não sai nada mais sobre nenhuma foto.
         """
         usar(IMAGEM_COMPLETA)
 

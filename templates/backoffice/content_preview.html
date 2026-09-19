@@ -42,6 +42,13 @@
     html,body{margin:0;background:#fff;overflow:hidden}</style>
 </head>
 <body class="bo-previa publico" data-viewport="{{ viewport }}">
+  {% comment %}
+  Prévia do "hero" (Rodada 21): a faixa do contador vem ANTES do
+  banner, exatamente como em `core/home.html` -- o mesmo parcial, na
+  mesma ordem, para o preview nunca divergir da Home pública. As
+  demais seções não têm faixa nenhuma para incluir aqui.
+  {% endcomment %}
+  {% if secao.key == "hero" or secao.kind == "hero" %}{% include "core/secoes/_faixa_contador.html" %}{% endif %}
   {% include parcial %}
 </body>
 </html>

@@ -624,13 +624,83 @@ a.step-dot:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
 .side-menu a.is-current { background: var(--p10); color: var(--p); }
 .side-menu a.is-current .ph { color: var(--p); }
 .side-menu .hr-item { margin-top: 8px; border-top: 1px solid var(--bd); border-radius: 0; padding-top: 14px; }
-/* O grupo SISTEMA: um titulo pequeno que nao e link, e os itens logo
-   abaixo, um pouco recuados -- a hierarquia se le sem precisar abrir
-   nada. */
-.side-menu-grupo { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--bd); }
-.side-menu-grupo-titulo { padding: 2px 12px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
-.side-menu .side-menu-grupo a { padding-left: 18px; }
-.dropdown-grupo-titulo { display: block; padding: 6px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
+/* --------------------------------------------------------------------------
+   Itens-pai recolhíveis do menu (Rodada 21): "Wizzard - gerar carta"
+   (com Idiomas dentro) e "Sistema" (com as configurações dentro,
+   Documentos legais mais um nível abaixo).
+
+   `<details>` NATIVO, SEM JAVASCRIPT
+   -----------------------------------
+   O disclosure do próprio navegador: Enter/Espaço abrem e fecham,
+   leitor de tela anuncia o estado, e não há nada para quebrar. O
+   `open` inicial vem do SERVIDOR (`backoffice/menu.html` decide pelo
+   `active`) -- entra já aberto em quem está num filho dele.
+
+   O CHEVRON GIRA, O MARCADOR NATIVO SOME
+   -----------------------------------------
+   `list-style` e o marcador do WebKit são suprimidos porque o SVG
+   próprio já diz "isto abre/fecha", e um segundo triângulo ao lado
+   seria ruído -- ele gira 180° com `[open]`.
+   -------------------------------------------------------------------------- */
+.side-menu-acordeao { display: flex; flex-direction: column; gap: 2px; }
+.side-menu-linha-pai {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 9px;
+}
+.side-menu-linha-pai::-webkit-details-marker { display: none; }
+.side-menu-linha-pai:hover { background: var(--bg); }
+/* O link (Wizzard) ou o rótulo (Sistema) ocupa o resto da linha; o
+   hover/fundo da LINHA (acima) já cobre a área toda, então o item em
+   si fica transparente aqui dentro -- sem dois fundos brigando. */
+.side-menu-linha-pai > a,
+.side-menu-pai-rotulo {
+  flex: 1;
+  min-width: 0;
+}
+.side-menu-linha-pai:hover > a { background: none; }
+.side-menu-pai-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tx);
+}
+.side-menu-pai-rotulo .ph { font-size: 18px; color: var(--mu); }
+.side-menu-chevron { flex: none; margin-right: 12px; color: var(--mu); transition: transform .15s ease; }
+.side-menu-acordeao[open] > .side-menu-linha-pai .side-menu-chevron { transform: rotate(180deg); }
+.side-menu-filhos { display: flex; flex-direction: column; gap: 2px; padding-bottom: 2px; }
+.side-menu .side-menu-filho { padding-left: 30px; }
+.side-menu .side-menu-neto { padding-left: 42px; font-size: 13.5px; }
+/* "Documentos legais": um SUBTÍTULO dentro de Sistema, não um link --
+   mesmo recuo do filho, tipografia de legenda como as demais etiquetas
+   do produto (`.side-menu-grupo-titulo` antes disto). */
+.side-menu-filho-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 2px 12px 2px 30px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--mu);
+}
+.side-menu-filho-titulo .ph { font-size: 14px; }
+/* No dropdown do celular, os mesmos `<details>`, com o recuo de
+   `.dropdown-item` (que já é uma classe própria, não descendente). */
+.dropdown-menu .side-menu-acordeao { gap: 0; }
+.dropdown-menu .side-menu-linha-pai:hover { background: var(--bg); border-radius: 6px; }
+.dropdown-menu .side-menu-linha-pai .dropdown-item:hover { background: none; }
+.dropdown-menu .side-menu-filho.dropdown-item { padding-left: 26px; }
+.dropdown-menu .side-menu-neto.dropdown-item { padding-left: 38px; font-size: 13px; }
+.dropdown-menu .side-menu-filho-titulo { margin-top: 4px; padding-left: 26px; }
 
 /* Barra inferior do celular */
 .tabbar {

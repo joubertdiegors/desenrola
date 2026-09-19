@@ -20,20 +20,29 @@ visual da Home envelheceria no primeiro ajuste.
 
 A ORDEM E OS FUNDOS SÃO OS DA REFERÊNCIA VISUAL
 -----------------------------------------------
-Banner (faixa com degradê claro, que também abriga a linha de
-destaques) → Como funciona (azul claro) → Parceiros (branco) →
-Perguntas (azul claro) → Mini Banner (faixa azul) → Rodapé (branco).
-Cada parcial declara o fundo da sua faixa; o Banner e os destaques
-dividem uma, porque na referência os destaques ficam DENTRO do hero.
+Faixa do contador (rosa claro, Rodada 21) → Banner (faixa com degradê
+claro, que também abriga a linha de destaques) → Como funciona (azul
+claro) → Parceiros (branco) → Perguntas (azul claro) → Mini Banner
+(faixa azul) → Rodapé (branco). Cada parcial declara o fundo da sua
+faixa; o Banner e os destaques dividem uma, porque na referência os
+destaques ficam DENTRO do hero.
 
 O BANNER É UMA PARTE DA FAIXA, NÃO UM QUADRO SOBRE ELA
 ------------------------------------------------------
 Os sete desenhos do Backoffice continuam sendo os sete desenhos: o que
 mudou é o lado de fora deles. A faixa (`.home-secao-hero`) é quem tem o
 fundo e o respiro da referência; o desenho, dentro dela, fica
-transparente (ver `body.publico .hero*` em layout.css). `data-contador`
-diz à faixa ONDE o contador vai ficar -- é o que reserva, só quando ele
-está em cima, o espaço da cápsula acima do título.
+transparente (ver `body.publico .hero*` em layout.css).
+
+O CONTADOR É UMA FAIXA PRÓPRIA, ANTES DO BANNER (Rodada 21)
+--------------------------------------------------------------
+Até a Rodada 20 o contador flutuava (`position: absolute`) por cima do
+banner, e `data-contador` dizia à faixa que respiro reservar para ele
+não cobrir o título. Isso saiu: `_faixa_contador.html` é sua PRÓPRIA
+seção, com fundo e borda inferior próprios, sempre ANTES do banner --
+nunca mais sobreposta a nada dele, e nenhum desenho reserva espaço
+para ela. A mesma inclusão, na mesma ordem, é o que a prévia do
+Backoffice usa para a seção "hero" (`content_preview.html`).
 
 ATIVAÇÃO
 --------
@@ -57,8 +66,9 @@ continua com a tipografia do produto.
 {% block header %}{% include "components/site_nav.html" %}{% endblock %}
 
 {% block content %}
+{% include "core/secoes/_faixa_contador.html" %}
 {% if template_do_banner or partes.trust %}
-<section class="home-secao home-secao-hero"{% if partes.hero.contador_ativo and secoes.hero.badge_label %} data-contador="{{ partes.hero.contador_posicao }}"{% endif %}>
+<section class="home-secao home-secao-hero">
   <div class="home-largura">
     {% if template_do_banner %}{% include template_do_banner %}{% endif %}
     {% if partes.trust %}{% include "core/secoes/trust.html" %}{% endif %}

@@ -1,5 +1,6 @@
 """
-O contador de cartas no Banner superior -- estrutural, não hardcode.
+O contador de cartas -- estrutural, não hardcode (Rodada 21: faixa
+própria, antes do banner).
 
 O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 ------------------------------------
@@ -9,15 +10,16 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
 2. **Que o interruptor do Backoffice não desligue nada de verdade.**
    `contador_ativo` e a ausência de rótulo levam ao mesmo resultado: o
    elemento não é desenhado -- nem vazio, nem como pílula sem número;
-3. **Que uma posição livre apareça.** Só as nove de
-   `PageSection.Posicao9` -- nunca uma coordenada solta;
+3. **Que o contador volte a flutuar sobre o banner.** É uma seção
+   PRÓPRIA (`.home-secao-contador`), sempre ANTES de `.home-secao-hero`
+   no HTML -- nunca dentro dele, nunca `position: absolute`;
 4. **Que o contador fique preso a um só desenho de banner.** Os sete
-   têm de suportá-lo -- inclusive "Somente texto", sem imagem nenhuma;
+   continuam funcionando -- inclusive "Somente texto", sem imagem
+   nenhuma -- porque nenhum deles precisa mais incluir nada;
 5. **Que a lógica de contagem seja duplicada.** Um segundo lugar
    somando cartas divergiria do selo com o tempo;
 6. **Que a prévia do Backoffice desenhe um contador diferente do da
-   Home pública** -- os dois usam o mesmo parcial e o mesmo método de
-   montagem de conteúdo.
+   Home pública** -- os dois usam o mesmo parcial, na mesma ordem.
 """
 
 import pathlib
@@ -46,17 +48,7 @@ TEMPLATE_DO_DESENHO = {
 }
 TODOS_OS_DESENHOS = tuple(TEMPLATE_DO_DESENHO)
 
-POSICOES = (
-    "superior-esquerda",
-    "superior-centro",
-    "superior-direita",
-    "centro-esquerda",
-    "centro",
-    "centro-direita",
-    "inferior-esquerda",
-    "inferior-centro",
-    "inferior-direita",
-)
+RAIZ_DOS_TEMPLATES = pathlib.Path(__file__).resolve().parents[3] / "templates" / "core" / "secoes"
 
 
 def secao():
@@ -123,15 +115,16 @@ def cliente(editora):
 def _payload_do_editor(**extra):
     """
     Um POST completo para a tela de edição -- idioma, os textos
-    gravados e os três campos do contador. Só assim salvar não reseta,
-    de volta, o que este teste não está tentando mudar (a mesma
-    convenção de `layout`/`imagem`: campo ausente é campo desmarcado).
+    gravados e os dois campos do contador que sobraram no formulário
+    (a posição saiu na Rodada 21: não há mais onde posicionar). Só
+    assim salvar não reseta, de volta, o que este teste não está
+    tentando mudar (a mesma convenção de `layout`/`imagem`: campo
+    ausente é campo desmarcado).
     """
     base = {
         "idioma": "pt",
         **traducao().content,
         "contador_ativo": "on",
-        "contador_posicao": secao().counter_position,
         "contador_ao_vivo_ativo": "on",
     }
     base.update(extra)
@@ -185,19 +178,13 @@ class TestNumeroReal:
         para dentro de nenhum dos sete templates -- só o `{% comment %}`
         pode falar sobre ele.
         """
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        texto = (raiz / "templates" / "core" / "secoes" / nome_do_arquivo).read_text(
-            encoding="utf-8"
-        )
+        texto = (RAIZ_DOS_TEMPLATES / nome_do_arquivo).read_text(encoding="utf-8")
         executavel = texto.split("{% endcomment %}", 1)[-1]
 
         assert "8" not in executavel
 
     def test_o_parcial_do_contador_nao_tem_o_digito(self):
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        texto = (
-            raiz / "templates" / "core" / "secoes" / "_banner_contador.html"
-        ).read_text(encoding="utf-8")
+        texto = (RAIZ_DOS_TEMPLATES / "_faixa_contador.html").read_text(encoding="utf-8")
         executavel = texto.split("{% endcomment %}", 1)[-1]
 
         assert "8" not in executavel
@@ -218,6 +205,7 @@ class TestAtivacao:
 
         assert "banner-contador-valor" not in corpo(client)
         assert "banner-contador" not in corpo(client)
+        assert "home-secao-contador" not in corpo(client)
 
     def test_desligar_nao_apaga_o_resto_do_banner(self, client):
         PageSection.objects.filter(pk=secao().pk).update(counter_enabled=False)
@@ -298,43 +286,66 @@ class TestIndicadorAoVivo:
 
 
 # ===========================================================================
-# 5. A posição -- só as nove do conjunto fechado
+# 5. A faixa: seção própria, sempre ANTES do banner (Rodada 21)
 # ===========================================================================
 
 
-class TestPosicionamento:
-    def test_o_padrao_e_superior_esquerda(self, client):
-        assert secao().counter_position == "superior-esquerda"
-        assert 'pos-superior-esquerda' in corpo(client)
+class TestFaixaPropria:
+    def test_a_faixa_vem_antes_do_banner_no_html(self, client):
+        html = corpo(client)
 
-    @pytest.mark.parametrize("posicao", POSICOES)
-    def test_cada_uma_das_nove_desenha_a_classe_correspondente(self, client, posicao):
-        PageSection.objects.filter(pk=secao().pk).update(counter_position=posicao)
+        assert html.index('class="home-secao home-secao-contador"') < html.index(
+            'class="home-secao home-secao-hero"'
+        )
+
+    def test_a_faixa_e_uma_secao_com_classe_propria(self, client):
+        html = corpo(client)
+        inicio = html.index('class="home-secao home-secao-contador"')
+
+        assert html[max(0, inicio - 10) : inicio + 40].count("<section") == 1
+
+    def test_a_capsula_nao_fica_dentro_da_secao_do_banner(self, client):
+        html = corpo(client)
+        secao_hero = html[
+            html.index('class="home-secao home-secao-hero"') : html.index(
+                "</section>", html.index('class="home-secao home-secao-hero"')
+            )
+        ]
+
+        assert "banner-contador" not in secao_hero
+
+    def test_nenhum_dos_sete_desenhos_inclui_o_parcial_do_contador(self):
+        """
+        Até a Rodada 20, cada um dos sete `include`ava o parcial -- e é
+        exatamente essa ligação que saiu: a faixa é incluída UMA vez,
+        em `core/home.html`, nunca pelos desenhos. O nome ainda pode
+        aparecer num COMENTÁRIO (algum arquivo cita
+        `_faixa_contador.html` como referência cruzada) -- o que não
+        pode existir é um `{% include %}` de verdade, no trecho
+        EXECUTÁVEL do template.
+        """
+        for nome_do_arquivo in TEMPLATE_DO_DESENHO.values():
+            texto = (RAIZ_DOS_TEMPLATES / nome_do_arquivo).read_text(encoding="utf-8")
+            executavel = texto.split("{% endcomment %}", 1)[-1]
+            assert "_faixa_contador" not in executavel
+            assert "_banner_contador" not in executavel
+
+    def test_a_classe_de_posicionamento_absoluto_nao_sobrevive(self, client):
+        """Nenhuma gambiarra: nem `pos-*`, nem `data-contador`."""
+        html = corpo(client)
+
+        assert "data-contador" not in html
+        assert "pos-superior" not in html
+        assert "pos-centro" not in html
+        assert "pos-inferior" not in html
+
+    def test_a_faixa_nao_aparece_sem_o_banner_configurado(self, client):
+        """Sem banner nenhum ativo, a Home continua funcionando -- sem a faixa."""
+        PageSection.objects.filter(page__key="home", key="hero").update(is_active=False)
 
         html = corpo(client)
 
-        assert f'banner-contador pos-{posicao}"' in html
-
-    @pytest.mark.parametrize("posicao", POSICOES)
-    def test_o_backoffice_grava_a_posicao_escolhida(self, cliente, posicao):
-        cliente.post(url_do_editor(), _payload_do_editor(contador_posicao=posicao))
-
-        assert secao().counter_position == posicao
-
-    def test_as_nove_sao_as_unicas_opcoes_no_formulario(self, cliente):
-        """Nada de coordenada livre: o campo é um `<select>` fechado."""
-        corpo_html = cliente.get(url_do_editor()).content.decode()
-
-        for posicao in POSICOES:
-            assert f'value="{posicao}"' in corpo_html
-
-    def test_valor_fora_do_conjunto_e_recusado_pelo_formulario(self, cliente):
-        resposta = cliente.post(
-            url_do_editor(), _payload_do_editor(contador_posicao="direita-solta-33px")
-        )
-
-        assert resposta.status_code == 200
-        assert secao().counter_position != "direita-solta-33px"
+        assert "home-secao-contador" not in html
 
 
 # ===========================================================================
@@ -367,24 +378,20 @@ class TestTodosOsDesenhos:
     def test_nao_ha_uma_segunda_logica_de_contagem(self):
         """
         Um só ponto no template lê `cartas_emitidas` -- os sete desenhos
-        incluem o MESMO parcial, em vez de calcular ou copiar o número
-        cada um a seu modo.
+        não incluem mais nada relacionado ao contador, e a faixa própria
+        é o único lugar que soma.
         """
-        raiz = pathlib.Path(__file__).resolve().parents[3]
-        pasta = raiz / "templates" / "core" / "secoes"
-
         for nome_do_arquivo in TEMPLATE_DO_DESENHO.values():
-            texto = (pasta / nome_do_arquivo).read_text(encoding="utf-8")
-            assert 'include "core/secoes/_banner_contador.html"' in texto
+            texto = (RAIZ_DOS_TEMPLATES / nome_do_arquivo).read_text(encoding="utf-8")
             assert "cartas_emitidas" not in texto.split("{% endcomment %}", 1)[-1]
 
-        parcial = (pasta / "_banner_contador.html").read_text(encoding="utf-8")
+        parcial = (RAIZ_DOS_TEMPLATES / "_faixa_contador.html").read_text(encoding="utf-8")
         executavel = parcial.split("{% endcomment %}", 1)[-1]
         assert executavel.count("cartas_emitidas") == 1
 
 
 # ===========================================================================
-# 7. A prévia do Backoffice usa o mesmo parcial da Home
+# 7. A prévia do Backoffice usa o mesmo parcial da Home, na mesma ordem
 # ===========================================================================
 
 
@@ -398,6 +405,11 @@ class TestPrevia:
 
         assert '<span class="banner-contador-valor">1</span>' in html
 
+    def test_a_previa_traz_a_faixa_antes_do_banner_tambem(self, cliente):
+        html = cliente.get(url_da_previa()).content.decode()
+
+        assert html.index("home-secao-contador") < html.index('class="hero container"')
+
     def test_a_previa_reflete_o_interruptor_ainda_nao_salvo(self, cliente):
         assert secao().counter_enabled is True
 
@@ -407,14 +419,6 @@ class TestPrevia:
 
         assert "banner-contador-valor" not in html
         assert secao().counter_enabled is True
-
-    def test_a_previa_reflete_a_posicao_ainda_nao_salva(self, cliente):
-        html = cliente.post(
-            url_da_previa(), _payload_do_editor(contador_posicao="inferior-direita")
-        ).content.decode()
-
-        assert 'pos-inferior-direita"' in html
-        assert secao().counter_position != "inferior-direita"
 
     def test_a_previa_reflete_o_rotulo_ainda_nao_salvo(self, cliente):
         html = cliente.post(
@@ -429,14 +433,39 @@ class TestPrevia:
         As duas telas montam o conteúdo com `FormularioDeSecao`: o que a
         prévia mostrou tem de ser exatamente o que fica gravado.
         """
-        dados = _payload_do_editor(
-            badge_label="Mesmo contador nos dois", contador_posicao="centro"
-        )
+        dados = _payload_do_editor(badge_label="Mesmo contador nos dois")
 
         da_previa = cliente.post(url_da_previa(), dados).content.decode()
         cliente.post(url_do_editor(), dados)
 
         assert "Mesmo contador nos dois" in da_previa
-        assert 'pos-centro"' in da_previa
         assert traducao().content["badge_label"] == "Mesmo contador nos dois"
-        assert secao().counter_position == "centro"
+
+    def test_a_previa_de_outra_secao_nao_traz_a_faixa(self, cliente):
+        """Só a prévia do "hero" inclui a faixa -- as demais não têm banner."""
+        como_funciona = PageSection.objects.get(page__key="home", key="how")
+
+        html = cliente.get(
+            reverse("backoffice:content_preview", args=[como_funciona.pk])
+        ).content.decode()
+
+        assert "home-secao-contador" not in html
+
+
+# ===========================================================================
+# 8. O campo de posição saiu do formulário (Rodada 21)
+# ===========================================================================
+
+
+class TestPosicaoSaiuDoFormulario:
+    def test_o_campo_nao_aparece_mais_na_tela(self, cliente):
+        assert "Posição do contador" not in cliente.get(url_do_editor()).content.decode()
+
+    def test_um_post_com_o_campo_antigo_e_ignorado_sem_erro(self, cliente):
+        """Ninguém quebra por mandar o campo antigo -- ele só não é lido."""
+        resposta = cliente.post(
+            url_do_editor(), _payload_do_editor(contador_posicao="inferior-direita")
+        )
+
+        assert resposta.status_code == 302
+        assert secao().counter_position != "inferior-direita"

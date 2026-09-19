@@ -119,6 +119,11 @@ PROPRIEDADES_DE_ESTILO = frozenset(
         "text-decoration", "line-height", "letter-spacing", "height",
         "display", "flex-wrap", "flex", "gap", "min-width",
         "margin", "margin-top", "margin-bottom", "padding-left",
+        # A âncora da imagem de um documento em blocos (Rodada 22):
+        # `float:left/right` e `width:<n>%` -- só o `_desenhar_imagem`
+        # de `apps.content.blocos` escreve isto, nunca quem administra
+        # (não há campo de "estilo livre" no editor de blocos).
+        "float", "width",
     }
 )
 # Valor de estilo: letras, números, `#`, `%`, `.`, `,`, `-`, espaço e
@@ -520,3 +525,23 @@ def renderizar_documento(html_gravado):
     atalhos: não há o que trocar.
     """
     return _marcado_como_seguro(sanitizar_documento(html_gravado))
+
+
+def renderizar_documento_em_blocos(blocos_gravados):
+    """
+    Um documento legal EM BLOCOS (Rodada 22), pronto para a página.
+
+    `apps.content.blocos.renderizar_blocos` já sanitiza o fragmento de
+    CADA bloco individualmente (a mesma `sanitizar_documento` de
+    sempre) -- o que envolve cada bloco (a `<div class="legal-bloco">`)
+    é gerado por este projeto, não por quem administra, e por isso não
+    passa pela lista fechada de tags/atributos (ela nem aceita
+    `class`/`data-*`, que a própria página pública usa para estilo).
+
+    Ainda assim, o resultado só sai daqui através de
+    `_marcado_como_seguro` -- o MESMO e único ponto do módulo que marca
+    HTML como seguro, para `renderizar` e `renderizar_documento`.
+    """
+    from . import blocos as _blocos  # import tardio: `blocos` importa este módulo
+
+    return _marcado_como_seguro(_blocos.renderizar_blocos(blocos_gravados))

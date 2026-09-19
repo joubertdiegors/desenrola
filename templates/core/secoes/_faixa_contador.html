@@ -1,0 +1,82 @@
+{% load i18n humanize %}{% comment %}
+O contador de cartas -- uma FAIXA própria, ANTES do banner.
+
+A FAIXA DA REFERÊNCIA (Rodada 23)
+----------------------------------
+Reprodução estrutural de "Hero Contador Estatico2.dc.html": uma faixa
+horizontal de ponta a ponta, SEM cartão -- nada de fundo branco
+próprio, borda, raio ou sombra --, com [ícone] [número] [texto]
+centralizados, colada ao banner logo abaixo, sem linha entre os dois.
+Até a Rodada 22 o conteúdo era uma cápsula branca dentro da faixa; ela
+saiu. As medidas e as cores ficam em layout.css (`.home-secao-contador`
+e `.banner-contador*`); as cores vêm todas de `--p` (Backoffice ›
+Sistema › Aparência), nunca das cores do arquivo de referência.
+
+POR QUE O NÚMERO E O TEXTO FICAM NUM GRUPO
+------------------------------------------
+Na versão de celular da referência, número e texto formam um grupo
+alinhado pela linha de base, a 6px um do outro. No desktop o grupo se
+comporta exatamente como os dois itens soltos da referência (mesmo vão
+de 14px, mesmo alinhamento pelo centro) -- uma marcação só para as duas
+versões.
+
+O ÍCONE É DO CSS
+----------------
+O desenho das três pessoas é o MESMO da referência, pintado por
+`mask` em `.banner-contador-icone::before`: a marcação fica um `<span>`
+vazio e a cor sai da identidade, não de um `fill` escrito aqui.
+
+ESTRUTURAL, NÃO SOBREPOSTO (Rodada 21)
+---------------------------------------
+Incluída uma vez só em `core/home.html` (e no mesmo lugar na prévia do
+Backoffice, `content_preview.html`), sempre ANTES do banner. Nenhum
+banner reserva espaço para ela, e ela nunca fica por cima de nada.
+
+As classes `.banner-contador*` continuam as de sempre -- várias
+asserções verificam "o número certo aparece nesta classe", e nada nelas
+fala de posição ou de cápsula.
+
+O NÚMERO CHEGA PRONTO
+---------------------
+`cartas_emitidas` é o total: o valor inicial configurado no Backoffice
+(as cartas de antes do sistema) + a contagem real de
+`apps.letters.statistics.cartas_emitidas()`. A conta é
+`content.services.numero_do_contador()`, feita em `contexto_da_home()`
+-- o MESMO contexto que a Home pública e a prévia do Backoffice usam.
+Este template só recebe o resultado; o valor inicial sozinho não chega
+aqui, não vai para nenhum atributo nem para nenhum `data-*`.
+
+O INDICADOR "AO VIVO"
+---------------------
+Opcional: o interruptor do indicador "ao vivo" do Banner, no Backoffice,
+com a nota em `badge_note`. Não existe na referência -- com ele
+desligado, a faixa é exatamente [ícone] [número] [texto].
+
+O QUE DESLIGA O CONTADOR INTEIRO
+----------------------------------
+`partes.hero.contador_ativo` (o interruptor do Backoffice) E a
+ausência de rótulo -- um contador sem texto ao lado seria só um número
+solto, sem dizer o que ele conta. Os dois motivos levam ao mesmo
+resultado: a faixa inteira não é desenhada.
+
+Contexto: partes.hero (contador_ativo, contador_ao_vivo_ativo),
+secoes.hero (badge_label, badge_note), cartas_emitidas.
+{% endcomment %}
+{% if partes.hero.contador_ativo and secoes.hero.badge_label %}
+<section class="home-secao home-secao-contador">
+  <div class="banner-contador">
+    <span class="banner-contador-icone" aria-hidden="true"></span>
+    <span class="banner-contador-textos">
+      {% if partes.hero.contador_ao_vivo_ativo and secoes.hero.badge_note %}<span class="banner-contador-ponto" role="img" aria-label="{{ secoes.hero.badge_note }}"></span>{% endif %}
+      {% comment %}
+      O número conta CARTAS EMITIDAS (apps.letters.statistics), não
+      pessoas -- e o rótulo ao lado, que vem do CMS, diz isso.
+      `intcomma` põe o separador de milhar da locale: é apresentação; o
+      contexto recebe o número inteiro.
+      {% endcomment %}
+      <span class="banner-contador-valor">{{ cartas_emitidas|intcomma }}</span>
+      <span class="banner-contador-rotulo">{{ secoes.hero.badge_label }}</span>
+    </span>
+  </div>
+</section>
+{% endif %}

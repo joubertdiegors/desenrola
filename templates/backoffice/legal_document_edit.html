@@ -1,0 +1,259 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% comment %}
+Administração · Sistema · Documentos legais · edição de UM documento
+(Termos de uso OU Privacidade -- nunca os dois; cada um tem a sua rota
+e o seu template, gerados por `apps.content.backoffice_views._editar_documento_legal`).
+
+O EDITOR POR BLOCOS (Rodada 22)
+---------------------------------
+Referência visual e estrutural: "Editor Conteudo Estatico". O
+documento é uma LISTA de blocos (parágrafo, título, lista, citação,
+destaque, botão, separador, imagem, galeria, tabela, HTML) -- nunca um
+`<textarea>` só. `apps.content.blocos` é quem sabe o formato de cada
+bloco; este template só entrega o estado inicial
+(`blocos_json`/`catalogo_de_blocos`/`imagens`) e a casca -- o quadro em
+si é montado e mantido por `editor-blocos.js`, a mesma convenção do
+editor de modelos (`template_editor.html`): uma ferramenta que precisa
+de JavaScript para fazer qualquer coisa, e diz isso quando ele falta.
+
+DUAS ABAS, UM SÓ FORMULÁRIO
+------------------------------
+"Editar" é o quadro de blocos; "Visualizar" é a MESMA prévia de
+`content_preview.html`, num `<iframe>` -- nunca uma aproximação. Trocar
+de aba não navega: `editor-blocos.js` esconde uma e mostra a outra, e
+manda o estado atual (ainda não salvo) para
+`url_previa` via um `<form target>` para o iframe, exatamente como a
+Central de Conteúdo já faz. "Salvar" no cabeçalho é o ÚNICO botão que
+grava -- ele submete o `<form>` que envolve o editor inteiro, com um
+campo oculto (`blocos`) que `editor-blocos.js` preenche com o JSON do
+quadro no instante do envio.
+
+Exige `content.change_contentblock` -- só chega aqui quem pode editar
+(o decorador da view recusa antes; não há um estado "somente leitura"
+nesta tela, que é a de `legal_document_view.html`).
+
+Contexto: documento, idioma, idiomas, e_o_idioma_padrao, publicado,
+url_publica, url_ver, url_previa, blocos_json, catalogo_de_blocos,
+imagens.
+{% endcomment %}
+
+{% block body_class %}eb-body{% endblock %}
+{% block main_class %}eb-main{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/editor-blocos.css' %}">{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="eb" data-editor-blocos data-aba="editar" data-dispositivo="desktop">
+
+  <header class="eb-cabecalho">
+    <div class="eb-cabecalho-esq">
+      <a class="eb-icone-doc" href="{{ url_ver }}" aria-label="{% translate 'Voltar à visualização' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+      </a>
+      <div class="eb-titulos">
+        <span class="eb-kicker">Backoffice · {% translate "Conteúdo" %}</span>
+        <h1 class="eb-titulo">{{ documento.titulo }}</h1>
+      </div>
+      {% if not publicado %}
+      <span class="eb-pilula is-rascunho"><span class="eb-ponto" aria-hidden="true"></span>{% translate "Rascunho não publicado" %}</span>
+      {% endif %}
+    </div>
+    <div class="eb-cabecalho-dir">
+      <nav class="eb-idiomas" aria-label="{% translate 'Idioma do documento' %}">
+        {% for opcao in idiomas %}
+        <a class="eb-idioma{% if opcao.atual %} is-atual{% endif %}" href="?idioma={{ opcao.codigo }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.nome }}</a>
+        {% endfor %}
+      </nav>
+      <span class="eb-sep" aria-hidden="true"></span>
+      <span class="eb-estado" data-estado>{% translate "Tudo salvo" %}</span>
+      <button type="submit" form="eb-form" class="eb-btn eb-btn-primario">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5h11L19.5 8v11.5h-15z"></path><path d="M8 4.5v5h7"></path><rect x="8" y="13" width="8" height="6.5"></rect></svg>{% translate "Salvar" %}
+      </button>
+    </div>
+  </header>
+
+  <div class="eb-abas">
+    <div class="eb-abas-esq" role="tablist" aria-label="{% translate 'Modo' %}">
+      <button type="button" class="eb-aba is-ativa" role="tab" data-aba-botao="editar" aria-selected="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.2 4.8l4 4L9 19H5v-4L15.2 4.8Z"></path></svg>{% translate "Editar" %}</button>
+      <button type="button" class="eb-aba" role="tab" data-aba-botao="visualizar" aria-selected="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>{% translate "Visualizar" %}</button>
+    </div>
+    <div class="eb-abas-dir" data-so-na-aba="visualizar" hidden>
+      <span class="eb-rotulo-dispositivo">{% translate "Ver como" %}</span>
+      <div class="eb-segmentado" role="group" aria-label="{% translate 'Dispositivo' %}">
+        <button type="button" class="eb-seg is-ativo" data-dispositivo-botao="desktop" aria-pressed="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="13" rx="2"></rect><path d="M8 20.5h8"></path></svg>{% translate "Desktop" %}</button>
+        <button type="button" class="eb-seg" data-dispositivo-botao="mobile" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>{% translate "Mobile" %}</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="eb-sem-js"><i class="ph-fill ph-warning" aria-hidden="true"></i>{% translate "Este editor precisa de JavaScript. Sem ele, nada aqui funciona -- inclusive salvar." %}</div>
+  </noscript>
+
+  <form id="eb-form" method="post" data-form-blocos>
+    {% csrf_token %}
+    <input type="hidden" name="blocos" data-campo-blocos value="[]">
+
+    <div class="eb-corpo" data-modo="editar">
+
+      <aside class="eb-lateral">
+        <div class="eb-lateral-cabeca">
+          <span class="eb-lateral-titulo">{% translate "Estrutura" %}</span>
+          <div class="eb-menu-bloco">
+            <button type="button" class="eb-btn-bloco" data-abrir-menu-bloco>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>{% translate "Bloco" %}
+            </button>
+            <div class="eb-menu-bloco-lista" data-menu-bloco hidden>
+              <div class="eb-menu-bloco-busca">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#93a2be" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+                <input type="text" data-busca-bloco placeholder="{% translate 'Buscar tipo de bloco…' %}" aria-label="{% translate 'Buscar tipo de bloco' %}">
+              </div>
+              <div class="eb-menu-bloco-itens" data-itens-menu-bloco></div>
+            </div>
+          </div>
+        </div>
+        <div class="eb-lateral-lista" data-lista-estrutura></div>
+        <div class="eb-lateral-rodape">
+          <i class="ph ph-info" aria-hidden="true"></i>
+          <span>{% translate "Arraste para reordenar. A visibilidade no mobile é independente." %}</span>
+        </div>
+      </aside>
+
+      <div class="eb-central">
+        <div class="eb-barra" role="toolbar" aria-label="{% translate 'Formatação' %}" data-barra>
+          <select class="editor-rico-seletor" data-comando="tipo-bloco" title="{% translate 'Tipo do bloco' %}" aria-label="{% translate 'Tipo do bloco' %}">
+            <option value="paragraph">{% translate "Parágrafo" %}</option>
+            <option value="heading">{% translate "Título de seção" %}</option>
+            <option value="quote">{% translate "Citação" %}</option>
+          </select>
+          <select class="editor-rico-seletor" data-comando="fontSize" title="{% translate 'Tamanho' %}" aria-label="{% translate 'Tamanho' %}">
+            <option value="3">{% translate "Normal" %}</option>
+            <option value="2">{% translate "Pequeno" %}</option>
+            <option value="4">{% translate "Médio" %}</option>
+            <option value="5">{% translate "Grande" %}</option>
+          </select>
+          <span class="editor-rico-separador"></span>
+          <div class="editor-rico-grupo">
+            <button type="button" class="editor-rico-botao" data-comando="bold" title="{% translate 'Negrito' %}" aria-label="{% translate 'Negrito' %}"><b>B</b></button>
+            <button type="button" class="editor-rico-botao" data-comando="italic" title="{% translate 'Itálico' %}" aria-label="{% translate 'Itálico' %}"><i>I</i></button>
+            <button type="button" class="editor-rico-botao" data-comando="underline" title="{% translate 'Sublinhado' %}" aria-label="{% translate 'Sublinhado' %}"><u>S</u></button>
+            <button type="button" class="editor-rico-botao" data-comando="strikeThrough" title="{% translate 'Tachado' %}" aria-label="{% translate 'Tachado' %}"><s>S</s></button>
+          </div>
+          <span class="editor-rico-separador"></span>
+          <div class="editor-rico-grupo eb-cores">
+            <button type="button" class="eb-swatch" data-comando="foreColor" data-valor="#10275c" style="background:#10275c" title="{% translate 'Cor do texto' %}" aria-label="{% translate 'Cor do texto: marinho' %}"></button>
+            <button type="button" class="eb-swatch" data-comando="foreColor" data-valor="#5b6b8c" style="background:#5b6b8c" title="{% translate 'Cor do texto' %}" aria-label="{% translate 'Cor do texto: cinza' %}"></button>
+            <button type="button" class="eb-swatch" data-comando="foreColor" data-valor="#1d4ed8" style="background:#1d4ed8" title="{% translate 'Cor do texto' %}" aria-label="{% translate 'Cor do texto: azul' %}"></button>
+            <button type="button" class="eb-swatch" data-comando="foreColor" data-valor="#b91c1c" style="background:#b91c1c" title="{% translate 'Cor do texto' %}" aria-label="{% translate 'Cor do texto: vermelho' %}"></button>
+            <button type="button" class="eb-swatch is-realce" data-comando="hiliteColor" data-valor="#fde68a" title="{% translate 'Realce' %}" aria-label="{% translate 'Realce' %}"></button>
+          </div>
+          <span class="editor-rico-separador"></span>
+          <div class="editor-rico-grupo">
+            <button type="button" class="editor-rico-botao" data-comando="justifyLeft" title="{% translate 'Alinhar à esquerda' %}" aria-label="{% translate 'Alinhar à esquerda' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"></path></svg></button>
+            <button type="button" class="editor-rico-botao" data-comando="justifyCenter" title="{% translate 'Centralizar' %}" aria-label="{% translate 'Centralizar' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M5.5 18h13"></path></svg></button>
+            <button type="button" class="editor-rico-botao" data-comando="insertUnorderedList" title="{% translate 'Lista com marcador' %}" aria-label="{% translate 'Lista com marcador' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="7" r="1.2" fill="currentColor"></circle><circle cx="5" cy="12" r="1.2" fill="currentColor"></circle><circle cx="5" cy="17" r="1.2" fill="currentColor"></circle><path d="M9.5 7h10M9.5 12h10M9.5 17h10"></path></svg></button>
+            <button type="button" class="editor-rico-botao" data-comando="insertOrderedList" title="{% translate 'Lista numerada' %}" aria-label="{% translate 'Lista numerada' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 7h10M9.5 12h10M9.5 17h10"></path><text x="2" y="9" font-size="7" fill="currentColor">1</text><text x="2" y="14" font-size="7" fill="currentColor">2</text></svg></button>
+          </div>
+          <span class="editor-rico-separador"></span>
+          <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="abrir-link" title="{% translate 'Link' %}"><i class="ph ph-link" aria-hidden="true"></i>{% translate "Link" %}</button>
+          <button type="button" class="editor-rico-botao" data-comando="unlink" title="{% translate 'Remover link' %}" aria-label="{% translate 'Remover link' %}"><i class="ph ph-link-break" aria-hidden="true"></i></button>
+          <span class="editor-rico-separador"></span>
+          <select class="editor-rico-seletor" data-comando="lineHeight" title="{% translate 'Entrelinha' %}" aria-label="{% translate 'Entrelinha' %}">
+            <option value="1.4">{% translate "Entrelinha 1,4" %}</option>
+            <option value="1.55" selected>{% translate "Entrelinha 1,55" %}</option>
+            <option value="1.7">{% translate "Entrelinha 1,7" %}</option>
+            <option value="2">{% translate "Entrelinha 2" %}</option>
+          </select>
+          <select class="editor-rico-seletor" data-comando="spacing-after" title="{% translate 'Espaço depois do bloco' %}" aria-label="{% translate 'Espaço depois do bloco' %}">
+            <option value="0">{% translate "Sem espaço depois" %}</option>
+            <option value="8">{% translate "Espaço pequeno depois" %}</option>
+            <option value="16" selected>{% translate "Espaço normal depois" %}</option>
+            <option value="24">{% translate "Espaço médio depois" %}</option>
+            <option value="32">{% translate "Espaço grande depois" %}</option>
+            <option value="48">{% translate "Espaço extra depois" %}</option>
+          </select>
+          <button type="button" class="editor-rico-botao editor-rico-botao-texto" data-comando="removeFormat" title="{% translate 'Limpar formatação' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19h14"></path><path d="M8.5 15.5 16 8a2.5 2.5 0 0 0-3.5-3.5L5 12v3.5Z"></path></svg>{% translate "Limpar" %}</button>
+          <span class="eb-flex"></span>
+          <button type="button" class="editor-rico-botao" data-comando="html" title="{% translate 'HTML do bloco' %}" aria-label="{% translate 'HTML do bloco' %}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7.5 4.5 12 9 16.5"></path><path d="M15 7.5 19.5 12 15 16.5"></path></svg></button>
+
+          <div class="eb-caixa-link" data-caixa-link hidden>
+            <label class="field editor-rico-campo-curto"><span>{% translate "Texto do link" %}</span><input class="input" type="text" data-link-texto></label>
+            <label class="field editor-rico-campo-longo"><span>{% translate "Endereço" %}</span><input class="input" type="text" data-link-endereco placeholder="https://…, /pt/… ou mailto:…"></label>
+            <label class="field-check"><input type="checkbox" data-link-nova-aba> {% translate "Nova aba" %}</label>
+            <button type="button" class="btn btn-primary btn-sm" data-aplicar-link>{% translate "Inserir link" %}</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-fechar-link>{% translate "Cancelar" %}</button>
+          </div>
+        </div>
+
+        <div class="eb-folha">
+          <div class="eb-canvas" data-canvas aria-label="{% translate 'Blocos do documento' %}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="eb-corpo eb-corpo-previa" data-modo="visualizar" hidden>
+      <iframe class="eb-iframe" data-previa-iframe name="eb-previa-quadro" title="{% translate 'Prévia' %}"></iframe>
+    </div>
+  </form>
+
+  {% comment %}
+  O formulário que MANDA a prévia -- não grava nada (é a mesma view de
+  prévia de `content_preview.html`, que só lê `request.POST`). Aponta
+  para o `<iframe>` pelo `target`; `editor-blocos.js` o submete de novo
+  toda vez que o quadro muda ou a aba "Visualizar" abre.
+
+  IRMÃO do formulário acima, NUNCA dentro dele: um `<form>` dentro de
+  outro é HTML inválido, e o navegador conserta sozinho -- mas
+  "consertar" aqui significa achatar os dois num só, e um SEGUNDO campo
+  `name="blocos"` (o desta prévia) passaria a competir com o do
+  formulário de salvar. `request.POST.get()` do Django devolve o
+  ÚLTIMO valor de um nome repetido: ao salvar, o rascunho da prévia
+  (às vezes vazio) apagaria silenciosamente o conteúdo real do quadro.
+  {% endcomment %}
+  <form method="post" action="{{ url_previa }}" target="eb-previa-quadro" data-form-previa hidden>
+    {% csrf_token %}
+    <input type="hidden" name="blocos" data-campo-blocos-previa value="[]">
+    <input type="hidden" name="viewport" data-campo-viewport-previa value="desktop">
+  </form>
+
+  {% comment %}Modelos de bloco vazio -- um por tipo, clonados por `editor-blocos.js` ao inserir.{% endcomment %}
+  <template data-modelo-controles-imagem>
+    <div class="eb-painel-imagem" data-painel-imagem>
+      <span class="eb-painel-titulo">{% translate "Imagem" %}</span>
+      <div class="eb-segmentado" role="group" aria-label="{% translate 'Posição no desktop' %}">
+        <button type="button" data-ancora="none">{% translate "Sem float" %}</button>
+        <button type="button" data-ancora="left">{% translate "Esquerda" %}</button>
+        <button type="button" data-ancora="right">{% translate "Direita" %}</button>
+      </div>
+      <label class="eb-painel-campo"><span>{% translate "Largura" %}</span>
+        <select data-largura-imagem>
+          <option value="20">20%</option><option value="25">25%</option><option value="30">30%</option>
+          <option value="36">36%</option><option value="40">40%</option><option value="50">50%</option>
+          <option value="60">60%</option><option value="70">70%</option>
+        </select>
+      </label>
+      <label class="eb-painel-campo"><span>{% translate "Texto alternativo" %}</span><input type="text" data-alt-imagem></label>
+      <button type="button" class="btn btn-secondary btn-sm" data-trocar-imagem>{% translate "Trocar imagem" %}</button>
+    </div>
+  </template>
+
+  <div class="eb-seletor-imagem" data-seletor-imagem hidden>
+    <div class="eb-seletor-imagem-janela">
+      <div class="eb-seletor-imagem-cabeca">
+        <span>{% translate "Escolher imagem da biblioteca" %}</span>
+        <button type="button" data-fechar-seletor-imagem aria-label="{% translate 'Fechar' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </div>
+      <div class="eb-seletor-imagem-grade" data-grade-imagens></div>
+    </div>
+  </div>
+</div>
+
+{{ blocos_json|json_script:"eb-dados-iniciais" }}
+{{ catalogo_de_blocos|json_script:"eb-catalogo" }}
+{{ imagens|json_script:"eb-imagens" }}
+{{ url_previa|json_script:"eb-url-previa" }}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/editor-blocos.js' %}" defer></script>{% endblock %}

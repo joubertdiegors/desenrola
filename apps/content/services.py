@@ -24,6 +24,7 @@ o banco recém-migrado, mostra a Home com as seções vazias em vez de um
 500 -- e o administrador preenche pela tela.
 """
 
+import json
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -33,7 +34,7 @@ from django.utils.html import linebreaks
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
-from . import rodape
+from . import blocos, rodape
 from .models import (
     ContentBlock,
     ContentTranslation,
@@ -89,6 +90,11 @@ class ParteDaPagina:
     # sem botão posicionado sobre o cartão (ver `core/secoes/partners.html`
     # e `_partner_card.html`). As colunas ficaram para que a mudança seja
     # reversível sem perder configuração.
+    #
+    # `contador_posicao` entrou na mesma situação na Rodada 21: o
+    # contador virou uma faixa própria, sempre centralizada
+    # (`core/secoes/_faixa_contador.html`), e não há mais onde
+    # posicionar -- nenhum template lê este campo.
     contador_ativo: bool = False
     contador_posicao: str = PageSection.Posicao9.SUPERIOR_ESQUERDA
     contador_ao_vivo_ativo: bool = True
@@ -427,10 +433,24 @@ class DocumentoLegal:
     """O texto publicado de um documento legal, e em que formato ele está."""
 
     texto: str
-    # `True` quando o bloco é "Texto formatado" -- escrito no editor de
-    # Documentos legais, em HTML já sanitizado. `False` é o texto simples
-    # de sempre, que a página mostra com `linebreaks`.
+    # `True` quando o bloco é "Texto formatado" ou "Blocos estruturados"
+    # -- em qualquer um dos dois, HTML já sanitizado. `False` é o texto
+    # simples de sempre, que a página mostra com `linebreaks`.
     rico: bool = False
+    # A lista de blocos (Rodada 22), só quando o bloco é "Blocos
+    # estruturados" -- `None` nos outros dois formatos. Quem desenha
+    # (`core.views.legal`) olha isto PRIMEIRO: havendo blocos, é
+    # `rodape.renderizar_documento_em_blocos` quem desenha, não `texto`.
+    blocos: list | None = None
+
+
+def _blocos_do_json(texto_json):
+    """A lista de blocos gravada, ou `None` se `texto_json` não for uma lista válida."""
+    try:
+        lista = json.loads(texto_json) if texto_json else []
+    except (TypeError, ValueError):
+        return None
+    return lista if isinstance(lista, list) else None
 
 
 def texto_legal(chave, language=None):
@@ -485,6 +505,13 @@ def documento_legal(chave, language=None):
     if not isinstance(texto, str):
         return None
     texto = texto.strip()
+
+    if tipos.get(lingua) == ContentBlock.Kind.STRUCTURED:
+        lista = _blocos_do_json(texto)
+        if lista is None or not blocos.blocos_tem_conteudo(lista):
+            return None
+        return DocumentoLegal(texto="", rico=True, blocos=lista)
+
     rico = tipos.get(lingua) == ContentBlock.Kind.RICH_TEXT
     if not texto or (rico and not rodape.tem_conteudo(texto)):
         return None
@@ -502,7 +529,7 @@ def legais_publicadas(language=None):
     idioma = language or _idioma_do_conteudo()
     padrao = settings.LANGUAGE_CODE
 
-    por_chave, ricas = {}, set()
+    por_chave, ricas, estruturadas = {}, set(), set()
     linhas = ContentTranslation.objects.filter(
         block__key__in=CHAVES_LEGAIS,
         block__is_active=True,
@@ -512,15 +539,21 @@ def legais_publicadas(language=None):
         por_chave.setdefault(chave, {})[lingua] = texto
         if tipo == ContentBlock.Kind.RICH_TEXT:
             ricas.add(chave)
+        elif tipo == ContentBlock.Kind.STRUCTURED:
+            estruturadas.add(chave)
 
     publicadas = set()
     for chave, por_idioma in por_chave.items():
         texto = por_idioma.get(idioma) or por_idioma.get(padrao) or ""
         if not isinstance(texto, str) or not texto.strip():
             continue
+        if chave in estruturadas:
+            lista = _blocos_do_json(texto)
+            if lista is None or not blocos.blocos_tem_conteudo(lista):
+                continue
         # A mesma regra de `documento_legal`: marcação sem texto não é
         # documento publicado.
-        if chave in ricas and not rodape.tem_conteudo(texto):
+        elif chave in ricas and not rodape.tem_conteudo(texto):
             continue
         publicadas.add(chave)
     return publicadas
@@ -541,13 +574,18 @@ def texto_simples_como_html(texto):
     return rodape.sanitizar_documento(linebreaks((texto or "").strip(), autoescape=True))
 
 
-def documento_legal_para_edicao(chave, idioma):
+def blocos_do_documento(chave, idioma):
     """
-    O que o editor abre: o texto DAQUELE idioma, já em HTML.
+    Os blocos que o editor abre, DAQUELE idioma -- sem queda para o
+    idioma padrão: o editor mostra o que está gravado no idioma
+    escolhido.
 
-    Sem queda para o idioma padrão: o editor mostra o que está gravado
-    no idioma escolhido, e a tela avisa quando não há nada -- a página
-    pública, essa sim, cai no padrão.
+    Um documento ainda no formato de antes (texto simples ou "Texto
+    formatado", de antes da Rodada 22) é convertido NA HORA, só para
+    exibição -- nada é gravado aqui. A conversão de verdade (a que
+    fica) acontece em `salvar_blocos_do_documento`, na primeira vez que
+    alguém salva por este editor -- a mesma janela de
+    `salvar_documento_legal` de antes.
     """
     traducao = (
         ContentTranslation.objects.filter(block__key=chave, language=idioma)
@@ -555,46 +593,58 @@ def documento_legal_para_edicao(chave, idioma):
         .first()
     )
     if traducao is None or not (traducao.content or "").strip():
-        return ""
-    if traducao.block.kind == ContentBlock.Kind.RICH_TEXT:
-        return rodape.sanitizar_documento(traducao.content)
-    return texto_simples_como_html(traducao.content)
+        return []
+    tipo = traducao.block.kind
+    if tipo == ContentBlock.Kind.STRUCTURED:
+        lista = _blocos_do_json(traducao.content)
+        return lista if lista is not None else []
+    if tipo == ContentBlock.Kind.RICH_TEXT:
+        return blocos.migrar_html_para_blocos(traducao.content)
+    return blocos.migrar_html_para_blocos(texto_simples_como_html(traducao.content))
 
 
-def salvar_documento_legal(chave, idioma, html_do_editor):
+def salvar_blocos_do_documento(chave, idioma, blocos_brutos):
     """
-    Grava o texto de um documento legal, vindo do editor, num idioma.
-    Devolve o que foi gravado.
+    Grava os blocos de um documento legal, vindos do editor, num
+    idioma. Devolve se o que foi gravado tem conteúdo (a mesma
+    pergunta de `blocos.blocos_tem_conteudo`).
 
-    Sanitiza de novo -- o formulário já sanitizou, mas a regra não
-    depende de quem chama. Um editor esvaziado grava "": o estado "sem
+    Sanitiza de novo -- o que chega já devia estar limpo, mas a regra
+    não depende de quem chama (a mesma razão de `salvar_documento_legal`
+    antes desta rodada). Um editor esvaziado grava `[]`: o estado "sem
     texto", em que a página responde 404 e os links somem do site.
 
-    A PRIMEIRA GRAVAÇÃO PELO EDITOR converte o bloco para "Texto
-    formatado". As traduções que ainda estiverem em texto simples, nos
-    outros idiomas, são convertidas junto (`texto_simples_como_html`):
-    o que se lê em cada idioma continua idêntico. Tudo numa transação --
-    não existe o meio do caminho em que um idioma está num formato e o
-    bloco diz outro.
+    A PRIMEIRA GRAVAÇÃO POR ESTE EDITOR converte o bloco para "Blocos
+    estruturados" -- e as traduções que ainda estiverem no formato de
+    antes, nos OUTROS idiomas, são convertidas junto
+    (`blocos.migrar_html_para_blocos`): o que se lê em cada idioma
+    continua idêntico. Tudo numa transação -- não existe o meio do
+    caminho em que um idioma está num formato e o bloco diz outro.
 
-    O bloco que alguém tenha apagado volta a existir, pela mesma chave:
-    é o lugar do documento, o mesmo que a migration cria.
+    O bloco que alguém tenha apagado volta a existir, pela mesma chave.
     """
-    limpo = rodape.sanitizar_documento(html_do_editor)
-    if not rodape.tem_conteudo(limpo):
-        limpo = ""
+    limpos = blocos.sanitizar_blocos(blocos_brutos)
+    tem_conteudo = blocos.blocos_tem_conteudo(limpos)
+    if not tem_conteudo:
+        limpos = []
+    gravar = json.dumps(limpos, ensure_ascii=False)
 
     with transaction.atomic():
         bloco, _criado = ContentBlock.objects.select_for_update().get_or_create(
-            key=chave, defaults={"kind": ContentBlock.Kind.RICH_TEXT}
+            key=chave, defaults={"kind": ContentBlock.Kind.STRUCTURED}
         )
-        if bloco.kind != ContentBlock.Kind.RICH_TEXT:
+        if bloco.kind != ContentBlock.Kind.STRUCTURED:
+            veio_de_rico = bloco.kind == ContentBlock.Kind.RICH_TEXT
             for traducao in bloco.translations.exclude(language=idioma):
-                traducao.content = texto_simples_como_html(traducao.content)
+                html_de_antes = (
+                    traducao.content if veio_de_rico else texto_simples_como_html(traducao.content)
+                )
+                convertidos = blocos.migrar_html_para_blocos(html_de_antes)
+                traducao.content = json.dumps(convertidos, ensure_ascii=False)
                 traducao.save(update_fields=["content", "updated_at"])
-            bloco.kind = ContentBlock.Kind.RICH_TEXT
+            bloco.kind = ContentBlock.Kind.STRUCTURED
             bloco.save(update_fields=["kind", "updated_at"])
         ContentTranslation.objects.update_or_create(
-            block=bloco, language=idioma, defaults={"content": limpo}
+            block=bloco, language=idioma, defaults={"content": gravar}
         )
-    return limpo
+    return tem_conteudo

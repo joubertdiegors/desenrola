@@ -90,7 +90,6 @@ def _payload(**extra):
         "idioma": "pt",
         **traducao.content,
         "contador_ativo": "on",
-        "contador_posicao": secao().counter_position,
         "contador_ao_vivo_ativo": "on",
     }
     base.update(extra)
@@ -140,12 +139,12 @@ class TestNaConfiguracaoExistente:
     def test_nao_mexe_nos_outros_campos_do_contador(self, cliente):
         cliente.post(
             url_do_editor(),
-            _payload(contador_valor_inicial="7", contador_posicao="inferior-direita"),
+            _payload(contador_valor_inicial="7", contador_ao_vivo_ativo=""),
         )
 
         atual = secao()
         assert atual.counter_initial_value == 7
-        assert atual.counter_position == "inferior-direita"
+        assert atual.counter_live_enabled is False
         assert atual.counter_enabled is True
 
 

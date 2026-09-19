@@ -477,7 +477,7 @@ class TestTela:
         """
         corpo = cliente.get(TELA).content.decode()
         inicio = corpo.index("Configurado em outras telas")
-        cartao = corpo[inicio : corpo.index("Documentos legais", inicio)]
+        cartao = corpo[inicio : corpo.index("</dl>", inicio)]
 
         for url in (
             reverse("backoffice:appearance"),
@@ -486,22 +486,23 @@ class TestTela:
         ):
             assert f'href="{url}"' in cartao
 
-    def test_mostra_o_estado_dos_documentos_legais_sem_edita_los(self, cliente):
+    def test_documentos_legais_nao_mora_mais_aqui(self, cliente):
         """
-        Até a Etapa F esta tela dizia que não havia links legais, porque
-        não havia mesmo. A Etapa G criou as duas páginas, e o cartão
-        passou a mostrar o ESTADO de cada documento.
+        Até a Rodada 20, esta tela trazia um cartão-resumo dos
+        documentos legais, com um link para onde se escrevia o texto.
+        A Rodada 21 separou Documentos legais em telas próprias, sob
+        Sistema, e tirou o resumo daqui -- cada tela agora é
+        independente (ver `test_documentos_legais_no_backoffice.py`).
 
-        O que não mudou, e é o que esta asserção guarda: aqui não se
-        edita texto legal. Não há formulário paralelo -- o texto é
-        escrito na administração do Django.
+        A fatia é o `<main>`, não a página inteira: o menu lateral
+        continua trazendo "Documentos legais" como item -- é a tela em
+        si que não fala mais dele.
         """
         corpo = cliente.get(TELA).content.decode()
-        inicio = corpo.index("Documentos legais")
-        cartao = corpo[inicio:]
+        principal = corpo[corpo.index('id="main"') : corpo.index("</main>")]
 
-        assert "Sem texto" in cartao
-        assert "<form" not in cartao
+        assert "Documentos legais" not in principal
+        assert "<form" not in principal[principal.index("Configurado em outras telas") :]
         assert 'name="legal.terms_of_use"' not in corpo
 
     def test_nao_ha_infraestrutura_inventada(self, cliente):

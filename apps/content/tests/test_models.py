@@ -47,7 +47,7 @@ class TestContentBlock:
             ContentBlock.objects.create(key=content_block.key)
 
     def test_tipos_disponiveis(self):
-        assert set(ContentBlock.Kind.values) == {"text", "rich_text", "image"}
+        assert set(ContentBlock.Kind.values) == {"text", "rich_text", "image", "structured"}
 
     def test_pode_ficar_inativo(self, content_block):
         content_block.is_active = False

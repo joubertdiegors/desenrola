@@ -65,6 +65,6 @@ porque ele varia com a permissão de quem olha.
   {% if perms.letters.view_all_letters %}
   <a href="{% url 'backoffice:letters' %}"{% if active == "letters" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'letters' %}ph-fill{% else %}ph{% endif %} ph-files" aria-hidden="true"></i>{% translate "Cartas" %}</a>
   {% endif %}
-  <a href="{% url 'backoffice:appearance' %}"{% if active == "templates" or active == "content" or active == "partners" or active == "email_settings" or active == "assets" or active == "languages" or active == "appearance" or active == "system" or active == "legal_documents" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'appearance' %}ph-fill{% else %}ph{% endif %} ph-dots-three-outline" aria-hidden="true"></i>{% translate "Mais" %}</a>
+  <a href="{% url 'backoffice:appearance' %}"{% if active == "templates" or active == "content" or active == "partners" or active == "email_settings" or active == "assets" or active == "languages" or active == "appearance" or active == "system" or active == "legal_documents_terms" or active == "legal_documents_privacy" %} aria-current="page" class="is-current"{% endif %}><i class="{% if active == 'appearance' %}ph-fill{% else %}ph{% endif %} ph-dots-three-outline" aria-hidden="true"></i>{% translate "Mais" %}</a>
 </nav>
 {% endblock %}

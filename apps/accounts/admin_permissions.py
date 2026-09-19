@@ -248,10 +248,14 @@ CATALOGO = (
                 chave="content.view_contentblock",
                 rotulo=_("Ver os documentos legais"),
                 descricao=_(
-                    "Abre a tela de Documentos legais e lê os Termos de uso e a "
-                    "Política de privacidade, em qualquer idioma."
+                    "Abre a visualização dos Termos de uso e da Política de "
+                    "privacidade, em qualquer idioma -- cada documento na sua "
+                    "própria tela."
                 ),
-                aplicada_em="content.backoffice_views.backoffice_legal_documents",
+                aplicada_em=(
+                    "content.backoffice_views.backoffice_legal_terms / "
+                    "backoffice_legal_privacy"
+                ),
             ),
             PermissaoAdministrativa(
                 chave="content.change_contentblock",
@@ -261,7 +265,10 @@ CATALOGO = (
                     "Não é uma permissão nova: é a mesma que a administração do "
                     "Django já cobrava destes textos."
                 ),
-                aplicada_em="content.backoffice_views.backoffice_legal_documents",
+                aplicada_em=(
+                    "content.backoffice_views.backoffice_legal_terms_edit / "
+                    "backoffice_legal_privacy_edit"
+                ),
             ),
             PermissaoAdministrativa(
                 chave="core.view_emailsettings",

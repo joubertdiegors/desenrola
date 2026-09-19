@@ -67,16 +67,29 @@ def conteudo():
 
 def area_do_banner(client):
     """
-    Só a PRIMEIRA seção do `<main>` -- o Banner.
+    Só a seção do Banner (`.home-secao-hero`) -- não `<main>` inteiro.
 
     Não o `<main>` inteiro: "Como funciona" também numera os passos
     dele (01, 02, 03), e uma busca por ">03<" na página toda acharia
-    aquele número em vez deste.
+    aquele número em vez deste. E não mais "a primeira seção depois de
+    `<main>`": desde a Rodada 21 a faixa do contador
+    (`.home-secao-contador`) vem antes dela -- por isso a âncora é a
+    classe `.home-secao-hero` em si, e não a posição.
     """
     html = client.get(HOME).content.decode()
-    corpo = html[html.index("<main") : html.index("</main>")]
+    inicio = html.rindex("<section", 0, html.index('class="home-secao home-secao-hero"'))
+    corpo = html[inicio:]
     fim = corpo.find("</section>")
     return corpo if fim == -1 else corpo[: fim + len("</section>")]
+
+
+def corpo(client):
+    """
+    A página inteira -- o que `TestContadorReal` precisa desde a Rodada
+    21: o contador não é mais parte de `area_do_banner()` (saiu do
+    banner, virou a faixa `.home-secao-contador`, sempre antes dele).
+    """
+    return client.get(HOME).content.decode()
 
 
 # ===========================================================================
@@ -134,6 +147,13 @@ class TestOsSeteDesenhos:
 class TestContadorReal:
     """
     A referência escreve "8 cartas geradas". Oito é desenho, não dado.
+
+    O CONTADOR NÃO MORA MAIS NO BANNER (Rodada 21)
+    -------------------------------------------------
+    Por isso estes testes leem a PÁGINA INTEIRA (`corpo()`), não
+    `area_do_banner()`: o contador é a faixa `.home-secao-contador`,
+    sempre ANTES do banner -- checar só a área do banner deixaria de
+    ver o contador nem quando ele está lá, nem quando devia sumir.
     """
 
     @pytest.mark.parametrize("desenho", (DESTAQUE, ASSIMETRICO))
@@ -144,7 +164,7 @@ class TestContadorReal:
         letter.save(update_fields=["finalized_at"])
         statistics.esquecer_a_contagem()
 
-        html = area_do_banner(client)
+        html = corpo(client)
 
         assert statistics.cartas_emitidas() == 1
         assert '<span class="banner-contador-valor">1</span>' in html
@@ -155,7 +175,7 @@ class TestContadorReal:
         escrever(badge_label="cartas já geradas")
         statistics.esquecer_a_contagem()
 
-        html = area_do_banner(client)
+        html = corpo(client)
 
         assert '<span class="banner-contador-valor">0</span>' in html
 
@@ -170,7 +190,7 @@ class TestContadorReal:
         usar(desenho)
         escrever(badge_label="cartas já geradas", badge_note="Atualizado em tempo real")
 
-        html = area_do_banner(client)
+        html = corpo(client)
 
         assert "8 cartas" not in html
 
@@ -179,7 +199,7 @@ class TestContadorReal:
         usar(DESTAQUE)
         escrever(badge_label="")
 
-        html = area_do_banner(client)
+        html = corpo(client)
 
         assert "banner-contador-valor" not in html
         assert "banner-contador" not in html

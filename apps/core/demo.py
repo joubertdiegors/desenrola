@@ -69,5 +69,11 @@ BACKOFFICE_SECTIONS = {
     # nao renderiza botao nenhum. O "Novo modelo" que havia aqui era
     # copia da tela de Modelos e nao fazia nada.
     "system": {"title": _("Identidade"), "icon": "", "action": ""},
-    "legal_documents": {"title": _("Documentos legais"), "icon": "", "action": ""},
+    # Os documentos legais (Rodada 21): cada um com a sua tela, e por
+    # isso com o proprio titulo -- `content.backoffice_views` monta o
+    # cabecalho sozinho (sempre montou, mesmo antes da separacao), sem
+    # passar por `_backoffice_context`. As chaves ficam aqui pela mesma
+    # razao do resto do dicionario: documentar qual `active` cada tela usa.
+    "legal_documents_terms": {"title": _("Termos de uso"), "icon": "", "action": ""},
+    "legal_documents_privacy": {"title": _("Privacidade"), "icon": "", "action": ""},
 }

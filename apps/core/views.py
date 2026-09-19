@@ -182,17 +182,26 @@ def legal(request, chave, titulo):
     legivel antes de a pessoa criar conta -- e o link dele esta,
     justamente, na tela de cadastro.
 
-    DOIS FORMATOS
+    TRÊS FORMATOS
     -------------
     Texto simples (o de sempre) vai para o template como TEXTO, e sai
-    por `linebreaks`. O documento escrito no editor de Documentos legais
-    ("Texto formatado") vai como `texto_rico`: o HTML que
-    `rodape.renderizar_documento` devolve -- sanitizado de novo aqui,
-    porque o banco nao e confiavel por definicao.
+    por `linebreaks`. Os outros dois vão como `texto_rico`, sanitizados
+    de novo aqui -- o banco não é confiável por definição: "Texto
+    formatado" (o editor de antes da Rodada 22) via
+    `rodape.renderizar_documento`; "Blocos estruturados" (o editor por
+    blocos, `documento.blocos` não é `None`) via
+    `rodape.renderizar_documento_em_blocos`.
     """
     documento = content.documento_legal(chave)
     if documento is None:
         raise Http404("documento legal sem conteúdo publicado")
+
+    if documento.blocos is not None:
+        texto_rico = rodape.renderizar_documento_em_blocos(documento.blocos)
+    elif documento.rico:
+        texto_rico = rodape.renderizar_documento(documento.texto)
+    else:
+        texto_rico = None
 
     return render(
         request,
@@ -200,9 +209,7 @@ def legal(request, chave, titulo):
         {
             "titulo": titulo,
             "texto": documento.texto,
-            "texto_rico": (
-                rodape.renderizar_documento(documento.texto) if documento.rico else None
-            ),
+            "texto_rico": texto_rico,
             **content.contexto_do_rodape(),
         },
     )
@@ -495,10 +502,6 @@ def backoffice_system(request):
             "url_da_aparencia": reverse("backoffice:appearance"),
             "url_dos_idiomas": reverse("backoffice:languages"),
             "url_do_email": reverse("backoffice:email_settings"),
-            # Onde o texto dos documentos legais e escrito: a tela de
-            # Documentos legais, no proprio Backoffice. Esta mostra o
-            # ESTADO deles e aponta para la -- nao duplica o editor.
-            "url_dos_documentos_legais": reverse("backoffice:legal_documents"),
         }
     )
     return render(request, "backoffice/system.html", context)

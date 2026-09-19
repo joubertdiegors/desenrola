@@ -28,12 +28,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from .models import Asset, FaqItem, MenuItem, PageSection, Partner
-from .rodape import (
-    HTML_PADRAO,
-    TAMANHO_MAXIMO_DO_DOCUMENTO,
-    sanitizar,
-    sanitizar_documento,
-)
+from .rodape import HTML_PADRAO, sanitizar
 from .section_schema import Lista, TextoRico, campos_da_secao, secao_declarada
 from .services import ANCORAS_DA_HOME
 
@@ -99,7 +94,6 @@ class FormularioDeSecao(forms.Form):
         "imagem",
         "imagem_remover",
         "contador_ativo",
-        "contador_posicao",
         "contador_ao_vivo_ativo",
         "contador_valor_inicial",
         "parceiros_posicao_botao",
@@ -186,6 +180,11 @@ class FormularioDeSecao(forms.Form):
                 )
 
         if declarada.contador:
+            # A Rodada 21 tirou o contador de dentro do banner: virou
+            # uma faixa própria, sempre centralizada, sempre ANTES dele
+            # (`core/secoes/_faixa_contador.html`). Não há mais "onde"
+            # escolher -- o campo `contador_posicao` saiu do formulário
+            # (a coluna `counter_position` continua no modelo, sem uso).
             self.fields["contador_ativo"] = forms.BooleanField(
                 label=_("Mostrar o contador de cartas"),
                 required=False,
@@ -194,13 +193,6 @@ class FormularioDeSecao(forms.Form):
                     "O número vem sempre do sistema (cartas realmente "
                     "emitidas) -- não é editável."
                 ),
-            )
-            self.fields["contador_posicao"] = forms.ChoiceField(
-                label=_("Posição do contador"),
-                required=False,
-                initial=secao.counter_position,
-                choices=PageSection.Posicao9.choices,
-                widget=forms.Select(attrs={"class": "input"}),
             )
             self.fields["contador_ao_vivo_ativo"] = forms.BooleanField(
                 label=_("Mostrar o indicador \"ao vivo\""),
@@ -325,14 +317,6 @@ class FormularioDeSecao(forms.Form):
             if secao.counter_enabled != ativo:
                 secao.counter_enabled = ativo
                 mudou.append("counter_enabled")
-        if "contador_posicao" in self.fields:
-            posicao = (
-                self.cleaned_data.get("contador_posicao")
-                or PageSection.Posicao9.SUPERIOR_ESQUERDA
-            )
-            if secao.counter_position != posicao:
-                secao.counter_position = posicao
-                mudou.append("counter_position")
         if "contador_ao_vivo_ativo" in self.fields:
             ao_vivo = bool(self.cleaned_data.get("contador_ao_vivo_ativo"))
             if secao.counter_live_enabled != ao_vivo:
@@ -676,27 +660,7 @@ class FormularioDeImagem(forms.ModelForm):
         return _validar_arquivo_de_imagem(self.cleaned_data.get("file"))
 
 
-class FormularioDeDocumentoLegal(forms.Form):
-    """
-    O texto de um documento legal, num idioma.
-
-    Um `<textarea>` só -- o que o editor rico (`editor-rico.js`) esconde
-    e alimenta, como no rodapé. O navegador nunca decide o que é HTML
-    aceitável: `clean_texto` reduz tudo à lista DOS DOCUMENTOS
-    (`rodape.sanitizar_documento`).
-
-    O limite é conferido aqui, com mensagem: um texto jurídico cortado
-    em silêncio seria pior do que um recusado.
-    """
-
-    texto = forms.CharField(
-        label=_("Texto do documento"),
-        required=False,
-        max_length=TAMANHO_MAXIMO_DO_DOCUMENTO,
-        widget=forms.Textarea(
-            attrs={"class": "input", "rows": 16, "data-editor-rico-campo": "1"}
-        ),
-    )
-
-    def clean_texto(self):
-        return sanitizar_documento(self.cleaned_data.get("texto") or "")
+# O editor de Documentos legais deixou de ser um `<textarea>` só (a
+# Rodada 22 trocou por blocos estruturados, ver `apps.content.blocos` e
+# `apps.content.backoffice_views._editar_documento_legal`) -- não há
+# mais formulário aqui: o POST é lido e sanitizado bloco a bloco.

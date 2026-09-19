@@ -232,7 +232,7 @@ class TestContador:
 
     def test_nao_ha_numero_escrito_no_template(self):
         marcacao = pathlib.Path(
-            "templates/core/secoes/_banner_contador.html"
+            "templates/core/secoes/_faixa_contador.html"
         ).read_text(encoding="utf-8")
 
         assert "cartas_emitidas" in marcacao

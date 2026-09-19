@@ -101,34 +101,6 @@ body.publico .hero-assimetrico,
 body.publico .hero-assimetrico-grade,
 body.publico .hero-editorial { background: none; padding: 0; }
 body.publico .hero-amplo-texto { padding: 42px 24px 40px; }
-/* O CONTADOR EM CIMA reserva a altura dele acima do titulo (capsula de
-   56px + 16px de respiro = 72px), e so quando esta em cima: a faixa
-   sabe a posicao pelo `data-contador`. Em baixo, o mesmo respiro vai
-   para o pe. No meio, nada a reservar. */
-.home-secao-hero[data-contador^="superior"] .hero,
-.home-secao-hero[data-contador^="superior"] .hero-texto,
-.home-secao-hero[data-contador^="superior"] .hero-cheio,
-.home-secao-hero[data-contador^="superior"] .hero-destaque,
-.home-secao-hero[data-contador^="superior"] .hero-assimetrico-grade,
-.home-secao-hero[data-contador^="superior"] .hero-editorial { padding-top: 72px; }
-.home-secao-hero[data-contador^="inferior"] .hero,
-.home-secao-hero[data-contador^="inferior"] .hero-texto,
-.home-secao-hero[data-contador^="inferior"] .hero-cheio,
-.home-secao-hero[data-contador^="inferior"] .hero-destaque,
-.home-secao-hero[data-contador^="inferior"] .hero-assimetrico-grade,
-.home-secao-hero[data-contador^="inferior"] .hero-editorial { padding-bottom: 72px; }
-.home-secao-hero .banner-contador.pos-superior-esquerda,
-.home-secao-hero .banner-contador.pos-superior-centro,
-.home-secao-hero .banner-contador.pos-superior-direita { top: 0; }
-.home-secao-hero .banner-contador.pos-inferior-esquerda,
-.home-secao-hero .banner-contador.pos-inferior-centro,
-.home-secao-hero .banner-contador.pos-inferior-direita { bottom: 0; }
-.home-secao-hero .banner-contador.pos-superior-esquerda,
-.home-secao-hero .banner-contador.pos-centro-esquerda,
-.home-secao-hero .banner-contador.pos-inferior-esquerda { left: 0; }
-.home-secao-hero .banner-contador.pos-superior-direita,
-.home-secao-hero .banner-contador.pos-centro-direita,
-.home-secao-hero .banner-contador.pos-inferior-direita { right: 0; }
 /* A tipografia da chamada e' a da referencia: o desenho decide onde o
    titulo fica, a identidade decide como ele e' escrito. */
 body.publico .hero h1,
@@ -290,31 +262,12 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
 .pos-inferior-centro { bottom: var(--pos-respiro, 24px); left: 50%; transform: translateX(-50%); }
 .pos-inferior-direita { bottom: var(--pos-respiro, 24px); right: var(--pos-respiro, 24px); }
 
-/* Contador do banner -- um parcial so (`_banner_contador.html`), incluido
-   pelos sete desenhos de banner (acima e abaixo). O ancestral posicionado
-   e sempre a propria secao do banner -- todas ganharam `position: relative`
-   -- entao as nove classes acima bastam em qualquer um dos sete desenhos,
-   com ou sem foto. */
-.banner-contador {
-  position: absolute;
-  z-index: 2;
-  max-width: calc(100% - 32px);
-  /* A sombra da referencia: mais aberta que a dos cartoes, porque a
-     capsula flutua sobre a faixa. */
-  box-shadow: 0 4px 14px rgba(16, 39, 92, .07);
-}
-/* ELE FLUTUA EM QUALQUER LARGURA -- NUNCA MUDA DE MODO
-   -------------------------------------------------------
-   Uma versao anterior o tirava do posicionamento absoluto abaixo de
-   1024px para evitar que cobrisse o titulo. Reentrar no fluxo normal
-   tem um efeito colateral serio: em quatro dos sete desenhos ele e
-   filho direto de um grid/flex de duas colunas (`.hero`,
-   `.hero-editorial`, `.hero-amplo`) -- virar um TERCEIRO item nessa
-   grade bagunça as duas colunas de verdade (texto e imagem trocam de
-   lugar, ou ficam lado a lado com o contador). Ficar sempre absoluto
-   preserva a contagem de itens do grid/flex em qualquer largura; o que
-   muda por breakpoint, logo abaixo, e so o respiro (`padding-top`) que
-   cada desenho reserva para ele nao cobrir o titulo. */
+/* Contador do banner -- desde a Rodada 21, uma FAIXA própria antes do
+   banner (`core/secoes/_faixa_contador.html`), não mais um elemento
+   absoluto sobre ele (ver `.home-secao-contador`, mais abaixo). As
+   nove classes `.pos-*` acima continuam servindo a outro elemento
+   absoluto: o botão de cada cartão de parceiro.
+*/
 
 /* ---------------------------------------------------------------------------
    Os quatro desenhos vindos da referencia visual do cliente.
@@ -478,70 +431,102 @@ body.publico .hero-lead { font-size: 17px; line-height: 1.55; }
   text-align: center;
 }
 
-/* A CAPSULA DO CONTADOR
-   ---------------------
-   O desenho do arquivo de referencia "Home 2.0": pilula BRANCA com
-   borda, sombra e raio 14; dentro, o icone de pessoas sobre uma area
-   clara, o numero em destaque e o texto ao lado -- que pode ocupar
-   duas linhas (`max-width: 10em`, como na referencia). O numero vem do
-   banco (`letters.statistics`), nunca do CSS nem do template.
+/* O CONTADOR DA HOME (Rodada 23)
+   -------------------------------
+   Reprodução estrutural de "Hero Contador Estatico2.dc.html": uma FAIXA
+   horizontal de ponta a ponta, sem cartão nenhum -- nada de fundo
+   branco próprio, borda, raio ou sombra --, com [ícone] [número]
+   [texto] centralizados e o banner colado logo abaixo. As medidas são
+   as da referência, medidas no navegador: desktop com 52px de altura,
+   `11px 26px` de respiro e 14px entre os três itens; celular com 47px,
+   `10px 16px`, 10px entre o ícone e o grupo número + texto, e 6px
+   dentro do grupo, alinhado pela linha de base.
 
-   As cores saem dos tokens de `body.publico`, derivados de `--p`: a
-   referencia foi desenhada no azul do projeto, e trocar a cor
-   principal no Backoffice continua trocando a capsula junto.
+   AS CORES SÃO AS DE APARÊNCIA, NÃO AS DA REFERÊNCIA
+   ----------------------------------------------------
+   O arquivo de referência desenha com as cores de um mockup; aqui tudo
+   sai de `--p` (Backoffice › Sistema › Aparência), como o resto da
+   Home: o quadro do ícone e o número em `--p`, o desenho do ícone em
+   branco (o mesmo par de `.btn-primary`), o texto em `--tx`. O fundo
+   da faixa é, de propósito, a MESMA cor com que o degradê de
+   `.home-secao-hero` começa (`--p` a 5% sobre branco): contador e
+   banner viram uma faixa só, sem linha nem troca de cor entre eles.
 
-   A POSICAO continua vindo das nove classes `pos-*` acima: a capsula
-   mudou de roupa, nao de regra. */
+   NADA DE `.home-largura` AQUI DENTRO
+   -----------------------------------
+   `.home-secao > .home-largura` é o respiro das seções de conteúdo
+   (44/48px; 28/30px no celular) -- e, no celular, essa regra vem
+   DEPOIS desta no arquivo e engordava a faixa. `.banner-contador` é a
+   linha inteira, com o próprio respiro, e nenhuma regra de seção
+   alcança.
+
+   O ÍCONE
+   -------
+   O mesmo desenho da referência (três pessoas, cheio), como máscara:
+   `background: currentColor` pinta com a cor da identidade, e a
+   marcação continua sendo um `<span>` vazio. */
+.home-secao-contador { background: color-mix(in srgb, var(--p) 5%, #fff); }
+/* O banner começa colado na faixa, como na referência (lá o bloco do
+   banner tem `padding-top: 0`): entre o contador e o banner fica só o
+   respiro da própria faixa (11px; 10px no celular). Vale só quando a
+   faixa existe -- sem contador, o banner mantém o respiro de sempre.
+   Três classes, para vencer `.home-secao > .home-largura` e o respiro
+   do banner no celular, que vêm depois no arquivo. */
+.home-secao-contador + .home-secao-hero > .home-largura { padding-top: 0; }
 .banner-contador {
-  /* Absoluto porque as nove classes `pos-*` acima so dizem ONDE -- e
-     e o desenho do banner que reserva o respiro para ele. */
-  position: absolute;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 18px 9px 11px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid var(--pub-bd);
-  /* `max-content` porque a capsula e ABSOLUTA e centralizada com
-     `left: 50%`: sem isto, a largura disponivel para ela e so a metade
-     direita do banner, e o navegador a espreme ate o rotulo quebrar em
-     quatro linhas -- que e o que fazia a capsula passar por cima do
-     titulo no celular. `max-width` continua sendo o limite real. */
-  width: max-content;
-  max-width: calc(100% - 32px);
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 26px;
 }
+/* Número e texto num grupo: no desktop ele se comporta como os dois
+   itens soltos da referência (mesmo vão, mesmo alinhamento pelo
+   centro); no celular vira o grupo por linha de base da versão mobile.
+   `min-width: 0` deixa o texto quebrar em vez de estourar a tela. */
+.banner-contador-textos { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .banner-contador-icone {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--pub-pilula);
-  color: var(--p);
-  font-size: 22px;
-  line-height: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--p);
+  color: #fff;
 }
-.banner-contador-ponto { width: 6px; height: 6px; border-radius: 999px; background: var(--p); flex: none; }
+.banner-contador-icone::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='7' r='3.3'/%3E%3Ccircle cx='4.8' cy='8.9' r='2.5'/%3E%3Ccircle cx='19.2' cy='8.9' r='2.5'/%3E%3Cpath d='M12 11.6c-3.2 0-5.8 1.9-5.8 4.3V17.6h11.6V15.9c0-2.4-2.6-4.3-5.8-4.3Z'/%3E%3Cpath d='M4.8 12.2c-2.4 0-4.3 1.4-4.3 3.2v1.4h4.6c-.2-1.6.3-3.1 1.4-4.3-.5-.2-1.1-.3-1.7-.3Z'/%3E%3Cpath d='M19.2 12.2c-.6 0-1.2.1-1.7.3 1.1 1.2 1.6 2.7 1.4 4.3h4.6v-1.4c0-1.8-1.9-3.2-4.3-3.2Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='7' r='3.3'/%3E%3Ccircle cx='4.8' cy='8.9' r='2.5'/%3E%3Ccircle cx='19.2' cy='8.9' r='2.5'/%3E%3Cpath d='M12 11.6c-3.2 0-5.8 1.9-5.8 4.3V17.6h11.6V15.9c0-2.4-2.6-4.3-5.8-4.3Z'/%3E%3Cpath d='M4.8 12.2c-2.4 0-4.3 1.4-4.3 3.2v1.4h4.6c-.2-1.6.3-3.1 1.4-4.3-.5-.2-1.1-.3-1.7-.3Z'/%3E%3Cpath d='M19.2 12.2c-.6 0-1.2.1-1.7.3 1.1 1.2 1.6 2.7 1.4 4.3h4.6v-1.4c0-1.8-1.9-3.2-4.3-3.2Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* O indicador "ao vivo" (interruptor do Banner no Backoffice): opcional
+   e ausente na referência -- desligado, a faixa é exatamente [ícone]
+   [número] [texto]. */
+.banner-contador-ponto { flex: none; align-self: center; width: 6px; height: 6px; border-radius: 999px; background: var(--p); }
 .banner-contador-valor {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--navy);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--p);
   font-variant-numeric: tabular-nums;
 }
-.banner-contador-rotulo {
-  font-size: 13px;
-  line-height: 1.25;
-  font-weight: 600;
-  color: var(--mu);
-  /* Largura MAXIMA, nao fixa: a capsula encolhe com um rotulo curto e
-     para de crescer aqui. 13em e o que mantem o texto em duas linhas
-     -- a altura da capsula da referencia (56px) e a do icone mais os
-     respiros, e uma terceira linha a estufaria. */
-  max-width: 13em;
+.banner-contador-rotulo { font-size: 14px; font-weight: 600; line-height: normal; color: var(--tx); }
+
+@media (max-width: 767px) {
+  .banner-contador { gap: 10px; padding: 10px 16px; }
+  .banner-contador-textos { align-items: baseline; gap: 6px; }
+  .banner-contador-icone { width: 26px; height: 26px; border-radius: 8px; }
+  .banner-contador-icone::before { width: 16px; height: 16px; }
+  .banner-contador-valor { font-size: 20px; line-height: normal; }
+  .banner-contador-rotulo { font-size: 13px; }
 }
 
 /* A linha de selos logo abaixo da chamada: texto pequeno, separado por
@@ -1890,7 +1875,76 @@ img.lang-flag { object-fit: cover; display: block; }
 .editor-rico-area hr { border: 0; border-top: 1px solid var(--bd); margin: 16px 0; }
 .editor-rico-area svg { vertical-align: -3px; }
 .editor-rico-area img { max-width: 100%; height: auto; }
+/* ---------------------------------------------------------------------------
+   O documento legal, publicado (Rodada 22)
+
+   Até aqui só existia `.legal-texto img`: o texto de Termos/Privacidade
+   nunca teve tipografia própria porque nunca teve nada além de
+   parágrafo simples. O editor por blocos passou a produzir título,
+   lista, citação, destaque, tabela, botão e galeria de verdade -- e
+   por isso o documento ganha aqui o mesmo tratamento do `.editor-rico-
+   area` acima (a área de edição do rodapé), com as CORES e o RESPIRO
+   do resto do site público (`--navy`, `--mu`, `--p`).
+   -------------------------------------------------------------------------- */
+.legal-texto { font-size: 15.5px; line-height: 1.7; color: var(--tx); }
+.legal-texto p { margin: 0 0 16px; }
+.legal-texto h2 { font-size: 22px; font-weight: 800; letter-spacing: -.01em; color: var(--navy); margin: 30px 0 12px; }
+.legal-texto h2:first-child { margin-top: 0; }
+.legal-texto ul, .legal-texto ol { margin: 0 0 16px; padding-left: 22px; }
+.legal-texto li { margin-bottom: 4px; }
+.legal-texto blockquote { margin: 0 0 16px; padding: 2px 0 2px 16px; border-left: 3px solid var(--bd); color: var(--mu); font-style: italic; }
+.legal-texto hr { border: 0; border-top: 1px solid var(--bd); margin: 28px 0; }
+.legal-texto a { color: var(--p); text-decoration: underline; }
 .legal-texto img { max-width: 100%; height: auto; }
+
+/* Um bloco escondido no mobile (Rodada 22): a mesma técnica de
+   d-only/m-only do resto do produto -- o servidor desenha os dois, o
+   CSS decide o que aparece. */
+@media (max-width: 767px) {
+  .legal-bloco-oculto-no-mobile { display: none; }
+}
+
+/* Imagem ancorada (esquerda/direita, Rodada 22): o `float`/`width` vêm
+   inline (`apps.content.blocos._desenhar_imagem`); aqui só o respiro e
+   o comportamento no mobile -- imagens NUNCA flutuam numa coluna
+   estreita, senão o texto ao redor vira uma fresta ilegível. */
+.legal-bloco-image img[style*="float"] { margin: 4px 0 14px; }
+.legal-bloco-image img[style*="float: left"],
+.legal-bloco-image img[style*="float:left"] { margin-right: 20px; }
+.legal-bloco-image img[style*="float: right"],
+.legal-bloco-image img[style*="float:right"] { margin-left: 20px; }
+@media (max-width: 600px) {
+  .legal-bloco-image img { float: none !important; width: 100% !important; margin: 0 0 14px !important; }
+}
+
+.legal-destaque {
+  display: flex; gap: 11px; padding: 13px 15px; margin: 4px 0 16px;
+  border-radius: 10px; background: var(--p10, #f7faff); border: 1px solid var(--bd);
+  border-left: 3px solid var(--p);
+}
+.legal-destaque-icone { flex: none; width: 17px; height: 17px; margin-top: 2px; }
+.legal-destaque-icone::before {
+  content: ""; display: block; width: 100%; height: 100%; background: var(--p);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.2 5 6v6c0 4.2 2.9 7.4 7 8.8 4.1-1.4 7-4.6 7-8.8V6Z'/%3E%3Cpath d='M9.2 12.2l2 2 3.6-3.8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.2 5 6v6c0 4.2 2.9 7.4 7 8.8 4.1-1.4 7-4.6 7-8.8V6Z'/%3E%3Cpath d='M9.2 12.2l2 2 3.6-3.8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.legal-destaque p, .legal-destaque span { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--navy); }
+
+.legal-galeria { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+.legal-galeria span { flex: 1 1 calc(33.333% - 7px); min-width: 140px; }
+.legal-galeria img { display: block; width: 100%; height: 160px; object-fit: cover; border-radius: 8px; }
+
+.legal-botao { margin: 4px 0 18px; }
+.legal-botao a {
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 9px;
+  background: var(--p); color: #fff; font-weight: 700; font-size: 14px; text-decoration: none;
+}
+.legal-botao a:hover { opacity: .92; }
+
+.legal-bloco-table { overflow-x: auto; margin: 4px 0 18px; }
+.legal-bloco-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.legal-bloco-table td, .legal-bloco-table th { padding: 9px 12px; border: 1px solid var(--bd); text-align: left; }
+.legal-bloco-table th { background: var(--bg); font-weight: 700; color: var(--navy); }
 /* As imagens da biblioteca, no modo "documento" do editor. */
 .editor-rico-imagens { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
 .editor-rico-imagem { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; padding: 5px; border: 1px solid var(--bd); border-radius: 9px; background: #fff; cursor: pointer; }

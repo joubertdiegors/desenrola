@@ -80,6 +80,21 @@ assets_json, config_json.
       <button type="button" class="te-btn te-btn-primario" data-acao="salvar">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"></path><path d="M9 4v5h6"></path></svg><span class="te-btn-texto">{% translate "Salvar" %}<span class="te-so-desktop"> {% translate "modelo" %}</span></span>
       </button>
+      {% comment %}
+      "Bloquear modelo" (Rodada 21): o fim do fluxo "destravado se edita
+      direto" que a Rodada 19 abriu -- abrir, ajustar, salvar e então
+      bloquear, sem sair do editor. É um `<form>` de verdade (não um
+      `data-acao` do JavaScript do editor): a resposta recarrega a
+      tela, que reabre em leitura porque o modelo já está travado.
+      {% endcomment %}
+      <form method="post" action="{% url 'backoffice:document_library_lock' modelo.pk %}" class="te-so-desktop"
+            onsubmit="return confirm('{% blocktranslate with nome=modelo.name %}Bloquear &quot;{{ nome }}&quot;? Ele passa a ser somente leitura. Para editar de novo, será preciso destravá-lo na administração ou duplicá-lo.{% endblocktranslate %}');">
+        {% csrf_token %}
+        <input type="hidden" name="voltar" value="editor">
+        <button type="submit" class="te-btn te-btn-contorno">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span class="te-btn-texto">{% translate "Bloquear" %}<span class="te-so-desktop"> {% translate "modelo" %}</span></span>
+        </button>
+      </form>
       {% endif %}
     </div>
   </header>

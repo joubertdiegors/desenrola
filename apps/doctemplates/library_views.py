@@ -578,6 +578,66 @@ def document_library_activation(request, pk):
     return redirect(destino)
 
 
+@exige_permissao(ADMINISTRAR_PERM)
+@require_POST
+def document_library_lock(request, pk):
+    """
+    Bloqueia um modelo DESTRAVADO -- a partir daqui, somente leitura.
+
+    UMA VIA SÓ
+    ----------
+    Esta ação só liga o cadeado. Desligá-lo continua sendo uma decisão
+    da administração (Django Admin) ou nascer destravado numa cópia --
+    a mesma orientação que a leitura do editor já dá
+    (`editor_views._motivo_da_leitura`): "destrave-o na administração ou
+    duplique-o". Não há "Desbloquear" nesta tela.
+
+    O FLUXO (Rodada 19 abriu a porta; esta rodada fecha o círculo)
+    -----------------------------------------------------------------
+    Desde a Rodada 19, um modelo destravado -- oficial ou não -- se
+    edita direto no editor. O que faltava era encerrar o ajuste: abrir,
+    editar, salvar e então bloquear, sem sair da tela nem depender do
+    Django Admin. "Bloquear modelo" existe no editor (ao lado de
+    "Salvar modelo") e aqui, no detalhe -- as DUAS telas onde a ação
+    de travar/destravar já existe hoje (a de ativar/desativar é a
+    mesma dupla). `voltar` diz para onde a resposta retorna.
+
+    `is_locked` É CAMPO ADMINISTRATIVO SIMPLES
+    ---------------------------------------------
+    Ligar o cadeado nunca esbarra em `DocumentTemplateLockedError`: não
+    está nem em `STRUCTURAL_FIELDS` (é o PRÓPRIO campo que essas regras
+    olham) nem precisa estar em `SYSTEM_MUTABLE_FIELDS` para um oficial
+    -- e está (`DocumentTemplate.SYSTEM_MUTABLE_FIELDS`). O `try` aqui
+    é defensivo, não uma via que se espera abrir.
+    """
+    modelo = get_object_or_404(DocumentTemplate, pk=pk)
+    destino = (
+        reverse("backoffice:template_editor", args=[modelo.pk])
+        if request.POST.get("voltar") == "editor"
+        else reverse("backoffice:document_detail", args=[modelo.pk])
+    )
+
+    if modelo.is_locked:
+        messages.info(request, _("Este modelo já está bloqueado."))
+        return redirect(destino)
+
+    modelo.is_locked = True
+    try:
+        modelo.save(update_fields=["is_locked", "updated_at"])
+    except DocumentTemplateLockedError as erro:
+        # A guarda do modelo é a autoridade; a tela só relata.
+        messages.error(request, str(erro))
+        return redirect(destino)
+
+    messages.success(
+        request,
+        _('"%(nome)s" foi bloqueado. Para editar de novo, destrave-o na administração '
+          'ou duplique-o.')
+        % {"nome": modelo.name},
+    )
+    return redirect(destino)
+
+
 def url_da_biblioteca():
     """Para o editor voltar para cá, e não para o Django Admin."""
     return reverse("backoffice:document_library")

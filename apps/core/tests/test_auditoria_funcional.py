@@ -379,7 +379,8 @@ PONTOS_DE_PARTIDA = [
     "backoffice:appearance",
     "backoffice:letter_policy",
     "backoffice:email_settings",
-    "backoffice:legal_documents",
+    "backoffice:legal_documents_terms",
+    "backoffice:legal_documents_privacy",
 ]
 
 INTERNO = re.compile(r'href="(/[^"#?]*)')

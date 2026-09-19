@@ -4,13 +4,15 @@ Banner superior · desenho "Destaque" (referencia 3a do cliente).
 Selo, titulo com uma palavra realcada, chamada e DOIS botoes a esquerda;
 foto a direita com etiquetas flutuantes por cima.
 
-O CONTADOR E COMPARTILHADO
----------------------------
-`_banner_contador.html` desenha a mesma cápsula dos outros seis
-desenhos; aqui ela flutua sobre a seção inteira, não sobre a foto --
-"selo_1"/"selo_2" (as OUTRAS duas etiquetas flutuantes, texto livre do
-CMS, sem relação com o contador) continuam só sobre a foto, onde sempre
-estiveram.
+O CONTADOR SAIU DAQUI
+----------------------
+Ate a Rodada 20, `_banner_contador.html` flutuava sobre esta secao
+(`position: absolute`), com o respiro reservado por `data-contador`
+em `core/home.html`. Da Rodada 21 em diante o contador e uma FAIXA
+propria, com fundo e borda proprios, ANTES do banner -- nunca mais
+por cima dele. Ver `core/secoes/_faixa_contador.html`.
+
+"selo_1"/"selo_2" (as etiquetas flutuantes, texto livre do CMS) não têm relação com o contador e continuam só sobre a foto, onde sempre estiveram.
 
 O SEGUNDO BOTAO LEVA PARA ALGUM LUGAR
 -------------------------------------
@@ -20,7 +22,6 @@ botao nao e desenhado -- botao sem funcao e pior do que botao nenhum.
 Contexto: secoes.hero, partes.hero.imagem, cartas_emitidas.
 {% endcomment %}
 <section class="hero hero-destaque container">
-  {% include "core/secoes/_banner_contador.html" %}
   <div class="hero-destaque-texto">
     {% if secoes.hero.kicker %}
     <p class="hero-kicker"><i class="ph-fill ph-sparkle" aria-hidden="true"></i>{{ secoes.hero.kicker }}</p>

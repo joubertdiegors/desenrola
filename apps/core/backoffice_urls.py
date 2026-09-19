@@ -137,6 +137,13 @@ urlpatterns = [
         doc_library_views.document_library_activation,
         name="document_library_activation",
     ),
+    # Bloqueia um modelo destravado (Rodada 21) -- so liga o cadeado;
+    # destravar continua sendo administracao ou duplicar.
+    path(
+        "modelos/<int:pk>/bloquear/",
+        doc_library_views.document_library_lock,
+        name="document_library_lock",
+    ),
     # Editor estrutural dos modelos da biblioteca (Etapa 3.2).
     path(
         "modelos/<int:pk>/editar/",
@@ -285,12 +292,40 @@ urlpatterns = [
     # Configuracoes globais do site (nome, contato, redes). Deixou de
     # ser o placeholder na Etapa F.
     path("sistema/", views.backoffice_system, name="system"),
-    # Documentos legais (Termos de uso, Privacidade): o texto das duas
-    # paginas publicas, escrito com o editor rico. Uma rota so: o
-    # documento e o idioma se escolhem na propria tela.
+    # Documentos legais (Termos de uso, Privacidade): cada documento com
+    # a sua propria rota de visualizacao e a sua propria rota de edicao
+    # (Rodada 21) -- nunca os dois juntos, nunca ver e editar na mesma
+    # tela. O idioma continua se escolhendo na propria tela (`?idioma=`).
     path(
-        "sistema/documentos-legais/",
-        content_backoffice.backoffice_legal_documents,
-        name="legal_documents",
+        "sistema/documentos-legais/termos-de-uso/",
+        content_backoffice.backoffice_legal_terms,
+        name="legal_documents_terms",
+    ),
+    path(
+        "sistema/documentos-legais/termos-de-uso/editar/",
+        content_backoffice.backoffice_legal_terms_edit,
+        name="legal_documents_terms_edit",
+    ),
+    # A previa ao vivo (Rodada 22) da aba "Visualizar" do editor por
+    # blocos -- o quadro de um <iframe>, nunca uma pagina que se navega.
+    path(
+        "sistema/documentos-legais/termos-de-uso/previa/",
+        content_backoffice.backoffice_legal_terms_preview,
+        name="legal_documents_terms_preview",
+    ),
+    path(
+        "sistema/documentos-legais/privacidade/",
+        content_backoffice.backoffice_legal_privacy,
+        name="legal_documents_privacy",
+    ),
+    path(
+        "sistema/documentos-legais/privacidade/editar/",
+        content_backoffice.backoffice_legal_privacy_edit,
+        name="legal_documents_privacy_edit",
+    ),
+    path(
+        "sistema/documentos-legais/privacidade/previa/",
+        content_backoffice.backoffice_legal_privacy_preview,
+        name="legal_documents_privacy_preview",
     ),
 ]

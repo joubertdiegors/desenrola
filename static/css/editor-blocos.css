@@ -1,0 +1,238 @@
+/* --------------------------------------------------------------------------
+   Editor de documentos legais por blocos (Rodada 22)
+
+   Arquivo proprio, carregado so nesta tela (bloco extra_css). Mesma
+   convencao estrutural do editor de modelos (template-editor.css):
+   tela cheia (100dvh), cabecalho + abas fixos, corpo que rola por
+   dentro. As cores e a tipografia sao as do arquivo de referencia
+   "Editor Conteudo Estatico" -- Manrope, azul #1d4ed8.
+
+   Os botoes de formatacao (negrito, italico, seletor de estilo, links)
+   reusam as classes `.editor-rico-*` de layout.css -- MESMO visual do
+   editor do rodape, para nao ter dois estilos de "botao de barra" no
+   produto. Aqui so o que e NOVO (barra propria, paineis, menu de
+   blocos, o quadro em si) ganha classe nova, com o prefixo `eb-`.
+   -------------------------------------------------------------------------- */
+
+.eb-body { overflow: hidden; height: 100vh; height: 100dvh; min-height: 0; }
+.eb-main { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; padding: 0; }
+
+.eb {
+  --eb-azul: #1d4ed8;
+  --eb-navy: #10275c;
+  --eb-cinza: #5b6b8c;
+  --eb-cinza-claro: #93a2be;
+  --eb-borda: #dfe8f5;
+  --eb-fundo: #eef3fb;
+  --eb-fundo-suave: #f7faff;
+  --eb-linha: rgba(16, 39, 92, .1);
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--eb-fundo);
+  font-family: Manrope, "Inter", system-ui, sans-serif;
+  color: var(--eb-navy);
+}
+.eb > * { flex: none; }
+.eb > form { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.eb button, .eb select, .eb input { font-family: inherit; }
+.eb button:focus-visible, .eb select:focus-visible, .eb input:focus-visible,
+.eb [contenteditable]:focus-visible { outline: 2px solid var(--eb-azul); outline-offset: 1px; }
+
+/* --- Cabecalho ------------------------------------------------------------ */
+
+.eb-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--eb-linha); }
+.eb-cabecalho-esq, .eb-cabecalho-dir { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.eb-cabecalho-dir { flex: none; }
+.eb-icone-doc { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: var(--eb-azul); flex: none; }
+.eb-titulos { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.eb-kicker { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--eb-cinza-claro); }
+.eb-titulo { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--eb-navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eb-pilula { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; flex: none; }
+.eb-pilula.is-rascunho { background: #fef3e2; color: #92510a; }
+.eb-ponto { width: 6px; height: 6px; border-radius: 999px; background: #d97706; }
+.eb-idiomas { display: flex; padding: 3px; border-radius: 9px; background: var(--eb-fundo); border: 1px solid var(--eb-borda); }
+.eb-idioma { padding: 6px 11px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--eb-cinza); text-decoration: none; }
+.eb-idioma.is-atual { background: #fff; color: var(--eb-azul); box-shadow: 0 1px 3px rgba(16, 39, 92, .12); }
+.eb-sep { width: 1px; height: 24px; background: var(--eb-borda); }
+.eb-estado { font-size: 12px; font-weight: 600; color: var(--eb-cinza); white-space: nowrap; }
+.eb-btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 15px; border: 1px solid var(--eb-borda); border-radius: 9px; background: #fff; font-size: 13.5px; font-weight: 700; color: var(--eb-cinza); cursor: pointer; }
+.eb-btn-primario { border-color: var(--eb-azul); background: var(--eb-azul); color: #fff; }
+.eb-btn-primario:hover { background: #123a8f; border-color: #123a8f; }
+
+/* --- Abas ------------------------------------------------------------------ */
+
+.eb-abas { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--eb-linha); }
+.eb-abas-esq { display: flex; gap: 2px; }
+.eb-aba { display: inline-flex; align-items: center; gap: 7px; padding: 11px 12px 10px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13.5px; font-weight: 600; color: var(--eb-cinza); cursor: pointer; }
+.eb-aba.is-ativa { border-bottom-color: var(--eb-azul); font-weight: 700; color: var(--eb-azul); }
+.eb-abas-dir { display: flex; align-items: center; gap: 10px; }
+.eb-rotulo-dispositivo { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--eb-cinza-claro); }
+.eb-segmentado { display: flex; padding: 3px; border-radius: 9px; background: var(--eb-fundo); border: 1px solid var(--eb-borda); }
+.eb-seg { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 0; border-radius: 7px; background: none; font-size: 12.5px; font-weight: 600; color: var(--eb-cinza); cursor: pointer; }
+.eb-seg.is-ativo { background: #fff; color: var(--eb-azul); font-weight: 700; box-shadow: 0 1px 3px rgba(16, 39, 92, .12); }
+
+.eb-sem-js { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: #fef3e2; color: #92510a; font-size: 13.5px; font-weight: 600; }
+
+/* --- Corpo: sidebar + central ----------------------------------------------- */
+
+.eb-corpo { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 262px minmax(0, 1fr); }
+.eb-corpo-previa { grid-template-columns: minmax(0, 1fr); }
+
+.eb-lateral { display: flex; flex-direction: column; min-height: 0; background: #fff; border-right: 1px solid var(--eb-linha); overflow: hidden; }
+.eb-lateral-cabeca { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #edf2fb; }
+.eb-lateral-titulo { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--eb-cinza); }
+.eb-btn-bloco { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 7px; border: 1px solid #bfd1f4; background: var(--eb-fundo); font-size: 11.5px; font-weight: 700; color: var(--eb-azul); cursor: pointer; }
+.eb-lateral-lista { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px; }
+.eb-lateral-rodape { margin-top: auto; display: flex; gap: 8px; align-items: flex-start; padding: 11px 14px; border-top: 1px solid #edf2fb; font-size: 11px; line-height: 1.4; color: var(--eb-cinza); }
+.eb-lateral-rodape .ph { flex: none; margin-top: 1px; }
+
+/* Cada item da estrutura -- espelha o bloco que representa no quadro. */
+.eb-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px;
+  cursor: grab; user-select: none; border: 1px solid transparent;
+}
+.eb-item:hover { background: var(--eb-fundo-suave); }
+.eb-item.is-selecionado { background: var(--eb-fundo); border-color: #bfd1f4; }
+.eb-item.is-arrastando { opacity: .5; }
+.eb-item.is-alvo-de-soltura { border-top: 2px solid var(--eb-azul); }
+.eb-item-alca { flex: none; color: #a9b6cc; display: flex; }
+.eb-item-icone { flex: none; color: var(--eb-azul); display: flex; }
+.eb-item-rotulo { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--eb-navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eb-item.is-oculto-no-mobile .eb-item-rotulo { color: var(--eb-cinza); font-weight: 500; }
+.eb-item-mobile { flex: none; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 0; border-radius: 6px; background: none; color: #a9b6cc; cursor: pointer; }
+.eb-item-mobile[aria-pressed="false"] { color: #d7602f; }
+.eb-item-mobile:hover { background: #e7edf7; }
+
+/* --- Menu "+ Bloco" ---------------------------------------------------------- */
+
+.eb-menu-bloco { position: relative; }
+.eb-menu-bloco-lista {
+  position: absolute; z-index: 40; top: calc(100% + 6px); right: 0; width: 264px;
+  max-height: 70vh; display: flex; flex-direction: column; border-radius: 11px;
+  border: 1px solid var(--eb-borda); background: #fff; box-shadow: 0 20px 40px -14px rgba(16, 39, 92, .3);
+  overflow: hidden;
+}
+.eb-menu-bloco-busca { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-bottom: 1px solid #edf2fb; background: var(--eb-fundo-suave); }
+.eb-menu-bloco-busca input { flex: 1; border: 0; background: none; font-size: 12.5px; color: var(--eb-navy); }
+.eb-menu-bloco-busca input:focus { outline: none; }
+.eb-menu-bloco-itens { overflow-y: auto; padding: 4px; }
+.eb-menu-bloco-categoria { padding: 9px 10px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--eb-cinza-claro); }
+.eb-menu-bloco-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 9px; background: none; text-align: left; cursor: pointer; }
+.eb-menu-bloco-item:hover { background: var(--eb-fundo); }
+.eb-menu-bloco-item .ph { flex: none; font-size: 16px; color: var(--eb-cinza); }
+.eb-menu-bloco-item-textos { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.eb-menu-bloco-item-nome { font-size: 12.5px; font-weight: 600; color: var(--eb-navy); }
+.eb-menu-bloco-item-desc { font-size: 11px; color: var(--eb-cinza); }
+
+/* --- Central: barra + folha -------------------------------------------------- */
+
+.eb-central { display: flex; flex-direction: column; min-height: 0; background: var(--eb-fundo); }
+.eb-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #e6edf8; position: relative; }
+.eb-barra .editor-rico-seletor { height: 30px; }
+.eb-flex { flex: 1; }
+.eb-cores { gap: 5px !important; padding: 2px; }
+.eb-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(16, 39, 92, .15); cursor: pointer; padding: 0; }
+.eb-swatch.is-realce { background: #fde68a; }
+.eb-caixa-link { position: absolute; z-index: 20; top: 100%; left: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; padding: 10px; border-radius: 10px; border: 1px solid var(--eb-borda); background: #fff; box-shadow: 0 14px 30px -12px rgba(16, 39, 92, .3); }
+
+.eb-folha { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 26px 0 60px; }
+.eb-canvas { width: 700px; max-width: calc(100% - 40px); margin: 0 auto; padding: 34px 44px 44px; background: #fff; border: 1px solid #e3eaf6; border-radius: 12px; box-shadow: 0 8px 26px rgba(16, 39, 92, .07); }
+
+/* Um bloco no quadro: a mesma tipografia de `.legal-texto` (layout.css),
+   mais a moldura de edição -- borda ao passar o mouse, azul quando
+   selecionado, e a fita de ações no canto quando selecionado. */
+.eb-bloco { position: relative; margin: 0 0 4px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
+.eb-bloco:hover { border-color: #e3eaf6; }
+.eb-bloco.is-selecionado { border-color: var(--eb-azul); box-shadow: 0 0 0 1px var(--eb-azul); }
+.eb-bloco.is-arrastando { opacity: .4; }
+.eb-bloco.is-alvo-de-soltura { box-shadow: inset 0 2px 0 var(--eb-azul); }
+.eb-bloco.is-oculto-no-mobile { background: repeating-linear-gradient(135deg, #fbfcfe, #fbfcfe 10px, #f3f6fb 10px, #f3f6fb 20px); }
+.eb-bloco [contenteditable] { outline: none; min-height: 1.4em; }
+.eb-bloco [contenteditable]:empty::before { content: attr(data-placeholder); color: #a9b6cc; }
+.eb-bloco-faixa {
+  position: absolute; top: -13px; right: 6px; z-index: 5; display: none; align-items: center; gap: 2px;
+  padding: 3px; border-radius: 8px; background: var(--eb-navy); box-shadow: 0 8px 20px rgba(16, 39, 92, .3);
+}
+.eb-bloco.is-selecionado .eb-bloco-faixa { display: flex; }
+.eb-bloco-faixa button { display: flex; align-items: center; justify-content: center; width: 24px; height: 22px; border: 0; border-radius: 5px; background: none; color: #c3d3ee; cursor: pointer; }
+.eb-bloco-faixa button:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.eb-bloco-faixa button.is-ativo { color: #fff; background: var(--eb-azul); }
+.eb-bloco-faixa button[data-remover] { color: #f3b4b0; }
+
+/* Tipos sem texto rico: molduras simples reaproveitando a mesma folha. */
+.eb-bloco-separador hr { border: 0; border-top: 1px solid var(--eb-borda); margin: 10px 0; }
+.eb-bloco-imagem-vazio, .eb-bloco-galeria-vazia {
+  display: flex; align-items: center; justify-content: center; gap: 8px; height: 120px;
+  border: 1.5px dashed var(--eb-borda); border-radius: 10px; color: var(--eb-cinza); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.eb-bloco-imagem img { max-width: 100%; border-radius: 6px; }
+.eb-bloco-tabela table { width: 100%; border-collapse: collapse; }
+.eb-bloco-tabela td, .eb-bloco-tabela th { border: 1px solid var(--eb-borda); padding: 6px 8px; font-size: 13px; }
+.eb-bloco-tabela-acoes { display: flex; gap: 6px; margin-top: 6px; }
+.eb-bloco-html textarea { width: 100%; min-height: 100px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; border: 1px solid var(--eb-borda); border-radius: 8px; padding: 8px; }
+.eb-bloco-botao input[type="text"] { width: 100%; margin-top: 6px; padding: 6px 9px; border: 1px solid var(--eb-borda); border-radius: 7px; font-size: 12.5px; }
+/* O mesmo botão de `.legal-botao a` (layout.css) -- edita-se o texto
+   ali dentro, então o rascunho já parece o resultado publicado. */
+.eb-bloco-botao .legal-botao-texto { display: inline-flex; padding: 11px 20px; border-radius: 9px; background: var(--p, var(--eb-azul)); color: #fff; font-weight: 700; font-size: 14px; }
+
+/* --- Painel de imagem selecionada (âncora/largura) --------------------------- */
+
+.eb-painel-imagem { position: absolute; z-index: 6; top: -13px; left: 6px; display: none; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 10px; background: var(--eb-navy); box-shadow: 0 8px 20px rgba(16, 39, 92, .3); }
+.eb-bloco.is-selecionado .eb-painel-imagem { display: flex; }
+/* Sem imagem escolhida, o painel (âncora/largura) não tem o que
+   configurar -- e, flutuando sobre o topo do bloco, cobriria o próprio
+   botão "Escolher imagem" por baixo. Só aparece com uma imagem já
+   selecionada. */
+.eb-bloco.is-selecionado:has(.eb-bloco-imagem-vazio) .eb-painel-imagem { display: none; }
+.eb-painel-titulo { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #93aee0; }
+.eb-painel-imagem .eb-segmentado { background: rgba(255, 255, 255, .08); border-color: transparent; }
+.eb-painel-imagem .eb-segmentado button { color: #c3d3ee; font-size: 11px; }
+.eb-painel-imagem .eb-segmentado button.is-ativo { background: var(--eb-azul); color: #fff; }
+.eb-painel-campo { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #c3d3ee; }
+.eb-painel-campo select, .eb-painel-campo input { height: 24px; border-radius: 6px; border: 0; padding: 0 6px; font-size: 11px; }
+
+/* --- Seletor de imagem (modal simples) ---------------------------------------- */
+
+.eb-seletor-imagem { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(16, 24, 40, .5); }
+.eb-seletor-imagem[hidden] { display: none; }
+.eb-seletor-imagem-janela { width: 560px; max-width: calc(100vw - 32px); max-height: 80vh; display: flex; flex-direction: column; background: #fff; border-radius: 14px; overflow: hidden; }
+.eb-seletor-imagem-cabeca { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--eb-borda); font-weight: 700; }
+.eb-seletor-imagem-cabeca button { border: 0; background: none; cursor: pointer; color: var(--eb-cinza); }
+.eb-seletor-imagem-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; padding: 16px; overflow-y: auto; }
+.eb-seletor-imagem-grade button { display: flex; align-items: center; justify-content: center; height: 88px; padding: 4px; border: 1px solid var(--eb-borda); border-radius: 9px; background: #fff; cursor: pointer; }
+.eb-seletor-imagem-grade button:hover { border-color: var(--eb-azul); }
+.eb-seletor-imagem-grade img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* --- Prévia (aba Visualizar) --------------------------------------------------- */
+
+.eb-corpo-previa { background: var(--eb-fundo); justify-items: center; align-content: start; padding: 24px 0; }
+.eb-iframe { width: 100%; max-width: 960px; height: calc(100vh - 150px); height: calc(100dvh - 150px); border: 1px solid var(--eb-borda); border-radius: 12px; background: #fff; }
+.eb[data-dispositivo="mobile"] .eb-iframe { max-width: 390px; }
+
+/* --------------------------------------------------------------------------
+   Celular: sanfona a sidebar, barra rolável, folha ocupa a largura.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  /* `minmax(0, 1fr)`, não só `1fr`: sem o mínimo travado em 0, a
+     largura de conteúdo da barra de formatação (que não quebra linha,
+     só rola) vira o mínimo automático da faixa -- e ela estoura a
+     tela inteira, entortando tudo por baixo (o "grid blowout" de
+     sempre, a mesma razão de a coluna do desktop já usar isto). */
+  .eb-corpo { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .eb-lateral { border-right: 0; border-bottom: 1px solid var(--eb-linha); max-height: 40vh; }
+  .eb-central { min-width: 0; }
+  .eb-canvas { max-width: calc(100% - 24px); padding: 22px 16px 28px; }
+  .eb-titulo { max-width: 40vw; }
+}
+
+@media (max-width: 640px) {
+  .eb-idiomas { display: none; }
+  .eb-barra { overflow-x: auto; flex-wrap: nowrap; }
+  .eb-btn .eb-btn-texto-longo { display: none; }
+  .eb-iframe { max-width: 100%; }
+}

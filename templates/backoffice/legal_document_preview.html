@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  {% comment %}
+  A PRÉVIA É A PÁGINA PÚBLICA, NÃO UMA IMITAÇÃO DELA (o mesmo princípio
+  de `backoffice/content_preview.html`): mesmo CSS, mesma marcação
+  (`.home-largura.legal-page` / `.legal-texto`), mesmo HTML que
+  `rodape.renderizar_documento_em_blocos` devolve -- só o `<title>` e a
+  casca do `<iframe>` são desta tela.
+
+  A LARGURA É A DO `<IFRAME>`, NÃO DESTE `<meta>`
+  ---------------------------------------------------
+  Dentro de um `<iframe>`, a largura do ELEMENTO é a largura de
+  referência das media queries -- é `legal_document_edit.html` quem
+  estreita o quadro no botão "Mobile" da aba Visualizar, e o CSS
+  responde como responderia num aparelho de verdade. `viewport` só vira
+  um `data-*` para eventual estilo desta casca; não muda o `<meta>`.
+  {% endcomment %}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ titulo }}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+  <style>:root{--p:{{ site_config.primary_color }};--s:{{ site_config.success_color }};}
+    html,body{margin:0;background:#fff}</style>
+</head>
+<body class="bo-previa publico" data-viewport="{{ viewport }}">
+  <article class="home-largura legal-page">
+    <h1>{{ titulo }}</h1>
+    <div class="legal-texto">{{ previa }}</div>
+  </article>
+</body>
+</html>

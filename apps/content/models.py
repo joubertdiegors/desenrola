@@ -145,6 +145,10 @@ class ContentBlock(TimeStampedModel):
         TEXT = "text", _("Texto simples")
         RICH_TEXT = "rich_text", _("Texto formatado")
         IMAGE = "image", _("Imagem")
+        # O documento por BLOCOS (Rodada 22): `content` guarda uma lista
+        # de blocos em JSON (ver `apps.content.blocos`), não HTML corrido.
+        # Só os documentos legais usam este tipo até aqui.
+        STRUCTURED = "structured", _("Blocos estruturados")
 
     key = models.SlugField(_("identificador"), max_length=100, unique=True)
     kind = models.CharField(_("tipo"), max_length=20, choices=Kind.choices, default=Kind.TEXT)
@@ -336,9 +340,9 @@ class PageSection(TimeStampedModel):
     #
     # O NÚMERO NUNCA MORA AQUI
     # ------------------------
-    # Só a ativação, a posição e o rótulo/indicador (este dois últimos
-    # em `PageSectionTranslation.content`, como texto comum). O número
-    # em si vem sempre de `apps.letters.statistics.cartas_emitidas()` --
+    # Só a ativação e o rótulo/indicador (estes dois em
+    # `PageSectionTranslation.content`, como texto comum). O número em
+    # si vem sempre de `apps.letters.statistics.cartas_emitidas()` --
     # nunca escrito, nunca gravado, nunca duplicado.
     #
     # `counter_initial_value` é CONFIGURAÇÃO, não o número: as cartas de
@@ -348,8 +352,18 @@ class PageSection(TimeStampedModel):
     counter_enabled = models.BooleanField(
         _("contador ativo"),
         default=True,
+        # O texto ainda diz "sobre o banner": a Rodada 21 mudou a
+        # POSIÇÃO (faixa própria, antes dele) sem alterar o campo em
+        # si, e reescrever o `help_text` pediria uma migration só de
+        # texto -- fora do escopo desta rodada (ver relatório).
         help_text=_("Mostra o número real de cartas já emitidas sobre o banner."),
     )
+    # Ate a Rodada 20, ONDE a capsula flutuava sobre o banner -- uma das
+    # nove posicoes de `Posicao9`. Desde a Rodada 21 o contador e uma
+    # faixa propria, sempre centralizada, sempre ANTES do banner: nao ha
+    # mais posicao para escolher, e o campo saiu do formulario
+    # (`content.forms.FormularioDeSecao`). A coluna fica, sem migration,
+    # com o valor que cada instalacao ja tinha gravado -- sem uso hoje.
     counter_position = models.CharField(
         _("posição do contador"),
         max_length=20,

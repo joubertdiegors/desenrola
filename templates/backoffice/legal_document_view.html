@@ -1,0 +1,99 @@
+{% extends "backoffice/base.html" %}
+{% load i18n %}
+{% comment %}
+Administração · Sistema · Documentos legais · visualização de UM documento
+(Termos de uso OU Privacidade -- nunca os dois; cada um tem a sua rota e
+o seu template, gerados por `apps.content.backoffice_views._ver_documento_legal`).
+
+O DOCUMENTO COMO A PÁGINA PÚBLICA O MOSTRA
+-------------------------------------------
+`previa` já vem em HTML sanitizado, pelo MESMO `content.rodape.renderizar_documento`
+que a página pública usa (`core:legal_termos`/`core:legal_privacidade`) --
+não o texto cru do editor, não os controles da barra rica. É a leitura
+de quem consulta, e é também o que quem edita vê ANTES de clicar em
+"Editar": ninguém enxerga o HTML por trás nesta tela.
+
+O BOTÃO "EDITAR"
+----------------
+Só aparece com `content.change_contentblock` (`pode_editar`), e leva à
+rota de EDIÇÃO deste mesmo documento (`url_editar`) -- nunca um
+formulário nesta página.
+
+Contexto: pode_editar, documento, idioma, idiomas, e_o_idioma_padrao,
+bloco, traducao, tem_texto_no_idioma, publicado, url_publica,
+url_editar, previa.
+{% endcomment %}
+
+{% block bo_main %}
+<div class="bo-head d-only">
+  <div>
+    <h1>{{ documento.titulo }}</h1>
+    <p class="text-muted">{% translate "Como a página pública mostra este documento." %}</p>
+  </div>
+  <span class="push"></span>
+  {% if publicado %}<a class="btn btn-secondary" href="{{ url_publica }}"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>{% translate "Ver a página" %}</a>{% endif %}
+  {% if pode_editar %}<a class="btn btn-primary" href="{{ url_editar }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>{% endif %}
+</div>
+<p class="m-only text-muted">{% translate "Como a página pública mostra este documento." %}</p>
+
+{% comment %}
+O idioma: trocar aqui só troca o que esta tela mostra -- nada é salvo,
+nada é editado.
+{% endcomment %}
+<div class="bo-card-head">
+  <span class="card-title">{% translate "Vendo em" %}</span>
+  <nav class="seg seg-sm" aria-label="{% translate 'Idioma do documento' %}">
+    {% for opcao in idiomas %}
+    <a class="seg-opt{% if opcao.atual %} is-on{% endif %}" href="?idioma={{ opcao.codigo }}"{% if opcao.atual %} aria-current="true"{% endif %}>{{ opcao.nome }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if bloco and not bloco.is_active %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Este documento está desativado: a página responde como inexistente mesmo com texto." %}</span></div>
+{% endif %}
+
+{% if not tem_texto_no_idioma %}
+  {% if e_o_idioma_padrao %}
+  <div class="notice notice-warning"><i class="ph-fill ph-warning" aria-hidden="true"></i><span>{% translate "Ainda não há texto. Enquanto não houver, a página não abre e o link para ela não aparece no site." %}</span></div>
+  {% else %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Ainda não há texto neste idioma. Enquanto não houver, a página mostra o texto do idioma padrão." %}</span></div>
+  {% endif %}
+{% endif %}
+
+{% if not pode_editar %}
+  <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "Você pode consultar este documento, mas não tem permissão para alterá-lo." %}</span></div>
+{% endif %}
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{{ documento.titulo }}</h2>
+    {% if publicado %}<span class="tag tag-success">{% translate "Publicado" %}</span>{% else %}<span class="tag tag-warning">{% translate "Sem texto" %}</span>{% endif %}
+  </div>
+  <dl class="bo-dados">
+    <dt>{% translate "Página pública" %}</dt>
+    <dd>{% if publicado %}<a href="{{ url_publica }}">{% translate "Ver a página" %}</a>{% else %}{% translate "Fora do ar enquanto não houver texto" %}{% endif %}</dd>
+    <dt>{% translate "Formato" %}</dt>
+    <dd>{% if bloco %}{{ bloco.get_kind_display }}{% else %}—{% endif %}</dd>
+    <dt>{% translate "Última alteração neste idioma" %}</dt>
+    <dd>{% if traducao %}{{ traducao.updated_at|date:"d/m/Y · H:i" }}{% else %}—{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="card bo-card">
+  <div class="bo-card-head">
+    <h2>{% translate "Texto" %}</h2>
+    <span class="note d-only">{% translate "Exatamente como a página pública renderiza" %}</span>
+  </div>
+  {% if previa %}
+  <div class="legal-texto">{{ previa }}</div>
+  {% else %}
+  <p class="text-muted">{% translate "Sem texto neste idioma." %}</p>
+  {% endif %}
+  {% if pode_editar %}
+  <div class="bo-actions">
+    <a class="btn btn-primary" href="{{ url_editar }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i>{% translate "Editar" %}</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

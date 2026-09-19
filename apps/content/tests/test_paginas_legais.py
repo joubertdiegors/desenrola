@@ -21,7 +21,13 @@ O QUE ESTA SUÍTE EXISTE PARA IMPEDIR
    escrito no editor sai como HTML -- mas só o que
    `content.rodape.sanitizar_documento` deixa passar, de novo na hora de
    desenhar.
+7. **Que os BLOCOS (Rodada 22) fujam da mesma regra.** "Blocos
+   estruturados" tem prioridade sobre `.rico`, sanitiza de novo ao
+   desenhar (o banco não é confiável), e uma lista sem conteúdo real
+   (vazia ou só com separador) é a mesma página em branco de sempre.
 """
+
+import json
 
 import pytest
 from django.db import connection
@@ -431,36 +437,53 @@ class TestCadastroIntacto:
 
 
 # ===========================================================================
-# 6. Identidade conta o estado e aponta para onde se escreve
+# 6. O estado de cada documento aparece na PRÓPRIA tela dele
 # ===========================================================================
 
 
 class TestBackoffice:
-    def test_a_tela_de_sistema_mostra_o_estado(self, client, staff_user):
+    """
+    Até a Rodada 20, era Identidade que contava o estado dos documentos
+    legais e apontava para onde se editava. A Rodada 21 separou Termos
+    de uso e Privacidade em telas próprias (ver
+    `test_documentos_legais_no_backoffice.py`): cada uma agora mostra o
+    PRÓPRIO estado, e Identidade não fala mais deles -- ver
+    `test_sistema.py::TestTela::test_documentos_legais_nao_mora_mais_aqui`.
+    """
+
+    def test_a_tela_do_documento_mostra_o_estado(self, client, staff_user):
+        from django.contrib.auth.models import Permission
+
+        staff_user.user_permissions.add(
+            Permission.objects.get(content_type__app_label="content", codename="view_contentblock")
+        )
         client.force_login(staff_user)
 
-        corpo = client.get(reverse("backoffice:system")).content.decode()
+        corpo = client.get(reverse("backoffice:legal_documents_terms")).content.decode()
 
         assert "Sem texto" in corpo
-        assert "Não há links legais configurados" not in corpo
 
-    def test_a_tela_de_sistema_mostra_publicado(self, client, staff_user):
+    def test_a_tela_do_documento_mostra_publicado_e_o_link_publico(self, client, staff_user):
+        from django.contrib.auth.models import Permission
+
+        staff_user.user_permissions.add(
+            Permission.objects.get(content_type__app_label="content", codename="view_contentblock")
+        )
         publicar(CHAVE_TERMOS, "Cláusulas.")
-        publicar(CHAVE_PRIVACIDADE, "Política.")
         client.force_login(staff_user)
 
-        corpo = client.get(reverse("backoffice:system")).content.decode()
+        corpo = client.get(reverse("backoffice:legal_documents_terms")).content.decode()
 
         assert "Publicado" in corpo
         assert f'href="{TERMOS}"' in corpo
 
-    def test_a_tela_aponta_para_os_documentos_legais_e_nao_edita(
+    def test_a_tela_de_identidade_nao_edita_nem_menciona_os_documentos(
         self, client, staff_user
     ):
         """
-        Não há editor paralelo em Identidade: o texto se escreve em
-        Documentos legais, no próprio Backoffice -- e não mais no Django
-        Admin (Rodada 15).
+        Não há editor paralelo em Identidade: o texto se escreve nas
+        telas de Sistema › Documentos legais, e não no Django Admin
+        (Rodada 15) nem num resumo em Identidade (Rodada 21).
         """
         from django.contrib.auth.models import Permission
 
@@ -471,19 +494,15 @@ class TestBackoffice:
 
         corpo = client.get(reverse("backoffice:system")).content.decode()
 
-        assert f'href="{reverse("backoffice:legal_documents")}"' in corpo
         assert reverse("admin:content_contentblock_changelist") not in corpo
         assert 'name="legal.terms_of_use"' not in corpo
         assert 'name="termos_de_uso"' not in corpo
 
-    def test_sem_a_permissao_o_nome_aparece_sem_link(self, client, staff_user):
-        """O menu esconde a tela de quem não a abre; o cartão também."""
+    def test_sem_a_permissao_a_tela_do_documento_e_403(self, client, staff_user):
+        """A tela em si é a porta -- não um `if` escondendo um cartão."""
         client.force_login(staff_user)
 
-        corpo = client.get(reverse("backoffice:system")).content.decode()
-
-        assert "Documentos legais" in corpo
-        assert reverse("backoffice:legal_documents") not in corpo
+        assert client.get(reverse("backoffice:legal_documents_terms")).status_code == 403
 
 
 # ===========================================================================
@@ -554,3 +573,76 @@ class TestTextoFormatado:
             client.get(TERMOS)
 
         assert len([c for c in capturadas if "contentblock" in c["sql"]]) == 2
+
+
+# ===========================================================================
+# 8. Os blocos estruturados (Rodada 22), na página pública
+# ===========================================================================
+
+
+def publicar_blocos(chave, lista_de_blocos, idioma="pt"):
+    """O que o editor por blocos grava: JSON e "Blocos estruturados"."""
+    ContentBlock.objects.filter(key=chave).update(kind=ContentBlock.Kind.STRUCTURED)
+    return publicar(chave, json.dumps(lista_de_blocos), idioma)
+
+
+class TestBlocosEstruturados:
+    def test_os_blocos_aparecem_renderizados(self, client):
+        publicar_blocos(CHAVE_TERMOS, [
+            {"type": "heading", "html": "1. Objeto"},
+            {"type": "paragraph", "html": "Texto <strong>forte</strong>."},
+        ])
+
+        corpo = client.get(TERMOS).content.decode()
+
+        assert "<h2>1. Objeto</h2>" in corpo
+        assert "<p>Texto <strong>forte</strong>.</p>" in corpo
+
+    def test_tem_prioridade_sobre_o_rico(self, client):
+        """
+        Um bloco não fica nos dois formatos ao mesmo tempo -- mas se
+        algo externo (uma migração manual, o Admin) deixasse `kind`
+        como blocos com conteúdo de outro formato ainda no campo, a
+        VIEW decide pelos blocos primeiro (`documento.blocos is not
+        None`), nunca lê `.texto` como HTML nesse caso.
+        """
+        publicar_blocos(CHAVE_TERMOS, [{"type": "paragraph", "html": "Só isto."}])
+
+        corpo = client.get(TERMOS).content.decode()
+
+        assert "Só isto." in corpo
+
+    def test_o_que_a_lista_nao_aceita_sai_na_hora_de_desenhar(self, client):
+        """O banco não é confiável: um JSON gravado por fora do editor passa pela lista de novo."""
+        paragrafo_perigoso = '<span onclick="roubar()">Oi</span><script>alert(1)</script>'
+        publicar_blocos(CHAVE_TERMOS, [
+            {"type": "paragraph", "html": paragrafo_perigoso},
+            {"type": "button", "html": "x", "href": "javascript:alert(1)"},
+        ])
+
+        corpo = client.get(TERMOS).content.decode()
+        texto = corpo[corpo.index('class="legal-texto"') :]
+
+        assert "onclick" not in texto
+        assert "<script>alert(1)</script>" not in texto
+        assert "javascript:" not in texto
+        assert "<p><span>Oi</span></p>" in texto
+
+    def test_lista_vazia_e_a_mesma_pagina_em_branco(self, client):
+        publicar_blocos(CHAVE_TERMOS, [])
+
+        assert client.get(TERMOS).status_code == 404
+        assert "legal.terms_of_use" not in services.legais_publicadas()
+
+    def test_so_separador_tambem_e_sem_texto(self, client):
+        publicar_blocos(CHAVE_TERMOS, [{"type": "separator"}])
+
+        assert client.get(TERMOS).status_code == 404
+
+    def test_json_invalido_e_tratado_como_sem_texto_nunca_erro(self, client):
+        publicar_blocos(CHAVE_TERMOS, [])
+        ContentTranslation.objects.filter(
+            block__key=CHAVE_TERMOS, language="pt"
+        ).update(content="{não é json}")
+
+        assert client.get(TERMOS).status_code == 404

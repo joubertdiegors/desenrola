@@ -10,6 +10,43 @@ assistente, a Home e os parceiros); depois o grupo SISTEMA, que junta
 as configurações administrativas. Cada item continua exigindo a MESMA
 permissão que a tela cobra no servidor -- esconder o item não é a
 proteção, é não oferecer uma porta que bateria na cara da pessoa.
+
+DOIS ITENS-PAI, RECOLHÍVEIS (Rodada 21)
+-----------------------------------------
+"Wizzard - gerar carta" (com "Idiomas" dentro) e "SISTEMA" (com
+E-mail, Imagens, Aparência, Identidade e Documentos legais dentro) são
+`<details>`: um disclosure nativo, sem JavaScript nenhum. Isso dá de
+graça o que se pediria a um script -- Enter/Espaço abrem e fecham,
+leitor de tela anuncia "recolhido"/"expandido" -- e o estado inicial
+vem do PRÓPRIO SERVIDOR: `open` só entra no HTML quando `active` é o
+próprio item ou um dos filhos dele (`wizzard_aberto`/`sistema_aberto`,
+calculados aqui). Fechado ou aberto por padrão, a pessoa continua
+podendo clicar para abrir ou fechar à vontade -- o `<details>` nativo
+já faz isso sozinho.
+
+"Wizzard - gerar carta" É TAMBÉM UM LINK
+------------------------------------------
+Diferente de "Sistema" (que não tem tela própria, só agrupa), o
+Wizzard continua sendo uma tela de verdade -- por isso o `<a>` mora
+DENTRO do `<summary>`, ao lado do símbolo de abrir/fechar: clicar no
+texto navega (o link vence, como em qualquer `<a>`); clicar no símbolo,
+fora do link, só abre ou fecha a lista de "Idiomas". A mesma ideia dos
+menus de navegação com filhos que várias ferramentas usam.
+
+DOCUMENTOS LEGAIS, DENTRO DE SISTEMA
+--------------------------------------
+Deixou de ter tela própria (Rodada 21 separou Termos de uso e
+Privacidade em telas independentes, cada uma com sua visualização e
+seu editor). Aqui "Documentos legais" é só um SUBTÍTULO -- não é link
+--, com as duas páginas listadas embaixo dele, mais recuadas: a
+hierarquia de três níveis (Sistema → Documentos legais → Termos/
+Privacidade) fica visível sem precisar de um terceiro `<details>`.
+
+"BANDEIRAS" SAIU
+-----------------
+Era um segundo caminho até a MESMA seção que já mora em Idiomas
+(`#bandeiras`) -- a Rodada 21 removeu o atalho; a seção continua lá,
+dentro de Idiomas, exatamente como estava.
 {% endcomment %}
 <nav class="{% if not in_dropdown %}side-menu{% endif %}" aria-label="{% translate 'Administração' %}">
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'overview' %}is-current{% endif %}" href="{% url 'backoffice:overview' %}"{% if active == "overview" %} aria-current="page"{% endif %}><i class="ph ph-squares-four" aria-hidden="true"></i>{% translate "Visão geral" %}</a>
@@ -35,13 +72,25 @@ proteção, é não oferecer uma porta que bateria na cara da pessoa.
   {% if perms.doctemplates.view_documenttemplate %}
   <a class="{% if in_dropdown %}dropdown-item{% elif active == 'templates' %}is-current{% endif %}" href="{% url 'backoffice:document_library' %}"{% if active == "templates" %} aria-current="page"{% endif %}><i class="ph ph-file-text" aria-hidden="true"></i>{% translate "Modelos de cartas" %}</a>
   {% endif %}
+
   {% comment %}
-  "Wizzard - gerar carta" é o novo NOME da tela que se chamava "Política
-  das cartas" -- mesma tela, mesma rota, mesmo comportamento. Abre para
-  quem entra no Backoffice; SALVAR exige as permissões de sempre,
-  conferidas no servidor.
+  "Wizzard - gerar carta": o nome da tela que se chamava "Política das
+  cartas" -- mesma tela, mesma rota, mesmo comportamento (Rodada 16).
+  Abre para quem entra no Backoffice; SALVAR exige as permissões de
+  sempre, conferidas no servidor. "Idiomas" mora dentro dele desde a
+  Rodada 21 -- é o mesmo `backoffice:languages` de sempre, só o LUGAR
+  no menu que mudou.
   {% endcomment %}
-  <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letter_policy' %}is-current{% endif %}" href="{% url 'backoffice:letter_policy' %}"{% if active == "letter_policy" %} aria-current="page"{% endif %}><i class="ph ph-clock-countdown" aria-hidden="true"></i>{% translate "Wizzard - gerar carta" %}</a>
+  <details class="side-menu-acordeao"{% if active == "letter_policy" or active == "languages" %} open{% endif %}>
+    <summary class="side-menu-linha-pai">
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'letter_policy' %}is-current{% endif %}" href="{% url 'backoffice:letter_policy' %}"{% if active == "letter_policy" %} aria-current="page"{% endif %}><i class="ph ph-clock-countdown" aria-hidden="true"></i>{% translate "Wizzard - gerar carta" %}</a>
+      <svg class="side-menu-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+    </summary>
+    <div class="side-menu-filhos">
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %} side-menu-filho" href="{% url 'backoffice:languages' %}"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
+    </div>
+  </details>
+
   {% comment %}
   "Home - Configurações" exige `content.view_pagesection` -- a mesma
   permissão que a tela cobra no servidor.
@@ -58,37 +107,52 @@ proteção, é não oferecer uma porta que bateria na cara da pessoa.
   {% endif %}
 
   {% comment %}
-  SISTEMA -- as configurações administrativas, num grupo só. O título
-  do grupo não é link: cada item leva à sua tela.
-
-  "Bandeiras" leva à MESMA seção que mora em Idiomas (`#bandeiras`):
-  as bandeiras são configuradas num lugar só, e este item é só um
-  segundo caminho até lá -- não uma segunda tela.
+  SISTEMA -- as configurações administrativas, um item-pai recolhível.
+  Diferente do Wizzard, não tem tela própria: o rótulo é um `<span>`,
+  nunca um link. Abre sozinho ao entrar em qualquer um dos filhos
+  (inclusive Termos de uso/Privacidade, dois níveis abaixo).
   {% endcomment %}
-  {% if in_dropdown %}<div class="dropdown-sep"></div><span class="dropdown-grupo-titulo" aria-hidden="true">{% translate "Sistema" %}</span>{% endif %}
-  <div class="{% if not in_dropdown %}side-menu-grupo{% endif %}" role="group" aria-label="{% translate 'Sistema' %}">
-    {% if not in_dropdown %}<span class="side-menu-grupo-titulo" aria-hidden="true">{% translate "Sistema" %}</span>{% endif %}
-    {% comment %}"E-mail" exige `core.view_emailsettings`, como a tela.{% endcomment %}
-    {% if perms.core.view_emailsettings %}
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'email_settings' %}is-current{% endif %}" href="{% url 'backoffice:email_settings' %}"{% if active == "email_settings" %} aria-current="page"{% endif %}><i class="ph ph-envelope-simple" aria-hidden="true"></i>{% translate "E-mail" %}</a>
-    {% endif %}
-    {% comment %}"Imagens" exige `content.view_asset`, como a biblioteca.{% endcomment %}
-    {% if perms.content.view_asset %}
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'assets' %}is-current{% endif %}" href="{% url 'backoffice:assets' %}"{% if active == "assets" %} aria-current="page"{% endif %}><i class="ph ph-image" aria-hidden="true"></i>{% translate "Imagens" %}</a>
-    {% endif %}
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'languages' %}is-current{% endif %}" href="{% url 'backoffice:languages' %}"{% if active == "languages" %} aria-current="page"{% endif %}><i class="ph ph-translate" aria-hidden="true"></i>{% translate "Idiomas" %}</a>
-    <a class="{% if in_dropdown %}dropdown-item{% endif %}" href="{% url 'backoffice:languages' %}#bandeiras"><i class="ph ph-flag" aria-hidden="true"></i>{% translate "Bandeiras" %}</a>
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'appearance' %}is-current{% endif %}" href="{% url 'backoffice:appearance' %}"{% if active == "appearance" %} aria-current="page"{% endif %}><i class="ph ph-palette" aria-hidden="true"></i>{% translate "Aparência" %}</a>
-    {% comment %}
-    "Identidade" (nome, contato e redes) abre para quem entra no
-    Backoffice; SALVAR exige `content.change_sitesettings`, no servidor.
-    {% endcomment %}
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %}" href="{% url 'backoffice:system' %}"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-identification-card" aria-hidden="true"></i>{% translate "Identidade" %}</a>
-    {% comment %}"Documentos legais" exige `content.view_contentblock`, como a tela.{% endcomment %}
-    {% if perms.content.view_contentblock %}
-    <a class="{% if in_dropdown %}dropdown-item{% elif active == 'legal_documents' %}is-current{% endif %}" href="{% url 'backoffice:legal_documents' %}"{% if active == "legal_documents" %} aria-current="page"{% endif %}><i class="ph ph-scales" aria-hidden="true"></i>{% translate "Documentos legais" %}</a>
-    {% endif %}
-  </div>
+  <details class="side-menu-acordeao"{% if active == "email_settings" or active == "assets" or active == "appearance" or active == "system" or active == "legal_documents_terms" or active == "legal_documents_privacy" %} open{% endif %}>
+    <summary class="side-menu-linha-pai">
+      <span class="side-menu-pai-rotulo"><i class="ph ph-gear-six" aria-hidden="true"></i>{% translate "Sistema" %}</span>
+      <svg class="side-menu-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"></path></svg>
+    </summary>
+    <div class="side-menu-filhos">
+      {% comment %}"E-mail" exige `core.view_emailsettings`, como a tela.{% endcomment %}
+      {% if perms.core.view_emailsettings %}
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'email_settings' %}is-current{% endif %} side-menu-filho" href="{% url 'backoffice:email_settings' %}"{% if active == "email_settings" %} aria-current="page"{% endif %}><i class="ph ph-envelope-simple" aria-hidden="true"></i>{% translate "E-mail" %}</a>
+      {% endif %}
+      {% comment %}"Imagens" exige `content.view_asset`, como a biblioteca.{% endcomment %}
+      {% if perms.content.view_asset %}
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'assets' %}is-current{% endif %} side-menu-filho" href="{% url 'backoffice:assets' %}"{% if active == "assets" %} aria-current="page"{% endif %}><i class="ph ph-image" aria-hidden="true"></i>{% translate "Imagens" %}</a>
+      {% endif %}
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'appearance' %}is-current{% endif %} side-menu-filho" href="{% url 'backoffice:appearance' %}"{% if active == "appearance" %} aria-current="page"{% endif %}><i class="ph ph-palette" aria-hidden="true"></i>{% translate "Aparência" %}</a>
+      {% comment %}
+      "Identidade" (nome, contato e redes) abre para quem entra no
+      Backoffice; SALVAR exige `content.change_sitesettings`, no servidor.
+      {% endcomment %}
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'system' %}is-current{% endif %} side-menu-filho" href="{% url 'backoffice:system' %}"{% if active == "system" %} aria-current="page"{% endif %}><i class="ph ph-identification-card" aria-hidden="true"></i>{% translate "Identidade" %}</a>
+      {% comment %}
+      "Documentos legais": um SUBTÍTULO, não um link -- desde a Rodada
+      21 os dois documentos têm cada um a sua tela (ver
+      `content.backoffice_views`), sem tela combinada para onde apontar.
+      Cada link exige `content.view_contentblock`, como as duas telas.
+      {% endcomment %}
+      {% if perms.content.view_contentblock %}
+      {% comment %}
+      Sem `aria-hidden`, ao contrário do título "Sistema" acima: aquele
+      tem `role="group" aria-label` no `<div>` que o envolve, então
+      escondê-lo do leitor de tela não perde nada -- o nome do grupo
+      ainda é anunciado. Este `<span>` é a ÚNICA pista de que os dois
+      links a seguir formam um subgrupo; escondê-lo apagaria essa
+      relação de quem usa leitor de tela.
+      {% endcomment %}
+      <span class="side-menu-filho side-menu-filho-titulo"><i class="ph ph-scales" aria-hidden="true"></i>{% translate "Documentos legais" %}</span>
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'legal_documents_terms' %}is-current{% endif %} side-menu-neto" href="{% url 'backoffice:legal_documents_terms' %}"{% if active == "legal_documents_terms" %} aria-current="page"{% endif %}>{% translate "Termos de uso" %}</a>
+      <a class="{% if in_dropdown %}dropdown-item{% elif active == 'legal_documents_privacy' %}is-current{% endif %} side-menu-neto" href="{% url 'backoffice:legal_documents_privacy' %}"{% if active == "legal_documents_privacy" %} aria-current="page"{% endif %}>{% translate "Privacidade" %}</a>
+      {% endif %}
+    </div>
+  </details>
 
   {% comment %}
   A saída da administração, depois de um risco: os itens acima são

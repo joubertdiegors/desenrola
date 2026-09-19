@@ -144,6 +144,20 @@ para ele, e desativar resolve o caso real sem perder histórico.
         <button type="submit" class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i>{% translate "Ativar" %}</button>
       {% endif %}
     </form>
+
+    {% if not modelo.is_locked %}
+    {% comment %}
+    "Bloquear modelo" (Rodada 21): só liga o cadeado, nunca desliga --
+    por isso não há botão "Desbloquear" aqui. Destravar continua sendo
+    administração ou duplicar, como `motivo_da_leitura` já diz a quem
+    abre um modelo travado.
+    {% endcomment %}
+    <form method="post" action="{% url 'backoffice:document_library_lock' modelo.pk %}"
+          onsubmit="return confirm('{% blocktranslate with nome=modelo.name %}Bloquear &quot;{{ nome }}&quot;? Ele passa a ser somente leitura. Para editar de novo, será preciso destravá-lo na administração ou duplicá-lo.{% endblocktranslate %}');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost"><i class="ph ph-lock-simple" aria-hidden="true"></i>{% translate "Bloquear modelo" %}</button>
+    </form>
+    {% endif %}
     {% endif %}
   </div>
 
