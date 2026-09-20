@@ -490,11 +490,16 @@ class TestConsultas:
         descuido: sessao, usuario, politica das cartas, as cartas, as
         nacionalidades, a contagem, a configuracao do site e as
         permissoes.
+
+        DEZ desde a validação para gerar carta: o botão do painel
+        pergunta a `letters.requisitos` se esta conta pode gerar, e a
+        resposta depende da política gravada -- uma leitura a mais, por
+        requisição, entrando aqui de propósito.
         """
         for i in range(presentation.RECENT_LIMIT):
             _criar_carta(user, data={"guest_name": f"Convidado {i}"})
 
         auth_client.get(DASHBOARD)  # aquece sessao/usuario
 
-        with django_assert_max_num_queries(9):
+        with django_assert_max_num_queries(10):
             auth_client.get(DASHBOARD)

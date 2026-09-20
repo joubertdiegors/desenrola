@@ -1,5 +1,5 @@
 {% extends "app_base.html" %}
-{% load i18n %}
+{% load i18n carta %}
 {% comment %}
 Dashboard (layout 2c desktop, 3b tablet, 4d celular).
 
@@ -26,8 +26,15 @@ nesta tela. Uma porta so.
       <h2>{% translate "Gerar Carta Convite" %}</h2>
       <p><span class="d-only">{% translate "Seus dados de anfitrião já estão salvos. Só falta o convidado e as datas — 6 etapas rápidas." %}</span><span class="m-only">{% translate "Seus dados já estão salvos. Só falta o convidado e as datas — 6 etapas rápidas." %}</span></p>
     </div>
-    <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Começar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    {% translate "Começar" as rotulo_gerar %}{% botao_gerar_carta rotulo_gerar aviso_id="aviso-para-gerar" %}
   </div>
+  {% comment %}
+  O aviso fica FORA do cartão: `.hero-cta` é uma linha (ícone, texto,
+  botão) no desktop, e uma frase dentro dela viraria uma quarta coluna.
+  Aqui ele nasce logo abaixo do botão, na largura toda, nos três
+  tamanhos de tela.
+  {% endcomment %}
+  {% aviso_para_gerar %}
 
   <div class="section-head" id="minhas-cartas">
     <h2>{% translate "Minhas cartas" %}</h2>

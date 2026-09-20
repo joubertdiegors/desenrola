@@ -132,6 +132,24 @@ class EmailSettings(TimeStampedModel):
     from_email = models.EmailField(_("remetente"), blank=True)
     from_name = models.CharField(_("nome do remetente"), max_length=150, blank=True)
 
+    # A CÓPIA OCULTA
+    # --------------
+    # Um endereço que recebe, em BCC, TODA mensagem que o site manda --
+    # confirmação de e-mail, recuperação de senha, o que vier depois.
+    # Serve de arquivo: quem administra o produto consegue ver o que
+    # saiu sem pedir ao destinatário.
+    #
+    # Em branco (o padrão) não existe cópia nenhuma. Não é o mesmo que
+    # `username` ou `from_email`: não entra em `pronta_para_enviar()`,
+    # porque um e-mail sem cópia oculta é um e-mail perfeitamente
+    # válido.
+    #
+    # Quem aplica é `apps.core.mail`, no ponto único de envio. Aqui só
+    # fica o endereço. O Django escreve `To:` e `Cc:` no cabeçalho e
+    # NUNCA `Bcc:` -- é isso que faz a cópia ser oculta de verdade, e
+    # não uma convenção nossa.
+    bcc_email = models.EmailField(_("enviar cópia oculta para"), blank=True)
+
     # Quem mexeu por último. `SET_NULL` porque a configuração sobrevive
     # à conta de quem a cadastrou -- apagar a pessoa não pode derrubar o
     # envio de e-mail do sistema inteiro.

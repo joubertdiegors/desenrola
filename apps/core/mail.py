@@ -12,6 +12,13 @@ Assim `send_mail()` e a recuperação de senha continuam sendo o código
 de sempre -- ninguém precisa saber que existe configuração no banco --
 e o interruptor do Backoffice passa a significar alguma coisa de fato.
 
+A CÓPIA OCULTA
+--------------
+Havendo endereço cadastrado (`EmailSettings.bcc_email`), TODA mensagem
+sai com ele em BCC -- ver `aplicar_copia_oculta`. A regra mora aqui, e
+não em quem escreve o e-mail, para não depender de cada novo fluxo
+lembrar dela.
+
 O QUE NUNCA SAI DAQUI
 ---------------------
 A senha. Ela é lida na hora de montar a conexão e some com ela. As
@@ -23,6 +30,7 @@ pode repetir o usuário -- e acabaria num log ou na tela.
 import logging
 import smtplib
 import ssl
+from email.utils import parseaddr
 
 from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
@@ -53,6 +61,49 @@ def configuracao():
     """
     objeto, _criado = EmailSettings.objects.get_or_create(pk=EmailSettings.SINGLETON_ID)
     return objeto
+
+
+def aplicar_copia_oculta(config, email_messages):
+    """
+    Acrescenta a cópia oculta configurada a cada mensagem.
+
+    POR QUE AQUI, E NÃO EM QUEM ESCREVE O E-MAIL
+    --------------------------------------------
+    A regra é do SITE, não de um fluxo. Se cada lugar que manda e-mail
+    tivesse de lembrar do BCC, o próximo e-mail escrito nasceria sem
+    ele -- e ninguém descobriria, porque a falta de uma cópia não
+    quebra nada. Aplicada aqui, ela vale para a confirmação de e-mail,
+    para a recuperação de senha e para tudo o que vier depois, sem uma
+    linha a mais em quem envia.
+
+    O QUE ISTO NÃO MEXE
+    -------------------
+    Não toca no assunto, no corpo, no remetente nem no destinatário. Só
+    acrescenta um endereço ao `bcc` -- e `bcc` não vira cabeçalho: o
+    Django escreve `To:` e `Cc:` na mensagem e nunca `Bcc:`. O
+    destinatário original não tem como ver quem mais recebeu.
+
+    NÃO DUPLICA
+    -----------
+    Se o endereço configurado JÁ está entre os destinatários da
+    mensagem (é o próprio destino, ou já veio em cópia), ele não entra
+    de novo: duas entradas no mesmo envelope mandariam a mesma
+    mensagem duas vezes para a mesma caixa. A comparação é pelo
+    endereço, não pelo texto -- `Ana <ana@mail.com>` e `ana@mail.com`
+    são a mesma pessoa.
+    """
+    endereco = (config.bcc_email or "").strip()
+    if not endereco:
+        return
+
+    alvo = endereco.lower()
+    for mensagem in email_messages:
+        ja_recebem = {
+            parseaddr(str(quem))[1].lower()
+            for quem in (*mensagem.to, *mensagem.cc, *mensagem.bcc)
+        }
+        if alvo not in ja_recebem:
+            mensagem.bcc = [*mensagem.bcc, endereco]
 
 
 def conexao(config, **kwargs):
@@ -111,6 +162,13 @@ class ConfiguredEmailBackend(BaseEmailBackend):
             return 0
 
         config = configuracao()
+
+        # ANTES da bifurcação, de propósito: a cópia oculta vale tanto
+        # pelo servidor cadastrado quanto pelo destino de reserva do
+        # ambiente. Aplicá-la só num dos dois faria a regra depender de
+        # o interruptor estar ligado.
+        aplicar_copia_oculta(config, email_messages)
+
         if not config.pronta_para_enviar():
             return _reserva(self.fail_silently).send_messages(email_messages)
 
@@ -182,13 +240,21 @@ def enviar_teste(config, destino):
     """
     try:
         with conexao(config) as ligacao:
-            EmailMessage(
+            mensagem = EmailMessage(
                 subject=str(ASSUNTO_DO_TESTE),
                 body=str(CORPO_DO_TESTE),
                 from_email=config.remetente() or None,
                 to=[destino],
                 connection=ligacao,
-            ).send(fail_silently=False)
+            )
+            # O teste é o ÚNICO envio que não passa pelo backend do
+            # projeto: ele abre a conexão na mão, para usar a
+            # configuração recém-salva mesmo desligada. Por isso a
+            # cópia oculta é pedida aqui também -- senão, o único
+            # e-mail que o administrador dispara de propósito seria o
+            # único a sair sem ela.
+            aplicar_copia_oculta(config, [mensagem])
+            mensagem.send(fail_silently=False)
     except Exception as erro:  # noqa: BLE001 -- qualquer falha vira uma frase
         # Só a classe e o servidor. Nunca `str(erro)`, nunca usuário,
         # nunca senha.

@@ -847,6 +847,11 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
   .aviso-do-email { padding: 12px 20px 0; }
   .aviso-do-email .notice { align-items: flex-start; flex-wrap: wrap; }
   .aviso-do-email .btn { margin-left: 0; width: 100%; }
+  /* No celular as saídas ocupam a linha inteira, como as do aviso do
+     e-mail: alvo de toque cheio em vez de dois botões espremidos. */
+  .aviso-para-gerar.notice { align-items: flex-start; }
+  .aviso-para-gerar form,
+  .aviso-para-gerar .btn { width: 100%; }
 
   /* A CAPSULA DO CONTADOR nao tem regra de celular: a referencia
      desenha a MESMA capsula nas duas telas (2a e 2b sao iguais neste
@@ -958,6 +963,14 @@ img.partner-image { object-fit: contain; padding: 20px; box-sizing: border-box; 
 .aviso-do-email { padding: 16px 48px 0; }
 .aviso-do-email .notice { align-items: center; }
 .aviso-do-email .btn { margin-left: auto; flex: none; }
+/* O aviso de "confirme para gerar carta": a MESMA forma do aviso do
+   e-mail -- a frase e, ao lado, o caminho para resolver. A diferença é
+   que aqui podem vir DUAS saídas (reenviar o e-mail e confirmar o
+   telefone), então a linha quebra em vez de empurrar a segunda para
+   fora da tela. */
+.aviso-para-gerar { margin-top: 12px; }
+.aviso-para-gerar.notice { align-items: center; flex-wrap: wrap; }
+.aviso-para-gerar .btn { flex: none; }
 .auth-form { display: flex; flex-direction: column; gap: 18px; }
 .auth-link { font-size: 13.5px; font-weight: 600; margin-top: -8px; min-height: 44px; display: flex; align-items: center; }
 .auth-alt { font-size: 14px; color: var(--mu); text-align: center; }
@@ -1518,6 +1531,19 @@ img.lang-flag { object-fit: cover; display: block; }
 
 .list-item strong { color: var(--navy); }
 
+/* O estado das confirmacoes (`accounts/profile.html`): o dado a
+   esquerda, a etiqueta e o que se pode fazer a direita. A mesma forma
+   de `.pref` logo abaixo -- e a mesma etiqueta `.tag` do resto do
+   sistema, nada de um componente de status so para esta tela. */
+.confirmacoes { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.confirmacao { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.confirmacao + .confirmacao { border-top: 1px solid var(--bd); padding-top: 14px; }
+.confirmacao strong { color: var(--navy); }
+/* `break-word`: um e-mail longo nao pode empurrar a largura da pagina. */
+.confirmacao-valor { display: block; font-size: 12.5px; color: var(--mu); word-break: break-word; }
+.confirmacao-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.confirmacao-estado form { margin: 0; }
+
 .prefs-stack { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
 .pref { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 14px; cursor: pointer; }
 .pref strong { color: var(--navy); }
@@ -1539,6 +1565,13 @@ img.lang-flag { object-fit: cover; display: block; }
      um texto corrido so, sem onde uma acabar e a outra comecar. */
   .profile-section { padding: 18px 16px; }
   .profile-section h2 { font-size: 18px; }
+  /* No celular a etiqueta mais o botao nao cabem na mesma linha do
+     dado: a linha vira duas, e o botao ocupa a largura toda -- o mesmo
+     que `.aviso-do-email` e `.aviso-para-gerar` fazem. */
+  .confirmacao { flex-direction: column; align-items: stretch; gap: 10px; }
+  .confirmacao-estado { width: 100%; }
+  .confirmacao-estado form { width: 100%; }
+  .confirmacao-estado .btn { width: 100%; }
   .profile-conta { text-align: center; }
   .profile-conta .profile-foot { margin-top: 12px; }
   .profile-columns { grid-template-columns: 1fr; gap: 20px; }

@@ -14,6 +14,14 @@ Não existe variável com a senha neste template. O campo é de ESCRITA
 branco significa "mantenha a que está guardada". O que a tela mostra é
 apenas SE existe uma senha -- `config.tem_senha`, um booleano.
 
+A CÓPIA OCULTA
+--------------
+O campo "Enviar cópia oculta para" NÃO é desta tela: é do site inteiro.
+Preenchido, toda mensagem que o Desenrola manda sai com aquele endereço
+em BCC (`apps.core.mail.aplicar_copia_oculta`). Fica aqui porque é aqui
+que mora o envio -- e porque é uma configuração administrativa, que só
+quem tem `core.view_emailsettings` enxerga.
+
 TRÊS FORMULÁRIOS, NÃO UM
 ------------------------
 Salvar os dados, ligar/desligar o envio e disparar um teste são três
@@ -172,6 +180,35 @@ config (EmailSettings), pode_editar (bool).
         <span class="field-hint">{{ form.from_name.help_text }}</span>
         {% for erro in form.from_name.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
       </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------------- #}
+  {# A copia oculta de tudo o que o site envia                            #}
+  {# ------------------------------------------------------------------- #}
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h2>{% translate "Cópia oculta" %}</h2>
+      {% if config.bcc_email %}
+        <span class="tag tag-neutral">{% translate "Ativa" %}</span>
+      {% else %}
+        <span class="tag tag-neutral">{% translate "Sem cópia" %}</span>
+      {% endif %}
+    </div>
+    {% comment %}
+    Vale para TODA mensagem do site, e nao so para esta tela: quem
+    aplica e `apps.core.mail.aplicar_copia_oculta`, no ponto unico de
+    envio. Em branco, nao existe copia nenhuma.
+
+    O endereco so aparece para quem pode ver esta tela
+    (`core.view_emailsettings`) -- nunca em pagina publica e nunca
+    dentro do e-mail enviado.
+    {% endcomment %}
+    <div class="field">
+      <label for="{{ form.bcc_email.id_for_label }}">{{ form.bcc_email.label }}</label>
+      {{ form.bcc_email }}
+      <span class="field-hint">{{ form.bcc_email.help_text }}</span>
+      {% for erro in form.bcc_email.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
     </div>
   </div>
 

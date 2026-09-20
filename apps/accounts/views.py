@@ -14,7 +14,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+    urlencode,
+    urlsafe_base64_decode,
+)
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
@@ -22,10 +26,10 @@ from django.views.decorators.http import require_POST
 
 from apps.content.context_processors import globais
 
-from . import confirmacao
+from . import confirmacao, confirmacao_de_telefone
 from .confirmacao import token_de_email
 from .forms import LoginForm, PasswordChangeForm, ProfileForm, SetPasswordForm, SignupForm
-from .models import User
+from .models import ConfirmacaoDeTelefone, User
 
 # As secoes do perfil -- hoje ANCORAS, e nao mais paginas.
 #
@@ -132,7 +136,16 @@ def profile(request):
                 # O endereco ANTES de salvar: e a comparacao que diz se a
                 # confirmacao ainda vale.
                 email_anterior = User.objects.values_list("email", flat=True).get(pk=user.pk)
+                # O telefone ANTES de salvar, pela mesma razão: a
+                # confirmação vale para o NÚMERO confirmado, não para a
+                # conta. Herdá-la ao trocar de número faria a marca
+                # dizer algo falso, e a política de geração de carta
+                # passaria com um número que ninguém provou possuir.
+                telefone_anterior = User.objects.values_list("phone", flat=True).get(pk=user.pk)
                 profile_form.save()
+
+                if user.phone != telefone_anterior:
+                    confirmacao_de_telefone.esquecer(user)
 
                 if user.email != email_anterior:
                     # Herdar a confirmacao do endereco antigo faria a
@@ -354,3 +367,110 @@ def reenviar_confirmacao(request):
             ),
         )
     return redirect(_safe_next(request) or "accounts:profile")
+
+
+# ---------------------------------------------------------------------------
+# Confirmacao de telefone
+# ---------------------------------------------------------------------------
+#
+# O e-mail confirma-se por LINK (accounts.confirmacao); o telefone, por
+# CODIGO (accounts.confirmacao_de_telefone) -- e o que cabe num SMS. As
+# duas rotas abaixo sao a tela e o pedido de codigo; a regra, os prazos e
+# os limites moram no modulo, nunca aqui.
+
+
+def _resposta_do_envio(request, resultado, telefone):
+    """A mensagem de cada resultado de `confirmacao_de_telefone.enviar`."""
+    if resultado == confirmacao_de_telefone.ENVIADO:
+        messages.success(
+            request,
+            _("Enviamos um código por SMS para %(telefone)s. Ele vale por 10 minutos.")
+            % {"telefone": telefone},
+        )
+    elif resultado == confirmacao_de_telefone.JA_CONFIRMADO:
+        messages.info(request, _("Seu telefone já está confirmado."))
+    elif resultado == confirmacao_de_telefone.SEM_TELEFONE:
+        messages.error(
+            request,
+            _("Cadastre um telefone no seu perfil antes de confirmá-lo."),
+        )
+    elif resultado == confirmacao_de_telefone.MUITO_CEDO:
+        messages.info(
+            request,
+            _("Você acabou de pedir um código. Aguarde um minuto para pedir outro."),
+        )
+    else:
+        messages.error(
+            request,
+            _("Não conseguimos enviar o código agora. Tente de novo em alguns minutos."),
+        )
+
+
+@login_required
+def confirmar_telefone(request):
+    """
+    A tela de confirmacao e a conferencia do codigo digitado.
+
+    So para `request.user`: confirmar telefone de terceiro nao e uma
+    operacao que exista. Quem chega sem codigo pedido ve o botao de
+    enviar -- nada e disparado por um GET, que qualquer pre-carregador
+    de navegador faria sozinho.
+    """
+    user = request.user
+    voltar_para = _safe_next(request) or reverse("core:dashboard")
+
+    if request.method == "POST":
+        resultado = confirmacao_de_telefone.conferir(user, request.POST.get("codigo", ""))
+        if resultado == confirmacao_de_telefone.CONFIRMADO:
+            messages.success(request, _("Telefone confirmado."))
+            return redirect(voltar_para)
+        if resultado == confirmacao_de_telefone.JA_CONFIRMADO:
+            messages.info(request, _("Seu telefone já está confirmado."))
+            return redirect(voltar_para)
+        if resultado == confirmacao_de_telefone.CODIGO_ERRADO:
+            messages.error(request, _("Código incorreto. Confira os seis dígitos e tente de novo."))
+        elif resultado == confirmacao_de_telefone.EXPIRADO:
+            messages.error(request, _("Esse código expirou. Peça um novo."))
+        elif resultado == confirmacao_de_telefone.TENTATIVAS_ESGOTADAS:
+            messages.error(request, _("Muitas tentativas. Peça um código novo."))
+        elif resultado == confirmacao_de_telefone.TELEFONE_MUDOU:
+            messages.error(request, _("Seu telefone mudou depois do envio. Peça um código novo."))
+        else:
+            messages.error(request, _("Peça um código antes de confirmar."))
+
+    return render(
+        request,
+        "accounts/phone_confirmation.html",
+        {
+            "telefone": user.phone,
+            "confirmado": user.telefone_confirmado,
+            "tem_codigo": ConfirmacaoDeTelefone.objects.filter(user=user).exists(),
+            "voltar_para": voltar_para,
+            "url_do_perfil": reverse("accounts:profile") + "#dados",
+        },
+    )
+
+
+@login_required
+@require_POST
+def enviar_codigo_do_telefone(request):
+    """
+    Manda (ou reenvia) o codigo para o telefone da propria conta.
+
+    So POST, e so para `request.user` -- pelas mesmas duas razoes do
+    reenvio do e-mail, e com um motivo a mais: SMS custa dinheiro, e uma
+    rota de GET viraria um disparador involuntario.
+    """
+    _resposta_do_envio(
+        request,
+        confirmacao_de_telefone.enviar(request.user, globais().name),
+        request.user.phone,
+    )
+    # Volta SEMPRE para a tela do codigo -- e ali que a pessoa digita o
+    # que acabou de receber. O `next` segue junto, na querystring, para
+    # que CONFIRMAR devolva ao lugar de onde ela veio.
+    destino = reverse("accounts:phone_confirm")
+    seguinte = _safe_next(request)
+    if seguinte:
+        destino = f"{destino}?{urlencode({'next': seguinte})}"
+    return redirect(destino)

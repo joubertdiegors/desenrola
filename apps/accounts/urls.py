@@ -30,6 +30,20 @@ urlpatterns = [
         views.reenviar_confirmacao,
         name="email_confirm_resend",
     ),
+    # Confirmacao de telefone: a tela (com a conferencia do codigo) e o
+    # pedido de codigo. As duas EXIGEM sessao -- diferente do link do
+    # e-mail, aqui nao ha token assinado no endereco: o que diz de quem
+    # e o telefone e a sessao.
+    path(
+        "telefone/confirmar/",
+        views.confirmar_telefone,
+        name="phone_confirm",
+    ),
+    path(
+        "telefone/enviar-codigo/",
+        views.enviar_codigo_do_telefone,
+        name="phone_confirm_send",
+    ),
     path("password-reset/", views.PasswordResetView.as_view(), name="password_reset"),
     path("password-reset/done/", views.PasswordResetDoneView.as_view(), name="password_reset_done"),
     path(

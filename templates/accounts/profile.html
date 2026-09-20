@@ -10,7 +10,8 @@ um mostrando uma secao e escondendo as outras. Eram paginas do proprio
 Perfil dentro do Perfil -- a mesma navegacao que a barra lateral do
 desktop tinha e que ja havia saido por nao levar a lugar nenhum novo.
 Agora as secoes vem empilhadas, na ordem em que se leem: identificacao,
-dados pessoais, seguranca, comunicacoes e as acoes da conta.
+dados pessoais, confirmacoes, seguranca, comunicacoes e as acoes da
+conta.
 
 `?secao=` continua valendo como ANCORA (e o que `_profile_url` devolve
 depois de salvar, para a pessoa voltar ao ponto onde estava) -- so
@@ -136,6 +137,74 @@ Comunicacoes ainda sao ilustrativas (sem campo no modelo).
           <a class="btn btn-ghost" href="{% url 'accounts:profile' %}">{% translate "Cancelar" %}</a>
         </div>
       </form>
+    </section>
+
+    {% comment %}
+    O ESTADO DAS CONFIRMACOES -- E A SAIDA DE CADA PENDENCIA.
+
+    Uma secao propria, e nao uma etiqueta ao lado de cada campo la em
+    cima: a acao de uma pendencia de e-mail e um POST
+    (`accounts:email_confirm_resend`), e um `<form>` dentro do `<form>`
+    dos dados pessoais nao e HTML valido -- o navegador descarta a tag
+    interna e os campos dela acabam sendo enviados no salvamento dos
+    dados. Aqui fora, cada formulario e o seu.
+
+    OS ESTADOS SAO OS QUE O SISTEMA JA TEM
+    --------------------------------------
+    `user.email_confirmado` (data em `email_verified_at`, escrita pelo
+    link de confirmacao) e `user.telefone_confirmado` (data em
+    `phone_verified_at`, escrita pelo codigo do SMS). Nada de um
+    terceiro mecanismo so para mostrar isto na tela.
+
+    Confirmado NAO oferece acao nenhuma: nao ha o que reenviar nem o
+    que confirmar de novo.
+    {% endcomment %}
+    <section class="card profile-section" id="confirmacoes">
+      <h2>{% translate "Confirmações" %}</h2>
+      <p class="section-sub">{% translate "Confirmar garante o caminho de volta: recuperar a senha e receber os avisos das suas cartas." %}</p>
+      <ul class="confirmacoes">
+        <li class="confirmacao" id="confirmacao-email">
+          <div class="confirmacao-dado">
+            <strong>{% translate "E-mail" %}</strong>
+            <span class="confirmacao-valor">{{ user.email }}</span>
+          </div>
+          <div class="confirmacao-estado">
+            {% if user.email_confirmado %}
+            <span class="tag tag-success"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>{% translate "Confirmado" %}</span>
+            {% else %}
+            <span class="tag tag-warning"><i class="ph-fill ph-clock" aria-hidden="true"></i>{% translate "Pendente de confirmação" %}</span>
+            {% comment %}
+            O MESMO reenvio da faixa da area logada e do aviso de gerar
+            carta -- uma rota so para mandar o convite de novo.
+            {% endcomment %}
+            <form method="post" action="{% url 'accounts:email_confirm_resend' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-secondary btn-sm">{% translate "Reenviar e-mail" %}</button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        <li class="confirmacao" id="confirmacao-telefone">
+          <div class="confirmacao-dado">
+            <strong>{% translate "Telefone" %}</strong>
+            <span class="confirmacao-valor">{% if user.phone %}{{ user.phone }}{% else %}{% translate "Não informado" %}{% endif %}</span>
+          </div>
+          <div class="confirmacao-estado">
+            {% if user.telefone_confirmado %}
+            <span class="tag tag-success"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>{% translate "Confirmado" %}</span>
+            {% else %}
+            <span class="tag tag-warning"><i class="ph-fill ph-clock" aria-hidden="true"></i>{% translate "Pendente de confirmação" %}</span>
+            {% comment %}
+            A tela de codigo por SMS, com `next` de volta para ca. Ela
+            tambem e quem atende o caso "conta sem telefone" -- diz que
+            e preciso cadastrar um e traz de volta ao perfil.
+            {% endcomment %}
+            <a class="btn btn-secondary btn-sm" href="{% url 'accounts:phone_confirm' %}?next={{ request.path|urlencode }}">{% translate "Confirmar telefone" %}</a>
+            {% endif %}
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section class="card profile-section" id="senha">

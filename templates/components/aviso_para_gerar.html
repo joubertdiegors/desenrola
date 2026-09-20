@@ -1,0 +1,37 @@
+{% load i18n %}{% comment %}
+O aviso em vermelho ao lado do botão de gerar carta -- e o caminho para
+resolver o que falta.
+
+Só aparece quando a política do Wizzard exige uma confirmação que esta
+conta ainda não tem. A frase vem pronta de `apps.letters.requisitos`
+(`geracao.mensagem`), para dizer exatamente o que falta -- e-mail,
+telefone, ou os dois -- e para ser a MESMA frase que o servidor mostra
+quando alguém tenta a URL do assistente direto.
+
+CADA PENDÊNCIA TRAZ A SUA SAÍDA
+-------------------------------
+E-mail: o botão de reenviar o convite de confirmação, o mesmo
+`accounts:email_confirm_resend` da faixa da área logada -- nada de um
+segundo mecanismo paralelo.
+Telefone: a tela de confirmação por código (`accounts:phone_confirm`).
+
+`notice notice-error` é o componente vermelho de sempre; o `id` é o que
+o botão desabilitado aponta em `aria-describedby`.
+
+Contexto: geracao (Requisitos), aviso_id.
+{% endcomment %}{% if not geracao.pode_gerar %}
+<div class="notice notice-error aviso-para-gerar" id="{{ aviso_id|default:'aviso-para-gerar' }}">
+  <i class="ph-fill ph-warning-circle" aria-hidden="true"></i>
+  <span>{{ geracao.mensagem }}</span>
+  {% if geracao.falta_email %}
+  <form method="post" action="{% url 'accounts:email_confirm_resend' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button type="submit" class="btn btn-secondary btn-sm">{% translate "Reenviar e-mail" %}</button>
+  </form>
+  {% endif %}
+  {% if geracao.falta_telefone %}
+  <a class="btn btn-secondary btn-sm" href="{% url 'accounts:phone_confirm' %}">{% translate "Confirmar telefone" %}</a>
+  {% endif %}
+</div>
+{% endif %}

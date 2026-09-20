@@ -1,5 +1,5 @@
 {% extends "app_base.html" %}
-{% load i18n %}
+{% load i18n carta %}
 {% comment %}
 Minhas cartas -- o histórico COMPLETO da pessoa, paginado.
 
@@ -42,7 +42,8 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
       <span class="letters-empty-icon"><i class="ph ph-file-dashed" aria-hidden="true"></i></span>
       <h2>{% translate "Você ainda não tem cartas" %}</h2>
       <p>{% translate "Quando gerar sua primeira Carta Convite, ela aparece aqui." %}</p>
-      <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+      {% translate "Gerar Carta Convite" as rotulo_gerar %}{% botao_gerar_carta rotulo_gerar aviso_id="aviso-para-gerar" %}
+      {% aviso_para_gerar %}
     </div>
   {% else %}
 
@@ -101,7 +102,8 @@ A DATA é a de CRIAÇÃO -- a mesma pela qual a lista é ordenada.
   paginacao, que e navegacao da propria lista.
   {% endcomment %}
   <div class="letters-nova">
-    <a class="btn btn-primary" href="{% url 'letters:new' %}">{% translate "Gerar Carta Convite" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+    {% translate "Gerar Carta Convite" as rotulo_gerar %}{% botao_gerar_carta rotulo_gerar aviso_id="aviso-para-gerar" %}
+    {% aviso_para_gerar %}
   </div>
 
   {% if pagina.has_other_pages %}

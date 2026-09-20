@@ -26,7 +26,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.letters import lifecycle, presentation, services
+from apps.letters import lifecycle, presentation, requisitos, services
 from apps.letters.models import DefaultDocumentTemplateMissingError, Letter, LetterRenderError
 from apps.letters.rules import MAX_STAY_DAYS, exceeds_max_stay, stay_duration_days
 
@@ -116,6 +116,7 @@ def _field_rows(fields, form):
 
 
 @login_required
+@requisitos.exige_requisitos_para_gerar
 def start(request):
     """
     Gerar Carta Convite: apresenta a etapa 1 (GET) e cria o rascunho no
@@ -175,6 +176,7 @@ def start(request):
 
 
 @login_required
+@requisitos.exige_requisitos_para_gerar
 def wizard_step(request, letter_uuid, step):
     """
     Uma etapa do assistente (1 a 6), identificada na URL.

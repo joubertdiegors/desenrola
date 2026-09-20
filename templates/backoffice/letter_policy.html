@@ -4,8 +4,9 @@
 Administração · Wizzard - gerar carta (a tela que se chamava "Política
 das cartas" -- mudou só o nome).
 
-Duas regras independentes, configuradas por quem administra:
+Três regras independentes, configuradas por quem administra:
 
+  VALIDAÇÃO o que a conta precisa ter confirmado para gerar carta;
   EDIÇÃO    por quanto tempo uma carta finalizada ainda aceita mudança;
   EXPIRAÇÃO quando a carta deixa de valer para o usuário.
 
@@ -30,6 +31,44 @@ Contexto: form (LetterPolicyForm), pode_editar (bool).
 
 <form method="post" novalidate>
   {% csrf_token %}
+
+  {% comment %}
+  A PRIMEIRA configuração da tela, de propósito: as outras duas falam da
+  carta depois de pronta; esta decide quem chega a gerá-la. O padrão
+  ("Não exigir nenhuma confirmação") é o comportamento de sempre -- ligar
+  a barreira é uma escolha explícita de quem administra.
+
+  Quem aplica a regra é `apps.letters.requisitos`, no servidor e na
+  interface; aqui só se escolhe o valor.
+  {% endcomment %}
+  <div class="card bo-card">
+    <div class="bo-card-head">
+      <h2>{% translate "Validação para gerar carta convite" %}</h2>
+      <span class="note d-only">{% translate "O que a conta precisa ter confirmado antes de abrir o assistente" %}</span>
+    </div>
+    <div class="field">
+      {% comment %}
+      O componente `.radio` do design system, desenhado aqui: o
+      `{{ opcao.tag }}` e o `<input>` do Django, e o `<span class="dot">`
+      logo depois e o que o CSS pinta quando ele esta marcado.
+      {% endcomment %}
+      <div class="radio-lista">
+        {% for opcao in form.generation_requirement %}
+        <label class="radio" for="{{ opcao.id_for_label }}">{{ opcao.tag }}<span class="dot" aria-hidden="true"></span><span>{{ opcao.choice_label }}</span></label>
+        {% endfor %}
+      </div>
+      <span class="field-hint">{{ form.generation_requirement.help_text }}</span>
+      {% for erro in form.generation_requirement.errors %}<span class="field-error">{{ erro }}</span>{% endfor %}
+    </div>
+    {% comment %}
+    O aviso do SMS: a confirmação de telefone manda um código de
+    verdade, e sem provedor configurado esse código só é escrito no log
+    do servidor (ver `apps/accounts/sms.py`). Dizer isso aqui evita
+    ligar a terceira política e descobrir depois que ninguém recebe o
+    código.
+    {% endcomment %}
+    <div class="notice"><i class="ph-fill ph-info" aria-hidden="true"></i><span>{% translate "A confirmação de telefone envia um código por SMS. Enquanto não houver provedor de SMS configurado, o código só aparece no log do servidor — ligue a terceira opção apenas depois de configurá-lo." %}</span></div>
+  </div>
 
   <div class="card bo-card">
     <div class="bo-card-head">

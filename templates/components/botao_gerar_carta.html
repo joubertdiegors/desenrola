@@ -1,0 +1,24 @@
+{% load i18n %}{% comment %}
+O botão que leva ao assistente -- ou o mesmo botão, bloqueado.
+
+Desenhado pela etiqueta `{% templatetag openblock %} botao_gerar_carta
+{% templatetag closeblock %}` (apps/letters/templatetags/carta.py), que
+pergunta os requisitos a `apps.letters.requisitos`. Nenhuma tela decide
+sozinha se pode gerar -- a resposta vem sempre do mesmo lugar.
+
+BLOQUEADO NÃO É AUSENTE
+-----------------------
+Quando falta confirmação, o botão CONTINUA na tela: some o `<a>` e entra
+um `<button disabled>` com a mesma classe. Some o destino, não o convite
+-- quem chega vê que a ação existe e, logo abaixo, por que ela não está
+disponível (`components/aviso_para_gerar.html`). Um botão que desaparece
+faz a pessoa procurar o que sumiu.
+
+`disabled` é do próprio elemento: o navegador não deixa clicar nem
+focar, e o leitor de tela anuncia "desabilitado". Não há JavaScript
+nisto, e o servidor tranca a rota de qualquer forma
+(`requisitos.exige_requisitos_para_gerar`) -- o botão é a cortesia, não
+a fechadura.
+
+Contexto: geracao (Requisitos), rotulo, classe, seta, aviso_id.
+{% endcomment %}{% if geracao.pode_gerar %}<a class="{{ classe }}" href="{% url 'letters:new' %}">{{ rotulo }}{% if seta %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i>{% endif %}</a>{% else %}<button type="button" class="{{ classe }}" disabled aria-describedby="{{ aviso_id }}">{{ rotulo }}{% if seta %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i>{% endif %}</button>{% endif %}

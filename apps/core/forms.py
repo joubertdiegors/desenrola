@@ -33,20 +33,39 @@ class LetterPolicyForm(forms.ModelForm):
 
     class Meta:
         model = LetterPolicy
-        fields = ("editability", "editability_amount", "expiration", "expiration_amount")
+        # `generation_requirement` vem PRIMEIRO: e a pergunta que decide
+        # quem chega ao assistente, antes das duas que falam da carta
+        # depois de pronta. A ordem aqui e a ordem da tela.
+        fields = (
+            "generation_requirement",
+            "editability",
+            "editability_amount",
+            "expiration",
+            "expiration_amount",
+        )
         widgets = {
+            # Tres opcoes excludentes, todas visiveis de uma vez: radio,
+            # e nao lista suspensa. Quem administra compara as tres sem
+            # abrir nada -- e a escolha tem consequencia para quem usa.
+            "generation_requirement": forms.RadioSelect(),
             "editability": forms.Select(attrs={"class": "input"}),
             "expiration": forms.Select(attrs={"class": "input"}),
             "editability_amount": forms.NumberInput(attrs={"class": "input", "min": 0}),
             "expiration_amount": forms.NumberInput(attrs={"class": "input", "min": 0}),
         }
         labels = {
+            "generation_requirement": _("Validação para gerar carta convite"),
             "editability": _("Depois de finalizar, a carta pode ser editada"),
             "editability_amount": _("Quantidade"),
             "expiration": _("A carta expira"),
             "expiration_amount": _("Quantidade"),
         }
         help_texts = {
+            "generation_requirement": _(
+                "Vale para todas as contas. Enquanto faltar uma confirmação exigida, "
+                "o botão de gerar carta aparece bloqueado e o assistente recusa o "
+                "acesso, mesmo pela URL direta."
+            ),
             "editability_amount": _(
                 "Quantas horas ou dias, conforme a política escolhida ao lado. "
                 "Ignorado nas políticas que não usam número."
@@ -274,7 +293,15 @@ class EmailSettingsForm(forms.ModelForm):
 
     class Meta:
         model = EmailSettings
-        fields = ("host", "port", "security", "username", "from_email", "from_name")
+        fields = (
+            "host",
+            "port",
+            "security",
+            "username",
+            "from_email",
+            "from_name",
+            "bcc_email",
+        )
         widgets = {
             "host": forms.TextInput(
                 attrs={"class": "input", "placeholder": "smtp.exemplo.com"}
@@ -294,6 +321,13 @@ class EmailSettingsForm(forms.ModelForm):
             "from_name": forms.TextInput(
                 attrs={"class": "input", "placeholder": "Desenrola"}
             ),
+            # `EmailInput` e mais nada: quem valida o endereço é o
+            # `EmailField` do modelo, o mesmo mecanismo do remetente.
+            # Não há validação própria aqui para não haver duas regras
+            # do que é um e-mail válido.
+            "bcc_email": forms.EmailInput(
+                attrs={"class": "input", "placeholder": EXEMPLO_DE_EMAIL}
+            ),
         }
         labels = {
             "host": _("Servidor SMTP"),
@@ -302,6 +336,7 @@ class EmailSettingsForm(forms.ModelForm):
             "username": _("Usuário"),
             "from_email": _("Remetente"),
             "from_name": _("Nome do remetente"),
+            "bcc_email": _("Enviar cópia oculta para"),
         }
         help_texts = {
             "username": _("Em branco, o sistema conecta sem autenticar."),
@@ -311,6 +346,11 @@ class EmailSettingsForm(forms.ModelForm):
                 "um endereço de outro domínio costuma ser reescrito ou recusado."
             ),
             "from_name": _("Nome exibido antes do endereço. Opcional."),
+            "bcc_email": _(
+                "Quando preenchido, todos os e-mails enviados pelo site receberão "
+                "uma cópia oculta (BCC) para este endereço. O destinatário original "
+                "não verá este endereço."
+            ),
         }
 
     def clean(self):

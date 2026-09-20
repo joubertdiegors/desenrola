@@ -328,6 +328,20 @@ class LetterPolicy(TimeStampedModel):
 
     SINGLETON_ID = 1
 
+    class GenerationRequirement(models.TextChoices):
+        """
+        O que uma conta precisa ter confirmado para GERAR uma carta.
+
+        A ordem é a da exigência: nenhuma, e-mail, e-mail e telefone.
+        `NENHUMA` é o padrão, e é exatamente o que o sistema fazia antes
+        desta regra existir -- instalar não tranca ninguém até um
+        administrador escolher outra coisa.
+        """
+
+        NENHUMA = "nenhuma", _("Não exigir nenhuma confirmação")
+        EMAIL = "email", _("Exigir confirmação de e-mail")
+        EMAIL_E_TELEFONE = "email_e_telefone", _("Exigir confirmação de e-mail e telefone")
+
     class Editability(models.TextChoices):
         NAO_EDITAVEL = "nao_editavel", _("Não pode ser editada")
         POR_HORAS = "por_horas", _("Por algumas horas após finalizar")
@@ -356,6 +370,17 @@ class LetterPolicy(TimeStampedModel):
             Expiration.X_DIAS_DEPOIS_DA_VIAGEM,
             Expiration.X_DIAS_APOS_CRIACAO,
         }
+    )
+
+    # A PRIMEIRA pergunta da tela: quem pode chegar ao assistente. As
+    # outras duas políticas falam da carta DEPOIS de pronta; esta fala de
+    # antes de começar. Quem responde com ela é
+    # `apps.letters.requisitos` -- aqui mora só o valor.
+    generation_requirement = models.CharField(
+        _("validação para gerar carta convite"),
+        max_length=32,
+        choices=GenerationRequirement.choices,
+        default=GenerationRequirement.NENHUMA,
     )
 
     editability = models.CharField(

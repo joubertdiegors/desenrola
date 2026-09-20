@@ -11,6 +11,7 @@ Regras vindas dos requisitos:
   - endereco completo opcional.
 """
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -113,6 +114,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     email_verified_at = models.DateTimeField(
         _("e-mail confirmado em"), null=True, blank=True
     )
+    # O telefone segue a MESMA forma do e-mail -- uma data, e nao um
+    # booleano -- pelas mesmas duas razoes: responde "confirmou?" e
+    # "quando?" pelo mesmo preco, e entra no que invalida o codigo
+    # enviado (ver `accounts.confirmacao_de_telefone`).
+    #
+    # Nulo = nao confirmado, que e o estado certo para toda conta criada
+    # antes desta coluna existir: ninguem confirmou numero nenhum.
+    # PREENCHER o telefone nao confirma nada -- so o codigo recebido no
+    # proprio aparelho confirma.
+    phone_verified_at = models.DateTimeField(
+        _("telefone confirmado em"), null=True, blank=True
+    )
     is_active = models.BooleanField(_("ativo"), default=True)
     is_staff = models.BooleanField(
         _("acesso a administracao"),
@@ -152,6 +165,17 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return self.email_verified_at is not None
 
+    @property
+    def telefone_confirmado(self):
+        """
+        O telefone desta conta ja foi confirmado?
+
+        Pergunta propria, pelo mesmo motivo de `email_confirmado`. E ela
+        que a regra de geracao de carta le -- nunca `bool(user.phone)`,
+        que diria apenas que alguem digitou um numero.
+        """
+        return self.phone_verified_at is not None
+
     def get_full_name(self):
         return self.full_name
 
@@ -172,3 +196,60 @@ class User(AbstractBaseUser, PermissionsMixin):
         """Endereco numa linha: 'Rua 25 – 1200 Cidade'. Vazio se nao houver."""
         place = " ".join(p for p in (self.postal_code, self.city) if p)
         return " – ".join(p for p in (self.address_line1, place) if p)
+
+
+class ConfirmacaoDeTelefone(models.Model):
+    """
+    O codigo de confirmacao vigente de um telefone -- um por conta.
+
+    POR QUE UMA LINHA, E NAO UM CAMPO NO USER
+    -----------------------------------------
+    O codigo e efemero: nasce, vale dez minutos e morre no uso. Guardar
+    isso em colunas do `User` encheria a tabela de estado descartavel e
+    faria toda leitura de usuario carregar junto. Aqui a linha e criada
+    quando alguem pede o codigo e APAGADA quando ele e usado -- nao
+    existir e o estado normal.
+
+    O CODIGO NAO FICA GUARDADO
+    --------------------------
+    Fica o HASH dele (`make_password`, o mesmo do Django para senha).
+    Quem ler o banco nao consegue confirmar o telefone de ninguem, e a
+    comparacao e em tempo constante. E o mesmo raciocinio da senha SMTP
+    de `core.EmailSettings`, invertido: ali o sistema precisa REAPRESENTAR
+    o segredo, entao ele e cifrado; aqui so precisa CONFERIR, entao o
+    hash basta -- e hash e mais forte.
+
+    O NUMERO VAI JUNTO
+    ------------------
+    `phone` guarda o numero para o qual o codigo saiu. Se a pessoa
+    trocar o telefone antes de digitar o codigo, o codigo antigo deixa de
+    valer: ele provaria a posse do numero ANTERIOR.
+
+    O QUE ESTA LINHA NAO E
+    ----------------------
+    Nao e o registro de que o telefone esta confirmado -- isso e
+    `User.phone_verified_at`. Esta aqui some; a data fica.
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="confirmacao_de_telefone",
+        verbose_name=_("usuario"),
+    )
+    phone = models.CharField(_("telefone"), max_length=32)
+    code_hash = models.CharField(_("codigo (hash)"), max_length=255)
+    sent_at = models.DateTimeField(_("enviado em"), default=timezone.now)
+    expires_at = models.DateTimeField(_("expira em"))
+    attempts = models.PositiveSmallIntegerField(_("tentativas"), default=0)
+
+    class Meta:
+        verbose_name = _("confirmacao de telefone")
+        verbose_name_plural = _("confirmacoes de telefone")
+
+    def __str__(self):
+        return f"{self.user_id}: {self.phone}"
+
+    @property
+    def expirado(self):
+        return timezone.now() >= self.expires_at

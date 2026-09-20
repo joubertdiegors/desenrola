@@ -314,6 +314,10 @@ select.input {
 .radio .dot { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--bd); }
 .radio input:checked + .dot { border-color: var(--p); background: var(--p); box-shadow: inset 0 0 0 4px #fff; }
 .radio input:focus-visible + .dot { outline: 3px solid var(--p20); outline-offset: 1px; }
+/* Varias opcoes do mesmo grupo, uma por linha. `.radio` e inline-flex
+   (nasceu para uma escolha ao lado da outra); um grupo de tres frases
+   precisa empilhar para ser comparavel de relance. */
+.radio-lista { display: flex; flex-direction: column; gap: 2px; }
 
 /* Toggle (comunicacoes, ativo/inativo) */
 .toggle { width: 40px; height: 22px; border-radius: 11px; position: relative; flex: none; display: inline-block; background: #cfd8e6; cursor: pointer; border: 0; padding: 0; }

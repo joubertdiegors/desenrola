@@ -184,6 +184,20 @@ EMAIL_SECRET_KEY = env("EMAIL_SECRET_KEY", default="")
 
 
 # ---------------------------------------------------------------------------
+# SMS (codigo de confirmacao de telefone)
+# ---------------------------------------------------------------------------
+# Usado pela confirmacao de telefone (apps.accounts.confirmacao_de_telefone),
+# que a politica "exigir confirmacao de e-mail e telefone" do Wizzard pede.
+#
+# O padrao APENAS ESCREVE a mensagem no log do servidor -- a mesma reserva
+# que o e-mail tem no console enquanto nao ha SMTP configurado. Ligar um
+# provedor de verdade e apontar esta variavel para outro backend (ver
+# apps/accounts/sms.py); nenhuma linha de quem envia muda.
+
+SMS_BACKEND = env("SMS_BACKEND", default="apps.accounts.sms.BackendDeLog")
+
+
+# ---------------------------------------------------------------------------
 # Internacionalizacao
 # ---------------------------------------------------------------------------
 

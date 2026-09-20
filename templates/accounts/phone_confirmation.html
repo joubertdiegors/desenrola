@@ -1,0 +1,73 @@
+{% extends "app_base.html" %}
+{% load i18n %}
+{% comment %}
+Confirmar o telefone: pedir o código e digitá-lo de volta.
+
+POR QUE ESTA TELA EXISTE
+------------------------
+A política "exigir confirmação de e-mail e telefone" (Backoffice ›
+Wizzard) precisa de uma confirmação de verdade. O e-mail confirma-se por
+link, porque um e-mail comporta um link; o telefone confirma-se por
+código, porque é o que cabe num SMS. Quem cuida do código é
+`accounts.confirmacao_de_telefone` -- esta tela só pede e mostra.
+
+TRÊS ESTADOS
+------------
+  sem telefone        não há número na conta: o caminho é o Perfil;
+  já confirmado       nada a fazer, e a tela diz isso;
+  pendente            o botão de enviar e o campo do código.
+
+Contexto: telefone, confirmado, pode_enviar, tem_codigo, voltar_para.
+{% endcomment %}
+
+{% block title %}{% translate "Confirmar telefone" %} · {{ site_config.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="profile-main">
+    <section class="card profile-section">
+      <h2>{% translate "Confirmar telefone" %}</h2>
+
+      {% if confirmado %}
+      <p class="section-sub">{% blocktranslate trimmed with telefone=telefone %}O número <strong>{{ telefone }}</strong> já está confirmado.{% endblocktranslate %}</p>
+      <a class="btn btn-primary" href="{{ voltar_para }}">{% translate "Voltar" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+
+      {% elif not telefone %}
+      <p class="section-sub">{% translate "Sua conta ainda não tem telefone. Cadastre um no perfil para poder confirmá-lo." %}</p>
+      <a class="btn btn-primary" href="{% url 'accounts:profile' %}#dados">{% translate "Ir para o perfil" %}<i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+
+      {% else %}
+      <p class="section-sub">{% blocktranslate trimmed with telefone=telefone %}Enviamos um código de 6 dígitos por SMS para <strong>{{ telefone }}</strong>. Digite-o abaixo para confirmar que o número é seu.{% endblocktranslate %}</p>
+
+      {% comment %}
+      Dois formulários, dois POSTs: pedir o código e conferir o código
+      são ações diferentes, e cada uma com o seu botão -- a mesma forma
+      do reenvio do e-mail.
+      {% endcomment %}
+      <form method="post" action="{% url 'accounts:phone_confirm' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ voltar_para }}">
+        <div class="form-grid">
+          <div class="field">
+            <label for="codigo_do_telefone">{% translate "Código recebido" %}</label>
+            <input class="input" id="codigo_do_telefone" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="000000" required>
+            <span class="field-hint">{% translate "Seis dígitos. O código vale por 10 minutos." %}</span>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button type="submit" class="btn btn-primary">{% translate "Confirmar telefone" %}</button>
+        </div>
+      </form>
+
+      <form method="post" action="{% url 'accounts:phone_confirm_send' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ voltar_para }}">
+        <button type="submit" class="btn btn-secondary btn-sm">{% if tem_codigo %}{% translate "Enviar outro código" %}{% else %}{% translate "Enviar código" %}{% endif %}</button>
+      </form>
+
+      <p class="section-sub">{% blocktranslate trimmed %}Número errado? Troque-o no <a href="{{ url_do_perfil }}">seu perfil</a> — trocar o número cancela a confirmação.{% endblocktranslate %}</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

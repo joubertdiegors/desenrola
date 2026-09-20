@@ -119,8 +119,9 @@ CATALOGO = (
                 chave="letters.change_letterpolicy",
                 rotulo=_("Alterar a política das cartas"),
                 descricao=_(
-                    "Muda os prazos de edição e de expiração que valem para todas "
-                    "as cartas."
+                    "Muda o que a conta precisa ter confirmado para gerar carta e "
+                    "os prazos de edição e de expiração que valem para todas as "
+                    "cartas."
                 ),
                 aplicada_em="core.views.backoffice_letter_policy",
             ),
@@ -274,8 +275,9 @@ CATALOGO = (
                 chave="core.view_emailsettings",
                 rotulo=_("Ver a configuração de e-mail"),
                 descricao=_(
-                    "Abre a tela de envio de e-mail e vê o servidor, a porta e o "
-                    "remetente cadastrados. A senha nunca é exibida."
+                    "Abre a tela de envio de e-mail e vê o servidor, a porta, o "
+                    "remetente e o endereço que recebe cópia oculta. A senha nunca "
+                    "é exibida."
                 ),
                 aplicada_em="core.views.backoffice_email_settings",
             ),
@@ -283,8 +285,9 @@ CATALOGO = (
                 chave="core.change_emailsettings",
                 rotulo=_("Configurar o envio de e-mail"),
                 descricao=_(
-                    "Altera o servidor SMTP e a senha, dispara mensagens de teste e "
-                    "liga ou desliga o envio real do sistema."
+                    "Altera o servidor SMTP, a senha e o endereço que recebe cópia "
+                    "oculta de todos os e-mails, dispara mensagens de teste e liga "
+                    "ou desliga o envio real do sistema."
                 ),
                 aplicada_em="core.views.backoffice_email_settings / _test / _activation",
             ),

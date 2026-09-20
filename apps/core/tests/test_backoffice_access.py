@@ -152,6 +152,13 @@ class TestAcessoDireto:
 class TestPermissaoDeAlterarAPolitica:
     URL = reverse("backoffice:letter_policy")
 
+    # O formulário do Wizzard tem mais um campo desde a validação para
+    # gerar carta: sem ele, TODO POST daqui voltaria 200 por falta de
+    # campo, e os testes passariam a provar outra coisa que não a
+    # permissão. A tela sempre o envia -- é um radio com uma opção
+    # marcada.
+    POLITICA = {"generation_requirement": "nenhuma"}
+
     @pytest.fixture
     def permissao_de_alterar(self, db):
         from django.contrib.auth.models import Permission
@@ -169,7 +176,8 @@ class TestPermissaoDeAlterarAPolitica:
         client.force_login(staff_user)
 
         leitura = client.get(self.URL)
-        escrita = client.post(self.URL, {"editability": "por_dias", "editability_amount": 3,
+        escrita = client.post(self.URL, {**self.POLITICA, "editability": "por_dias",
+                                         "editability_amount": 3,
                                          "expiration": "nunca", "expiration_amount": 0})
 
         assert leitura.status_code == 200
@@ -184,7 +192,7 @@ class TestPermissaoDeAlterarAPolitica:
 
         resposta = client.post(
             self.URL,
-            {"editability": "por_dias", "editability_amount": 3,
+            {**self.POLITICA, "editability": "por_dias", "editability_amount": 3,
              "expiration": "na_data_da_viagem", "expiration_amount": 0},
         )
 
@@ -203,7 +211,7 @@ class TestPermissaoDeAlterarAPolitica:
 
         resposta = client.post(
             self.URL,
-            {"editability": "por_horas", "editability_amount": 0,
+            {**self.POLITICA, "editability": "por_horas", "editability_amount": 0,
              "expiration": "nunca", "expiration_amount": 0},
         )
 
